@@ -1,0 +1,27 @@
+envelope: 1
+uuid: nexus-export-job-53a047aa-b10b-420f-bc74-fb0a3d26399c
+type: job
+id: 53a047aa-b10b-420f-bc74-fb0a3d26399c
+context: guardian real-time job dispatch
+intent: null
+summary: null
+system: guardian
+tags: []
+exported_at: 1789179601805
+source: nexus.lib.node-export
+payload:
+  id: 53a047aa-b10b-420f-bc74-fb0a3d26399c
+  command: ask
+  provider: claude
+  prompt: fsefse
+  content: null
+  source: null
+  tools: null
+  hat: null
+  status: delivered_confirmed
+  response: ''
+  ts: 1789179601602
+  updatedAt: 1789179601805
+  deliveredAt: 1789179601609
+  ackedAt: 1789179601718
+  confirmedAt: 1789179601805

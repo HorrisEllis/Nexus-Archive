@@ -1,0 +1,1 @@
+{"uuid":"2d74f11f-42e6-4c5d-94e3-f24f4ccefa49","system":"loom","component":"loom.ingest","action":"registered","status":"ok","tags":["loom","write"],"detail":"Ingest a component descriptor into the registry","causedBy":"loom","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1789169840273}

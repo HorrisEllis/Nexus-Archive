@@ -1,0 +1,77 @@
+envelope: 1
+uuid: nexus-export-contract-3c35d649-61c8-4478-b1d1-6b240c8b7f0d
+type: contract
+id: 3c35d649-61c8-4478-b1d1-6b240c8b7f0d
+context: null
+intent: build
+summary: null
+system: null
+tags: []
+exported_at: 1789169912632
+source: idearium
+payload:
+  uuid: 3c35d649-61c8-4478-b1d1-6b240c8b7f0d
+  status: queued
+  intention: build
+  dir: null
+  language: null
+  stage: queued
+  system: null
+  source: idearium
+  sourceDropId: null
+  boundary:
+    key: idearium:build
+    primitive: idearium.spec-engine (MODULE_ID)
+    invariants: []
+    principles:
+      - §2.2
+      - §3.1
+  file: null
+  title: integration
+  forAgent: gemini
+  contract:
+    content: |-
+      You are building the "Integration Points" section of a NEXUS component spec.
+      SPEC CONTEXT:
+        Name: checklist-demo
+        Type: component
+        Description: (none provided)
+        UUID: 07c37e3e-76e8-41eb-aba3-fa02a9e92476
+        Chunk: 7/10
+        Section: integration
+        comp_id: idearium.spec-engine
+        seam_id: idearium.spec-engine:v1:chunk:07c37e3e:integration
+        contract_id: spec-contract:07c37e3e:integration:a1382035
+      SYSTEM STATE:
+      ## NEXUS System Context
+
+      **Guardian:** up 1min · 0 jobs
+
+      **Open Gaps:** none
+
+      PREVIOUSLY COMPLETED SECTIONS:
+      ### Meta & Identity
+      real content for the first chunk
+
+      YOUR TASK:
+      Write the "Integration Points" section for this spec.
+      What talks to this, what this talks to, seam contracts
+      Requirements:
+      - Be specific to "checklist-demo" — not generic
+      - Reference AXIOMS-v1.0 where relevant
+      - Every UUID/seam_id/comp_id should follow the NEXUS naming convention
+      - §1.2: declare all failure modes explicitly
+      - §2.1: declare all JAA writes that must happen before behavior
+      - Output ONLY the section content — no preamble, no "here is the section:"
+    file: null
+    title: integration
+    forAgent: gemini
+  dependsOn: []
+  onFail:
+    action: retry
+    maxRetries: 2
+  retryCount: 0
+  compartmentId: null
+  verdict: null
+  createdAt: 1789169912632
+  updatedAt: 1789169912632

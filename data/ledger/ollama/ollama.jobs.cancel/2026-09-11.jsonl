@@ -1,0 +1,1 @@
+{"uuid":"1cf203aa-c82f-4fa3-90c2-2e094483b140","system":"ollama","component":"ollama.jobs.cancel","action":"registered","status":"ok","tags":["ollama"],"detail":"Cancel a queued job","causedBy":"ollama","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1789169840188}

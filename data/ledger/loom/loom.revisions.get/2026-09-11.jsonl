@@ -1,0 +1,1 @@
+{"uuid":"3eec6c13-b4b8-47aa-9281-968f3aa1e4eb","system":"loom","component":"loom.revisions.get","action":"registered","status":"ok","tags":["loom"],"detail":"Read one revision","causedBy":"loom","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1789169840283}

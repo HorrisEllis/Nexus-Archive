@@ -1,0 +1,1 @@
+{"uuid":"931c26a4-60c9-4123-bb5e-6500ab3206e2","system":"guardian","component":"guardian.copilot.memory","action":"registered","status":"ok","tags":["guardian"],"detail":"Co-pilot memory operations","causedBy":"guardian","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1789169839948}

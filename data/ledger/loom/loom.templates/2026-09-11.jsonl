@@ -1,0 +1,1 @@
+{"uuid":"db924674-88c3-4e70-99a5-8eac2aa2833e","system":"loom","component":"loom.templates","action":"registered","status":"ok","tags":["loom"],"detail":"Available scaffold templates","causedBy":"loom","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1789169840285}

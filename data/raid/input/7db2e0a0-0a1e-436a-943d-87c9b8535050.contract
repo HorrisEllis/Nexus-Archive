@@ -1,0 +1,77 @@
+envelope: 1
+uuid: nexus-export-contract-7db2e0a0-0a1e-436a-943d-87c9b8535050
+type: contract
+id: 7db2e0a0-0a1e-436a-943d-87c9b8535050
+context: null
+intent: build
+summary: null
+system: null
+tags: []
+exported_at: 1789169882685
+source: idearium
+payload:
+  uuid: 7db2e0a0-0a1e-436a-943d-87c9b8535050
+  status: queued
+  intention: build
+  dir: null
+  language: null
+  stage: queued
+  system: null
+  source: idearium
+  sourceDropId: null
+  boundary:
+    key: idearium:build
+    primitive: idearium.spec-engine (MODULE_ID)
+    invariants: []
+    principles:
+      - §2.2
+      - §3.1
+  file: null
+  title: api
+  forAgent: claude
+  contract:
+    content: |-
+      You are building the "API & Routes" section of a NEXUS component spec.
+      SPEC CONTEXT:
+        Name: dep-test
+        Type: component
+        Description: (none provided)
+        UUID: 22c28fe5-6df0-4898-93db-1fee3fb79f3f
+        Chunk: 5/10
+        Section: api
+        comp_id: idearium.spec-engine
+        seam_id: idearium.spec-engine:v1:chunk:22c28fe5:api
+        contract_id: spec-contract:22c28fe5:api:a47e9eaf
+      SYSTEM STATE:
+      ## NEXUS System Context
+
+      **Guardian:** up 1min · 0 jobs
+
+      **Open Gaps:** none
+
+      PREVIOUSLY COMPLETED SECTIONS:
+      ### Meta & Identity
+      real meta content
+
+      YOUR TASK:
+      Write the "API & Routes" section for this spec.
+      HTTP routes, request/response shapes, error codes
+      Requirements:
+      - Be specific to "dep-test" — not generic
+      - Reference AXIOMS-v1.0 where relevant
+      - Every UUID/seam_id/comp_id should follow the NEXUS naming convention
+      - §1.2: declare all failure modes explicitly
+      - §2.1: declare all JAA writes that must happen before behavior
+      - Output ONLY the section content — no preamble, no "here is the section:"
+    file: null
+    title: api
+    forAgent: claude
+  dependsOn: []
+  onFail:
+    action: retry
+    maxRetries: 2
+  retryCount: 0
+  compartmentId: null
+  verdict: null
+  createdAt: 1789169882685
+  updatedAt: 1789169882685

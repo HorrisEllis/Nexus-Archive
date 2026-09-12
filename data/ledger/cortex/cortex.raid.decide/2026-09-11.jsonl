@@ -1,0 +1,1 @@
+{"uuid":"a85382c1-2c7e-4fb2-a9ec-c604a7c53a59","system":"cortex","component":"cortex.raid.decide","action":"registered","status":"ok","tags":["cortex","routing"],"detail":"Route intent to best agent/component","causedBy":"cortex","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1789169841609}

@@ -896,6 +896,18 @@ spec:
       last_drift_check: '2026-09-01'
       governs: >
         Cortex's gap-emission organ (`cortex/gap-finder/index.js`) — listens for `anomaly.detected`/`sigma.event.*`, dedups against the live `gaps` table.
+    - spec:             'docs/2026-09-11-brainos-agent-orchestration-phasemap.spec'
+      version:          '0.1.0'
+      status:           'active'
+      last_drift_check: '2026-09-12'
+      governs: >
+        BrainOS agent-orchestration build order (5 phases) — supersedes docs/brainos-live-control-panel.spec. §REGISTERED 2026-09-12 (was missing from this registry entirely, caught by precommit-check.js's own §6.3 rule). Drift found and closed same pass: phase 1 (context menu) and phase 2 (routing/pipeline edges) were still marked BUILDING/SPECCED though shipped in 0.39.87/0.39.88 — both corrected to DONE with version references.
+    - spec:             'docs/2026-09-11-brainos-external-concept-mapping.spec'
+      version:          '0.1.0'
+      status:           'active'
+      last_drift_check: '2026-09-12'
+      governs: >
+        Maps an uploaded external BrainOS reference project's concepts onto real NEXUS equivalents (mapping only, nothing built by the spec itself). §REGISTERED 2026-09-12 (same missing-registration gap as the sibling orchestration-phasemap spec above). Drift found and closed same pass: the trigger/scheduler/branching GENUINE_GAP entry was still open though closed by automation-engine.js in 0.39.89/0.39.91 — corrected to CLOSED with version references and the real remaining scope (branch/http/notification step types) named explicitly.
 
   # ── Full original document, preserved verbatim — every narrative session
   # log, every filename mentioned only in prose, zero information loss.

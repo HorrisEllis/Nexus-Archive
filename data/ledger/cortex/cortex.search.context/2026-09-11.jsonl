@@ -1,0 +1,1 @@
+{"uuid":"28f7cb18-4e26-4c36-adf9-3315d7e8b6b8","system":"cortex","component":"cortex.search.context","action":"registered","status":"ok","tags":["cortex"],"detail":"Context assembly for search query","causedBy":"cortex","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1789169841617}

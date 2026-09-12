@@ -560,6 +560,26 @@ async function _startWire() {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Content-Type', 'application/json');
 
+    // §FOUND & FIXED 2026-09-12 — James's own devtools console (screenshot):
+    // every "unreachable"/CORS failure this whole session, on every route
+    // (automation/workflows, automation/log, agent-mesh/routes, etc.) was
+    // this: 'Access-Control-Allow-Origin: *' was set, but nothing ever
+    // answered an OPTIONS preflight request. A browser sends OPTIONS before
+    // any POST (and any GET carrying a Content-Type header, which every
+    // fetch() call in brainos-automation.js's api() helper does) to ask
+    // permission first. Every route check below is `req.method === 'GET'`
+    // or `'POST'` -- OPTIONS matched none of them, fell through to
+    // whatever this server's real default response is, which is not
+    // HTTP 200/204 -- so the browser's preflight check failed and it
+    // never even attempted the real request. clear-glass was reachable
+    // this entire time; this was the actual block.
+    if (req.method === 'OPTIONS') {
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, PUT, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+      res.writeHead(204);
+      return res.end();
+    }
+
     let body = '';
     req.on('data', c => body += c);
     req.on('end', async () => {
@@ -750,6 +770,48 @@ async function _startWire() {
       // gap class as /dom/query above (this codebase's own agent tools
       // run in copilot's separate Node process, not this one, and the
       // real IPC handlers above only reach clear-glass's own renderer).
+      // §BUILT 2026-09-12 — James: "right click context needs to be
+      // able to... open the agent suite to edit and modify the agent."
+      // Real, previously-missing HTTP surface for the already-real
+      // openSettingsWindow() (only reachable before via an Electron
+      // app-menu click or the IPC bridge, both same-process-only —
+      // this page runs in a separate browser tab hitting :7704 over
+      // plain HTTP, neither reaches it). §HONEST NAME — this opens the
+      // real API/account settings window (renderer/settings.html), not
+      // a per-agent prompt/behavior editor; no such per-agent editor
+      // exists in this codebase today, so the context menu below calls
+      // this "Open agent settings," not "agent suite," to not overclaim
+      // what it actually opens.
+      // §BUILT 2026-09-12 — James: "all systems and commands." Checked
+      // docs/command-index-per-system.spec directly first: only
+      // clear-glass's command index is real and built today
+      // (`[IPC] real command index written — 68 real commands`,
+      // confirmed in this session's own boot log) — guardian/ollama/
+      // idearium/bridge equivalents are `status: specced`, explicitly
+      // NOT built per that spec's own phase markers. Wiring dropdowns
+      // for those would be fabricating a data source that doesn't
+      // exist. This route exposes the one real index that does,
+      // written to disk by ipc/bridge.js's _writeCommandIndex() but
+      // previously only reachable via IPC (same-process-only), never
+      // over plain HTTP from a separate page.
+      if (u === '/commands' && req.method === 'GET') {
+        try {
+          const fs = require('fs'), path = require('path');
+          const indexPath = path.join(__dirname, '..', '..', '..', 'data', 'clear-glass', 'command-index.json');
+          const raw = fs.readFileSync(indexPath, 'utf8');
+          res.writeHead(200);
+          return res.end(raw);
+        } catch (e) {
+          res.writeHead(404);
+          return res.end(JSON.stringify({ ok: false, error: `command index not yet written: ${e.message}` }));
+        }
+      }
+
+      if (u === '/window/settings' && req.method === 'POST') {
+        openSettingsWindow();
+        return res.end(JSON.stringify({ ok: true }));
+      }
+
       if (u === '/userscripts/list' && req.method === 'GET') {
         if (!userscripts) { res.writeHead(503); return res.end(JSON.stringify({ ok: false, error: 'userscripts manager not initialized' })); }
         return res.end(JSON.stringify({ ok: true, scripts: userscripts.list(parsed || {}) }));

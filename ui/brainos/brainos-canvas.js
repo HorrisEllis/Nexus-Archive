@@ -42,9 +42,24 @@
  * ... FLAGGED GAP." That mechanism does not exist. The lines this file
  * draws between nodes are real, confirmed structural relationships
  * (which system calls which — read from real code, listed in
- * REAL_TOPOLOGY below with its source), drawn once and never animated
- * as if a live request were traveling — animating them would be
- * exactly the fabricated motion §NO_DECORATIVE_MOTION forbids.
+ * REAL_TOPOLOGY below with its source), never animated as if a live
+ * request were traveling — animating them would be exactly the
+ * fabricated motion §NO_DECORATIVE_MOTION forbids.
+ *
+ * §SUPERSEDES §NO_CAP_ON_VISIBILITY 2026-09-11 — James, live reference
+ * (BrainOS-v2.html's onNodeDiscovered/heartbeatLoop): a node does not
+ * exist on that canvas until a real probe/heartbeat confirms it —
+ * `clusters` starts empty, onNodeDiscovered() is the only thing that
+ * ever pushes into it. The prior rule here (draw every REAL_SYSTEMS/
+ * REAL_AGENTS node up front, dim if never wired) is explicitly
+ * overridden by that reference and by James's direct instruction:
+ * "blank unless the canvas detects the heartbeat." mount() below no
+ * longer draws any system/agent node or topology edge — it only
+ * records their real positions. A node's circle+label is created the
+ * first time pulse()/onRealEvent() fires for its real id (_ensureNode
+ * below) — same discipline as onNodeDiscovered, gated on a real signal,
+ * never drawn speculatively. A REAL_TOPOLOGY edge is drawn only once
+ * BOTH of its real endpoints have actually appeared this way.
  */
 (function (global) {
   'use strict';
@@ -108,7 +123,11 @@
 
   let _mounted = false;
   let _svg = null;
-  let _nodeEls = {}; // id -> {circle, pulseTimer} — fixed REAL_SYSTEMS/REAL_AGENTS nodes
+  let _nodeEls = {}; // id -> {circle, pulseTimer} — fixed REAL_SYSTEMS/REAL_AGENTS nodes, created lazily (see _ensureNode)
+  let _positions = {}; // id -> {x,y,port?,sysVar?} — real layout, computed once at mount, NOT drawn until _ensureNode fires
+  let _nodeGroup = null; // <g> parent for lazily-created system/agent nodes
+  let _lineGroup = null; // <g> parent for lazily-drawn REAL_TOPOLOGY edges
+  let _drawnEdges = {}; // "from|to" -> true, once an edge has been drawn (both endpoints real)
   let _meshLayer = null;
   let _meshNodeEls = {}; // dynamic mesh node id -> {g, circle, label, kind}
   let _meshNodeData = {}; // dynamic mesh node id -> the real last-known full data object
@@ -163,54 +182,27 @@
       id: 'brainos-route-arrow', viewBox: '0 0 10 10', refX: '9', refY: '5',
       markerWidth: '6', markerHeight: '6', orient: 'auto-start-reverse',
     });
-    const arrowPath = _svgEl('path', { d: 'M 0 0 L 10 5 L 0 10 z', fill: 'var(--idle, #4fc3f7)' });
+    const arrowPath = _svgEl('path', { d: 'M 0 0 L 10 5 L 0 10 z', fill: 'var(--idle, #ff6a00)' });
     marker.appendChild(arrowPath);
     defs.appendChild(marker);
     svg.appendChild(defs);
 
     const systems = _layoutCircle(REAL_SYSTEMS, width / 2, height / 2, 220);
-    const agents = _layoutCircle(REAL_AGENTS.map((id) => ({ id, sysVar: null })), width / 2, height / 2, 90);
-    const positions = {};
-    systems.concat(agents).forEach((n) => { positions[n.id] = n; });
+    const agentList = REAL_AGENTS.map((id) => ({ id, sysVar: null }));
+    const agents = _layoutCircle(agentList, width / 2, height / 2, 90);
+    const isAgentId = new Set(agentList.map((n) => n.id));
+    _positions = {};
+    systems.concat(agents).forEach((n) => { _positions[n.id] = { ...n, isAgent: isAgentId.has(n.id) }; });
 
-    // Static topology lines — drawn once, never re-lit per call (see header).
-    const lineGroup = _svgEl('g', { class: 'brainos-canvas-lines' });
-    for (const edge of REAL_TOPOLOGY) {
-      const a = positions[edge.from], b = positions[edge.to];
-      if (!a || !b) continue; // a named system not in either real list — skip, don't guess coordinates
-      const line = _svgEl('line', {
-        x1: a.x, y1: a.y, x2: b.x, y2: b.y,
-        stroke: 'var(--rim)', 'stroke-width': '1', class: 'brainos-canvas-edge',
-      });
-      const title = _svgEl('title', {});
-      title.textContent = edge.source;
-      line.appendChild(title);
-      lineGroup.appendChild(line);
-    }
-    svg.appendChild(lineGroup);
-
-    // Nodes — real systems (outer ring) + real agents (inner ring).
-    const nodeGroup = _svgEl('g', { class: 'brainos-canvas-nodes' });
-    for (const n of systems.concat(agents)) {
-      const g = _svgEl('g', { class: 'brainos-canvas-node', 'data-node-id': n.id });
-      const circle = _svgEl('circle', {
-        cx: n.x, cy: n.y, r: agents.includes(n) ? 10 : 14,
-        fill: n.sysVar ? _colorFor(n.sysVar) : 'var(--panel)',
-        stroke: n.sysVar ? _colorFor(n.sysVar) : 'var(--rim)',
-        'stroke-width': '1.5',
-        class: 'brainos-canvas-dot',
-      });
-      const label = _svgEl('text', {
-        x: n.x, y: n.y + (n.port ? 26 : 22), 'text-anchor': 'middle',
-        class: 'brainos-canvas-label',
-      });
-      label.textContent = n.id;
-      g.appendChild(circle);
-      g.appendChild(label);
-      nodeGroup.appendChild(g);
-      _nodeEls[n.id] = { circle, pulseTimer: null };
-    }
-    svg.appendChild(nodeGroup);
+    // §BLANK UNTIL DETECTED — real system/agent nodes and their topology
+    // edges are NOT drawn here. Only the (empty) parent groups are
+    // created; _ensureNode() populates a node's <g> the first time a
+    // real pulse arrives for it (see pulse()/_maybeDrawEdges() below).
+    _lineGroup = _svgEl('g', { class: 'brainos-canvas-lines' });
+    svg.appendChild(_lineGroup);
+    _nodeGroup = _svgEl('g', { class: 'brainos-canvas-nodes' });
+    svg.appendChild(_nodeGroup);
+    _drawnEdges = {};
 
     // §NEW 2026-09-06 — James: "brainos is important. do that next."
     // Dynamic mesh layer — agent-mesh's real, live, CHANGING node list
@@ -236,12 +228,98 @@
     return svg;
   }
 
+  // §BLANK UNTIL DETECTED — creates a real system/agent node's <g> the
+  // FIRST time a real signal for its id arrives. No-ops if the id isn't
+  // one of REAL_SYSTEMS/REAL_AGENTS (no fabricated node) or if it
+  // already exists. After creating, checks REAL_TOPOLOGY for any edge
+  // now satisfiable (both real endpoints present) and draws it.
+  function _ensureNode(nodeId) {
+    if (_nodeEls[nodeId]) return _nodeEls[nodeId];
+    const n = _positions[nodeId];
+    if (!n || !_nodeGroup) return null; // unrecognized id — no guessed node
+    const g = _svgEl('g', { class: 'brainos-canvas-node', 'data-node-id': n.id });
+    const circle = _svgEl('circle', {
+      cx: n.x, cy: n.y, r: n.isAgent ? 10 : 14,
+      fill: n.sysVar ? _colorFor(n.sysVar) : 'var(--panel)',
+      stroke: n.sysVar ? _colorFor(n.sysVar) : 'var(--rim)',
+      'stroke-width': '1.5',
+      class: 'brainos-canvas-dot',
+    });
+    const label = _svgEl('text', {
+      x: n.x, y: n.y + (n.port ? 26 : 22), 'text-anchor': 'middle',
+      class: 'brainos-canvas-label',
+    });
+    label.textContent = n.id;
+    g.appendChild(circle);
+    g.appendChild(label);
+    _nodeGroup.appendChild(g);
+    // §EXTENDED 2026-09-11 — James: "connect it to the agent mesh in
+    // clearglass." Fixed system/agent nodes previously had no
+    // interactivity at all — only the dynamic mesh layer (renderMeshView
+    // below) got click/context-menu/drag-to-connect. Same real handlers,
+    // same real callbacks (_onNodeClick/_onNodeContextMenu/_onNodeConnect
+    // — already wired in brainos-app.js to real GET/POST
+    // /agent-mesh/routes, /agent-mesh/spawn, /agent-mesh/route), applied
+    // here too. A REAL_AGENTS node (claude/chatgpt/etc.) is passed
+    // kind:'agent' so brainos-app.js's existing context-menu code (which
+    // branches on node.kind === 'agent' for Spawn/Dispatch) fires
+    // identically to how it already does for dynamic agent-kind mesh
+    // nodes — no new branch invented, the real one is reused.
+    const nodeData = { id: n.id, kind: n.isAgent ? 'agent' : 'system', label: n.id };
+    if (g.addEventListener) {
+      g.style && (g.style.cursor = 'pointer');
+      g.addEventListener('click', () => {
+        if (typeof _onNodeClick === 'function') _onNodeClick(nodeData);
+      });
+      g.addEventListener('contextmenu', (ev) => {
+        ev.preventDefault();
+        if (typeof _onNodeContextMenu === 'function') _onNodeContextMenu(nodeData, ev);
+      });
+      g.addEventListener('mousedown', (ev) => { ev.stopPropagation(); _dragFrom = n.id; });
+      g.addEventListener('mouseup', (ev) => {
+        ev.stopPropagation();
+        if (_dragFrom && _dragFrom !== n.id && typeof _onNodeConnect === 'function') {
+          _onNodeConnect(_dragFrom, n.id);
+        }
+        _dragFrom = null;
+      });
+    }
+    const entry = { circle, pulseTimer: null };
+    _nodeEls[nodeId] = entry;
+    _maybeDrawEdges();
+    return entry;
+  }
+
+  // Draws any REAL_TOPOLOGY edge whose both endpoints now exist
+  // (real, already-pulsed nodes) and hasn't been drawn yet. Never
+  // redrawn/animated per call — see header's §CONNECTIONS note.
+  function _maybeDrawEdges() {
+    if (!_lineGroup) return;
+    for (const edge of REAL_TOPOLOGY) {
+      const key = `${edge.from}|${edge.to}`;
+      if (_drawnEdges[key]) continue;
+      const a = _nodeEls[edge.from], b = _nodeEls[edge.to];
+      const ap = _positions[edge.from], bp = _positions[edge.to];
+      if (!a || !b || !ap || !bp) continue; // one endpoint hasn't been detected yet
+      const line = _svgEl('line', {
+        x1: ap.x, y1: ap.y, x2: bp.x, y2: bp.y,
+        stroke: 'var(--rim)', 'stroke-width': '1', class: 'brainos-canvas-edge',
+      });
+      const title = _svgEl('title', {});
+      title.textContent = edge.source;
+      line.appendChild(title);
+      _lineGroup.appendChild(line);
+      _drawnEdges[key] = true;
+    }
+  }
+
   // ── Real pulse — called only from a real event, never on a timer ─────────
   // §HONEST NAME — "pulse", not "heartbeat interval": there is no
   // interval. One real event in, one real, bounded CSS animation out,
-  // per §NO_DECORATIVE_MOTION.
+  // per §NO_DECORATIVE_MOTION. Now also the real detection point: a
+  // node's <g> is created here on its first pulse, not before.
   function pulse(nodeId) {
-    const entry = _nodeEls[nodeId];
+    const entry = _ensureNode(nodeId);
     if (!entry) return; // an unrecognized/unwired node id — no fabricated pulse
     entry.circle.classList.remove('brainos-pulse');
     // Force reflow so re-triggering the same node's pulse restarts the
@@ -262,9 +340,18 @@
     // Real, honest mapping — matches listMeshView()'s own real status
     // vocabulary (agent-mesh.js: 'alive'/'idle'/'dead' for nodes, real
     // agent health-derived status strings for agents), not invented.
-    if (status === 'alive' || status === 'connected' || status === 'ok') return 'var(--ok, #00ff88)';
-    if (status === 'idle') return 'var(--warn, #ffaa00)';
-    return 'var(--dim, #556)';
+    // §BUGFIX 2026-09-12, found while retheming — this referenced
+    // var(--ok, ...) and var(--dim, ...), neither ever declared in
+    // brainos-app.css (checked directly), so both silently ran on
+    // their hardcoded fallback literals forever, never the real
+    // theme — the exact class of bug already fixed for --rim
+    // (0.39.90) and --sys-* (this same pass). Every other real
+    // "alive/connected" status color in this file family (badges,
+    // the legend, brainos-app.js's own status color helper) already
+    // uses --online/--offline for this exact vocabulary; matched.
+    if (status === 'alive' || status === 'connected' || status === 'ok') return 'var(--online)';
+    if (status === 'idle') return 'var(--warn)';
+    return 'var(--offline)';
   }
 
   // §NEW 2026-09-06 — the real, live dynamic mesh render. Genuinely
@@ -439,6 +526,10 @@
   function unmount() {
     if (_svg) { _svg.remove(); _svg = null; }
     _nodeEls = {};
+    _positions = {};
+    _nodeGroup = null;
+    _lineGroup = null;
+    _drawnEdges = {};
     _meshLayer = null;
     _meshNodeEls = {};
     _meshNodeData = {};

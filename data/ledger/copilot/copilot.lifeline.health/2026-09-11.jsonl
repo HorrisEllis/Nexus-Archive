@@ -1,0 +1,1 @@
+{"uuid":"8efba55d-d72f-4d51-9f03-6122f75f7756","system":"copilot","component":"copilot.lifeline.health","action":"registered","status":"ok","tags":["copilot"],"detail":"Lifeline provider health","causedBy":"copilot","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1789169840218}

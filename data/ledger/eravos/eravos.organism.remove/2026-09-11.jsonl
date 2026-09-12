@@ -1,0 +1,1 @@
+{"uuid":"5d669bf1-8025-429b-9caa-bfe799c2a857","system":"eravos","component":"eravos.organism.remove","action":"registered","status":"ok","tags":["eravos"],"detail":"Remove an organism","causedBy":"eravos","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1789169840170}

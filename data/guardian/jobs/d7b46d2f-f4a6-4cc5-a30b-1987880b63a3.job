@@ -1,0 +1,44 @@
+envelope: 1
+uuid: nexus-export-job-d7b46d2f-f4a6-4cc5-a30b-1987880b63a3
+type: job
+id: d7b46d2f-f4a6-4cc5-a30b-1987880b63a3
+context: guardian real-time job dispatch
+intent: null
+summary: null
+system: guardian
+tags: []
+exported_at: 1789179652809
+source: nexus.lib.node-export
+payload:
+  id: d7b46d2f-f4a6-4cc5-a30b-1987880b63a3
+  command: ask
+  provider: claude
+  prompt: fsefse
+  content: null
+  source: null
+  tools:
+    - name: read_file
+      description: >-
+        Read a text file from the project by its path, relative to the project root. Returns the
+        file content as plain text.
+    - name: diagnose
+      description: >-
+        Diagnose the NEXUS system via the real diagnostic service. Actions: "status" (every system's
+        online/friction/sigma/open-gap state), "gaps" (
+    - name: system_priority
+      description: >-
+        Bottom-up, architecture-first priority for gaps and system health. Actions: "score" (needs
+        system, optional filePath/componentId/severity — 
+    - name: intent_hat
+      description: >-
+        Real, automatic intent-to-hat suggestion. Action "suggest" (needs prompt) classifies a
+        message's real verb and reports which real hat (the_d
+  hat: null
+  status: streaming
+  response: ''
+  ts: 1789179646692
+  updatedAt: 1789179652809
+  deliveredAt: 1789179646695
+  ackedAt: 1789179646823
+  confirmedAt: 1789179646850
+  lastChunk: 1789179652809

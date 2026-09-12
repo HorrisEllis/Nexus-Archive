@@ -60,13 +60,13 @@ spec:
       name: "auto-discovered nodes + right-click context menu on existing canvas"
       why_first: "highest leverage, zero new infra — system-registry.js + pulse-registry.js already produce exactly the real node/heartbeat data James asked for; the only real gap is a renderer + a context menu, on the canvas that already exists"
       scope: "GET endpoint aggregating system-registry.build() + pulse-registry state -> brainos-canvas.js renders one real node per entry (not the current hardcoded REAL_AGENTS/REAL_SYSTEMS arrays); right-click opens a real context menu with actions wired to already-real mechanisms only (spawn agent via mesh.spawn, open job via guardian, run macro, view userscript) — no action invented that lacks a real target function"
-      status: BUILDING (this session)
+      status: "DONE (v0.39.87) — §DRIFT-CORRECTED 2026-09-12: was still marked BUILDING; auto-discovered nodes + right-click context menu (onNodeContextMenu, spawn/respawn/dispatch actions) shipped in 0.39.87, confirmed present in brainos-canvas.js/brainos-app.js this pass, not re-verified beyond that"
 
     - phase: 2
       name: "node-to-node routing / pipeline edges"
       why_second: "depends on phase 1's real node objects existing on canvas to attach edges to"
       scope: "a drawn edge between two nodes creates a real, persisted routing rule (reuses lib/seam/ Stream/Gate primitives per WARP vocabulary, not a new pipeline engine) — 'feedback loop' = an edge whose target is its own source, same primitive, no special case"
-      status: SPECCED, not built
+      status: "DONE (v0.39.88) — §DRIFT-CORRECTED 2026-09-12: was still marked SPECCED, not built; clear-glass/src/mesh/route-graph.js + canvas drag-to-connect (onNodeConnect) shipped in 0.39.88, direct response-chaining only per that version's own stated scope (no per-edge filters/branching/transforms yet)"
 
     - phase: 3
       name: "node import/export"

@@ -202,7 +202,20 @@ function _updateField(patch) {
 
 // ── RAID state ────────────────────────────────────────────────────────────────
 // Lightweight routing table — full RAID is in cortex/core/raid (when present)
-const _raidHealth = { ollama: 100, guardian: 100, claude: 80, chatgpt: 75 };
+// §EXPANDED 2026-09-12 — James: "expand raid to fit all agents." Was
+// {ollama, guardian, claude, chatgpt} — a lightweight legacy table that
+// pre-dated agent-mesh's real 7-agent AGENT_REGISTRY (clear-glass/src/
+// mesh/agent-mesh.js: claude, chatgpt, gemini, perplexity, mistral,
+// deepseek, grok — confirmed there this session). guardian and ollama
+// are real too (guardian's own dispatch path, ollama-bridge's local
+// model) so both are kept alongside the full agent set, not replaced
+// by it. New agents start at a neutral 70 (matches this file's own
+// existing 70-100 "healthy" range used elsewhere) rather than 0 or 100,
+// since nothing has confirmed them healthy or unhealthy yet.
+const _raidHealth = {
+  ollama: 100, guardian: 100, claude: 80, chatgpt: 75,
+  gemini: 70, perplexity: 70, mistral: 70, deepseek: 70, grok: 70,
+};
 const _raidDecisions = [];
 
 function _raidDecide(intent, cfrCtx = {}) {
@@ -214,9 +227,12 @@ function _raidDecide(intent, cfrCtx = {}) {
     .filter(([, h]) => h >= 50)
     .sort(([, a], [, b]) => b - a);
 
-  // In chaotic regime, prefer faster providers
+  // In chaotic regime, prefer faster providers — ollama/guardian (local)
+  // first as before; the remaining real agents appended after them
+  // (not reasoned about here as faster/slower relative to each other,
+  // just no longer excluded from chaotic-regime routing entirely).
   const agentOrder = regime === 'chaotic'
-    ? ['ollama', 'guardian', 'claude', 'chatgpt']
+    ? ['ollama', 'guardian', 'claude', 'chatgpt', 'gemini', 'perplexity', 'mistral', 'deepseek', 'grok']
     : candidates.map(([k]) => k);
 
   const agent  = agentOrder[0] || 'ollama';

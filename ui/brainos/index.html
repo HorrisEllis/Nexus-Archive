@@ -74,11 +74,21 @@
 
 <div class="main">
 
-  <!-- LEFT SIDEBAR — real mesh nodes, from the same real listMeshView() data the canvas renders -->
-  <div class="sidebar">
-    <div class="sb-head">Mesh Nodes</div>
-    <div class="node-list" id="node-list">
-      <div class="empty-state">waiting for real data…</div>
+  <!-- LEFT SIDEBAR — §RESTRUCTURED 2026-09-12: James, "sidebars are tab
+       dependent not static." Content now swaps per active main tab
+       (setMainTab() in brainos-app.js toggles which .sb-section shows),
+       instead of always showing mesh nodes regardless of tab. -->
+  <div class="sidebar" id="sidebar">
+    <div class="sb-section act" id="sb-canvas">
+      <div class="sb-head">Mesh Nodes</div>
+      <div class="node-list" id="node-list">
+        <div class="empty-state">waiting for real data…</div>
+      </div>
+    </div>
+    <div class="sb-section" id="sb-automation">
+      <div class="sb-head">Workflows</div>
+      <div id="auto-wf-list"></div>
+      <button class="hbtn g" id="auto-new" style="width:100%;margin-top:8px">+ NEW WORKFLOW</button>
     </div>
   </div>
 
@@ -117,17 +127,17 @@
       </div>
     </div>
 
-    <!-- PIPELINE — real: GET cortex:3748/api/raid/queue -->
+    <!-- PIPELINE — real: clear-glass/src/mesh/route-graph.js -->
     <div class="panel-overlay" id="panel-pipeline">
-      <div class="panel-title">⌁ PIPELINE — RAID's real contract queue (dependsOn / onFail)</div>
+      <div class="panel-title">⌁ PIPELINE — real agent-chain builder (clear-glass/src/mesh/route-graph.js)</div>
       <div id="pipeline-body">
         <div class="empty-state">waiting for real data…</div>
       </div>
     </div>
 
-    <!-- AUTOMATION — real: window.ClearGlass.macros -->
+    <!-- AUTOMATION — real: clear-glass/src/mesh/automation-engine.js -->
     <div class="panel-overlay" id="panel-automation">
-      <div class="panel-title">▶ AUTOMATION — real, stored macros (clear-glass/macro.js)</div>
+      <div class="panel-title">▶ AUTOMATION — real workflow engine (clear-glass/src/mesh/automation-engine.js)</div>
       <div id="automation-body">
         <div class="empty-state">waiting for real data…</div>
       </div>
@@ -163,6 +173,7 @@
 </div>
 
 <script src="/ui/brainos/brainos-canvas.js"></script>
+<script src="/ui/brainos/brainos-automation.js"></script>
 <script src="/ui/brainos/brainos-app.js"></script>
 </body>
 </html>

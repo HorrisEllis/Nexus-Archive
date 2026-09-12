@@ -1,0 +1,1 @@
+{"uuid":"f7a09b38-8393-4b11-a7c0-69ab439b6522","system":"eravos","component":"eravos.contract","action":"registered","status":"ok","tags":["eravos"],"detail":"ERAVOS interaction contract","causedBy":"eravos","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1789169840182}

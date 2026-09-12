@@ -1,0 +1,1 @@
+{"uuid":"75c31613-267e-4e2c-8e3a-f8e2f73aa2e8","system":"cortex","component":"cortex.gaps.open","action":"registered","status":"ok","tags":["cortex","gaps"],"detail":"Open a new gap","causedBy":"cortex","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1789169841595}

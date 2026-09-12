@@ -1,0 +1,1 @@
+{"uuid":"4e89174c-6229-4ab5-aadf-6b8b4be0cebe","system":"copilot","component":"copilot.stream.ingest","action":"registered","status":"ok","tags":["copilot"],"detail":"Push events into co-pilot stream","causedBy":"copilot","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1789169840208}

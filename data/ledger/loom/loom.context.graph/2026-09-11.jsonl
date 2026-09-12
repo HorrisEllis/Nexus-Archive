@@ -1,0 +1,1 @@
+{"uuid":"b462d888-eb17-48f3-91f0-d49cbc5a6e9b","system":"loom","component":"loom.context.graph","action":"registered","status":"ok","tags":["loom"],"detail":"Context graph for a scope","causedBy":"loom","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1789169840271}

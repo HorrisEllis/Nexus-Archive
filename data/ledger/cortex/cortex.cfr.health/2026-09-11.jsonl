@@ -1,0 +1,1 @@
+{"uuid":"37fdd377-d0a2-43af-b4b3-c5467cfd116f","system":"cortex","component":"cortex.cfr.health","action":"registered","status":"ok","tags":["cortex"],"detail":"CFR field health — sigma, regime, coherence","causedBy":"cortex","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1789169841597}

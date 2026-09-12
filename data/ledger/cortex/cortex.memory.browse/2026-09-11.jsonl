@@ -1,0 +1,1 @@
+{"uuid":"19be0382-c389-4c51-8842-a79009252071","system":"cortex","component":"cortex.memory.browse","action":"registered","status":"ok","tags":["cortex","memory"],"detail":"Browse any JAA table","causedBy":"cortex","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1789169841590}

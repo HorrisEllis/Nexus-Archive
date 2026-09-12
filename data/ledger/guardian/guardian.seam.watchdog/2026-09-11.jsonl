@@ -1,0 +1,1 @@
+{"uuid":"dd5dbc8a-b9d9-489b-84b4-eea15563d03e","system":"guardian","component":"guardian.seam.watchdog","action":"registered","status":"ok","tags":["guardian"],"detail":"SEAM watchdog + stall detection","causedBy":"guardian","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1789169839930}

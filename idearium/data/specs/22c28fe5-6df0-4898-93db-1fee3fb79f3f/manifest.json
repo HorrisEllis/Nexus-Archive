@@ -18,10 +18,10 @@
   "ideaUuid": null,
   "totalChunks": 10,
   "doneChunks": 1,
-  "failedChunks": 0,
+  "failedChunks": 9,
   "progress": 10,
   "createdAt": 1788861641943,
-  "updatedAt": 1788861641958,
+  "updatedAt": 1789169957708,
   "completedAt": null,
   "archivePath": null,
   "templateId": null,
@@ -74,24 +74,26 @@
       "contract_id": "spec-contract:22c28fe5:purpose:f01cc334",
       "filePath": "/home/claude/nexus-chatlog-fix/idearium/data/specs/22c28fe5-6df0-4898-93db-1fee3fb79f3f/f01cc334-ef51-450c-a20c-2a37761774cc.md",
       "fileName": "01-purpose.md",
-      "status": "pending",
+      "status": "failed",
       "dependsOn": [
         "meta"
       ],
       "agent": "ollama",
       "agentModel": null,
-      "attempts": 0,
-      "failureMode": null,
+      "attempts": 1,
+      "failureMode": "axiom/cascade failure after 3 attempt(s)",
       "content": null,
       "byteSize": 0,
       "createdAt": 1788861641943,
-      "updatedAt": 1788861641943,
+      "updatedAt": 1789169837728,
       "completedAt": null,
       "tags": [
         "purpose",
         "component",
         "dep-test"
-      ]
+      ],
+      "jobId": null,
+      "dispatchDir": null
     },
     {
       "uuid": "da9b9469-65a7-4e2b-9f72-26fc2037b892",
@@ -105,24 +107,26 @@
       "contract_id": "spec-contract:22c28fe5:axioms:da9b9469",
       "filePath": "/home/claude/nexus-chatlog-fix/idearium/data/specs/22c28fe5-6df0-4898-93db-1fee3fb79f3f/da9b9469-65a7-4e2b-9f72-26fc2037b892.md",
       "fileName": "02-axioms.md",
-      "status": "pending",
+      "status": "failed",
       "dependsOn": [
         "meta"
       ],
       "agent": "claude",
       "agentModel": null,
-      "attempts": 0,
-      "failureMode": null,
+      "attempts": 1,
+      "failureMode": "axiom/cascade failure after 3 attempt(s)",
       "content": null,
       "byteSize": 0,
       "createdAt": 1788861641943,
-      "updatedAt": 1788861641943,
+      "updatedAt": 1789169852692,
       "completedAt": null,
       "tags": [
         "axioms",
         "component",
         "dep-test"
-      ]
+      ],
+      "jobId": null,
+      "dispatchDir": null
     },
     {
       "uuid": "3ea7a525-24ca-4cdb-8613-4e22e9e9e10f",
@@ -136,22 +140,24 @@
       "contract_id": "spec-contract:22c28fe5:schema:3ea7a525",
       "filePath": "/home/claude/nexus-chatlog-fix/idearium/data/specs/22c28fe5-6df0-4898-93db-1fee3fb79f3f/3ea7a525-24ca-4cdb-8613-4e22e9e9e10f.md",
       "fileName": "03-schema.md",
-      "status": "pending",
+      "status": "failed",
       "dependsOn": [],
       "agent": "deepseek",
       "agentModel": null,
-      "attempts": 0,
-      "failureMode": null,
+      "attempts": 1,
+      "failureMode": "axiom/cascade failure after 3 attempt(s)",
       "content": null,
       "byteSize": 0,
       "createdAt": 1788861641943,
-      "updatedAt": 1788861641943,
+      "updatedAt": 1789169867697,
       "completedAt": null,
       "tags": [
         "schema",
         "component",
         "dep-test"
-      ]
+      ],
+      "jobId": null,
+      "dispatchDir": null
     },
     {
       "uuid": "a47e9eaf-b769-42fa-a08b-e49820765eee",
@@ -165,22 +171,24 @@
       "contract_id": "spec-contract:22c28fe5:api:a47e9eaf",
       "filePath": "/home/claude/nexus-chatlog-fix/idearium/data/specs/22c28fe5-6df0-4898-93db-1fee3fb79f3f/a47e9eaf-b769-42fa-a08b-e49820765eee.md",
       "fileName": "04-api.md",
-      "status": "pending",
+      "status": "failed",
       "dependsOn": [],
       "agent": "claude",
       "agentModel": null,
-      "attempts": 0,
-      "failureMode": null,
+      "attempts": 1,
+      "failureMode": "axiom/cascade failure after 3 attempt(s)",
       "content": null,
       "byteSize": 0,
       "createdAt": 1788861641943,
-      "updatedAt": 1788861641943,
+      "updatedAt": 1789169882709,
       "completedAt": null,
       "tags": [
         "api",
         "component",
         "dep-test"
-      ]
+      ],
+      "jobId": null,
+      "dispatchDir": null
     },
     {
       "uuid": "9623ba62-414c-4b36-96b0-40ff327bbaf2",
@@ -194,22 +202,24 @@
       "contract_id": "spec-contract:22c28fe5:events:9623ba62",
       "filePath": "/home/claude/nexus-chatlog-fix/idearium/data/specs/22c28fe5-6df0-4898-93db-1fee3fb79f3f/9623ba62-414c-4b36-96b0-40ff327bbaf2.md",
       "fileName": "05-events.md",
-      "status": "pending",
+      "status": "failed",
       "dependsOn": [],
       "agent": "ollama",
       "agentModel": null,
-      "attempts": 0,
-      "failureMode": null,
+      "attempts": 1,
+      "failureMode": "axiom/cascade failure after 3 attempt(s)",
       "content": null,
       "byteSize": 0,
       "createdAt": 1788861641943,
-      "updatedAt": 1788861641943,
+      "updatedAt": 1789169897701,
       "completedAt": null,
       "tags": [
         "events",
         "component",
         "dep-test"
-      ]
+      ],
+      "jobId": null,
+      "dispatchDir": null
     },
     {
       "uuid": "2c221c80-1a2e-48d7-9fff-5dfb4141fd3e",
@@ -223,22 +233,24 @@
       "contract_id": "spec-contract:22c28fe5:integration:2c221c80",
       "filePath": "/home/claude/nexus-chatlog-fix/idearium/data/specs/22c28fe5-6df0-4898-93db-1fee3fb79f3f/2c221c80-1a2e-48d7-9fff-5dfb4141fd3e.md",
       "fileName": "06-integration.md",
-      "status": "pending",
+      "status": "failed",
       "dependsOn": [],
       "agent": "gemini",
       "agentModel": null,
-      "attempts": 0,
-      "failureMode": null,
+      "attempts": 1,
+      "failureMode": "axiom/cascade failure after 3 attempt(s)",
       "content": null,
       "byteSize": 0,
       "createdAt": 1788861641943,
-      "updatedAt": 1788861641943,
+      "updatedAt": 1789169912728,
       "completedAt": null,
       "tags": [
         "integration",
         "component",
         "dep-test"
-      ]
+      ],
+      "jobId": null,
+      "dispatchDir": null
     },
     {
       "uuid": "ad71ff4d-16a4-4fb5-bcfa-6805f6e378da",
@@ -252,22 +264,24 @@
       "contract_id": "spec-contract:22c28fe5:failure_modes:ad71ff4d",
       "filePath": "/home/claude/nexus-chatlog-fix/idearium/data/specs/22c28fe5-6df0-4898-93db-1fee3fb79f3f/ad71ff4d-16a4-4fb5-bcfa-6805f6e378da.md",
       "fileName": "07-failure_modes.md",
-      "status": "pending",
+      "status": "failed",
       "dependsOn": [],
       "agent": "claude",
       "agentModel": null,
-      "attempts": 0,
-      "failureMode": null,
+      "attempts": 1,
+      "failureMode": "axiom/cascade failure after 3 attempt(s)",
       "content": null,
       "byteSize": 0,
       "createdAt": 1788861641943,
-      "updatedAt": 1788861641943,
+      "updatedAt": 1789169927710,
       "completedAt": null,
       "tags": [
         "failure_modes",
         "component",
         "dep-test"
-      ]
+      ],
+      "jobId": null,
+      "dispatchDir": null
     },
     {
       "uuid": "d1b32287-17ff-44b9-8248-f70b01d98e65",
@@ -281,22 +295,24 @@
       "contract_id": "spec-contract:22c28fe5:build_order:d1b32287",
       "filePath": "/home/claude/nexus-chatlog-fix/idearium/data/specs/22c28fe5-6df0-4898-93db-1fee3fb79f3f/d1b32287-17ff-44b9-8248-f70b01d98e65.md",
       "fileName": "08-build_order.md",
-      "status": "pending",
+      "status": "failed",
       "dependsOn": [],
       "agent": "ollama",
       "agentModel": null,
-      "attempts": 0,
-      "failureMode": null,
+      "attempts": 1,
+      "failureMode": "axiom/cascade failure after 3 attempt(s)",
       "content": null,
       "byteSize": 0,
       "createdAt": 1788861641943,
-      "updatedAt": 1788861641943,
+      "updatedAt": 1789169942721,
       "completedAt": null,
       "tags": [
         "build_order",
         "component",
         "dep-test"
-      ]
+      ],
+      "jobId": null,
+      "dispatchDir": null
     },
     {
       "uuid": "1579f49b-075c-4955-87f9-14a618cccf8a",
@@ -310,22 +326,24 @@
       "contract_id": "spec-contract:22c28fe5:tests:1579f49b",
       "filePath": "/home/claude/nexus-chatlog-fix/idearium/data/specs/22c28fe5-6df0-4898-93db-1fee3fb79f3f/1579f49b-075c-4955-87f9-14a618cccf8a.md",
       "fileName": "09-tests.md",
-      "status": "pending",
+      "status": "failed",
       "dependsOn": [],
       "agent": "deepseek",
       "agentModel": null,
-      "attempts": 0,
-      "failureMode": null,
+      "attempts": 1,
+      "failureMode": "axiom/cascade failure after 3 attempt(s)",
       "content": null,
       "byteSize": 0,
       "createdAt": 1788861641943,
-      "updatedAt": 1788861641943,
+      "updatedAt": 1789169957707,
       "completedAt": null,
       "tags": [
         "tests",
         "component",
         "dep-test"
-      ]
+      ],
+      "jobId": null,
+      "dispatchDir": null
     }
   ]
 }

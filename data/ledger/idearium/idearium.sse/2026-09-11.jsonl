@@ -1,0 +1,1 @@
+{"uuid":"93d93a25-5824-40c9-9c11-4581908391ca","system":"idearium","component":"idearium.sse","action":"registered","status":"ok","tags":["idearium","stream"],"detail":"Live SSE event stream","causedBy":"idearium","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1789169839961}

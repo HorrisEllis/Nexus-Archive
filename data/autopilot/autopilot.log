@@ -487,3 +487,439 @@
 [2026-09-11T21:36:49.445Z] ── boot sequence complete — 2 phase(s)
 [2026-09-11T21:36:49.445Z] ── boot phase 1 — bgDiag
 [2026-09-11T21:36:49.445Z] [36m[bgDiag][0m starting — /usr/bin/node -e setTimeout(()=>{},9999)
+[2026-09-11T23:36:09.429Z] refreshing loom/data/registry.json in the background (real runtime ~4 min; boot does not wait for this) ...
+[2026-09-11T23:36:09.441Z] autopilot starting — supervising: orchestrator, cortex, guardian, idearium, architect, diagnostic, eravos, intelligence, intelligence-consumer, ollama-bridge, versionium, copilot, loom, clear-glass
+[2026-09-11T23:36:09.441Z] ── boot phase 1 — cortex
+[2026-09-11T23:36:09.442Z] [35m[cortex][0m starting — node cortex/boot.js
+[2026-09-11T23:36:09.470Z] ⚠ autopilot status server could not bind :7799 — already in use (another autopilot instance may still be running, or didn't fully release the port yet on a fast restart). Continuing boot WITHOUT the status server — guardian/cortex/etc. are unaffected, but /status, /spawn/:name, and /touch/:name won't be reachable until this is resolved (check for a zombie node process holding the port).
+[2026-09-11T23:36:09.475Z] [cortex] phase 1 gate passed — http://127.0.0.1:3748/health
+[2026-09-11T23:36:09.475Z] ── boot phase 2 — orchestrator, guardian, diagnostic
+[2026-09-11T23:36:09.475Z] [36m[orchestrator][0m starting — node orchestrator/orchestrator.js
+[2026-09-11T23:36:09.486Z] [32m[guardian][0m starting — node guardian/server.js
+[2026-09-11T23:36:09.497Z] [31m[diagnostic][0m starting — node service/nexus-diagnostic.js
+[2026-09-11T23:36:09.513Z] [diagnostic] phase 2 gate passed — http://127.0.0.1:7825/health
+[2026-09-11T23:36:09.514Z] [guardian] phase 2 gate passed — http://127.0.0.1:7820/health
+[2026-09-11T23:36:09.517Z] [orchestrator] phase 2 gate passed — http://127.0.0.1:9000/health
+[2026-09-11T23:36:09.518Z] ── boot phase 3 — idearium, architect, eravos, intelligence, ollama-bridge, versionium, copilot, loom, clear-glass
+[2026-09-11T23:36:09.518Z] [33m[idearium][0m starting — node idearium/api/index.js
+[2026-09-11T23:36:09.529Z] [34m[architect][0m starting — node architect/service.js
+[2026-09-11T23:36:09.543Z] [37m[eravos][0m starting — node eravos/server.js
+[2026-09-11T23:36:09.557Z] [36m[intelligence][0m starting — node intelligence/server.js
+[2026-09-11T23:36:09.572Z] [32m[ollama-bridge][0m starting — node ollama/server.js
+[2026-09-11T23:36:09.587Z] [33m[versionium][0m starting — node versionium/server.js
+[2026-09-11T23:36:09.600Z] [34m[copilot][0m starting — node copilot/server.js
+[2026-09-11T23:36:09.615Z] [31m[loom][0m starting — node loom/server.js
+[2026-09-11T23:36:09.630Z] [37m[clear-glass][0m starting — D:\Backups\Downloads\nexus-v0_39_91\nexus\node_modules\.bin\electron.cmd .
+[2026-09-11T23:36:09.670Z] [35m[cortex][0m [31mexited[0m code=1 signal=null — crashes in window: 1/6
+[2026-09-11T23:36:09.671Z] [35m[cortex][0m [31m§CIRCUIT BREAKER TRIPPED[0m — port already in use, likely an orphaned process from a previous run still bound to it. Retrying won't free someone else's port. Find and stop it, then restart autopilot. Windows: "Get-Process node | Stop-Process -Force" (kills ALL node processes) or "netstat -ano | findstr :<port>" → "taskkill /PID <pid> /F" for a single one.
+[2026-09-11T23:36:09.685Z] [loom] phase 3 gate passed — http://127.0.0.1:3752/health
+[2026-09-11T23:36:09.698Z] [37m[eravos][0m [31mexited[0m code=1 signal=null — crashes in window: 1/6
+[2026-09-11T23:36:09.698Z] [37m[eravos][0m [31m§CIRCUIT BREAKER TRIPPED[0m — port already in use, likely an orphaned process from a previous run still bound to it. Retrying won't free someone else's port. Find and stop it, then restart autopilot. Windows: "Get-Process node | Stop-Process -Force" (kills ALL node processes) or "netstat -ano | findstr :<port>" → "taskkill /PID <pid> /F" for a single one.
+[2026-09-11T23:36:09.700Z] [idearium] phase 3 gate passed — http://127.0.0.1:4800/health
+[2026-09-11T23:36:09.701Z] [eravos] phase 3 gate passed — http://127.0.0.1:3751/health
+[2026-09-11T23:36:09.701Z] [architect] phase 3 gate passed — http://127.0.0.1:3747/health
+[2026-09-11T23:36:09.702Z] [ollama-bridge] phase 3 gate passed — http://127.0.0.1:3749/health
+[2026-09-11T23:36:09.702Z] [copilot] phase 3 gate passed — http://127.0.0.1:3750/health
+[2026-09-11T23:36:09.703Z] [intelligence] phase 3 gate passed — http://127.0.0.1:3753/health
+[2026-09-11T23:36:09.703Z] [versionium] phase 3 gate passed — http://127.0.0.1:3754/health
+[2026-09-11T23:36:09.709Z] [clear-glass] phase 3 gate passed — http://127.0.0.1:7704/health
+[2026-09-11T23:36:09.709Z] ── boot phase 4 — intelligence-consumer
+[2026-09-11T23:36:09.710Z] [35m[intelligence-consumer][0m starting — node intelligence/consumer.js
+[2026-09-11T23:36:09.726Z] [intelligence-consumer] phase 4 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-09-11T23:36:09.727Z] ── boot sequence complete — 4 phase(s)
+[2026-09-11T23:36:09.727Z] running post-boot vitals check (tests/verify-ncp-agents.js — 8 real NCP/agent fixes)...
+[2026-09-11T23:36:09.745Z] [36m[orchestrator][0m [31mexited[0m code=1 signal=null — crashes in window: 1/6
+[2026-09-11T23:36:09.745Z] [36m[orchestrator][0m [31m§CIRCUIT BREAKER TRIPPED[0m — port already in use, likely an orphaned process from a previous run still bound to it. Retrying won't free someone else's port. Find and stop it, then restart autopilot. Windows: "Get-Process node | Stop-Process -Force" (kills ALL node processes) or "netstat -ano | findstr :<port>" → "taskkill /PID <pid> /F" for a single one.
+[2026-09-11T23:36:09.763Z] [32m[ollama-bridge][0m [31mexited[0m code=1 signal=null — crashes in window: 1/6
+[2026-09-11T23:36:09.763Z] [32m[ollama-bridge][0m [31m§CIRCUIT BREAKER TRIPPED[0m — port already in use, likely an orphaned process from a previous run still bound to it. Retrying won't free someone else's port. Find and stop it, then restart autopilot. Windows: "Get-Process node | Stop-Process -Force" (kills ALL node processes) or "netstat -ano | findstr :<port>" → "taskkill /PID <pid> /F" for a single one.
+[2026-09-11T23:36:09.765Z] [34m[architect][0m [31mexited[0m code=1 signal=null — crashes in window: 1/6
+[2026-09-11T23:36:09.765Z] [34m[architect][0m [31m§CIRCUIT BREAKER TRIPPED[0m — port already in use, likely an orphaned process from a previous run still bound to it. Retrying won't free someone else's port. Find and stop it, then restart autopilot. Windows: "Get-Process node | Stop-Process -Force" (kills ALL node processes) or "netstat -ano | findstr :<port>" → "taskkill /PID <pid> /F" for a single one.
+[2026-09-11T23:36:09.766Z] [36m[intelligence][0m [31mexited[0m code=1 signal=null — crashes in window: 1/6
+[2026-09-11T23:36:09.766Z] [36m[intelligence][0m [31m§CIRCUIT BREAKER TRIPPED[0m — port already in use, likely an orphaned process from a previous run still bound to it. Retrying won't free someone else's port. Find and stop it, then restart autopilot. Windows: "Get-Process node | Stop-Process -Force" (kills ALL node processes) or "netstat -ano | findstr :<port>" → "taskkill /PID <pid> /F" for a single one.
+[2026-09-11T23:36:09.776Z] [33m[versionium][0m [31mexited[0m code=1 signal=null — crashes in window: 1/6
+[2026-09-11T23:36:09.777Z] [33m[versionium][0m [31m§CIRCUIT BREAKER TRIPPED[0m — port already in use, likely an orphaned process from a previous run still bound to it. Retrying won't free someone else's port. Find and stop it, then restart autopilot. Windows: "Get-Process node | Stop-Process -Force" (kills ALL node processes) or "netstat -ano | findstr :<port>" → "taskkill /PID <pid> /F" for a single one.
+[2026-09-11T23:36:09.788Z] [34m[copilot][0m [31mexited[0m code=1 signal=null — crashes in window: 1/6
+[2026-09-11T23:36:09.789Z] [34m[copilot][0m [31m§CIRCUIT BREAKER TRIPPED[0m — port already in use, likely an orphaned process from a previous run still bound to it. Retrying won't free someone else's port. Find and stop it, then restart autopilot. Windows: "Get-Process node | Stop-Process -Force" (kills ALL node processes) or "netstat -ano | findstr :<port>" → "taskkill /PID <pid> /F" for a single one.
+[2026-09-11T23:36:09.849Z] [33m[idearium][0m [31mexited[0m code=1 signal=null — crashes in window: 1/6
+[2026-09-11T23:36:09.850Z] [33m[idearium][0m restarting in 1s (attempt 1)
+[2026-09-11T23:36:09.885Z] [31m[loom][0m [31mexited[0m code=1 signal=null — crashes in window: 1/6
+[2026-09-11T23:36:09.885Z] [31m[loom][0m [31m§CIRCUIT BREAKER TRIPPED[0m — port already in use, likely an orphaned process from a previous run still bound to it. Retrying won't free someone else's port. Find and stop it, then restart autopilot. Windows: "Get-Process node | Stop-Process -Force" (kills ALL node processes) or "netstat -ano | findstr :<port>" → "taskkill /PID <pid> /F" for a single one.
+[2026-09-11T23:36:09.994Z] [31m[diagnostic][0m [31mexited[0m code=1 signal=null — crashes in window: 1/6
+[2026-09-11T23:36:09.994Z] [31m[diagnostic][0m [31m§CIRCUIT BREAKER TRIPPED[0m — port already in use, likely an orphaned process from a previous run still bound to it. Retrying won't free someone else's port. Find and stop it, then restart autopilot. Windows: "Get-Process node | Stop-Process -Force" (kills ALL node processes) or "netstat -ano | findstr :<port>" → "taskkill /PID <pid> /F" for a single one.
+[2026-09-11T23:36:10.861Z] [33m[idearium][0m starting — node idearium/api/index.js
+[2026-09-11T23:36:11.133Z] [33m[idearium][0m [31mexited[0m code=1 signal=null — crashes in window: 2/6
+[2026-09-11T23:36:11.133Z] [33m[idearium][0m restarting in 2s (attempt 2)
+[2026-09-11T23:36:11.612Z] ✓ vitals check passed — ALL 9 REAL FIXES VERIFIED INTACT.
+[2026-09-11T23:36:13.137Z] [33m[idearium][0m starting — node idearium/api/index.js
+[2026-09-11T23:36:13.351Z] [33m[idearium][0m [31mexited[0m code=1 signal=null — crashes in window: 3/6
+[2026-09-11T23:36:13.351Z] [33m[idearium][0m restarting in 4s (attempt 3)
+[2026-09-11T23:36:13.742Z] [32m[guardian][0m [31mexited[0m code=1 signal=null — crashes in window: 1/6
+[2026-09-11T23:36:13.742Z] [32m[guardian][0m [31m§CIRCUIT BREAKER TRIPPED[0m — port already in use, likely an orphaned process from a previous run still bound to it. Retrying won't free someone else's port. Find and stop it, then restart autopilot. Windows: "Get-Process node | Stop-Process -Force" (kills ALL node processes) or "netstat -ano | findstr :<port>" → "taskkill /PID <pid> /F" for a single one.
+[2026-09-11T23:36:17.361Z] [33m[idearium][0m starting — node idearium/api/index.js
+[2026-09-11T23:36:17.641Z] [33m[idearium][0m [31mexited[0m code=1 signal=null — crashes in window: 4/6
+[2026-09-11T23:36:17.641Z] [33m[idearium][0m restarting in 8s (attempt 4)
+[2026-09-11T23:36:17.642Z] [37m[clear-glass][0m [31mexited[0m code=0 signal=null — crashes in window: 1/6
+[2026-09-11T23:36:17.645Z] [37m[clear-glass][0m restarting in 3s (attempt 1)
+[2026-09-11T23:36:20.648Z] [37m[clear-glass][0m starting — D:\Backups\Downloads\nexus-v0_39_91\nexus\node_modules\.bin\electron.cmd .
+[2026-09-11T23:36:22.485Z] [37m[clear-glass][0m [31mexited[0m code=0 signal=null — crashes in window: 2/6
+[2026-09-11T23:36:22.487Z] [37m[clear-glass][0m restarting in 3s (attempt 2)
+[2026-09-11T23:36:23.294Z] autopilot received SIGINT — stopping all kernels
+[2026-09-11T23:36:23.301Z] [35m[intelligence-consumer][0m stopped cleanly (autopilot shutdown)
+[2026-09-11T23:36:56.132Z] refreshing loom/data/registry.json in the background (real runtime ~4 min; boot does not wait for this) ...
+[2026-09-11T23:36:56.145Z] autopilot starting — supervising: orchestrator, cortex, guardian, idearium, architect, diagnostic, eravos, intelligence, intelligence-consumer, ollama-bridge, versionium, copilot, loom, clear-glass
+[2026-09-11T23:36:56.146Z] ── boot phase 1 — cortex
+[2026-09-11T23:36:56.147Z] [35m[cortex][0m starting — node cortex/boot.js
+[2026-09-11T23:36:56.180Z] ⚠ autopilot status server could not bind :7799 — already in use (another autopilot instance may still be running, or didn't fully release the port yet on a fast restart). Continuing boot WITHOUT the status server — guardian/cortex/etc. are unaffected, but /status, /spawn/:name, and /touch/:name won't be reachable until this is resolved (check for a zombie node process holding the port).
+[2026-09-11T23:36:56.189Z] [cortex] phase 1 gate passed — http://127.0.0.1:3748/health
+[2026-09-11T23:36:56.189Z] ── boot phase 2 — orchestrator, guardian, diagnostic
+[2026-09-11T23:36:56.189Z] [36m[orchestrator][0m starting — node orchestrator/orchestrator.js
+[2026-09-11T23:36:56.201Z] [32m[guardian][0m starting — node guardian/server.js
+[2026-09-11T23:36:56.216Z] [31m[diagnostic][0m starting — node service/nexus-diagnostic.js
+[2026-09-11T23:36:56.242Z] [diagnostic] phase 2 gate passed — http://127.0.0.1:7825/health
+[2026-09-11T23:36:56.244Z] [guardian] phase 2 gate passed — http://127.0.0.1:7820/health
+[2026-09-11T23:36:56.247Z] [orchestrator] phase 2 gate passed — http://127.0.0.1:9000/health
+[2026-09-11T23:36:56.247Z] ── boot phase 3 — idearium, architect, eravos, intelligence, ollama-bridge, versionium, copilot, loom, clear-glass
+[2026-09-11T23:36:56.247Z] [33m[idearium][0m starting — node idearium/api/index.js
+[2026-09-11T23:36:56.261Z] [34m[architect][0m starting — node architect/service.js
+[2026-09-11T23:36:56.274Z] [37m[eravos][0m starting — node eravos/server.js
+[2026-09-11T23:36:56.290Z] [36m[intelligence][0m starting — node intelligence/server.js
+[2026-09-11T23:36:56.308Z] [32m[ollama-bridge][0m starting — node ollama/server.js
+[2026-09-11T23:36:56.326Z] [33m[versionium][0m starting — node versionium/server.js
+[2026-09-11T23:36:56.342Z] [34m[copilot][0m starting — node copilot/server.js
+[2026-09-11T23:36:56.359Z] [31m[loom][0m starting — node loom/server.js
+[2026-09-11T23:36:56.383Z] [37m[clear-glass][0m starting — D:\Backups\Downloads\nexus-v0_39_91\nexus\node_modules\.bin\electron.cmd .
+[2026-09-11T23:36:56.416Z] [35m[cortex][0m [31mexited[0m code=1 signal=null — crashes in window: 1/6
+[2026-09-11T23:36:56.417Z] [35m[cortex][0m [31m§CIRCUIT BREAKER TRIPPED[0m — port already in use, likely an orphaned process from a previous run still bound to it. Retrying won't free someone else's port. Find and stop it, then restart autopilot. Windows: "Get-Process node | Stop-Process -Force" (kills ALL node processes) or "netstat -ano | findstr :<port>" → "taskkill /PID <pid> /F" for a single one.
+[2026-09-11T23:36:56.437Z] [37m[eravos][0m [31mexited[0m code=1 signal=null — crashes in window: 1/6
+[2026-09-11T23:36:56.438Z] [37m[eravos][0m [31m§CIRCUIT BREAKER TRIPPED[0m — port already in use, likely an orphaned process from a previous run still bound to it. Retrying won't free someone else's port. Find and stop it, then restart autopilot. Windows: "Get-Process node | Stop-Process -Force" (kills ALL node processes) or "netstat -ano | findstr :<port>" → "taskkill /PID <pid> /F" for a single one.
+[2026-09-11T23:36:56.440Z] [loom] phase 3 gate passed — http://127.0.0.1:3752/health
+[2026-09-11T23:36:56.442Z] [36m[orchestrator][0m [31mexited[0m code=1 signal=null — crashes in window: 1/6
+[2026-09-11T23:36:56.442Z] [36m[orchestrator][0m [31m§CIRCUIT BREAKER TRIPPED[0m — port already in use, likely an orphaned process from a previous run still bound to it. Retrying won't free someone else's port. Find and stop it, then restart autopilot. Windows: "Get-Process node | Stop-Process -Force" (kills ALL node processes) or "netstat -ano | findstr :<port>" → "taskkill /PID <pid> /F" for a single one.
+[2026-09-11T23:36:56.444Z] [idearium] phase 3 gate passed — http://127.0.0.1:4800/health
+[2026-09-11T23:36:56.444Z] [eravos] phase 3 gate passed — http://127.0.0.1:3751/health
+[2026-09-11T23:36:56.445Z] [architect] phase 3 gate passed — http://127.0.0.1:3747/health
+[2026-09-11T23:36:56.446Z] [ollama-bridge] phase 3 gate passed — http://127.0.0.1:3749/health
+[2026-09-11T23:36:56.446Z] [intelligence] phase 3 gate passed — http://127.0.0.1:3753/health
+[2026-09-11T23:36:56.447Z] [copilot] phase 3 gate passed — http://127.0.0.1:3750/health
+[2026-09-11T23:36:56.447Z] [versionium] phase 3 gate passed — http://127.0.0.1:3754/health
+[2026-09-11T23:36:56.448Z] [clear-glass] phase 3 gate passed — http://127.0.0.1:7704/health
+[2026-09-11T23:36:56.448Z] ── boot phase 4 — intelligence-consumer
+[2026-09-11T23:36:56.448Z] [35m[intelligence-consumer][0m starting — node intelligence/consumer.js
+[2026-09-11T23:36:56.467Z] [intelligence-consumer] phase 4 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-09-11T23:36:56.467Z] ── boot sequence complete — 4 phase(s)
+[2026-09-11T23:36:56.468Z] running post-boot vitals check (tests/verify-ncp-agents.js — 8 real NCP/agent fixes)...
+[2026-09-11T23:36:56.499Z] [32m[ollama-bridge][0m [31mexited[0m code=1 signal=null — crashes in window: 1/6
+[2026-09-11T23:36:56.500Z] [32m[ollama-bridge][0m [31m§CIRCUIT BREAKER TRIPPED[0m — port already in use, likely an orphaned process from a previous run still bound to it. Retrying won't free someone else's port. Find and stop it, then restart autopilot. Windows: "Get-Process node | Stop-Process -Force" (kills ALL node processes) or "netstat -ano | findstr :<port>" → "taskkill /PID <pid> /F" for a single one.
+[2026-09-11T23:36:56.516Z] [34m[architect][0m [31mexited[0m code=1 signal=null — crashes in window: 1/6
+[2026-09-11T23:36:56.516Z] [34m[architect][0m [31m§CIRCUIT BREAKER TRIPPED[0m — port already in use, likely an orphaned process from a previous run still bound to it. Retrying won't free someone else's port. Find and stop it, then restart autopilot. Windows: "Get-Process node | Stop-Process -Force" (kills ALL node processes) or "netstat -ano | findstr :<port>" → "taskkill /PID <pid> /F" for a single one.
+[2026-09-11T23:36:56.521Z] [33m[versionium][0m [31mexited[0m code=1 signal=null — crashes in window: 1/6
+[2026-09-11T23:36:56.521Z] [33m[versionium][0m [31m§CIRCUIT BREAKER TRIPPED[0m — port already in use, likely an orphaned process from a previous run still bound to it. Retrying won't free someone else's port. Find and stop it, then restart autopilot. Windows: "Get-Process node | Stop-Process -Force" (kills ALL node processes) or "netstat -ano | findstr :<port>" → "taskkill /PID <pid> /F" for a single one.
+[2026-09-11T23:36:56.523Z] [36m[intelligence][0m [31mexited[0m code=1 signal=null — crashes in window: 1/6
+[2026-09-11T23:36:56.523Z] [36m[intelligence][0m [31m§CIRCUIT BREAKER TRIPPED[0m — port already in use, likely an orphaned process from a previous run still bound to it. Retrying won't free someone else's port. Find and stop it, then restart autopilot. Windows: "Get-Process node | Stop-Process -Force" (kills ALL node processes) or "netstat -ano | findstr :<port>" → "taskkill /PID <pid> /F" for a single one.
+[2026-09-11T23:36:56.529Z] [34m[copilot][0m [31mexited[0m code=1 signal=null — crashes in window: 1/6
+[2026-09-11T23:36:56.529Z] [34m[copilot][0m [31m§CIRCUIT BREAKER TRIPPED[0m — port already in use, likely an orphaned process from a previous run still bound to it. Retrying won't free someone else's port. Find and stop it, then restart autopilot. Windows: "Get-Process node | Stop-Process -Force" (kills ALL node processes) or "netstat -ano | findstr :<port>" → "taskkill /PID <pid> /F" for a single one.
+[2026-09-11T23:36:56.584Z] [33m[idearium][0m [31mexited[0m code=1 signal=null — crashes in window: 1/6
+[2026-09-11T23:36:56.585Z] [33m[idearium][0m restarting in 1s (attempt 1)
+[2026-09-11T23:36:56.690Z] [31m[loom][0m [31mexited[0m code=1 signal=null — crashes in window: 1/6
+[2026-09-11T23:36:56.690Z] [31m[loom][0m [31m§CIRCUIT BREAKER TRIPPED[0m — port already in use, likely an orphaned process from a previous run still bound to it. Retrying won't free someone else's port. Find and stop it, then restart autopilot. Windows: "Get-Process node | Stop-Process -Force" (kills ALL node processes) or "netstat -ano | findstr :<port>" → "taskkill /PID <pid> /F" for a single one.
+[2026-09-11T23:36:56.711Z] [32m[guardian][0m [31mexited[0m code=1 signal=null — crashes in window: 1/6
+[2026-09-11T23:36:56.711Z] [32m[guardian][0m [31m§CIRCUIT BREAKER TRIPPED[0m — port already in use, likely an orphaned process from a previous run still bound to it. Retrying won't free someone else's port. Find and stop it, then restart autopilot. Windows: "Get-Process node | Stop-Process -Force" (kills ALL node processes) or "netstat -ano | findstr :<port>" → "taskkill /PID <pid> /F" for a single one.
+[2026-09-11T23:36:56.825Z] [31m[diagnostic][0m [31mexited[0m code=1 signal=null — crashes in window: 1/6
+[2026-09-11T23:36:56.825Z] [31m[diagnostic][0m [31m§CIRCUIT BREAKER TRIPPED[0m — port already in use, likely an orphaned process from a previous run still bound to it. Retrying won't free someone else's port. Find and stop it, then restart autopilot. Windows: "Get-Process node | Stop-Process -Force" (kills ALL node processes) or "netstat -ano | findstr :<port>" → "taskkill /PID <pid> /F" for a single one.
+[2026-09-11T23:36:57.597Z] [33m[idearium][0m starting — node idearium/api/index.js
+[2026-09-11T23:36:57.886Z] [33m[idearium][0m [31mexited[0m code=1 signal=null — crashes in window: 2/6
+[2026-09-11T23:36:57.886Z] [33m[idearium][0m restarting in 2s (attempt 2)
+[2026-09-11T23:36:58.436Z] [37m[clear-glass][0m [31mexited[0m code=0 signal=null — crashes in window: 1/6
+[2026-09-11T23:36:58.437Z] [37m[clear-glass][0m restarting in 3s (attempt 1)
+[2026-09-11T23:36:58.557Z] ✓ vitals check passed — ALL 9 REAL FIXES VERIFIED INTACT.
+[2026-09-11T23:36:59.896Z] [33m[idearium][0m starting — node idearium/api/index.js
+[2026-09-11T23:37:00.173Z] [33m[idearium][0m [31mexited[0m code=1 signal=null — crashes in window: 3/6
+[2026-09-11T23:37:00.175Z] [33m[idearium][0m restarting in 4s (attempt 3)
+[2026-09-11T23:37:01.451Z] [37m[clear-glass][0m starting — D:\Backups\Downloads\nexus-v0_39_91\nexus\node_modules\.bin\electron.cmd .
+[2026-09-11T23:37:01.868Z] autopilot received SIGINT — stopping all kernels
+[2026-09-11T23:37:01.874Z] [37m[clear-glass][0m stopped cleanly (autopilot shutdown)
+[2026-09-11T23:37:01.878Z] [35m[intelligence-consumer][0m stopped cleanly (autopilot shutdown)
+[2026-09-11T23:37:07.874Z] refreshing loom/data/registry.json in the background (real runtime ~4 min; boot does not wait for this) ...
+[2026-09-11T23:37:07.886Z] autopilot starting — supervising: orchestrator, cortex, guardian, idearium, architect, diagnostic, eravos, intelligence, intelligence-consumer, ollama-bridge, versionium, copilot, loom, clear-glass
+[2026-09-11T23:37:07.887Z] ── boot phase 1 — cortex
+[2026-09-11T23:37:07.889Z] [35m[cortex][0m starting — node cortex/boot.js
+[2026-09-11T23:37:07.922Z] autopilot status: http://127.0.0.1:7799/status
+[2026-09-11T23:37:16.586Z] [cortex] phase 1 gate passed — http://127.0.0.1:3748/health
+[2026-09-11T23:37:16.586Z] ── boot phase 2 — orchestrator, guardian, diagnostic
+[2026-09-11T23:37:16.587Z] [36m[orchestrator][0m starting — node orchestrator/orchestrator.js
+[2026-09-11T23:37:16.603Z] [32m[guardian][0m starting — node guardian/server.js
+[2026-09-11T23:37:16.619Z] [31m[diagnostic][0m starting — node service/nexus-diagnostic.js
+[2026-09-11T23:37:17.148Z] [guardian] phase 2 gate passed — http://127.0.0.1:7820/health
+[2026-09-11T23:37:17.149Z] [diagnostic] phase 2 gate passed — http://127.0.0.1:7825/health
+[2026-09-11T23:37:17.152Z] [orchestrator] phase 2 gate passed — http://127.0.0.1:9000/health
+[2026-09-11T23:37:17.153Z] ── boot phase 3 — idearium, architect, eravos, intelligence, ollama-bridge, versionium, copilot, loom, clear-glass
+[2026-09-11T23:37:17.153Z] [33m[idearium][0m starting — node idearium/api/index.js
+[2026-09-11T23:37:17.165Z] [34m[architect][0m starting — node architect/service.js
+[2026-09-11T23:37:17.177Z] [37m[eravos][0m starting — node eravos/server.js
+[2026-09-11T23:37:17.189Z] [36m[intelligence][0m starting — node intelligence/server.js
+[2026-09-11T23:37:17.204Z] [32m[ollama-bridge][0m starting — node ollama/server.js
+[2026-09-11T23:37:17.218Z] [33m[versionium][0m starting — node versionium/server.js
+[2026-09-11T23:37:17.231Z] [34m[copilot][0m starting — node copilot/server.js
+[2026-09-11T23:37:17.247Z] [31m[loom][0m starting — node loom/server.js
+[2026-09-11T23:37:17.263Z] [37m[clear-glass][0m starting — D:\Backups\Downloads\nexus-v0_39_91\nexus\node_modules\.bin\electron.cmd .
+[2026-09-11T23:37:17.297Z] [eravos] phase 3 gate passed — http://127.0.0.1:3751/health
+[2026-09-11T23:37:17.798Z] [idearium] phase 3 gate passed — http://127.0.0.1:4800/health
+[2026-09-11T23:37:17.800Z] [architect] phase 3 gate passed — http://127.0.0.1:3747/health
+[2026-09-11T23:37:17.802Z] [copilot] phase 3 gate passed — http://127.0.0.1:3750/health
+[2026-09-11T23:37:17.803Z] [loom] phase 3 gate passed — http://127.0.0.1:3752/health
+[2026-09-11T23:37:17.804Z] [ollama-bridge] phase 3 gate passed — http://127.0.0.1:3749/health
+[2026-09-11T23:37:17.804Z] [intelligence] phase 3 gate passed — http://127.0.0.1:3753/health
+[2026-09-11T23:37:17.805Z] [versionium] phase 3 gate passed — http://127.0.0.1:3754/health
+[2026-09-11T23:37:18.304Z] [clear-glass] phase 3 gate passed — http://127.0.0.1:7704/health
+[2026-09-11T23:37:18.305Z] ── boot phase 4 — intelligence-consumer
+[2026-09-11T23:37:18.308Z] [35m[intelligence-consumer][0m starting — node intelligence/consumer.js
+[2026-09-11T23:37:18.325Z] [intelligence-consumer] phase 4 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-09-11T23:37:18.325Z] ── boot sequence complete — 4 phase(s)
+[2026-09-11T23:37:18.327Z] running post-boot vitals check (tests/verify-ncp-agents.js — 8 real NCP/agent fixes)...
+[2026-09-11T23:37:20.878Z] ✓ vitals check passed — ALL 9 REAL FIXES VERIFIED INTACT.
+[2026-09-11T23:38:07.917Z] [35m[cortex][0m stable for 60s — backoff reset
+[2026-09-11T23:38:16.619Z] [36m[orchestrator][0m stable for 60s — backoff reset
+[2026-09-11T23:38:16.635Z] [32m[guardian][0m stable for 60s — backoff reset
+[2026-09-11T23:38:16.637Z] [31m[diagnostic][0m stable for 60s — backoff reset
+[2026-09-11T23:38:17.168Z] [33m[idearium][0m stable for 60s — backoff reset
+[2026-09-11T23:38:17.180Z] [34m[architect][0m stable for 60s — backoff reset
+[2026-09-11T23:38:17.192Z] [37m[eravos][0m stable for 60s — backoff reset
+[2026-09-11T23:38:17.240Z] [36m[intelligence][0m stable for 60s — backoff reset
+[2026-09-11T23:38:17.240Z] [32m[ollama-bridge][0m stable for 60s — backoff reset
+[2026-09-11T23:38:17.241Z] [33m[versionium][0m stable for 60s — backoff reset
+[2026-09-11T23:38:17.251Z] [34m[copilot][0m stable for 60s — backoff reset
+[2026-09-11T23:38:17.267Z] [31m[loom][0m stable for 60s — backoff reset
+[2026-09-11T23:38:17.292Z] [37m[clear-glass][0m stable for 60s — backoff reset
+[2026-09-11T23:38:18.330Z] [35m[intelligence-consumer][0m stable for 60s — backoff reset
+[2026-09-12T00:19:47.445Z] autopilot received SIGINT — stopping all kernels
+[2026-09-12T00:19:47.468Z] [33m[versionium][0m stopped cleanly (autopilot shutdown)
+[2026-09-12T00:19:47.469Z] [32m[ollama-bridge][0m stopped cleanly (autopilot shutdown)
+[2026-09-12T00:19:47.470Z] [35m[intelligence-consumer][0m stopped cleanly (autopilot shutdown)
+[2026-09-12T00:19:47.470Z] [37m[eravos][0m stopped cleanly (autopilot shutdown)
+[2026-09-12T00:19:47.474Z] [36m[intelligence][0m stopped cleanly (autopilot shutdown)
+[2026-09-12T00:19:47.474Z] [34m[architect][0m stopped cleanly (autopilot shutdown)
+[2026-09-12T00:19:47.477Z] [31m[loom][0m stopped cleanly (autopilot shutdown)
+[2026-09-12T00:19:47.483Z] [37m[clear-glass][0m stopped cleanly (autopilot shutdown)
+[2026-09-12T00:19:47.484Z] [32m[guardian][0m stopped cleanly (autopilot shutdown)
+[2026-09-12T00:19:47.485Z] [33m[idearium][0m stopped cleanly (autopilot shutdown)
+[2026-09-12T00:19:47.485Z] [34m[copilot][0m stopped cleanly (autopilot shutdown)
+[2026-09-12T00:19:47.487Z] [36m[orchestrator][0m stopped cleanly (autopilot shutdown)
+[2026-09-12T00:19:47.487Z] [31m[diagnostic][0m stopped cleanly (autopilot shutdown)
+[2026-09-12T00:19:47.488Z] [35m[cortex][0m stopped cleanly (autopilot shutdown)
+[2026-09-12T00:25:42.416Z] refreshing loom/data/registry.json in the background (real runtime ~4 min; boot does not wait for this) ...
+[2026-09-12T00:25:42.428Z] autopilot starting — supervising: orchestrator, cortex, guardian, idearium, architect, diagnostic, eravos, intelligence, intelligence-consumer, ollama-bridge, versionium, copilot, loom, clear-glass
+[2026-09-12T00:25:42.429Z] ── boot phase 1 — cortex
+[2026-09-12T00:25:42.429Z] [35m[cortex][0m starting — node cortex/boot.js
+[2026-09-12T00:25:42.610Z] autopilot status: http://127.0.0.1:7799/status
+[2026-09-12T00:25:43.301Z] [cortex] phase 1 gate passed — http://127.0.0.1:3748/health
+[2026-09-12T00:25:43.301Z] ── boot phase 2 — orchestrator, guardian, diagnostic
+[2026-09-12T00:25:43.301Z] [36m[orchestrator][0m starting — node orchestrator/orchestrator.js
+[2026-09-12T00:25:43.312Z] [32m[guardian][0m starting — node guardian/server.js
+[2026-09-12T00:25:43.323Z] [31m[diagnostic][0m starting — node service/nexus-diagnostic.js
+[2026-09-12T00:25:43.854Z] [diagnostic] phase 2 gate passed — http://127.0.0.1:7825/health
+[2026-09-12T00:25:43.855Z] [guardian] phase 2 gate passed — http://127.0.0.1:7820/health
+[2026-09-12T00:25:43.868Z] [orchestrator] phase 2 gate passed — http://127.0.0.1:9000/health
+[2026-09-12T00:25:43.870Z] ── boot phase 3 — idearium, architect, eravos, intelligence, ollama-bridge, versionium, copilot, loom, clear-glass
+[2026-09-12T00:25:43.870Z] [33m[idearium][0m starting — node idearium/api/index.js
+[2026-09-12T00:25:43.881Z] [34m[architect][0m starting — node architect/service.js
+[2026-09-12T00:25:43.893Z] [37m[eravos][0m starting — node eravos/server.js
+[2026-09-12T00:25:43.905Z] [36m[intelligence][0m starting — node intelligence/server.js
+[2026-09-12T00:25:43.917Z] [32m[ollama-bridge][0m starting — node ollama/server.js
+[2026-09-12T00:25:43.927Z] [33m[versionium][0m starting — node versionium/server.js
+[2026-09-12T00:25:43.939Z] [34m[copilot][0m starting — node copilot/server.js
+[2026-09-12T00:25:43.953Z] [31m[loom][0m starting — node loom/server.js
+[2026-09-12T00:25:43.967Z] [37m[clear-glass][0m starting — D:\Backups\Downloads\nexus-v0_39_91\nexus\node_modules\.bin\electron.cmd .
+[2026-09-12T00:25:43.995Z] [eravos] phase 3 gate passed — http://127.0.0.1:3751/health
+[2026-09-12T00:25:44.496Z] [idearium] phase 3 gate passed — http://127.0.0.1:4800/health
+[2026-09-12T00:25:44.497Z] [ollama-bridge] phase 3 gate passed — http://127.0.0.1:3749/health
+[2026-09-12T00:25:44.498Z] [copilot] phase 3 gate passed — http://127.0.0.1:3750/health
+[2026-09-12T00:25:44.499Z] [architect] phase 3 gate passed — http://127.0.0.1:3747/health
+[2026-09-12T00:25:44.505Z] [versionium] phase 3 gate passed — http://127.0.0.1:3754/health
+[2026-09-12T00:25:44.505Z] [intelligence] phase 3 gate passed — http://127.0.0.1:3753/health
+[2026-09-12T00:25:44.508Z] [loom] phase 3 gate passed — http://127.0.0.1:3752/health
+[2026-09-12T00:25:45.032Z] [clear-glass] phase 3 gate passed — http://127.0.0.1:7704/health
+[2026-09-12T00:25:45.033Z] ── boot phase 4 — intelligence-consumer
+[2026-09-12T00:25:45.033Z] [35m[intelligence-consumer][0m starting — node intelligence/consumer.js
+[2026-09-12T00:25:45.049Z] [intelligence-consumer] phase 4 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-09-12T00:25:45.050Z] ── boot sequence complete — 4 phase(s)
+[2026-09-12T00:25:45.051Z] running post-boot vitals check (tests/verify-ncp-agents.js — 8 real NCP/agent fixes)...
+[2026-09-12T00:25:47.482Z] ✓ vitals check passed — ALL 9 REAL FIXES VERIFIED INTACT.
+[2026-09-12T00:26:42.459Z] [35m[cortex][0m stable for 60s — backoff reset
+[2026-09-12T00:26:43.320Z] [36m[orchestrator][0m stable for 60s — backoff reset
+[2026-09-12T00:26:43.330Z] [32m[guardian][0m stable for 60s — backoff reset
+[2026-09-12T00:26:43.341Z] [31m[diagnostic][0m stable for 60s — backoff reset
+[2026-09-12T00:26:43.897Z] [33m[idearium][0m stable for 60s — backoff reset
+[2026-09-12T00:26:43.912Z] [34m[architect][0m stable for 60s — backoff reset
+[2026-09-12T00:26:43.912Z] [37m[eravos][0m stable for 60s — backoff reset
+[2026-09-12T00:26:43.927Z] [36m[intelligence][0m stable for 60s — backoff reset
+[2026-09-12T00:26:43.933Z] [32m[ollama-bridge][0m stable for 60s — backoff reset
+[2026-09-12T00:26:43.949Z] [33m[versionium][0m stable for 60s — backoff reset
+[2026-09-12T00:26:43.965Z] [34m[copilot][0m stable for 60s — backoff reset
+[2026-09-12T00:26:43.980Z] [31m[loom][0m stable for 60s — backoff reset
+[2026-09-12T00:26:43.995Z] [37m[clear-glass][0m stable for 60s — backoff reset
+[2026-09-12T00:26:45.062Z] [35m[intelligence-consumer][0m stable for 60s — backoff reset
+[2026-09-12T02:11:20.111Z] [35m[intelligence-consumer][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-09-12T02:11:20.114Z] [35m[intelligence-consumer][0m restarting in 1s (attempt 1)
+[2026-09-12T02:11:20.119Z] [31m[loom][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-09-12T02:11:20.120Z] [31m[loom][0m restarting in 1s (attempt 1)
+[2026-09-12T02:11:20.121Z] [33m[versionium][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-09-12T02:11:20.121Z] [33m[versionium][0m restarting in 1s (attempt 1)
+[2026-09-12T02:11:20.122Z] [32m[ollama-bridge][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-09-12T02:11:20.122Z] [32m[ollama-bridge][0m restarting in 1s (attempt 1)
+[2026-09-12T02:11:20.123Z] autopilot received SIGINT — stopping all kernels
+[2026-09-12T02:11:20.125Z] [37m[eravos][0m stopped cleanly (autopilot shutdown)
+[2026-09-12T02:11:20.126Z] [36m[intelligence][0m stopped cleanly (autopilot shutdown)
+[2026-09-12T02:11:20.126Z] [34m[architect][0m stopped cleanly (autopilot shutdown)
+[2026-09-12T02:11:20.135Z] [37m[clear-glass][0m stopped cleanly (autopilot shutdown)
+[2026-09-12T02:11:20.137Z] [33m[idearium][0m stopped cleanly (autopilot shutdown)
+[2026-09-12T02:11:20.138Z] [34m[copilot][0m stopped cleanly (autopilot shutdown)
+[2026-09-12T02:11:20.138Z] [32m[guardian][0m stopped cleanly (autopilot shutdown)
+[2026-09-12T02:11:20.146Z] [36m[orchestrator][0m stopped cleanly (autopilot shutdown)
+[2026-09-12T02:11:20.148Z] [31m[diagnostic][0m stopped cleanly (autopilot shutdown)
+[2026-09-12T02:11:20.154Z] [35m[cortex][0m stopped cleanly (autopilot shutdown)
+[2026-09-12T02:11:21.123Z] [35m[intelligence-consumer][0m starting — node intelligence/consumer.js
+[2026-09-12T02:11:21.133Z] [31m[loom][0m starting — node loom/server.js
+[2026-09-12T02:11:21.143Z] [33m[versionium][0m starting — node versionium/server.js
+[2026-09-12T02:11:21.154Z] [32m[ollama-bridge][0m starting — node ollama/server.js
+[2026-09-12T02:11:22.766Z] refreshing loom/data/registry.json in the background (real runtime ~4 min; boot does not wait for this) ...
+[2026-09-12T02:11:22.777Z] autopilot starting — supervising: orchestrator, cortex, guardian, idearium, architect, diagnostic, eravos, intelligence, intelligence-consumer, ollama-bridge, versionium, copilot, loom, clear-glass
+[2026-09-12T02:11:22.778Z] ── boot phase 1 — cortex
+[2026-09-12T02:11:22.779Z] [35m[cortex][0m starting — node cortex/boot.js
+[2026-09-12T02:11:23.212Z] autopilot status: http://127.0.0.1:7799/status
+[2026-09-12T02:11:31.894Z] [cortex] phase 1 gate passed — http://127.0.0.1:3748/health
+[2026-09-12T02:11:31.895Z] ── boot phase 2 — orchestrator, guardian, diagnostic
+[2026-09-12T02:11:31.896Z] [36m[orchestrator][0m starting — node orchestrator/orchestrator.js
+[2026-09-12T02:11:31.909Z] [32m[guardian][0m starting — node guardian/server.js
+[2026-09-12T02:11:31.921Z] [31m[diagnostic][0m starting — node service/nexus-diagnostic.js
+[2026-09-12T02:11:32.955Z] [diagnostic] phase 2 gate passed — http://127.0.0.1:7825/health
+[2026-09-12T02:11:32.958Z] [orchestrator] phase 2 gate passed — http://127.0.0.1:9000/health
+[2026-09-12T02:11:35.519Z] [guardian] phase 2 gate passed — http://127.0.0.1:7820/health
+[2026-09-12T02:11:35.520Z] ── boot phase 3 — idearium, architect, eravos, intelligence, ollama-bridge, versionium, copilot, loom, clear-glass
+[2026-09-12T02:11:35.520Z] [33m[idearium][0m starting — node idearium/api/index.js
+[2026-09-12T02:11:35.530Z] [34m[architect][0m starting — node architect/service.js
+[2026-09-12T02:11:35.540Z] [37m[eravos][0m starting — node eravos/server.js
+[2026-09-12T02:11:35.552Z] [36m[intelligence][0m starting — node intelligence/server.js
+[2026-09-12T02:11:35.564Z] [32m[ollama-bridge][0m starting — node ollama/server.js
+[2026-09-12T02:11:35.576Z] [33m[versionium][0m starting — node versionium/server.js
+[2026-09-12T02:11:35.589Z] [34m[copilot][0m starting — node copilot/server.js
+[2026-09-12T02:11:35.600Z] [31m[loom][0m starting — node loom/server.js
+[2026-09-12T02:11:35.612Z] [37m[clear-glass][0m starting — D:\Backups\Downloads\nexus-v0_39_91\nexus\node_modules\.bin\electron.cmd .
+[2026-09-12T02:11:36.141Z] [eravos] phase 3 gate passed — http://127.0.0.1:3751/health
+[2026-09-12T02:11:36.142Z] [ollama-bridge] phase 3 gate passed — http://127.0.0.1:3749/health
+[2026-09-12T02:11:36.294Z] [versionium] phase 3 gate passed — http://127.0.0.1:3754/health
+[2026-09-12T02:11:36.650Z] [idearium] phase 3 gate passed — http://127.0.0.1:4800/health
+[2026-09-12T02:11:36.651Z] [architect] phase 3 gate passed — http://127.0.0.1:3747/health
+[2026-09-12T02:11:36.655Z] [loom] phase 3 gate passed — http://127.0.0.1:3752/health
+[2026-09-12T02:11:36.681Z] [intelligence] phase 3 gate passed — http://127.0.0.1:3753/health
+[2026-09-12T02:11:37.396Z] [copilot] phase 3 gate passed — http://127.0.0.1:3750/health
+[2026-09-12T02:11:38.177Z] [clear-glass] phase 3 gate passed — http://127.0.0.1:7704/health
+[2026-09-12T02:11:38.178Z] ── boot phase 4 — intelligence-consumer
+[2026-09-12T02:11:38.181Z] [35m[intelligence-consumer][0m starting — node intelligence/consumer.js
+[2026-09-12T02:11:38.200Z] [intelligence-consumer] phase 4 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-09-12T02:11:38.200Z] ── boot sequence complete — 4 phase(s)
+[2026-09-12T02:11:38.201Z] running post-boot vitals check (tests/verify-ncp-agents.js — 8 real NCP/agent fixes)...
+[2026-09-12T02:11:41.253Z] ✓ vitals check passed — ALL 9 REAL FIXES VERIFIED INTACT.
+[2026-09-12T02:12:22.802Z] [35m[cortex][0m stable for 60s — backoff reset
+[2026-09-12T02:12:31.920Z] [36m[orchestrator][0m stable for 60s — backoff reset
+[2026-09-12T02:12:31.927Z] [32m[guardian][0m stable for 60s — backoff reset
+[2026-09-12T02:12:31.940Z] [31m[diagnostic][0m stable for 60s — backoff reset
+[2026-09-12T02:12:35.544Z] [33m[idearium][0m stable for 60s — backoff reset
+[2026-09-12T02:12:35.544Z] [34m[architect][0m stable for 60s — backoff reset
+[2026-09-12T02:12:35.554Z] [37m[eravos][0m stable for 60s — backoff reset
+[2026-09-12T02:12:35.575Z] [36m[intelligence][0m stable for 60s — backoff reset
+[2026-09-12T02:12:35.590Z] [32m[ollama-bridge][0m stable for 60s — backoff reset
+[2026-09-12T02:12:35.605Z] [33m[versionium][0m stable for 60s — backoff reset
+[2026-09-12T02:12:35.607Z] [34m[copilot][0m stable for 60s — backoff reset
+[2026-09-12T02:12:35.620Z] [31m[loom][0m stable for 60s — backoff reset
+[2026-09-12T02:12:35.636Z] [37m[clear-glass][0m stable for 60s — backoff reset
+[2026-09-12T02:12:38.205Z] [35m[intelligence-consumer][0m stable for 60s — backoff reset
+[2026-09-12T02:16:21.361Z] [35m[intelligence-consumer][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-09-12T02:16:21.362Z] [35m[intelligence-consumer][0m restarting in 1s (attempt 1)
+[2026-09-12T02:16:21.376Z] [31m[loom][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-09-12T02:16:21.377Z] [31m[loom][0m restarting in 1s (attempt 1)
+[2026-09-12T02:16:21.378Z] [32m[ollama-bridge][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-09-12T02:16:21.379Z] [32m[ollama-bridge][0m restarting in 1s (attempt 1)
+[2026-09-12T02:16:21.380Z] autopilot received SIGINT — stopping all kernels
+[2026-09-12T02:16:21.384Z] [33m[versionium][0m stopped cleanly (autopilot shutdown)
+[2026-09-12T02:16:21.392Z] [37m[eravos][0m stopped cleanly (autopilot shutdown)
+[2026-09-12T02:16:21.393Z] [37m[clear-glass][0m stopped cleanly (autopilot shutdown)
+[2026-09-12T02:16:21.394Z] [34m[copilot][0m stopped cleanly (autopilot shutdown)
+[2026-09-12T02:16:21.395Z] [34m[architect][0m stopped cleanly (autopilot shutdown)
+[2026-09-12T02:16:21.397Z] [33m[idearium][0m stopped cleanly (autopilot shutdown)
+[2026-09-12T02:16:21.401Z] [36m[intelligence][0m stopped cleanly (autopilot shutdown)
+[2026-09-12T02:16:21.402Z] [32m[guardian][0m stopped cleanly (autopilot shutdown)
+[2026-09-12T02:16:21.404Z] [35m[cortex][0m stopped cleanly (autopilot shutdown)
+[2026-09-12T02:16:21.414Z] [36m[orchestrator][0m stopped cleanly (autopilot shutdown)
+[2026-09-12T02:16:21.414Z] [31m[diagnostic][0m stopped cleanly (autopilot shutdown)
+[2026-09-12T02:16:22.376Z] [35m[intelligence-consumer][0m starting — node intelligence/consumer.js
+[2026-09-12T02:16:22.391Z] [31m[loom][0m starting — node loom/server.js
+[2026-09-12T02:16:22.399Z] [32m[ollama-bridge][0m starting — node ollama/server.js
+[2026-09-12T02:17:11.738Z] refreshing loom/data/registry.json in the background (real runtime ~4 min; boot does not wait for this) ...
+[2026-09-12T02:17:11.751Z] autopilot starting — supervising: orchestrator, cortex, guardian, idearium, architect, diagnostic, eravos, intelligence, intelligence-consumer, ollama-bridge, versionium, copilot, loom, clear-glass
+[2026-09-12T02:17:11.752Z] ── boot phase 1 — cortex
+[2026-09-12T02:17:11.753Z] [35m[cortex][0m starting — node cortex/boot.js
+[2026-09-12T02:17:12.218Z] autopilot status: http://127.0.0.1:7799/status
+[2026-09-12T02:17:12.946Z] [cortex] phase 1 gate passed — http://127.0.0.1:3748/health
+[2026-09-12T02:17:12.946Z] ── boot phase 2 — orchestrator, guardian, diagnostic
+[2026-09-12T02:17:12.947Z] [36m[orchestrator][0m starting — node orchestrator/orchestrator.js
+[2026-09-12T02:17:12.959Z] [32m[guardian][0m starting — node guardian/server.js
+[2026-09-12T02:17:12.970Z] [31m[diagnostic][0m starting — node service/nexus-diagnostic.js
+[2026-09-12T02:17:14.004Z] [guardian] phase 2 gate passed — http://127.0.0.1:7820/health
+[2026-09-12T02:17:14.004Z] [diagnostic] phase 2 gate passed — http://127.0.0.1:7825/health
+[2026-09-12T02:17:14.008Z] [orchestrator] phase 2 gate passed — http://127.0.0.1:9000/health
+[2026-09-12T02:17:14.009Z] ── boot phase 3 — idearium, architect, eravos, intelligence, ollama-bridge, versionium, copilot, loom, clear-glass
+[2026-09-12T02:17:14.009Z] [33m[idearium][0m starting — node idearium/api/index.js
+[2026-09-12T02:17:14.021Z] [34m[architect][0m starting — node architect/service.js
+[2026-09-12T02:17:14.031Z] [37m[eravos][0m starting — node eravos/server.js
+[2026-09-12T02:17:14.043Z] [36m[intelligence][0m starting — node intelligence/server.js
+[2026-09-12T02:17:14.054Z] [32m[ollama-bridge][0m starting — node ollama/server.js
+[2026-09-12T02:17:14.068Z] [33m[versionium][0m starting — node versionium/server.js
+[2026-09-12T02:17:14.082Z] [34m[copilot][0m starting — node copilot/server.js
+[2026-09-12T02:17:14.096Z] [31m[loom][0m starting — node loom/server.js
+[2026-09-12T02:17:14.109Z] [37m[clear-glass][0m starting — D:\Backups\Downloads\nexus-v0_39_91\nexus\node_modules\.bin\electron.cmd .
+[2026-09-12T02:17:14.139Z] [eravos] phase 3 gate passed — http://127.0.0.1:3751/health
+[2026-09-12T02:17:14.654Z] [ollama-bridge] phase 3 gate passed — http://127.0.0.1:3749/health
+[2026-09-12T02:17:15.061Z] [versionium] phase 3 gate passed — http://127.0.0.1:3754/health
+[2026-09-12T02:17:15.158Z] [architect] phase 3 gate passed — http://127.0.0.1:3747/health
+[2026-09-12T02:17:15.163Z] [clear-glass] phase 3 gate passed — http://127.0.0.1:7704/health
+[2026-09-12T02:17:15.164Z] [loom] phase 3 gate passed — http://127.0.0.1:3752/health
+[2026-09-12T02:17:15.165Z] [copilot] phase 3 gate passed — http://127.0.0.1:3750/health
+[2026-09-12T02:17:15.190Z] [idearium] phase 3 gate passed — http://127.0.0.1:4800/health
+[2026-09-12T02:17:15.390Z] [intelligence] phase 3 gate passed — http://127.0.0.1:3753/health
+[2026-09-12T02:17:15.391Z] ── boot phase 4 — intelligence-consumer
+[2026-09-12T02:17:15.391Z] [35m[intelligence-consumer][0m starting — node intelligence/consumer.js
+[2026-09-12T02:17:15.408Z] [intelligence-consumer] phase 4 — no healthUrl (no HTTP surface) — spawned, not verified
+[2026-09-12T02:17:15.409Z] ── boot sequence complete — 4 phase(s)
+[2026-09-12T02:17:15.410Z] running post-boot vitals check (tests/verify-ncp-agents.js — 8 real NCP/agent fixes)...
+[2026-09-12T02:17:18.619Z] ✓ vitals check passed — ALL 9 REAL FIXES VERIFIED INTACT.
+[2026-09-12T02:18:11.779Z] [35m[cortex][0m stable for 60s — backoff reset
+[2026-09-12T02:18:12.980Z] [36m[orchestrator][0m stable for 60s — backoff reset
+[2026-09-12T02:18:12.981Z] [32m[guardian][0m stable for 60s — backoff reset
+[2026-09-12T02:18:12.996Z] [31m[diagnostic][0m stable for 60s — backoff reset
+[2026-09-12T02:18:14.161Z] [33m[idearium][0m stable for 60s — backoff reset
+[2026-09-12T02:18:14.162Z] [34m[architect][0m stable for 60s — backoff reset
+[2026-09-12T02:18:14.164Z] [37m[eravos][0m stable for 60s — backoff reset
+[2026-09-12T02:18:14.164Z] [36m[intelligence][0m stable for 60s — backoff reset
+[2026-09-12T02:18:14.165Z] [32m[ollama-bridge][0m stable for 60s — backoff reset
+[2026-09-12T02:18:14.165Z] [33m[versionium][0m stable for 60s — backoff reset
+[2026-09-12T02:18:14.165Z] [34m[copilot][0m stable for 60s — backoff reset
+[2026-09-12T02:18:14.166Z] [31m[loom][0m stable for 60s — backoff reset
+[2026-09-12T02:18:14.166Z] [37m[clear-glass][0m stable for 60s — backoff reset
+[2026-09-12T02:18:15.425Z] [35m[intelligence-consumer][0m stable for 60s — backoff reset
+[2026-09-12T02:42:55.674Z] [35m[intelligence-consumer][0m [31mexited[0m code=3221225786 signal=null — crashes in window: 1/6
+[2026-09-12T02:42:55.680Z] [35m[intelligence-consumer][0m restarting in 1s (attempt 1)
+[2026-09-12T02:42:55.682Z] autopilot received SIGINT — stopping all kernels
+[2026-09-12T02:42:55.685Z] [33m[versionium][0m stopped cleanly (autopilot shutdown)
+[2026-09-12T02:42:55.686Z] [31m[loom][0m stopped cleanly (autopilot shutdown)
+[2026-09-12T02:42:55.687Z] [32m[ollama-bridge][0m stopped cleanly (autopilot shutdown)
+[2026-09-12T02:42:55.688Z] [37m[clear-glass][0m stopped cleanly (autopilot shutdown)
+[2026-09-12T02:42:55.694Z] [37m[eravos][0m stopped cleanly (autopilot shutdown)
+[2026-09-12T02:42:55.695Z] [36m[intelligence][0m stopped cleanly (autopilot shutdown)
+[2026-09-12T02:42:55.695Z] [34m[architect][0m stopped cleanly (autopilot shutdown)
+[2026-09-12T02:42:55.696Z] [33m[idearium][0m stopped cleanly (autopilot shutdown)
+[2026-09-12T02:42:55.702Z] [32m[guardian][0m stopped cleanly (autopilot shutdown)
+[2026-09-12T02:42:55.702Z] [36m[orchestrator][0m stopped cleanly (autopilot shutdown)
+[2026-09-12T02:42:55.707Z] [34m[copilot][0m stopped cleanly (autopilot shutdown)
+[2026-09-12T02:42:55.712Z] [31m[diagnostic][0m stopped cleanly (autopilot shutdown)
+[2026-09-12T02:42:55.720Z] [35m[cortex][0m stopped cleanly (autopilot shutdown)
+[2026-09-12T02:42:56.693Z] [35m[intelligence-consumer][0m starting — node intelligence/consumer.js

@@ -1,0 +1,1 @@
+{"uuid":"5fb7e0d9-ffc0-4e22-978b-4243c6dc104b","system":"idearium","component":"idearium.snapshot.restore","action":"registered","status":"ok","tags":["idearium"],"detail":"Restore state from a snapshot","causedBy":"idearium","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1789169840010}

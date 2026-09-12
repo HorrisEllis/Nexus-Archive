@@ -1,0 +1,1 @@
+{"uuid":"b063df65-7784-4030-8360-8d7d2b513dcf","system":"guardian","component":"guardian.settings.get","action":"registered","status":"ok","tags":["guardian"],"detail":"Guardian settings","causedBy":"guardian","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1789169839943}

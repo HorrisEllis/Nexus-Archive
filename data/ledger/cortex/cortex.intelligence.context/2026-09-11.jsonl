@@ -1,0 +1,1 @@
+{"uuid":"74a504ff-972f-4133-a066-02c97d880b7d","system":"cortex","component":"cortex.intelligence.context","action":"registered","status":"ok","tags":["cortex"],"detail":"Pre-request context for intent","causedBy":"cortex","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1789169841601}

@@ -1,0 +1,1 @@
+{"uuid":"08af51ce-ef9b-4410-9202-c759ed7ab352","system":"copilot","component":"copilot.axioms.remove","action":"registered","status":"ok","tags":["copilot"],"detail":"Remove a runtime axiom","causedBy":"copilot","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1789169840217}

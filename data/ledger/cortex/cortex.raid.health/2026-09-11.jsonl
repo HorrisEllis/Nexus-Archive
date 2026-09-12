@@ -1,0 +1,1 @@
+{"uuid":"2f6c51ee-df0e-44ac-826c-da0354adcf19","system":"cortex","component":"cortex.raid.health","action":"registered","status":"ok","tags":["cortex"],"detail":"RAID agent health + weights","causedBy":"cortex","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1789169841610}

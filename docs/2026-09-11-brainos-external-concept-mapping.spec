@@ -107,8 +107,8 @@ spec:
     - upload: "routing-engine.js / workflow-engine.js (if/then/when/fail chains, triggers: timer/cron/heartbeat/CLI/intent/data, per ROADMAP Phase 3)"
       concept: "conditional multi-step automation with triggers and branching"
       real_equivalent: "cortex/core/raid/ (real dependsOn/onFail contract dependency graph) + lib/seam/queue.js (real STRATEGY_ORDER retry/escalate state machine) + clear-glass/src/mesh/route-graph.js (real, just-built node-to-node pipeline edges, v0.39.88)"
-      status: GENUINE_GAP for the trigger/scheduler/branching layer specifically
-      real_gap: "NEXUS has real dependency graphs and real retry state machines, but no real cron/schedule/heartbeat-triggered workflow engine and no real visual condition/branch step editor anywhere. This is the one upload concept with no true NEXUS equivalent yet -- it's genuinely new work, matching docs/2026-09-11-brainos-agent-orchestration-phasemap.spec's own Phase 2 note that lib/seam/stream.js's Event/Gate/Stream primitives are 'the real next step if that's ever needed' for exactly this."
+      status: "CLOSED (v0.39.89, extended 0.39.91) — §DRIFT-CORRECTED 2026-09-12: was GENUINE_GAP for the trigger/scheduler/branching layer specifically"
+      real_gap: "Closed, not a live gap anymore: clear-glass/src/mesh/automation-engine.js (0.39.89) built real persisted workflows (data/brainos/workflows/*.workflow.json) with trigger/agent/delay steps dispatching through the same mesh.enqueue() path route-graph and the drainer already share; 0.39.91 added real condition steps (var/op/value against live mesh.listMeshView() data, no eval) and command steps (call a named real NEXUS system+endpoint), plus per-step CRUD and the floating panel's step editor. Deliberately still not built: branch/http/notification step types, named as real extensions in automation-engine.js's own header, not silently promised — carried forward as the one remaining piece of this original gap."
 
     - upload: "bridge-canvas-persistence.js (referenced for saving/loading canvas node+tunnel state as JSON)"
       concept: "persist canvas graph state"

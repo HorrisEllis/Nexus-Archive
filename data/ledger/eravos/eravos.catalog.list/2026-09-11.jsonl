@@ -1,0 +1,1 @@
+{"uuid":"7758c532-dfb1-4aa4-b9ff-b9a9506663a8","system":"eravos","component":"eravos.catalog.list","action":"registered","status":"ok","tags":["eravos"],"detail":"Available organisms from registry","causedBy":"eravos","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1789169840174}

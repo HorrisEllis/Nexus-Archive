@@ -31,9 +31,26 @@
       const el = document.getElementById('panel-' + tab);
       if (el) el.classList.add('act');
     }
+    // §RESTRUCTURED 2026-09-12 — James: "sidebars are tab dependent not
+    // static. pipeline is fullscreen." Sidebar content now swaps per
+    // tab (canvas -> mesh nodes, automation -> workflows, matching the
+    // reference's own layout); pipeline hides both the left sidebar and
+    // right panel entirely so the pipeline canvas gets the full width,
+    // same as the reference's PIPELINE view has neither.
+    const sidebar = document.getElementById('sidebar');
+    const rpanel = document.querySelector('.rpanel');
+    if (tab === 'pipeline') {
+      sidebar.style.display = 'none';
+      rpanel.style.display = 'none';
+    } else {
+      sidebar.style.display = '';
+      rpanel.style.display = '';
+      document.getElementById('sb-canvas').classList.toggle('act', tab === 'canvas');
+      document.getElementById('sb-automation').classList.toggle('act', tab === 'automation');
+    }
     if (tab === 'bayes') fetchBayes();
-    if (tab === 'pipeline') fetchPipeline();
-    if (tab === 'automation') fetchAutomation();
+    if (tab === 'pipeline') { fetchPipeline(); window.BrainOSAutomation.mountPipelinePanel(); }
+    if (tab === 'automation') { fetchAutomation(); window.BrainOSAutomation.mountAutomationPanel(); }
   }
   document.querySelectorAll('.tnav').forEach((t) => t.addEventListener('click', () => setMainTab(t.dataset.tab)));
 
@@ -107,6 +124,18 @@
     if (_ctxMenuEl) { _ctxMenuEl.remove(); _ctxMenuEl = null; }
     document.removeEventListener('click', _closeContextMenu);
   }
+  // §BUILT 2026-09-12 — mirrors automation-engine.js's own real
+  // SYSTEM_PORTS (same source brainos-canvas.js's REAL_SYSTEMS already
+  // duplicates by value) — needed here for the context menu's real Ping
+  // action against a fixed system node.
+  const REAL_SYSTEM_PORTS = {
+    guardian: 7820, ollama: 3749, copilot: 3750, clearglass: 7704,
+    orchestrator: 9000, cortex: 3748, architect: 3747, idearium: 4800,
+    emerge: 4242, loom: 3752, eravos: 3751, diagnostic: 7825,
+    versionium: 3754, autopilot: 7799, 'agent-mesh': 7704,
+  };
+  function _systemPort(id) { return REAL_SYSTEM_PORTS[id] || null; }
+
   function _openContextMenu(node, ev) {
     _closeContextMenu();
     const menu = document.createElement('div');
@@ -117,6 +146,16 @@
     ];
     if (node.kind === 'agent') {
       const agentKey = node.meta?.key || node.label;
+      // §BUILT 2026-09-12 — real per-provider chat URLs, guardian/lib/
+      // dispatcher.js's own provUrls map (used there when a job is
+      // queued waiting for a tab) — duplicated client-side by value,
+      // same convention brainos-canvas.js's REAL_SYSTEMS already uses,
+      // since this is a no-build-step static page.
+      const CHAT_URLS = {
+        claude: 'https://claude.ai/new', chatgpt: 'https://chatgpt.com/',
+        gemini: 'https://gemini.google.com/', perplexity: 'https://www.perplexity.ai/',
+        mistral: 'https://chat.mistral.ai/', deepseek: 'https://chat.deepseek.com/',
+      };
       items.push(
         { label: `Spawn / respawn ${_escapeHtml(agentKey)}`, run: () => {
             fetch(CLEARGLASS_URL + '/agent-mesh/spawn', {
@@ -134,9 +173,60 @@
             }).then((r) => r.json()).then((d) => log(d.ok ? `${agentKey} → ${(d.text || d.response || '').slice(0, 200)}` : `dispatch failed: ${d.error}`))
               .catch((e) => log(`dispatch failed: ${e.message}`));
           } },
+        // §BUILT 2026-09-12 — James: "diagnose, ping, start conversation,
+        // open the agent suite." Ping is a real, zero-cost read of the
+        // agent's own last-known status/latency from GET /agent-mesh/view
+        // — no new dispatch, no fabricated round-trip.
+        { label: `Ping ${_escapeHtml(agentKey)}`, run: () => {
+            fetch(CLEARGLASS_URL + '/agent-mesh/view').then((r) => r.json()).then((d) => {
+              const entry = (d.nodes || d.view || []).find((n) => n.id === agentKey || n.label === agentKey);
+              log(entry ? `${agentKey}: ${entry.status || 'unknown'}${entry.latency ? ` · ${entry.latency}ms` : ''}` : `${agentKey}: not in real mesh view`);
+            }).catch((e) => log(`ping failed: ${e.message}`));
+          } },
+        { label: `Diagnose ${_escapeHtml(agentKey)}`, run: () => {
+            fetch(DIAGNOSTIC_URL + '/status').then((r) => r.json()).then((d) => {
+              const entry = d.summary?.[agentKey];
+              log(entry ? `${agentKey}: friction ${entry.friction ?? '—'} · sigma ${entry.sigma ?? '—'} · gaps ${entry.openGaps ?? '—'}` : `diagnostic has no real entry for "${agentKey}" — it monitors named SYSTEMS (guardian, cortex, etc.), not individual agents`);
+            }).catch((e) => log(`diagnose failed: ${e.message}`));
+          } },
+        // §HONEST — opens the agent's REAL chat tab (guardian/lib/
+        // dispatcher.js's own URL, a plain new browser tab) only if
+        // that provider has one; not fabricated for providers with none.
+        CHAT_URLS[agentKey] ? { label: `Start conversation with ${_escapeHtml(agentKey)}`, run: () => window.open(CHAT_URLS[agentKey], '_blank') } : null,
+        // §HONEST NAME — see clear-glass/src/main/index.js's own comment
+        // on this route: this opens the real API/account settings
+        // window, not a per-agent prompt/behavior editor (no such editor
+        // exists in this codebase). Named for what it actually does.
+        { label: `Open agent settings…`, run: () => {
+            fetch(CLEARGLASS_URL + '/window/settings', { method: 'POST' }).then((r) => r.json())
+              .then((d) => log(d.ok ? 'opened settings window' : `settings failed: ${d.error}`))
+              .catch((e) => log(`settings failed: ${e.message} — this route only responds from inside clear-glass's own process`));
+          } },
+      );
+    } else if (node.kind === 'system') {
+      // §BUILT 2026-09-12 — same real actions for a fixed REAL_SYSTEMS
+      // node (guardian/cortex/etc.): Diagnose reads that system's real
+      // diagnostic summary; Ping is a real GET to that system's own
+      // /health, using the exact port brainos-canvas.js's REAL_SYSTEMS
+      // already carries — reused here via a lookup, not re-derived.
+      items.push(
+        { label: `Ping ${_escapeHtml(node.id)}`, run: () => {
+            const port = _systemPort(node.id);
+            if (!port) { log(`${node.id}: no real port known`); return; }
+            const t0 = Date.now();
+            fetch(`http://127.0.0.1:${port}/health`).then((r) => { log(`${node.id}: ${r.ok ? 'OK' : 'HTTP ' + r.status} · ${Date.now() - t0}ms`); })
+              .catch((e) => log(`${node.id}: unreachable (${e.message})`));
+          } },
+        { label: `Diagnose ${_escapeHtml(node.id)}`, run: () => {
+            fetch(DIAGNOSTIC_URL + '/status').then((r) => r.json()).then((d) => {
+              const entry = d.summary?.[node.id];
+              log(entry ? `${node.id}: friction ${entry.friction ?? '—'} · sigma ${entry.sigma ?? '—'} · gaps ${entry.openGaps ?? '—'}` : `diagnostic has no real entry for "${node.id}"`);
+            }).catch((e) => log(`diagnose failed: ${e.message}`));
+          } },
       );
     }
     for (const it of items) {
+      if (!it) continue; // a conditionally-omitted real action (e.g. no known chat URL) — not a menu item, not a broken one
       const row = document.createElement('div');
       row.className = 'brainos-ctx-menu-item';
       row.textContent = it.label;
@@ -211,6 +301,26 @@
         if (data.type === 'mesh.nodes.snapshot' && Array.isArray(data.nodes)) {
           data.nodes.forEach((n) => { _meshNodes[n.id] = n; });
           renderSidebar();
+        }
+      }
+      // §WIRED 2026-09-11 — James: "wire it all in." automation.* events
+      // (automation.notify, automation.log, automation.run.*,
+      // automation.branch.dispatched) were already reaching this exact
+      // real SSE connection the whole time — automation-engine.js's
+      // busEmit is wired straight to agent-mesh's this.sse.emit()
+      // (clear-glass/src/mesh/agent-mesh.js line ~198), same real
+      // stream mesh.* events already use. This handler's own filter was
+      // silently dropping every one of them; nothing new to build on
+      // the server side, only the missing branch here. automation.notify
+      // is now a real toast via this file's own existing log()
+      // mechanism — the "toast channel needs a real listener" gap named
+      // last turn is that listener.
+      if (typeof data?.type === 'string' && data.type.startsWith('automation.')) {
+        if (data.type === 'automation.notify') {
+          log(`${data.level && data.level !== 'info' ? data.level.toUpperCase() + ': ' : ''}${data.message || ''}`);
+        }
+        if (window.BrainOSAutomation && typeof window.BrainOSAutomation.onRealEvent === 'function') {
+          window.BrainOSAutomation.onRealEvent(data);
         }
       }
     };

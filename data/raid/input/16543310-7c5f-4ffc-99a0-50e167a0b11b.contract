@@ -1,0 +1,77 @@
+envelope: 1
+uuid: nexus-export-contract-16543310-7c5f-4ffc-99a0-50e167a0b11b
+type: contract
+id: 16543310-7c5f-4ffc-99a0-50e167a0b11b
+context: null
+intent: build
+summary: null
+system: null
+tags: []
+exported_at: 1789169882622
+source: idearium
+payload:
+  uuid: 16543310-7c5f-4ffc-99a0-50e167a0b11b
+  status: queued
+  intention: build
+  dir: null
+  language: null
+  stage: queued
+  system: null
+  source: idearium
+  sourceDropId: null
+  boundary:
+    key: idearium:build
+    primitive: idearium.spec-engine (MODULE_ID)
+    invariants: []
+    principles:
+      - §2.2
+      - §3.1
+  file: null
+  title: api
+  forAgent: claude
+  contract:
+    content: |-
+      You are building the "API & Routes" section of a NEXUS component spec.
+      SPEC CONTEXT:
+        Name: checklist-demo
+        Type: component
+        Description: (none provided)
+        UUID: 07c37e3e-76e8-41eb-aba3-fa02a9e92476
+        Chunk: 5/10
+        Section: api
+        comp_id: idearium.spec-engine
+        seam_id: idearium.spec-engine:v1:chunk:07c37e3e:api
+        contract_id: spec-contract:07c37e3e:api:f6f97e48
+      SYSTEM STATE:
+      ## NEXUS System Context
+
+      **Guardian:** up 1min · 0 jobs
+
+      **Open Gaps:** none
+
+      PREVIOUSLY COMPLETED SECTIONS:
+      ### Meta & Identity
+      real content for the first chunk
+
+      YOUR TASK:
+      Write the "API & Routes" section for this spec.
+      HTTP routes, request/response shapes, error codes
+      Requirements:
+      - Be specific to "checklist-demo" — not generic
+      - Reference AXIOMS-v1.0 where relevant
+      - Every UUID/seam_id/comp_id should follow the NEXUS naming convention
+      - §1.2: declare all failure modes explicitly
+      - §2.1: declare all JAA writes that must happen before behavior
+      - Output ONLY the section content — no preamble, no "here is the section:"
+    file: null
+    title: api
+    forAgent: claude
+  dependsOn: []
+  onFail:
+    action: retry
+    maxRetries: 2
+  retryCount: 0
+  compartmentId: null
+  verdict: null
+  createdAt: 1789169882622
+  updatedAt: 1789169882622
