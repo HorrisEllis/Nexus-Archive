@@ -575,11 +575,11 @@ test('_cluster returns general for unknown', () => {
   assert.strictEqual(_cluster(undefined), 'general');
 });
 
-test('_decide with Ollama online → LAW_I routes to ollama', () => {
+test('_decide with only Ollama online → chain fallback routes to ollama (no longer LAW_I, §DEFAULT-AGENT-CHANGE 2026-09-02)', () => {
   const health = { ollama: { online: true, consecutiveFails: 0 } };
   const d = _decide({ prompt: 'build code' }, health, new Map());
   assert.strictEqual(d.agent, 'ollama');
-  assert.ok(d.reason.startsWith('LAW_I'));
+  assert.ok(d.reason.startsWith('cluster_chain'), `ollama is reached via the chain fallback now that LAW_I is chatgpt-first, not LAW_I itself; got reason: ${d.reason}`);
 });
 
 test('_decide with Ollama offline (3+ fails) → claude (via the guardian-claude health key)', () => {
@@ -600,14 +600,14 @@ test('_decide with Ollama offline (3+ fails) → claude (via the guardian-claude
   assert.ok(d.reason.includes('cluster_chain'));
 });
 
-test('_decide with guardian-claude online but ollama still used (LAW_I)', () => {
-  // LAW_I means ollama MUST be tried first even when guardian is available
+test('_decide with guardian-claude online and ollama online → cluster_chain fitness picks ollama (§DEFAULT-AGENT-CHANGE 2026-09-02: no longer LAW_I -- chatgpt/gemini are LAW_I now, both absent from this fixture, so this falls through to the fitness-ranked chain; ollama winning here is a fitness-score outcome for this specific fixture, not a guarantee)', () => {
   const health = {
     ollama:            { online: true,  consecutiveFails: 0 },
     'guardian-claude': { online: true,  consecutiveFails: 0 },
   };
   const d = _decide({ prompt: 'code' }, health, new Map());
-  assert.strictEqual(d.agent, 'ollama'); // LAW_I enforced
+  assert.strictEqual(d.agent, 'ollama');
+  assert.ok(d.reason.startsWith('cluster_chain'), `expected cluster_chain fitness ranking (LAW_I no longer applies to ollama), got reason: ${d.reason}`);
 });
 
 test('_decide is deterministic — same inputs → same output (10 runs)', () => {

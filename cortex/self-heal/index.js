@@ -157,6 +157,83 @@ function _attemptLevel3(gapType, gapUuid) {
   return { level: 3, outcome: 'no_findings' };
 }
 
+// ── Level 4 context gathering — real data, not a guess ─────────────────────────
+// §CONTEXT-WIRE 2026-09-02, RE-APPLIED 2026-09-11 (this regressed out of an
+// earlier merge and is being restored here) — James: the level-4 contract
+// needs the events leading up to the gap, any dangling hooks on the same
+// system, the real file/dir, and what the system is supposed to do vs
+// what it's actually doing — not just a faultClass string an agent has to
+// go rediscover from scratch. Every piece below already exists as real,
+// working code (gapField.explainWhy → intelligence/relational-field's
+// real causal chain; gapField.openGaps for sibling dangling-hook gaps;
+// the gap row's own file/system fields) — this assembles them, it
+// invents nothing new. Checked against the CURRENT lib/gap-field.js
+// before restoring (openGaps/explainWhy signatures unchanged since this
+// was first built).
+// Async because explainFinding's causal-field read is async; kept OUT of
+// the synchronous failure_modes write below so a slow/unavailable causal
+// field can never delay the one thing that must never be lost (§0.3).
+async function _gatherFailureContext(gapType, gapUuid) {
+  const ctx = { gapType, gapUuid, root: null, conditions: [], siblingDanglingHooks: [], file: null, dir: null, system: null, detail: null, expected: null };
+  let gapRow = null;
+  try {
+    const gapField = require('../../lib/gap-field');
+    gapRow = gapField.openGaps({ limit: 10000 }).find(g => g.uuid === gapUuid) || null;
+    if (gapRow) {
+      ctx.system = gapRow.source || gapRow.system || null;
+      ctx.file = gapRow.file || gapRow.modulePath || null;
+      ctx.dir = ctx.file ? require('path').dirname(ctx.file) : null;
+      ctx.detail = gapRow.body || gapRow.detail || null;
+    }
+    const why = await gapField.explainWhy(gapUuid, {});
+    if (why?.ok && why.why?.available) {
+      ctx.root = why.why.root || null;
+      ctx.conditions = why.why.conditions || [];
+    }
+    if (ctx.system) {
+      ctx.siblingDanglingHooks = gapField.openGaps({ domain: 'system', limit: 10000 })
+        .filter(g => g.type === 'dangling-hook' && (g.source === ctx.system))
+        .map(g => ({ hookId: g.meta?.hookId || null, direction: g.meta?.direction || null, detail: g.body || null }));
+    }
+  } catch (e) {
+    ctx.gatherError = e.message; // honest: partial/no context is reported as such below, never silently omitted
+  }
+  if (ctx.system) {
+    try {
+      const specPath = require('path').join(__dirname, '../../docs', `${ctx.system}.spec`);
+      if (require('fs').existsSync(specPath)) {
+        const raw = require('fs').readFileSync(specPath, 'utf8');
+        const purpose = (raw.match(/purpose:\s*(.+)/) || [])[1];
+        ctx.expected = purpose ? purpose.trim() : '(spec exists but has no purpose: line)';
+      } else {
+        ctx.expected = `(no docs/${ctx.system}.spec exists — LM1 living-model phasemap tracks this)`;
+      }
+    } catch (e) { ctx.expected = `(spec lookup failed: ${e.message})`; }
+  }
+  return ctx;
+}
+
+function _formatFailureContext(ctx) {
+  const lines = [];
+  lines.push(`SYSTEM: ${ctx.system || '(unknown — gap row had no source/system field)'}`);
+  lines.push(`FILE/DIR: ${ctx.file || '(none recorded)'}${ctx.dir ? ` (dir: ${ctx.dir})` : ''}`);
+  lines.push(`SUPPOSED TO DO: ${ctx.expected || '(not looked up)'}`);
+  lines.push(`DOING INSTEAD: ${ctx.detail || '(no detail on the gap row)'}`);
+  if (ctx.root || ctx.conditions.length) {
+    lines.push(`EVENTS LEADING UP TO IT (real causal chain, not a guess):`);
+    if (ctx.root) lines.push(`  root: ${JSON.stringify(ctx.root)}`);
+    for (const c of ctx.conditions.slice(0, 10)) lines.push(`  - ${JSON.stringify(c)}`);
+  } else {
+    lines.push(`EVENTS LEADING UP TO IT: none available (no causal chain traced for this gap — do not assume there was no precursor, only that the causal field didn't have one)`);
+  }
+  if (ctx.siblingDanglingHooks.length) {
+    lines.push(`DANGLING HOOKS ON THIS SAME SYSTEM (may be related, may be independent — check before assuming):`);
+    for (const h of ctx.siblingDanglingHooks.slice(0, 10)) lines.push(`  - ${h.hookId} (${h.direction}): ${h.detail}`);
+  }
+  if (ctx.gatherError) lines.push(`(NOTE: context gathering hit an error and may be partial: ${ctx.gatherError})`);
+  return lines.join('\n');
+}
+
 // ── Level 4 — failure mode, human action item ─────────────────────────────────
 function _enterFailureMode(gapType, gapUuid, existing) {
   const entry = {
@@ -172,29 +249,36 @@ function _enterFailureMode(gapType, gapUuid, existing) {
   // §RAID-SOURCE 2026-08-29 — James: "hook... self-heal system into
   // raid." Real, honest wire: Level 4 already means "every automated
   // remediation attempt failed, this needs something NEW to happen" —
-  // exactly what a RAID contract is for. Submitted alongside the
-  // existing failure_modes row and bus event (not instead of — a real
-  // human action item still gets recorded even if this contract never
-  // gets picked up), giving self-heal a real, second path: let a real
-  // agent attempt a fix before escalating purely to a human.
+  // exactly what a RAID contract is for.
   //
-  // No custom checkEndState — reuses contract-intake's real, default
-  // seam-verdict check (the same convention BR5's own contracts already
-  // use), so an agent working this contract reports SEAM VERDICT: PASS/
-  // FAIL the same way any other real contract does, not a self-heal-
-  // specific protocol invented here. onFail:'halt' — a self-heal
-  // contract that an agent can't resolve is a genuine, real level-4
-  // finding, not something to retry or silently reassign to a different
-  // agent (that's fallbackAgent's job for lower-stakes contracts; this
-  // one already exhausted 4 real automated levels before reaching here).
-  try {
-    require('../core/raid/contract-intake.js').submitContract({
-      content: `A real, automated self-heal remediation attempt has exhausted all 4 levels for a real fault. faultClass="${gapType}", gapUuid="${gapUuid}". Read the relevant real code and this codebase's own real gap/event-ledger data for this fault before proposing anything (bottom-up — do not guess at a fix without reading what actually failed). If you find and make a real, verified fix, report SEAM VERDICT: PASS. If you cannot resolve it, report SEAM VERDICT: FAIL with your real findings — this becomes the actual human action item, not a placeholder.`,
-      title: `self-heal level-4: ${gapType}`,
-    }, { source: 'self-heal', intention: 'heal', onFail: { action: 'halt' } });
-  } catch (e) {
-    console.warn(`[${MODULE_ID}] could not submit level-4 fault as a real RAID contract (failure_modes row above is the real record either way): ${e.message}`);
-  }
+  // §CONTEXT-WIRE 2026-09-02 — deliberately fire-and-forget, NOT awaited
+  // here. _enterFailureMode stays synchronous (failure_modes write + bus
+  // emit above happen immediately, exactly as before this change)
+  // because that write is the one thing that must never be lost or
+  // delayed — §0.3. The richer, async-gathered RAID contract goes out
+  // right after, best-effort.
+  (async () => {
+    let content = `A real, automated self-heal remediation attempt has exhausted all 4 levels for a real fault. faultClass="${gapType}", gapUuid="${gapUuid}".`;
+    try {
+      const ctx = await _gatherFailureContext(gapType, gapUuid);
+      content += `\n\n${_formatFailureContext(ctx)}`;
+      // §INTENT-AND-AGENT — forAgent stays unset: fault_taxonomy's real
+      // row shape has no per-fault-class "which agent fixes this" field
+      // anywhere in this codebase — inventing one here would be exactly
+      // the fabrication this codebase's own discipline avoids elsewhere.
+      // RAID's real fitness-based router picks instead.
+    } catch (e) {
+      content += `\n\n(NOTE: context-gathering itself failed, contract submitted with faultClass only: ${e.message})`;
+    }
+    content += `\n\nRead the relevant real code and this codebase's own real gap/event-ledger data for this fault before proposing anything (bottom-up — do not guess at a fix without reading what actually failed). If you find and make a real, verified fix, report SEAM VERDICT: PASS. If you cannot resolve it, report SEAM VERDICT: FAIL with your real findings — this becomes the actual human action item, not a placeholder.`;
+    try {
+      require('../core/raid/contract-intake.js').submitContract({
+        content, title: `self-heal level-4: ${gapType}`,
+      }, { source: 'self-heal', intention: `heal:${gapType}`, onFail: { action: 'halt' } });
+    } catch (e) {
+      console.warn(`[${MODULE_ID}] could not submit level-4 fault as a real RAID contract (failure_modes row above is the real record either way): ${e.message}`);
+    }
+  })();
   return { level: 4, outcome: 'failure_mode' };
 }
 
@@ -243,4 +327,5 @@ module.exports = {
   MODULE_ID, VERSION, SEMANTIC_GAP_TYPES,
   init, stop, health,
   _onHealRequested, // exported for direct testing, §4.1
+  _gatherFailureContext, _formatFailureContext, // exported for direct testing, §4.1
 };

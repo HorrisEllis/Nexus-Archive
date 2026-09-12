@@ -34,17 +34,24 @@
     // §RESTRUCTURED 2026-09-12 — James: "sidebars are tab dependent not
     // static. pipeline is fullscreen." Sidebar content now swaps per
     // tab (canvas -> mesh nodes, automation -> workflows, matching the
-    // reference's own layout); pipeline hides both the left sidebar and
-    // right panel entirely so the pipeline canvas gets the full width,
-    // same as the reference's PIPELINE view has neither.
+    // reference's own layout); pipeline hides the left sidebar entirely
+    // so the pipeline canvas gets the full width, same as the
+    // reference's PIPELINE view has none.
+    // §CONTEXT-DEPENDENT 2026-09-12 — James: "div.rpanel should be
+    // context dependent, and only opens on the canvas when viewing
+    // agent." rpanel is no longer a static per-tab default (it used to
+    // show on every tab but pipeline) — it starts closed on every tab
+    // switch here, and the ONLY thing that opens it is clicking a real
+    // kind:'agent' node on the canvas (see onNodeClick below). A plain
+    // system/pulse node, or switching to any other main tab, leaves it
+    // closed.
     const sidebar = document.getElementById('sidebar');
     const rpanel = document.querySelector('.rpanel');
+    rpanel.classList.remove('open');
     if (tab === 'pipeline') {
       sidebar.style.display = 'none';
-      rpanel.style.display = 'none';
     } else {
       sidebar.style.display = '';
-      rpanel.style.display = '';
       document.getElementById('sb-canvas').classList.toggle('act', tab === 'canvas');
       document.getElementById('sb-automation').classList.toggle('act', tab === 'automation');
     }
@@ -106,10 +113,53 @@
   // ── CANVAS — mount the real, existing dynamic mesh renderer ─────────────
   const canvasHost = document.getElementById('canvas-host');
   window.BrainOSCanvas.mount(canvasHost);
+
+  // §BUILT 2026-09-12 — James: "animated embers in the background,
+  // particles." Eravos's own real riseUp animation (brainos-app.css)
+  // needed a spawner -- the theme file only ever defines the CSS
+  // class/keyframe, never the JS that actually creates .spark elements.
+  // Purely decorative page chrome, same boundary as the atmosphere
+  // gradient/scanline (§RETHEMED, above this file's css) -- appends
+  // into #particles (fixed, pointer-events:none, behind real content),
+  // never touches the canvas SVG or any data-bearing element.
+  // Self-bounded: each ember removes itself after its own animation
+  // duration, and a live count cap stops the interval from piling up
+  // embers if the tab was backgrounded and timers queued.
+  (function _spawnEmbers() {
+    const host = document.getElementById('particles');
+    if (!host) return;
+    const MAX_LIVE = 40;
+    let live = 0;
+    setInterval(() => {
+      if (live >= MAX_LIVE) return;
+      live++;
+      const el = document.createElement('div');
+      el.className = 'spark';
+      const size = 2 + Math.random() * 3;
+      const duration = 6 + Math.random() * 6;
+      const drift = (Math.random() * 60 - 30).toFixed(0) + 'px';
+      const color = Math.random() < 0.5 ? 'var(--idle)' : 'var(--warn)'; // fire / amber
+      el.style.cssText = `left:${(Math.random() * 100).toFixed(1)}%; bottom:-10px; width:${size}px; height:${size}px; background:${color}; box-shadow:0 0 ${(size * 2).toFixed(0)}px ${color}; animation-duration:${duration}s; --drift:${drift};`;
+      host.appendChild(el);
+      setTimeout(() => { el.remove(); live--; }, duration * 1000);
+    }, 500);
+  })();
   window.BrainOSCanvas.onNodeClick((node) => {
     _selectedNode = node;
-    renderNodeDetail(node);
-    setRTab('node');
+    // §CONTEXT-DEPENDENT 2026-09-12 — James: "only opens on the canvas
+    // when viewing agent." A plain system/pulse node (kind:'node')
+    // still gets selected (canvas highlight), but doesn't open rpanel
+    // — CHAT LOGS/PIPELINE/AUTOMATION/TOOL CALLS are agent-scoped
+    // concepts, not something a fixed system node has. "View detail"
+    // for ANY node (agent or system) is now the popup below, not this.
+    const rpanel = document.querySelector('.rpanel');
+    if (node && node.kind === 'agent' && document.querySelector('.tnav.act')?.dataset.tab === 'canvas') {
+      renderNodeDetail(node);
+      rpanel.classList.add('open');
+      setRTab('node');
+    } else {
+      rpanel.classList.remove('open');
+    }
   });
 
   // §BUILT — James: "right click nodes, with a context menu, ... deploying
@@ -142,7 +192,7 @@
     menu.className = 'brainos-ctx-menu';
     menu.style.cssText = `position:fixed; left:${ev.clientX}px; top:${ev.clientY}px; z-index:9999;`;
     const items = [
-      { label: `View detail`, run: () => { _selectedNode = node; renderNodeDetail(node); setRTab('node'); } },
+      { label: `View detail`, run: () => { _selectedNode = node; _openNodeDetailPopup(node, ev); } },
     ];
     if (node.kind === 'agent') {
       const agentKey = node.meta?.key || node.label;
@@ -348,16 +398,31 @@
     list.querySelectorAll('.node-item').forEach((el) => {
       el.addEventListener('click', () => {
         const n = _meshNodes[el.dataset.id];
-        if (n) { _selectedNode = n; renderNodeDetail(n); setRTab('node'); renderSidebar(); }
+        if (!n) return;
+        _selectedNode = n;
+        renderSidebar();
+        // §CONTEXT-DEPENDENT 2026-09-12 — same rpanel rule as onNodeClick
+        // above: only an agent node opens it, and only while on canvas
+        // (this sidebar list only renders on the canvas tab anyway, but
+        // checked directly rather than assumed).
+        const rpanel = document.querySelector('.rpanel');
+        if (n.kind === 'agent' && document.querySelector('.tnav.act')?.dataset.tab === 'canvas') {
+          renderNodeDetail(n);
+          rpanel.classList.add('open');
+          setRTab('node');
+        } else {
+          rpanel.classList.remove('open');
+        }
       });
     });
   }
 
-  // ── NODE detail (right panel) — real data from whatever was clicked ─────
-  function renderNodeDetail(n) {
-    const el = document.getElementById('rt-node');
-    if (!n) { el.innerHTML = '<div class="empty-state">click a node on the canvas</div>'; return; }
-    el.innerHTML = `
+  // ── NODE detail — shared HTML builder, used by both the rpanel NODE
+  // tab (agent nodes, opened via onNodeClick above) and the popup below
+  // ("View detail" context-menu action, any node kind). ─────────────────
+  function _nodeDetailHtml(n) {
+    if (!n) return '<div class="empty-state">click a node on the canvas</div>';
+    return `
       <div class="list-row">
         <div class="lr-head"><span class="lr-name">${_escapeHtml(n.label || n.id)}</span>
           <span class="badge ${n.status === 'alive' || n.status === 'connected' ? 'ok' : n.status === 'idle' ? 'warn' : 'err'}">${_escapeHtml(n.status || 'unknown')}</span>
@@ -367,6 +432,34 @@
         ${n.health !== undefined ? `<div class="lr-meta">health: ${_escapeHtml(n.health)}</div>` : ''}
         ${n.meta ? `<div class="lr-meta">meta: ${_escapeHtml(JSON.stringify(n.meta))}</div>` : ''}
       </div>`;
+  }
+  function renderNodeDetail(n) {
+    document.getElementById('rt-node').innerHTML = _nodeDetailHtml(n);
+  }
+
+  // §BUILT 2026-09-12 — James: "view details should be a popup." Same
+  // real content _nodeDetailHtml already builds for the rpanel NODE
+  // tab, just presented as a real popup (styled off .brainos-ctx-menu,
+  // same open/close convention as the canvas's own right-click menu
+  // and the pipeline's status popup) instead of switching tabs — works
+  // for ANY node kind, including system/pulse nodes that don't open
+  // rpanel at all anymore.
+  let _detailPopupEl = null;
+  function _closeNodeDetailPopup() {
+    if (_detailPopupEl) { _detailPopupEl.remove(); _detailPopupEl = null; }
+    document.removeEventListener('click', _closeNodeDetailPopup);
+  }
+  function _openNodeDetailPopup(node, ev) {
+    _closeNodeDetailPopup();
+    _closeContextMenu();
+    const popup = document.createElement('div');
+    popup.className = 'brainos-ctx-menu node-detail-popup';
+    popup.style.cssText = `position:fixed; left:${ev.clientX}px; top:${ev.clientY}px; z-index:9999;`;
+    popup.innerHTML = _nodeDetailHtml(node);
+    document.body.appendChild(popup);
+    _detailPopupEl = popup;
+    popup.addEventListener('click', (e) => e.stopPropagation());
+    setTimeout(() => document.addEventListener('click', _closeNodeDetailPopup), 0);
   }
 
   // ── CHAT LOGS (right panel) — real: GET cortex/api/chat-log ─────────────

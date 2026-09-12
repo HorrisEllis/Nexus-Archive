@@ -662,16 +662,9 @@
             <input type="file" id="pipe-json-file" accept="application/json" style="display:none">
             <button class="hbtn g" id="pipe-chain-build" disabled>BUILD PIPELINE</button>
             <span id="pipe-step-count" class="lr-meta" style="margin-left:auto"></span>
+            <button class="hbtn" id="pipe-status-btn">\u22ee STATUS / ROUTES</button>
           </div>
           <div id="pipe-canvas" class="pipe-canvas"></div>
-        </div>
-        <div class="pipe-side">
-          <div class="panel-title" style="font-size:9px">RUN STATUS</div>
-          <div id="pipe-run-status" class="empty-state">add steps, build, then run</div>
-          <button class="hbtn g" id="pipe-run" style="width:100%;margin-top:8px">\u25b6 RUN PIPELINE</button>
-          <div class="lr-meta" style="margin-top:4px">uses Step 1's own Input/data field -- no separate input box</div>
-          <div class="panel-title" style="font-size:9px;margin-top:16px">EXISTING REAL ROUTES</div>
-          <div id="pipe-existing"></div>
         </div>
       </div>`;
     // §CHANGED 2026-09-12 -- James: "move agent to the dropdown when
@@ -704,6 +697,47 @@
       } catch (e) { alert(`Import failed: ${e.message}`); }
       ev.target.value = '';
     });
+    document.getElementById('pipe-status-btn').addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      _toggleStatusMenu(document.getElementById('pipe-status-btn'));
+    });
+    _renderChainBuilder();
+    await _refreshPipelineView();
+  }
+
+  // §BUILT 2026-09-12 — James, screenshot of the browser's own real
+  // context menu: "have this sidebar on the right be a context menu."
+  // Replaces the old persistent .pipe-side column with a popup styled
+  // like brainos-app.js's own real .brainos-ctx-menu (canvas node
+  // right-click) — same open/close convention (append to body, close
+  // on the next outside click, deferred one tick so the opening click
+  // doesn't also close it), just richer content than a plain click-row
+  // list. Real functionality unchanged: same #pipe-run dispatch logic
+  // (moved here since the button is now created fresh each open,
+  // rather than living in the static, always-present markup) and the
+  // same #pipe-existing route list via the existing, untouched
+  // _refreshPipelineView().
+  let _statusMenuEl = null;
+  function _closeStatusMenu() {
+    if (_statusMenuEl) { _statusMenuEl.remove(); _statusMenuEl = null; }
+    document.removeEventListener('click', _closeStatusMenu);
+  }
+  function _toggleStatusMenu(anchorEl) {
+    if (_statusMenuEl) { _closeStatusMenu(); return; }
+    const rect = anchorEl.getBoundingClientRect();
+    const menu = document.createElement('div');
+    menu.className = 'brainos-ctx-menu pipe-status-menu';
+    menu.style.cssText = `position:fixed; right:${window.innerWidth - rect.right}px; top:${rect.bottom + 8}px; z-index:9999;`;
+    menu.innerHTML = `
+      <div class="panel-title" style="font-size:9px">RUN STATUS</div>
+      <div id="pipe-run-status" class="empty-state">add steps, build, then run</div>
+      <button class="hbtn g" id="pipe-run" style="width:100%;margin-top:8px">\u25b6 RUN PIPELINE</button>
+      <div class="lr-meta" style="margin-top:4px">uses Step 1's own Input/data field -- no separate input box</div>
+      <div class="panel-title" style="font-size:9px;margin-top:16px">EXISTING REAL ROUTES</div>
+      <div id="pipe-existing"></div>`;
+    document.body.appendChild(menu);
+    _statusMenuEl = menu;
+    menu.addEventListener('click', (ev) => ev.stopPropagation()); // real clicks inside (run/delete) must not self-close via the outside-click listener below
     // §CHANGED 2026-09-12 -- James: "remove the pipeline input from the
     // right and use the input from step one." No separate textarea
     // anymore -- reads step 1's own real Input/data field at Run time.
@@ -718,8 +752,8 @@
         ? `${_chainSteps[0].agentKey} started -- remaining steps fire as each real completion lands (route-graph.js)`
         : `dispatch failed: ${r.error}`;
     });
-    _renderChainBuilder();
-    await _refreshPipelineView();
+    _refreshPipelineView();
+    setTimeout(() => document.addEventListener('click', _closeStatusMenu), 0);
   }
 
   // §WIRED 2026-09-11 — real push handler, called by brainos-app.js with

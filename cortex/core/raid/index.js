@@ -19,7 +19,9 @@
  * LAYER 1 (constraints, deny-only) — fully implemented:
  *   _agentAvailable() — online + consecutiveFails<3
  *   explicit preferredAgent honored if available
- *   LAW_I — ollama always tried first for non-specialist clusters
+ *   LAW_I — ChatGPT tried first, Gemini as its fallback, for all
+ *     clusters (§DEFAULT-AGENT-CHANGE 2026-09-02 — replaces the prior
+ *     ollama-first default; ollama moved into the general chain)
  *   LAW_III — claude (API) is the unconditional last resort, never excluded
  *   §P97 — CFR sigma floor tightens the consecutiveFails threshold when
  *          the causal field is outside 'stable' regime
@@ -194,9 +196,18 @@ function _decide(call, health, weights) {
     // falls through to LAW_I / chain — preference offline is not fatal
   }
 
-  // LAW_I — ollama first, for all clusters until "specialist" is enumerated.
-  if (_agentAvailable('ollama', health, { tightened })) {
-    return { agent: 'ollama', cluster, reason: 'LAW_I: ollama always first for non-specialist clusters' };
+  // LAW_I — ChatGPT first, Gemini as its fallback.
+  // §DEFAULT-AGENT-CHANGE 2026-09-02 — James, direct, explicit: "use
+  // Gemini or ChatGPT as the default agent" / "ChatGPT first, Gemini
+  // fallback." This REPLACES the prior ollama-first LAW_I below (not
+  // layered alongside it) — ollama moves down into the general chain,
+  // still real and available, just no longer guaranteed-first. LAW_III
+  // (claude, unconditional last resort) is unchanged.
+  if (_agentAvailable('chatgpt', health, { tightened })) {
+    return { agent: 'chatgpt', cluster, reason: 'LAW_I: chatgpt always first for non-specialist clusters' };
+  }
+  if (_agentAvailable('gemini', health, { tightened })) {
+    return { agent: 'gemini', cluster, reason: 'LAW_I: gemini fallback (chatgpt unavailable)' };
   }
 
   // Computed chain (replaces the retired hardcoded CLUSTER_CHAINS, per
@@ -215,9 +226,18 @@ function _decide(call, health, weights) {
   // §NEW 2026-09-11 — James: "also deepseek... get raid solid, enterprise
   // grade." perplexity/deepseek added at the END — real, available
   // fallback candidates, but James never stated a preference for either
-  // relative to the four above, so they're not assumed to outrank an
+  // relative to the others, so they're not assumed to outrank an
   // explicit, stated preference; last means "considered, not favored."
-  const chain = ['ollama', 'chatgpt', 'gemini', 'claude', 'perplexity', 'deepseek'];
+  // §RE-APPLIED 2026-09-11 (this fix regressed out of an earlier merge
+  // and is being restored here, onto the current chain including
+  // perplexity/deepseek, not blindly overwritten from an older snapshot
+  // that predated them): chatgpt/gemini already handled by LAW_I above
+  // (they only reach this array if BOTH were unavailable, listed again
+  // here only so a mid-request health change during the survivors scan
+  // can't skip them — same defensive shape LAW_III already relies on).
+  // ollama moved from position 1 to position 3: still tried, no longer
+  // guaranteed-first.
+  const chain = ['chatgpt', 'gemini', 'ollama', 'claude', 'perplexity', 'deepseek'];
   const survivors = chain.filter(name => _agentAvailable(name, health, { tightened }));
 
   if (survivors.length === 1) {

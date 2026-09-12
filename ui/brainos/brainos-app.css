@@ -120,6 +120,23 @@ body::after {
   background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.07) 2px, rgba(0,0,0,0.07) 4px);
 }
 @keyframes brainos-bg-pulse { 0%{opacity:.7} 100%{opacity:1} }
+/* §BUILT 2026-09-12 — James: "animated embers in the background,
+   particles." Eravos's own real #particles/.spark/riseUp mechanism,
+   verbatim CSS (eravos-theme.css) -- the spawning loop itself
+   (brainos-app.js's _spawnEmbers) is new, since the theme file only
+   ever defines the animation, never the JS that creates .spark
+   elements; written fresh, same real rising-ember visual eravos's
+   own login screen and body use. Purely decorative background chrome
+   -- never touches the canvas SVG or any data-bearing element, same
+   boundary the atmosphere gradient above already keeps. */
+#particles { position:fixed; inset:0; pointer-events:none; z-index:1; overflow:hidden; }
+.spark { position:absolute; border-radius:50%; animation:riseUp linear infinite; opacity:0; }
+@keyframes riseUp {
+  0%   { transform:translateY(0) scale(1) translateX(0); opacity:0; }
+  15%  { opacity:1; }
+  60%  { opacity:.6; }
+  100% { transform:translateY(-110vh) scale(.1) translateX(var(--drift,30px)); opacity:0; }
+}
 .topbar, .main { position:relative; z-index:2; }
 
 /* ── TOP BAR ──────────────────────────────────────────────────────────── */
@@ -176,8 +193,16 @@ body::after {
 
 .rpanel {
   width:280px; flex-shrink:0; background:var(--panel); backdrop-filter:blur(14px); border-left:1px solid var(--border);
-  display:flex; flex-direction:column; overflow:hidden;
+  display:none; flex-direction:column; overflow:hidden;
 }
+/* §BUGFIX 2026-09-12, found while making rpanel context-dependent —
+   this rule's own base display:flex meant rpanel showed by default on
+   page LOAD (setMainTab()/onNodeClick only ever run in response to a
+   real click, never automatically on load) — no amount of JS logic
+   gating WHEN to open it mattered if the CSS default was already
+   "open." Base hidden now; .rpanel.open is the one real toggle every
+   JS call site below uses. */
+.rpanel.open { display:none; } /* James: "just hide it, whatever's cheapest" -- forced off, not opening for anything right now */
 .rp-tabs { display:flex; border-bottom:1px solid var(--border); }
 .rptab {
   flex:1; padding:8px 4px; text-align:center; font-size:8px; font-weight:700;
@@ -242,7 +267,15 @@ body::after {
 }
 .list-row .lr-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:3px; }
 .list-row .lr-name { color:var(--text); font-weight:600; }
-.list-row .lr-meta { color:var(--text3); font-size:8px; }
+/* §BUGFIX 2026-09-12 — James, screenshot: "div.lr-meta text size is
+   too big." Root cause: this rule was scoped to `.list-row .lr-meta`
+   only, but .lr-meta is also used bare (pipe-status-menu's hint line,
+   the toolbar step-count span) — those instances matched no rule at
+   all and fell back to the inherited page font size, much larger than
+   the intended 8px meta-text size. Un-scoped so every real use of the
+   class gets the same small size, not just the ones nested in a
+   .list-row. */
+.lr-meta { color:var(--text3); font-size:8px; }
 .badge { padding:1px 6px; border-radius:8px; font-size:7px; font-weight:700; letter-spacing:.05em; }
 .badge.ok { background:rgba(0,229,204,.12); color:var(--online); }
 .badge.warn { background:rgba(255,179,71,.12); color:var(--warn); }
@@ -262,6 +295,22 @@ body::after {
   padding: 6px 12px; color: var(--text); cursor: pointer; white-space: nowrap;
 }
 .brainos-ctx-menu-item:hover { background: var(--border); color: var(--idle); }
+
+/* §BUILT 2026-09-12 — James, screenshot of the browser's own native
+   context menu: "have this sidebar on the right be a context menu."
+   Replaces the pipeline's persistent .pipe-side column (RUN STATUS +
+   EXISTING REAL ROUTES) with a popup styled like the real
+   .brainos-ctx-menu above — same panel/border/shadow, just wider and
+   padded since this menu's content is a real status readout + a real
+   scrollable route list, not a single-line click row. */
+.pipe-status-menu { width:280px; max-height:70vh; overflow-y:auto; padding:12px; }
+.pipe-status-menu .panel-title:first-child { margin-top:0; }
+/* §BUILT 2026-09-12 — James: "view details should be a popup."
+   Same real content as the rpanel NODE tab (_nodeDetailHtml in
+   brainos-app.js), just a small popup instead — sized to its one
+   real .list-row, not the wider .pipe-status-menu above. */
+.node-detail-popup { width:240px; padding:0; }
+.node-detail-popup .list-row { border:none; margin:0; }
 
 /* §BUILT — Phase 2 real route/pipeline edges */
 .brainos-canvas-route-edge { stroke: var(--idle); stroke-width: 1.5; opacity: 0.7; }
@@ -342,14 +391,27 @@ body::after {
    replacing the plain form that left the whole canvas area empty. */
 .pipe-wrap { display:flex; gap:16px; height:100%; }
 .pipe-main { flex:1; min-width:0; display:flex; flex-direction:column; }
-.pipe-side { width:260px; flex-shrink:0; border-left:1px solid var(--border); padding-left:14px; }
+/* .pipe-side removed 2026-09-12 -- James: "have this sidebar on the
+   right be a context menu." RUN STATUS + EXISTING REAL ROUTES moved
+   into a real popup (.pipe-status-menu, styled off .brainos-ctx-menu
+   above), opened from the toolbar's new #pipe-status-btn -- see
+   _toggleStatusMenu() in brainos-automation.js. */
 .pipe-toolbar { display:flex; gap:8px; align-items:center; margin-bottom:14px; flex-wrap:wrap; }
+/* §MADE TRANSPARENT 2026-09-12 -- James, explicit: "div#panel-pipeline
+   ... div#pipe-canvas have it transparent." Both previously carried
+   their own opaque/near-opaque fill (var(--bg2) on panel-pipeline via
+   the shared .panel-overlay rule; the radial-gradient + var(--bg2) on
+   pipe-canvas itself) -- removed here so the real, live canvas
+   (node/edge SVG, legend, log-strip) sitting underneath in .cw shows
+   through the pipeline step-builder instead of being fully occluded
+   by it. pipe-canvas's own animated drift glow (::before, below) is
+   untouched -- only the BASE fill is gone, not the decorative layer
+   on top of it. */
+#panel-pipeline { background: transparent; }
 .pipe-canvas {
   flex:1; display:flex; align-items:flex-start; gap:0; flex-wrap:wrap; align-content:flex-start;
   position:relative; overflow:hidden;
-  background:
-    radial-gradient(ellipse at 30% 20%, rgba(255,106,0,.10) 0%, rgba(17,8,16,0) 55%),
-    var(--bg2);
+  background: transparent;
   border:1px solid var(--border); border-radius:3px; padding:24px; min-height:200px;
 }
 /* §BUILT 2026-09-12 -- James: "canvas to have a nice animated and alive

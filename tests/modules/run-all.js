@@ -142,6 +142,7 @@ const SUITES = [
   'test-fault-taxonomy.js',
   'test-escalation.js',
   'test-self-heal.js',
+  'test-self-heal-context.js',
   'test-gap-finder.js',
   'test-raid-decision-record.js',
   'test-raid-constitution-gate.js',

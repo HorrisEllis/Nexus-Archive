@@ -212,10 +212,17 @@ if (_decide) {
     assert(r.reason.includes('explicit'));
   }, { invariant: true });
 
-  t('raid._decide: LAW_I — ollama first when online', () => {
-    const health = { ollama: { online: true, consecutiveFails: 0 }, claude: { online: true }, 'guardian-claude': { online: false }, 'guardian-chatgpt': { online: false } };
+  t('raid._decide: LAW_I — chatgpt first when online (§DEFAULT-AGENT-CHANGE 2026-09-02)', () => {
+    const health = { 'guardian-chatgpt': { online: true, consecutiveFails: 0 }, ollama: { online: true, consecutiveFails: 0 }, 'guardian-claude': { online: false } };
     const r = _decide({ intent: 'write code' }, health, mockWeights);
-    assert.strictEqual(r.agent, 'ollama', `LAW_I: should prefer ollama, got ${r.agent}`);
+    assert.strictEqual(r.agent, 'chatgpt', `LAW_I: should prefer chatgpt, got ${r.agent}`);
+    assert(r.reason.includes('LAW_I'));
+  }, { invariant: true });
+
+  t('raid._decide: LAW_I — gemini fallback when chatgpt unavailable', () => {
+    const health = { 'guardian-gemini': { online: true, consecutiveFails: 0 }, ollama: { online: true, consecutiveFails: 0 }, 'guardian-claude': { online: false }, 'guardian-chatgpt': { online: false } };
+    const r = _decide({ intent: 'write code' }, health, mockWeights);
+    assert.strictEqual(r.agent, 'gemini', `LAW_I: should fall back to gemini when chatgpt is offline, got ${r.agent}`);
     assert(r.reason.includes('LAW_I'));
   }, { invariant: true });
 
@@ -300,12 +307,12 @@ if (_prescribe) {
 }
 
 if (_decide) {
-  t('[INV] raid: LAW_I is absolute — ollama always first when healthy', () => {
-    // Ollama with 0 consecutive fails must always be chosen over api-claude
-    const health = { ollama: { online: true, consecutiveFails: 0 }, claude: { online: true }, 'guardian-claude': { online: true }, 'guardian-chatgpt': { online: true } };
+  t('[INV] raid: LAW_I is absolute — chatgpt always first when healthy (§DEFAULT-AGENT-CHANGE 2026-09-02)', () => {
+    // ChatGPT with 0 consecutive fails must always be chosen over ollama/api-claude
+    const health = { chatgpt: { online: true, consecutiveFails: 0 }, ollama: { online: true, consecutiveFails: 0 }, claude: { online: true }, 'guardian-claude': { online: true }, 'guardian-chatgpt': { online: true } };
     for (let i = 0; i < 5; i++) {
       const r = _decide({ intent: 'generate code' + i }, health, mockWeights);
-      assert.strictEqual(r.agent, 'ollama', `LAW_I violated on attempt ${i}: got ${r.agent}`);
+      assert.strictEqual(r.agent, 'chatgpt', `LAW_I violated on attempt ${i}: got ${r.agent}`);
     }
   }, { invariant: true });
 }
