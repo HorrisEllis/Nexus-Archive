@@ -1,0 +1,81 @@
+envelope: 1
+uuid: nexus-export-schema-hook_contract
+type: schema
+id: hook_contract
+context: >-
+  guardian/schemas — sovereign local copy. Origin: lib/node-schemas/schema.hook_contract (shared
+  canonical version, may have moved on independently since this copy was made — sovereignty means
+  guardian does not depend on it at runtime, not that the two can never drift).
+intent: null
+summary: null
+system: guardian
+tags: []
+exported_at: 1789235656487
+source: nexus.lib.node-export
+payload:
+  status: REAL
+  source: >-
+    hooks/guardian.hooks.js — GUARDIAN_HOOKS array, real per-entry shape (confirmed against the
+    file's own header doc-comment and a live entry)
+  fields:
+    id:
+      type: string
+      required: true
+      description: real stable hook-declaration id
+    name:
+      type: string
+      required: true
+      description: real kebab-case unique name
+    intent:
+      type: string
+      required: true
+      description: real one-sentence description of what this wire does and why
+    type:
+      type: string
+      required: true
+      description: real hook type — one of 22 real hook types per the file's own header, e.g. 'api'
+    direction:
+      type: string
+      required: true
+      description: real direction — 'unidirectional' | 'bidirectional' | 'broadcast' | 'sink'
+    from:
+      type: object
+      required: true
+      description: real {surface, layer} the hook originates from
+    to:
+      type: object
+      required: true
+      description: real {surface, layer, port?} the hook targets
+    ui:
+      type: object
+      required: false
+      description: >-
+        real UI surfacing info (panel/element/action), where applicable — not present on every real
+        entry checked
+    config:
+      type: object
+      required: false
+      description: real runtime configuration for this hook, e.g. {path, method} for an api-type hook
+    contract:
+      type: object
+      required: true
+      description: real {axioms, sideEffects, idempotent, methodEnforced} behavioral contract
+    references:
+      type: object
+      required: false
+      description: 'real related files/specs/hooks, e.g. {files: [...]}'
+    seam:
+      type: string
+      required: false
+      description: >-
+        real SEAM component id, only present if this hook participates in a SEAM sequence — per the
+        file header; loom's own seam registry slot is currently empty (0 real entries), so this
+        field's cross-reference target is itself unbuilt
+    status:
+      type: string
+      required: true
+      description: real lifecycle status — 'active' | 'deprecated' | 'seed'
+    updatedAt:
+      type: string
+      required: true
+      description: real ISO timestamp of last change

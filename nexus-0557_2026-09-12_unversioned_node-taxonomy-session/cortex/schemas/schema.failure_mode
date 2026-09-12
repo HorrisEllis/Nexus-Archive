@@ -1,0 +1,48 @@
+envelope: 1
+uuid: nexus-export-schema-failure_mode
+type: schema
+id: failure_mode
+context: >-
+  cortex/schemas — sovereign local copy. Origin: lib/node-schemas/schema.failure_mode (shared
+  canonical version, may have moved on independently since this copy was made — sovereignty means
+  cortex does not depend on it at runtime, not that the two can never drift).
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789235656628
+source: nexus.lib.node-export
+payload:
+  status: REAL
+  source: >-
+    Promoted from OPEN this pass — real backing found while mapping cortex.
+    cortex/self-heal/index.js's real _enterFailureMode(gapType, gapUuid, existing) ("Level 4 —
+    failure mode, human action item") writes real jaaDB rows to a real `failure_modes` table, read
+    back via cortex/boot.js's real GET /api/failure-modes (jaaDB.tail('failure_modes', 20)). This
+    was the type that sat OPEN, unconfirmed, longest this session — found only once cortex itself
+    was actually checked directly, not assumed absent because no earlier pass surfaced it.
+  fields:
+    uuid:
+      type: string
+      required: true
+      description: real failure-mode entry id
+    faultClass:
+      type: string
+      required: true
+      description: real fault classification — the gapType that escalated to this level
+    gapUuid:
+      type: string
+      required: true
+      description: real id of the .gap that escalated into this failure mode
+    friction:
+      type: number
+      required: false
+      description: real friction score carried over from the escalating gap, defaults to 1.0
+    enteredAt:
+      type: number
+      required: true
+      description: real timestamp this failure mode was entered
+    source:
+      type: string
+      required: true
+      description: real originating module — cortex/self-heal/index.js's own MODULE_ID
