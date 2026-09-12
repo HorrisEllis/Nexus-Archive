@@ -157,11 +157,10 @@ body::after {
 .node-list { flex:1; overflow-y:auto; padding:4px; }
 .node-list::-webkit-scrollbar { width:3px; }
 .node-list::-webkit-scrollbar-thumb { background:var(--border2); }
-/* §UN-RESTRUCTURED 2026-09-12 — sidebar is canvas-only again; only
-   one .sb-section (sb-canvas) exists now, kept generic in case a
-   future tab genuinely needs its own sidebar section again. */
+/* §RESTRUCTURED 2026-09-12 — tab-dependent sidebar sections */
 .sb-section { display:none; flex-direction:column; height:100%; padding:8px; }
 .sb-section.act { display:flex; }
+#sb-automation #auto-wf-list { flex:1; overflow-y:auto; }
 .node-item {
   padding:6px 8px; border-radius:2px; cursor:pointer; margin-bottom:2px;
   font-family:var(--mono); font-size:9px; display:flex; align-items:center; gap:6px;
@@ -209,7 +208,27 @@ body::after {
   display:none; position:absolute; inset:0;
   background:var(--bg2); overflow-y:auto; padding:16px; z-index:5;
 }
-.panel-overlay.act { display:block; }
+/* §BUGFIX 2026-09-12 — James, live screenshot: pipeline canvas's own
+   atmosphere glow (.pipe-canvas::before, sized via inset:-20% off its
+   own box) only ever painted a small patch behind the step row
+   instead of filling the panel. Root cause confirmed directly, not
+   guessed: .pipe-wrap/.auto-wrap declare height:100%, but their real
+   ancestor chain (this .panel-overlay -> #pipeline-body/
+   #automation-body) never gave them a DEFINITE height anywhere --
+   #pipeline-body/#automation-body are plain auto-height divs, and a
+   percentage height against an auto-height ancestor is invalid per
+   spec (resolves as if unset), so .pipe-wrap/.auto-wrap silently
+   collapsed to their own content's height instead of filling the
+   real available space. Same latent bug in BOTH panels (automation's
+   RUN QUEUE/EXECUTION LOG column has had the identical never-fills
+   problem, just less visually obvious with short text lists).
+   Switched the whole chain to flexbox, which doesn't have the
+   percentage-height requirement: this becomes a column flex
+   container once active, and #pipeline-body/#automation-body below
+   grow to fill it via flex:1 (min-height:0 so their own children can
+   still scroll instead of forcing the panel taller). */
+.panel-overlay.act { display:flex; flex-direction:column; }
+#pipeline-body, #automation-body { flex:1; min-height:0; display:flex; flex-direction:column; }
 .panel-title { font-family:var(--display); font-size:11px; font-weight:700; letter-spacing:.15em; color:var(--idle); margin-bottom:12px; }
 .field-row { display:flex; align-items:center; gap:8px; margin-bottom:8px; font-family:var(--mono); font-size:9px; }
 .field-row label { width:110px; color:var(--text2); flex-shrink:0; }
@@ -307,14 +326,8 @@ body::after {
 /* §BUILT 2026-09-11 — brainos-automation.js's real panels. */
 .auto-wrap { display:flex; gap:14px; height:100%; }
 .auto-col { overflow-y:auto; }
-/* §RESTORED 2026-09-12 — James: "remove the sidebar from the
-   automation tab." Was briefly moved to the persistent sidebar
-   (#sb-automation) earlier the same day; back here now that the
-   sidebar is hidden for this tab. Reuses .sb-head/.node-item/.nd-*
-   (same real render function, brainos-automation.js's _refreshWfList,
-   untouched) so it looks identical to how it rendered in the sidebar. */
-.auto-list-col  { width:200px; flex-shrink:0; border-right:1px solid var(--border); padding-right:14px; display:flex; flex-direction:column; }
-.auto-list-col #auto-wf-list { flex:1; overflow-y:auto; }
+/* .auto-list-col removed 2026-09-12 — workflow list moved to the
+   persistent sidebar (#sb-automation), no longer duplicated here. */
 .auto-editor-col{ flex:1; min-width:0; }
 .auto-log-col   { width:260px; flex-shrink:0; border-left:1px solid var(--border); padding-left:14px; }
 .auto-log-col .ll { white-space:normal; font-size:8px; margin-bottom:6px; }
