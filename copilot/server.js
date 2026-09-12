@@ -2544,7 +2544,7 @@ function register() {
     // grep for 'startHeartbeat\|createPulse' in copilot/server.js returned
     // zero matches per the Phase 0 audit this session.
     try {
-      const { startHeartbeat } = require('../nexus-connect');
+      const { startHeartbeat } = require('../nexus/nexus-connect');
       startHeartbeat(SYSTEM_ID, PORT);
     } catch (_) { /* nexus-connect optional — never crash the server over a heartbeat */ }
   });

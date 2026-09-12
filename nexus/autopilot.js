@@ -33,7 +33,11 @@ const fs   = require('fs');
 const path = require('path');
 const http = require('http');
 
-const ROOT     = __dirname;
+// §FIXED 2026-09-11 — this file moved from repo root into nexus/ (N2,
+// 2026-09-11 phasemap). __dirname now resolves to .../nexus, not the repo
+// root — every real caller below (data/ tree walks, child-process cwd,
+// other systems' relative paths) needs the actual root, one level up.
+const ROOT     = path.join(__dirname, '..');
 
 // §RESOURCE GOVERNANCE 2026-07-10 — see _spawnKernel for the crash this fixes.
 // 1024MB per Node child: twelve of them is ~12GB worst case rather than the
@@ -47,7 +51,7 @@ const MEM_BACKOFF_MS = 15000;
 // zero: a critical kernel spawning into truly exhausted memory still fails
 // with the same 'spawn UNKNOWN' this whole guard exists to prevent.
 const CRITICAL_HALT_PCT = Number(process.env.NEXUS_CRITICAL_HALT_PCT || 0.05);
-const { ResourceMonitor } = require('./lib/resource-monitor');
+const { ResourceMonitor } = require('../lib/resource-monitor');
 const _resourceMonitor = new ResourceMonitor({ name: 'autopilot', intervalMs: 15000 }).start();
 
 // ── §P1 nexus-live-mind 2026-08-07 — wire the nervous system live ────────────
@@ -59,7 +63,7 @@ const _resourceMonitor = new ResourceMonitor({ name: 'autopilot', intervalMs: 15
 let _faninEvents = [];   // autopilot's live view of the whole-system stream
 let _ledgerWire = null;  // §ledger-wire — remote systems' ledger streams (cross-process)
 try {
-  const { wireFanin } = require('./lib/ledger-fanin/boot');
+  const { wireFanin } = require('../lib/ledger-fanin/boot');
   const _fw = wireFanin({
     onAutopilot: (row) => { _faninEvents.push(row); if (_faninEvents.length > 1000) _faninEvents.shift(); },
   });
@@ -85,7 +89,7 @@ try {
   // a quiet zero. That distinction is the whole point: a silent stream and an
   // idle stream look identical until you insist they don't.
   try {
-    const ledgerSSE = require('./lib/ledger-sse');
+    const ledgerSSE = require('../lib/ledger-sse');
     // NOTE the key is `system:`, not `name:` — deliberately, and this comment
     // deliberately does not spell the colliding literal out either.
     //
@@ -114,8 +118,8 @@ try {
   // when cortex is up and the store loads, which is exactly not true during
   // the failures worth reading. §2.1 disk first.
   try {
-    const elog = require('./lib/error-log');
-    elog.attach(require('./lib/ledger-fanin'));
+    const elog = require('../lib/error-log');
+    elog.attach(require('../lib/ledger-fanin'));
     console.error(`[autopilot] §error-log active — ${elog.LOG_PATH}`);
   } catch (e) {
     console.error(`[autopilot] §error-log unavailable: ${e.message}`);
@@ -132,7 +136,7 @@ try {
   const _isProbe = process.argv.slice(2).some(a => a.startsWith('--status-port='));
   if (require.main === module && !_isProbe) {
     try {
-      const { wireIntelligence } = require('./lib/autopilot-intelligence');
+      const { wireIntelligence } = require('../lib/autopilot-intelligence');
       const _iw = wireIntelligence({ snapshotAlreadyAttached: true });
       console.error(`[autopilot] ${_iw.report}`);
     } catch (e) { console.error(`[autopilot] intelligence substrate wiring skipped: ${e.message}`); }
@@ -699,7 +703,7 @@ function _spawnKernel(kernel, color) {
 // crashing process is one layer below what that pipeline normally watches.
 function _writeCircuitGap(name, s) {
   try {
-    const { jaaDB, uid } = require('./cortex/memory/jaa-db');
+    const { jaaDB, uid } = require('../cortex/memory/jaa-db');
     jaaDB.insert('gaps', {
       uuid: uid(), type: 'kernel_circuit_open', path: name, severity: 'critical',
       body: `Kernel "${name}" crashed ${s.crashes.length} times in ${Math.round(CIRCUIT_WINDOW_MS/60000)}min — ` +
@@ -787,7 +791,7 @@ const INSTANCE_SNAPSHOT_MS = 60_000; // matches intelligence's own PATTERN_SCAN_
 
 function _logInstanceSnapshot() {
   try {
-    const { jaaDB, uid } = require('./cortex/memory/jaa-db');
+    const { jaaDB, uid } = require('../cortex/memory/jaa-db');
     const os = require('os');
     const snapshot = _statusSnapshot();
     const running = Object.values(snapshot).filter(s => s.pid).length;
@@ -856,9 +860,9 @@ function _logInstanceSnapshot() {
 // event from the stream with a loud log, per warp's own semantics), never
 // process-fatal: a supervisor that dies of its own telemetry is a worse
 // failure than the one it was recording.
-const { Stream }    = require('./warp/core/Stream.js');
-const { StreamLog } = require('./warp/core/StreamLog.js');
-const { Axiom }     = require('./warp/core/Axiom.js');
+const { Stream }    = require('../warp/core/Stream.js');
+const { StreamLog } = require('../warp/core/StreamLog.js');
+const { Axiom }     = require('../warp/core/Axiom.js');
 
 const _warpLog = new StreamLog('DATA');
 const _warp = new Stream({
@@ -873,7 +877,7 @@ function _warpEmit(type, data) {
   // Event's constructor enforces its own contract loudly (throws on a bad
   // type) — that's correct at build time, but a telemetry emit must never
   // kill the supervisor at runtime, so contain here and report (§1.2).
-  try { _warp.emit(new (require('./warp/core/Event.js').Event)(type, data)); }
+  try { _warp.emit(new (require('../warp/core/Event.js').Event)(type, data)); }
   catch (e) { console.error(`[warp:autopilot] emit failed for '${type}': ${e.message}`); }
 }
 
@@ -888,8 +892,8 @@ function _startStatusServer() {
       // system and an unobserved one are never confused for each other.
       let ledger = null;
       try {
-        const lsse = require('./lib/ledger-sse');
-        ledger = { ...lsse.health(), errorLog: require('./lib/error-log').health(),
+        const lsse = require('../lib/ledger-sse');
+        ledger = { ...lsse.health(), errorLog: require('../lib/error-log').health(),
                    recentEvents: _faninEvents.slice(-25) };
       } catch (e) { ledger = { ok: false, error: e.message }; }
       const body = JSON.stringify({ ok: true, kernels: _statusSnapshot(), boot: _bootResult, ledger, ts: Date.now() }, null, 2);
@@ -1035,8 +1039,8 @@ function _startStatusServer() {
 // tablet spec warns about.
 function _handleGraphRead(req, res) {
   try {
-    const { jaaDB } = require('./cortex/memory/jaa-db');
-    const busSubs   = require('./lib/bus-subscriptions');
+    const { jaaDB } = require('../cortex/memory/jaa-db');
+    const busSubs   = require('../lib/bus-subscriptions');
 
     const subs  = busSubs.all(jaaDB);
     const edgeR = busSubs.edges(jaaDB);
@@ -1187,7 +1191,7 @@ function _handleGraphRead(req, res) {
         // function the rest of NEXUS uses rather than reimplementing the
         // thresholds here, which would be a second truth (§10.3).
         if (cfr && cfr.regime === undefined) {
-          try { cfr.regime = require('./intelligence/cfr/field').computeRegime(cfr); }
+          try { cfr.regime = require('../intelligence/cfr/field').computeRegime(cfr); }
           catch (_) { cfr.regime = null; }
         }
       }
@@ -1469,7 +1473,7 @@ function _handleLedgerRead(req, res) {
 let _jaaDB = null;
 function _getJaaDB() {
   if (_jaaDB) return _jaaDB;
-  try { ({ jaaDB: _jaaDB } = require('./cortex/memory/jaa-db.js')); }
+  try { ({ jaaDB: _jaaDB } = require('../cortex/memory/jaa-db.js')); }
   catch (e) { console.warn(`[autopilot] jaaDB unavailable — on-demand events will log to console only: ${e.message}`); _jaaDB = false; }
   return _jaaDB;
 }
@@ -1772,7 +1776,7 @@ function _refreshLoomRegistry() {
   const { spawn } = require('child_process');
   _log('refreshing loom/data/registry.json in the background (real runtime ~4 min; boot does not wait for this) ...');
   try {
-    const child = spawn('node', ['loom/bootstrap.js'], { cwd: __dirname, stdio: 'ignore', detached: true });
+    const child = spawn('node', ['loom/bootstrap.js'], { cwd: ROOT, stdio: 'ignore', detached: true });
     child.unref();
     child.on('error', (e) => _log(`  ⚠ loom registry background refresh failed to start: ${e.message} — run "node loom/bootstrap.js" manually if intelligence's loom-map sync keeps reporting 0`));
   } catch (e) {
@@ -1830,7 +1834,7 @@ if (require.main === module) start();
 if (require.main === module && CLI_MODE && !statusArg) {
   // give the boot a moment to bring systems up, then open the CLI.
   setTimeout(() => {
-    try { require('./lib/nexus-cli-interface').start({ onClose: () => {} }); }
+    try { require('../lib/nexus-cli-interface').start({ onClose: () => {} }); }
     catch (e) { console.error(`[autopilot] --cli interface failed to start: ${e.message}`); }
   }, 3000);
 }

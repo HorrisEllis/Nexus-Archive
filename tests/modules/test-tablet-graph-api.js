@@ -36,7 +36,7 @@ async function test(id, desc, fn) {
 }
 
 const ROOT = path.join(__dirname, '../..');
-const { _handleGraphRead } = require('../../autopilot.js');
+const { _handleGraphRead } = require('../../nexus/autopilot.js');
 
 let server, PORT;
 const GET = (p) => new Promise((resolve) => {

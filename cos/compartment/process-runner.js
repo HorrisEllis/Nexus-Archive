@@ -29,7 +29,7 @@
 
 const { spawn }   = require('child_process');
 const path        = require('path');
-const { Event }   = require('../siso/Event.js');
+const { Event }   = require("../siso/index.js");
 const { COMP, WATCHDOG } = require('../foundation/event-contracts.js');
 
 // ─── Runtime → binary resolver ────────────────────────────────────────────────

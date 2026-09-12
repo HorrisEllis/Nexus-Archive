@@ -26,8 +26,8 @@ async function test(id, desc, fn) {
 }
 
 const ROOT = path.join(__dirname, '../..');
-const ap = require('../../autopilot.js');
-const SRC = fs.readFileSync(path.join(ROOT, 'autopilot.js'), 'utf8');
+const ap = require('../../nexus/autopilot.js');
+const SRC = fs.readFileSync(path.join(ROOT, 'nexus', 'autopilot.js'), 'utf8');
 
 // Swap KERNELS in place (it is the same array the module reads) and restore
 // after, so no test leaks a fake kernel into another suite.

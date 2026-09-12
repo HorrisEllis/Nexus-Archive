@@ -252,7 +252,7 @@ const server = http.createServer(async (req, res) => {
 // real, shared nexus-connect.js client (nc2.registerWithOrchestrator +
 // nc2.startHeartbeat, which wraps createPulse() internally — confirmed
 // directly in nexus-connect.js, not assumed).
-const nc2 = require('../nexus-connect');
+const nc2 = require('../nexus/nexus-connect');
 function register() {
   const components = require('./registry-components');
   nc2.registerWithOrchestrator(SYSTEM_ID, PORT, {

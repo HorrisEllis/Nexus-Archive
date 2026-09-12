@@ -552,7 +552,7 @@ async function processNext(executor) {
   // they do not re-enter the ladder.
   if (finalStatus === STATUS.FAIL && queued.source !== 'self-heal') {
     try {
-      require('../../../nexus-bus.js').emit('HEAL_REQUESTED', {
+      require('../../../nexus/nexus-bus.js').emit('HEAL_REQUESTED', {
         gapType: 'raid_contract_exhausted',
         gapUuid: queued.uuid,
         body: `RAID contract "${queued.title || queued.uuid}" (source: ${queued.source}) failed with no further retry/fallback available. verdict: ${resolved.trace_log?.find(t => t.event === 'QA_QC')?.data?.verdict ?? 'none'}`,

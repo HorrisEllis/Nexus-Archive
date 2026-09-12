@@ -93,7 +93,7 @@ function register() {
     // Same gap as copilot: registered once, then invisible to
     // nexus-bus._sources. Nerve needs recurring presence data.
     try {
-      const { startHeartbeat } = require('../nexus-connect');
+      const { startHeartbeat } = require('../nexus/nexus-connect');
       startHeartbeat(SYSTEM_ID, PORT);
     } catch (_) {}
   });

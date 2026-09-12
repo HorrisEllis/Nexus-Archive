@@ -20,9 +20,20 @@ const path = require('path');
 const MODULE_ID = 'changelog';
 const VERSION   = '1.0.0';
 
-const DOCS_DIR        = path.join(__dirname, '..', 'docs');
-const SNAPSHOT_PATH   = path.join(__dirname, '..', 'data', 'changelog-snapshot.json');
-const CHANGELOG_PATH  = path.join(__dirname, '..', 'CHANGELOG.md');
+// §FIXED 2026-09-11 — all three paths below were one '..' short: from
+// orchestrator/lib/, a single '..' resolves to orchestrator/, not the real
+// repo root. DOCS_DIR/SNAPSHOT_PATH pointed at orchestrator/docs and
+// orchestrator/data/changelog-snapshot.json, neither of which has ever
+// existed (confirmed — checked before fixing, not assumed) — meaning this
+// entire module has been a silent no-op in production since it was built:
+// readSpecs() always saw an empty/missing DOCS_DIR and returned {}, so no
+// real spec change was ever detected and the real CHANGELOG.md (nor its
+// new docs/ location) was ever actually written to by this path. Found
+// while repointing CHANGELOG_PATH for the root .md cleanup — same file,
+// same class of bug, fixed together rather than leaving 2 of 3 broken.
+const DOCS_DIR        = path.join(__dirname, '..', '..', 'docs');
+const SNAPSHOT_PATH   = path.join(__dirname, '..', '..', 'data', 'changelog-snapshot.json');
+const CHANGELOG_PATH  = path.join(__dirname, '..', '..', 'docs', 'CHANGELOG.md');
 
 function _specVersion(content) {
   const m = content.match(/^\s+version:\s+['"]?([0-9]+\.[0-9]+\.[0-9][^\s'"#\n]*)['"]?/m);

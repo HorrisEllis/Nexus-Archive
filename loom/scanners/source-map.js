@@ -144,7 +144,7 @@ function scanTree({ excludePaths = [] } = {}) {
     'meta/rfr2/index.js': 'nexus.meta.rfr2.index',
     'intelligence/index.js': 'nexus.intelligence.index',
     'cortex/memory/jaa-db.js': 'nexus.cortex.jaa-db',
-    'nexus-bus.js': 'nexus.nexus-bus',
+    'nexus/nexus-bus.js': 'nexus.nexus-bus',
   };
   const ALIAS = {};
   for (const [file, id] of Object.entries(CANDIDATES)) {

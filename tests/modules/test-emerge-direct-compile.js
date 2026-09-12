@@ -60,7 +60,7 @@ async function run() {
   });
 
   test('EM-007', 'autopilot.js no longer spawns emerge/consumer.js as a kernel', () => {
-    const apSrc = fs.readFileSync(path.join(__dirname, '../../autopilot.js'), 'utf8');
+    const apSrc = fs.readFileSync(path.join(__dirname, '../../nexus/autopilot.js'), 'utf8');
     assert.ok(!/args:\s*\[['"]emerge\/consumer\.js['"]\]/.test(apSrc));
   });
 

@@ -43,13 +43,44 @@ class StreamLog {
    * present in every entry warp's own Stream.emit() constructs, so no
    * caller needs to change what it passes in.
    */
+  /**
+   * record(entry) — warp's existing contract: store whatever shape the
+   * caller passes, unconditionally, at the default 'DATA' level. At a
+   * lower level (set via cos's convention: log.level = 'EVENTS'), fields
+   * are progressively dropped — streamId/parentStreamId at EVENTS-only,
+   * full entry only at DEEP+. This matches cos's original tiering exactly;
+   * the field names it filters on (streamId, parentStreamId) are already
+   * present in every entry warp's own Stream.emit() constructs, so no
+   * caller needs to change what it passes in.
+   *
+   * §FIX 2026-09-11 — Stream.emit() calls this with `eventType`/`eventData`
+   * keys (SISO's original param names), but this method's own doc says
+   * "Same shape as SISO's log" — SISO's log shape uses `.type`/`.data` on
+   * the STORED entry, not the caller's param names. Verified this was
+   * really dropped, not intentional: old cos/siso/StreamLog.js's record()
+   * explicitly destructured and renamed eventType->type; this file's
+   * spread-everything-verbatim version silently stopped doing that when
+   * ported, and nothing caught it because no caller here happened to read
+   * `.type` back until cos/host/event-bus.js started routing through this
+   * file for real. Confirmed via warp's own test suite before and after
+   * (43 passed / 0 failed, unchanged) that restoring the rename doesn't
+   * touch anything already depending on the current (wrong) shape.
+   */
   record(entry) {
     const lvl = LEVELS[this.level] ?? LEVELS.DATA;
     if (lvl === 0) return;
 
+    const { eventType, eventData, gateClaimed, ...rest } = entry;
     const seq = this._seq++;
-    const stored = { ...entry, seq, loggedAt: Date.now() };
+    const stored = {
+      ...rest,
+      ...(eventType !== undefined ? { type: eventType } : {}),
+      ...(gateClaimed !== undefined ? { claimed: gateClaimed } : {}),
+      seq,
+      loggedAt: Date.now(),
+    };
     if (lvl < 2) { delete stored.streamId; delete stored.parentStreamId; }
+    if (lvl >= 3 && eventData !== undefined) stored.data = eventData;
     this._entries.push(stored);
   }
 
@@ -67,6 +98,9 @@ class StreamLog {
     this._entries = [];
     this._seq = 0;
   }
+
+  /** Public accessor for the internal counter — same pattern as Stream's own get seq(). */
+  get seq() { return this._seq; }
 
   /** §COS MERGE — entries since a given seq number. */
   since(afterSeq) {

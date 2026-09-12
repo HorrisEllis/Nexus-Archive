@@ -9,7 +9,7 @@
  * §5.7  All inter-system communication via event bus only.
  *
  * Usage (CJS):
- *   const nc = require('./nexus-connect');
+ *   const nc = require('../nexus-connect');
  *   await nc.postEvent('guardian.job.complete', { jobId, chars });
  *   await nc.postLedger('guardian', 'guardian.job.complete', payload);
  *   await nc.healthCheck('cortex');
@@ -29,7 +29,7 @@ let _pulseEmitter = null;
  */
 function startPulse(systemId, port) {
   try {
-    const { createPulseEmitter } = require('./lib/heartbeat');
+    const { createPulseEmitter } = require('../lib/heartbeat');
     const SYSTEM_UUIDS = {
       cortex:       'nexus-cortex-0000-4000-0000-000000000001',
       guardian:     'nexus-guardian-0000-4000-0000-000000000001',
@@ -311,7 +311,7 @@ function startHeartbeat(systemId, port) {
   // (the earlier real migrations — clear-glass, cortex, idearium — each
   // had their OWN separate hand-rolled copy; this one function serving
   // 3 systems is a different, better-leveraged case).
-  const { createPulse } = require('./orchestrator/lib/pulse.js');
+  const { createPulse } = require('../orchestrator/lib/pulse.js');
   return createPulse({ systemId, port });
 }
 

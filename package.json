@@ -19,11 +19,11 @@
     "test:all": "node tests/brutal.test.js && node tests/pipeline.test.js && node tests/kernel.test.js && node tests/full.test.js && node tests/modules/run-all.js",
     "test:int": "node tests/integration.test.js",
     "start": "node orchestrator.js",
-    "start:all": "node autopilot.js",
-    "start:core": "node autopilot.js --only=orchestrator,bridge,cortex,guardian",
-    "autopilot": "node autopilot.js",
-    "autopilot:status": "node autopilot.js --status-port=7799",
-    "start:all:cli": "node autopilot.js --cli",
+    "start:all": "node nexus/autopilot.js",
+    "start:core": "node nexus/autopilot.js --only=orchestrator,bridge,cortex,guardian",
+    "autopilot": "node nexus/autopilot.js",
+    "autopilot:status": "node nexus/autopilot.js --status-port=7799",
+    "start:all:cli": "node nexus/autopilot.js --cli",
     "movement": "node cli/nexus-movement.js"
   },
   "engines": {

@@ -167,7 +167,7 @@ ${openGaps.length
 
 ## Current Build Phase
 
-> Read \`CLAUDE.md\` for full system context.
+> Read \`docs/CLAUDE.md\` for full system context.
 > Read \`docs/nexus.spec\` for the current per-system spec.
 > Read \`docs/AXIOMS-v3.1.md\` for governing laws.
 > Read \`MANIFEST.json\` session_log for build history.

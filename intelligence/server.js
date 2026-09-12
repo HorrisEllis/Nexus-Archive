@@ -56,7 +56,7 @@ const ledger = createCFRLedger({
 // (intelligence/index.js's own real bus.emit — confirmed the only one
 // that exists) into the system stream, same reasoning as onGap above.
 try {
-  require('../nexus-bus').on('cortex.intelligence.pattern_crystallised', (data) => {
+  require('../nexus/nexus-bus').on('cortex.intelligence.pattern_crystallised', (data) => {
     systemStream.emit(new Event('intelligence.pattern.crystallised', data));
   });
 } catch (e) { console.warn(`[intelligence] pattern-crystallisation relay unavailable: ${e.message}`); }

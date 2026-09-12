@@ -410,7 +410,7 @@ if (warnings.length) {
 if (errors.length) {
   console.error('\n✗ NEXUS working-agreement BLOCKS this commit:');
   for (const e of errors) console.error('  · ' + e);
-  console.error('\nSee CLAUDE.md. Fix or use --no-verify only with reason.\n');
+  console.error('\nSee docs/CLAUDE.md. Fix or use --no-verify only with reason.\n');
   process.exit(1);
 }
 if (warnings.length) console.warn('  (warnings do not block — but address them)\n');

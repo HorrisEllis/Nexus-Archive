@@ -31,12 +31,12 @@ async function test(id, desc, fn) {
   catch (e) { console.error(`  ✗ ${id} ${desc}\n    ${e.message}`); failed++; }
 }
 
-const SRC = fs.readFileSync(path.join(__dirname, '../../autopilot.js'), 'utf8');
+const SRC = fs.readFileSync(path.join(__dirname, '../../nexus/autopilot.js'), 'utf8');
 
 (async () => {
   await test('AWS-001', 'autopilot constructs a real warp/core Stream with a StreamLog and the three contract axioms', async () => {
-    assert.ok(/require\(['"]\.\/warp\/core\/Stream\.js['"]\)/.test(SRC), 'must use warp/core Stream');
-    assert.ok(/require\(['"]\.\/warp\/core\/StreamLog\.js['"]\)/.test(SRC), 'must use warp/core StreamLog');
+    assert.ok(/require\(['"]\.\.\/warp\/core\/Stream\.js['"]\)/.test(SRC), 'must use warp/core Stream');
+    assert.ok(/require\(['"]\.\.\/warp\/core\/StreamLog\.js['"]\)/.test(SRC), 'must use warp/core StreamLog');
     assert.ok(/new Axiom\('type-is-string'/.test(SRC) && /new Axiom\('has-id'/.test(SRC) && /new Axiom\('has-ts'/.test(SRC),
       'must register the same axiom contract as lib/warp-bus.js defaultAxioms()');
   });
@@ -64,7 +64,7 @@ const SRC = fs.readFileSync(path.join(__dirname, '../../autopilot.js'), 'utf8');
     const { spawnSync } = require('child_process');
     const script = `
       process.env.AUTOPILOT_STATUS_PORT = '7921';
-      const { _startStatusServer } = require(${JSON.stringify(path.join(__dirname, '../../autopilot.js'))});
+      const { _startStatusServer } = require(${JSON.stringify(path.join(__dirname, '../../nexus/autopilot.js'))});
       const http = require('http');
       _startStatusServer();
       const GET = (p) => new Promise((res) => { http.get({ host:'127.0.0.1', port:7921, path:p }, r => { let d=''; r.on('data',c=>d+=c); r.on('end',()=>res(JSON.parse(d))); }); });

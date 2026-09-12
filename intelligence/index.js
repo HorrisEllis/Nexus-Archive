@@ -40,7 +40,7 @@
 'use strict';
 
 const { jaaDB, uid } = require('../cortex/memory/jaa-db');
-const bus = require('../nexus-bus');
+const bus = require('../nexus/nexus-bus');
 
 const MODULE_ID = 'cortex/intelligence';
 // §WIRED — real, distinct config, not inline constants. See

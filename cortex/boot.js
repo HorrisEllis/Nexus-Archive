@@ -96,7 +96,7 @@ const { createPulse } = require('../orchestrator/lib/pulse.js');
 // orchestrator) were already POSTing to cortex's /api/event with it in mind
 // — but this file never required it, so nothing arriving at /api/event ever
 // reached an in-process listener. Fixed at the two points below.
-const bus = require('../nexus-bus');
+const bus = require('../nexus/nexus-bus');
 
 // ── Cortex SSE — real broadcast channel, matches guardian's own
 // cockpitClients/cockpitBroadcast pattern (guardian/server.js) exactly.

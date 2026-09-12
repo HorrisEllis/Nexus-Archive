@@ -34,7 +34,7 @@ function test(id, desc, fn) {
   catch (e) { console.error(`  ✗ ${id} ${desc}\n    ${e.message}`); failed++; }
 }
 
-const AUTOPILOT_PATH = path.join(__dirname, '../../autopilot.js');
+const AUTOPILOT_PATH = path.join(__dirname, '../../nexus/autopilot.js');
 const CLEAR_GLASS_MAIN = path.join(__dirname, '../../clear-glass/src/main/index.js');
 
 // ── autopilot.js side — real execution, no Electron dependency ────────────

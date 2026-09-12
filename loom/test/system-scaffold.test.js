@@ -33,19 +33,25 @@ async function main() {
   ];
 
   let result;
-  await check('scaffoldSystem writes all five projections, no UI file among them', async () => {
+  await check('scaffoldSystem writes all nine projections (extended 2026-09-11), no UI file among them', async () => {
     result = scaffoldSystem('widget-forge', {
       port: 9911, purpose: 'test system', operations, outDir, dataDir,
     });
-    assert.strictEqual(result.written.length, 5);
+    assert.strictEqual(result.written.length, 9);
     const names = result.written.map(p => path.basename(p));
     assert.ok(names.includes('index.js') || true); // both cli/index.js and api/index.js share basename, checked below
     assert.ok(result.written.some(p => p.endsWith('cli/index.js')));
     assert.ok(result.written.some(p => p.endsWith('api/index.js')));
     assert.ok(result.written.some(p => p.endsWith('registry-components.js')));
     assert.ok(result.written.some(p => p.endsWith('interaction-contract.json')));
-    assert.ok(result.written.some(p => p.endsWith('.spec.md')));
+    assert.ok(result.written.some(p => p.endsWith('spec/widget-forge.spec')), 'real .spec, not .spec.md');
+    assert.ok(result.written.some(p => p.endsWith('config.js')));
+    assert.ok(result.written.some(p => p.endsWith('event-taxonomy.js')));
+    assert.ok(result.written.some(p => p.endsWith('command-index.js')));
+    assert.ok(result.written.some(p => p.endsWith('tool-index.js')));
     assert.ok(!result.written.some(p => /ui[\/\\]/.test(p)), 'a ui/ path was generated — this must never happen');
+    assert.ok(fs.existsSync(path.join(outDir, 'data', 'widget-forge', 'failures')), 'data/<system>/failures not created');
+    assert.ok(fs.existsSync(path.join(outDir, 'data', 'widget-forge', 'invariant')), 'data/<system>/invariant not created');
   });
 
   await check('generated component + hooks actually registered in LOOM, on disk', async () => {

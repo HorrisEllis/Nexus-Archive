@@ -27,9 +27,7 @@
 
 'use strict';
 
-const { Stream }    = require('../siso/Stream.js');
-const { StreamLog } = require('../siso/StreamLog.js');
-const { Event }     = require('../siso/Event.js');
+const { Stream, StreamLog, Event } = require('../siso/index.js');
 const { DEFAULT_RING_CAP } = require('../foundation/constants.js');
 
 // ─── EventBus ─────────────────────────────────────────────────────────────────
@@ -55,7 +53,18 @@ class EventBus {
    * @returns {object} stamped event { seq, type, payload, timestamp }
    */
   emit(type, payload = {}) {
-    return this._stream.emit(new Event(type, payload));
+    // §ADAPTER 2026-09-11 — warp/core/Stream.emit() no longer returns the
+    // stamped event directly (it returns undefined for a sync chain, or a
+    // Promise for an async gate chain — see warp/core/Stream.js's own
+    // _emitProduced comment). EventBus's public contract ("returns the
+    // stamped event") predates that change and real callers depend on it
+    // (process-runner.js, host boot, spawnProcess tests). warp still
+    // builds and ring-buffers the exact same {seq,type,payload,timestamp}
+    // shape internally before gate dispatch runs — reading it back via
+    // tail(1) is correct regardless of whether the gate's own transform
+    // was sync or async, since the ring push happens before either path.
+    this._stream.emit(new Event(type, payload));
+    return this._stream.tail(1)[0];
   }
 
   // ── Gate Registration (primary SISO API) ──────────────────────────────────
@@ -91,7 +100,14 @@ class EventBus {
    * @returns {function} unsubscribe
    */
   on(type, fn) {
-    return this._stream.on(type, fn);
+    // §ADAPTER 2026-09-11 — warp/core/Stream.on(type, handler) calls
+    // handler(event) with the raw Event (.data, .uuid, .ts), not the
+    // {seq,type,payload,timestamp} stamped shape this bus's on() has
+    // always handed observers (onAny's wildcard path already gets
+    // "stamped" natively from warp — this is the one place that diverged).
+    return this._stream.on(type, (event) => {
+      fn({ seq: this._stream.seq, type: event.type, payload: event.data, timestamp: event.ts || Date.now() });
+    });
   }
 
   /**

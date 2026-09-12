@@ -28,7 +28,7 @@
 const { StateStore }     = require('./state-store.js');
 const { createEventBus } = require('./event-bus.js');
 const { SystemMap }      = require('./system-map.js');
-const { Event }          = require('../siso/Event.js');
+const { Event }          = require("../siso/index.js");
 const { HOST, COMP }     = require('../foundation/event-contracts.js');
 const { COS_VERSION }    = require('../foundation/constants.js');
 
