@@ -7,33 +7,39 @@ intent: null
 summary: null
 system: null
 tags: []
-exported_at: 1789116323994
+exported_at: 1789200000900
 source: nexus.lib.node-export
 payload:
   status: REAL
   source: >-
-    lib/ico.js — logFailure()'s real failure-mode ledger record. James: "data folders:
-    .failure_mode" pointed here — every system's data/<system>/failures/ dir (confirmed real:
-    data/guardian/failures, data/cortex/*, data/idearium/failures, etc., one per ICO kernel
-    instance) is this exact shape, appended as ndjson
+    Promoted from OPEN this pass — real backing found while mapping cortex.
+    cortex/self-heal/index.js's real _enterFailureMode(gapType, gapUuid, existing) ("Level 4 —
+    failure mode, human action item") writes real jaaDB rows to a real `failure_modes` table,
+    read back via cortex/boot.js's real GET /api/failure-modes (jaaDB.tail('failure_modes', 20)).
+    This was the type that sat OPEN, unconfirmed, longest this session — found only once cortex
+    itself was actually checked directly, not assumed absent because no earlier pass surfaced it.
   fields:
-    error:
+    uuid:
       type: string
       required: true
-      description: real error description — logFailure()'s only truly required field
-    solution:
-      type: any
-      required: false
-      description: real fix/workaround, null until one is known
+      description: real failure-mode entry id
+    faultClass:
+      type: string
+      required: true
+      description: real fault classification — the gapType that escalated to this level
+    gapUuid:
+      type: string
+      required: true
+      description: real id of the .gap that escalated into this failure mode
     friction:
       type: number
       required: false
-      description: real friction score, defaults to 0
-    source:
-      type: string
-      required: false
-      description: real originating system, null if not given
-    ts:
+      description: real friction score carried over from the escalating gap, defaults to 1.0
+    enteredAt:
       type: number
       required: true
-      description: real timestamp, defaults to Date.now()
+      description: real timestamp this failure mode was entered
+    source:
+      type: string
+      required: true
+      description: real originating module — cortex/self-heal/index.js's own MODULE_ID

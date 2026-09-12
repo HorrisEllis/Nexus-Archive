@@ -7,13 +7,18 @@ intent: null
 summary: null
 system: null
 tags: []
-exported_at: 1789117272247
+exported_at: 1789200000500
 source: nexus.lib.node-export
 payload:
   status: REAL
   source: >-
     guardian/registry-components.js — the real _c() helper's output shape, one real object per
-    registered route/capability
+    registered route/capability. `intent` promoted to a required top-level field this pass, per
+    the real precedent already sitting in job.dispatch's own record: `hooks.in: [{
+    id:'guardian.job.dispatch.receive', intent:['build','ask','forge','compile'], ... }]` — that
+    array already exists in real code, just nested and optional (hooks defaults to {}). No other
+    real capability record in registry-components.js currently sets it, so most existing rows would
+    need a real intent list backfilled to satisfy this as REQUIRED, not just a schema-level promise.
   fields:
     id:
       type: string
@@ -40,7 +45,18 @@ payload:
     route:
       type: object
       required: true
-      description: real {method, path} — the actual HTTP route this capability maps to
+      description: >-
+        real {method, path} — the actual HTTP route this capability maps to. This IS the
+        capability→.command link: identical shape to schema.command's own {method, path}, always
+        present, so "maps to at least one .command" already holds structurally for every real row.
+    intent:
+      type: array
+      required: true
+      description: >-
+        real intent-verb list this capability serves, e.g. ['build','ask','forge','compile'] — the
+        capability→.intent link. Promoted from job.dispatch's own real (but optional, nested)
+        hooks.in[].intent to a required top-level field, per this pass's own instruction. checkPayload
+        only checks presence + typeof here, NOT non-empty — see §KNOWN GAP below.
     description:
       type: string
       required: true
@@ -60,4 +76,14 @@ payload:
     hooks:
       type: object
       required: false
-      description: real associated hook references, defaults to {}
+      description: real associated hook references, defaults to {} — the original, nested home of intent[], kept for backward compatibility
+    events:
+      type: array
+      required: false
+      description: >-
+        §NOT GROUNDED — no real capability record anywhere in the codebase currently declares which
+        .event(s) it emits. Left optional and unenforced deliberately: marking this required would
+        mean inventing a shape with no real construction site to check it against, which breaks this
+        registry's own grounding rule. A real per-capability event-emission list (e.g. registry-
+        components.js's _c() gaining an `events:` opt, mirroring how `hooks.in[].intent` already
+        works) would need to exist in real code before this can honestly be REQUIRED.

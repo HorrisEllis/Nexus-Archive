@@ -1,0 +1,20 @@
+envelope: 1
+uuid: nexus-export-schema-sigma_record
+type: schema
+id: sigma_record
+context: intelligence/schemas — intelligence-local schema registry
+intent: null
+summary: null
+system: intelligence
+tags: []
+exported_at: 1789200001900
+source: nexus.lib.node-export
+payload:
+  status: OPEN
+  source: >-
+    intelligence/schemas.js documents this table's existence ("real deviation-from-baseline
+    records, generic across domains") but its own entry is only a pointer ("see
+    intelligence/baseline.js and intelligence/cfr/sigma.js — the real writers"), not a field list.
+    Marked OPEN honestly rather than inventing fields those two real writers weren't independently
+    checked against this pass.
+  fields: {}

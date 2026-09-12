@@ -104,6 +104,23 @@ const server = http.createServer(async (req, res) => {
     });
   } catch (_) { /* logging failure never blocks the real request */ }
 
+  if (pathname === '/api/intelligence/topo-kernel/stats') {
+    try {
+      const { TopoKernel } = require('./topo-kernel/index.js');
+      if (!global._topoKernel) global._topoKernel = new TopoKernel();
+      json(res, 200, { ok: true, ...global._topoKernel.stats() });
+    } catch (e) { json(res, 500, { ok: false, error: e.message }); }
+    return;
+  }
+
+  if (pathname === '/api/intelligence/telemetry/status') {
+    try {
+      const tc = require('./telemetry-codec/index.js');
+      json(res, 200, { ok: true, moduleId: tc.MODULE_ID, version: tc.VERSION });
+    } catch (e) { json(res, 500, { ok: false, error: e.message }); }
+    return;
+  }
+
   if (pathname === '/health') { json(res, 200, { ok: true, system: 'intelligence', port: PORT, ts: Date.now() }); return; }
 
   if (pathname === '/sse') {

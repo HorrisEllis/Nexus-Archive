@@ -18,6 +18,8 @@ function _c(id, method, path, desc, opts = {}) {
 }
 module.exports = [
   _c('health',       'GET',  '/health',                            'Intelligence system health'),
+  _c('topo-kernel',  'GET',  '/api/intelligence/topo-kernel/stats', 'Sovereign SISO topology kernel — signal/field/shape/trust stats'),
+  _c('telemetry',    'GET',  '/api/intelligence/telemetry/status',  'Telemetry-codec runtime module status'),
   _c('patterns',     'GET',  '/api/intelligence/patterns',          'Crystallised behavioral patterns'),
   _c('context',      'GET',  '/api/intelligence/context',           'Assembled intelligence context'),
   _c('status',       'GET',  '/api/intelligence/status',            'Intelligence subsystem health'),

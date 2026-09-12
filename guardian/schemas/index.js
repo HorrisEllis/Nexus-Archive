@@ -1,93 +1,33 @@
 'use strict';
-// guardian/schemas/index.js — guardian's own schema registry.
-// UUID: nexus-guardian-schemas-index-v1-0000-2026-0911-001
-// §NEW 2026-09-11 — resolves P3's open question (lib/node-schemas.js's
-// header: "shared base + per-system extension, or fully separate
-// per-system schemas from scratch?"). James's decision: every system
-// gets its own schemas/ folder. This is the real template — the
-// convention below, not just guardian's answer.
+// guardian/schemas/index.js — guardian's own, fully sovereign schema registry.
 //
-// §CONVERTED 2026-09-11 (same pass) — James: "the node type is the file
-// extension, not js — a yaml file with the node type as the extension."
-// Every local entry below used to be a require()'d .js module; now every
-// one is a real .schema YAML node file (node-export.js's own envelope),
-// filename/id matching the full public type name (guardian_job.schema,
-// not job.schema — kept consistent with lib/node-schemas/'s own
-// filename===id convention).
+// §CORRECTED 2026-09-12 — James: "relevant individual node schemas per
+// system. Each system is sovereign remember that." The prior version of
+// this file referenced lib/node-schemas.js at runtime for shared types
+// (SHARED_TYPES + shared.get()) — real, working, but not actually
+// sovereign: guardian still depended on a central module to resolve most of
+// its own types. Every type guardian uses now has its own real, individual
+// file in this folder — a genuine copy, not a pointer. guardian can resolve
+// every one of its own types with zero runtime dependency on
+// lib/node-schemas.js.
 //
-// §GROUNDING RULE (same discipline lib/node-schemas.js already applies
-// to itself) — a type is either (a) a direct reference to the shared
-// central schema, when guardian genuinely uses that same real shape
-// unmodified, or (b) a fresh guardian-local .schema file, grounded in
-// guardian's own real construction site, when the data is
-// guardian-exclusive. Never both — redefining a shared type here would
-// be a second source of truth for the same real fields.
-//
-// Shared types guardian actually writes, referenced not duplicated:
-//   .artifact          — lib/node-schemas/artifact.schema (guardian's own
-//                         listeners are literally that schema's source)
-//   .guardian_listener — lib/node-schemas/guardian_listener.schema (already
-//                         a guardian-specific type, lives centrally only
-//                         because it was built before this folder existed
-//                         — real to move here later, not moved yet)
-//   .ledger            — lib/node-schemas/ledger.schema (component-ledger.js
-//                         is system-agnostic; guardian is one caller
-//                         among many, not a guardian-exclusive shape)
-//   .gap               — lib/node-schemas/gap.schema (same reasoning as ledger)
-//   .event             — lib/node-schemas/event.schema (cortex's shared
-//                         event_log; guardian writes into it via bus.emit,
-//                         not its own separate table)
-//   .capability        — lib/node-schemas/capability.schema (guardian/
-//                         registry-components.js's real shape; every
-//                         system with its own registry-components.js
-//                         uses this same real convention, not guardian-
-//                         exclusive)
-//   .hook_contract     — lib/node-schemas/hook_contract.schema (hooks/
-//                         guardian.hooks.js's shape; every hooks/<s>.
-//                         hooks.js file follows this same real convention)
-//   .fault             — lib/node-schemas/fault.schema (cortex/self-heal/
-//                         fault-taxonomy.js is sole write authority per
-//                         its own §10.1 — guardian is a reader/subject,
-//                         never a writer of this table)
-//
-// Guardian-exclusive types, defined locally in this folder:
-//   guardian_job, guardian_download, guardian_pa_session,
-//   guardian_timeline_event, guardian_setting, guardian_session
-//   (session was status: 'REAL — DRIFT' until the 2026-09-11 session-fix
-//   pass reconciled it — see guardian_session.schema, now status: REAL)
-//   guardian_seam_session, guardian_queue_compartment, guardian_chat_log
-//   (added 2026-09-11, full-data-sweep pass — real, previously-uncovered
-//   tables: seam_sessions, queue_compartments, chat_log)
-//
-// §FLAGGED, NOT SCHEMA'D — guardian's bare `ledger` table (§LAW II CLI
-// logging, guardian/server.js ~2219/2379: {uuid, category, msg, meta, ts})
-// is a THIRD real, distinct ledger-shaped table — different from both
-// the shared .ledger (component-ledger.js) and jaa/schema.sql's
-// ledger_entries. Same class of fragmentation the guardian_session fix
-// found and reconciled — not silently schema'd as if it were settled;
-// needs the same kind of reconciliation decision before it gets a type.
-//
-// §NOT INCLUDED — gap_questions, chat_sessions, chat_messages,
-// chat_completions exist in jaa/schema-full.sql's table list but have
-// ZERO real writers anywhere in guardian/*.js (confirmed by grep, not
-// assumed) — same dead-schema status as guardian_nodes/guardian_health.
-// Not schema'd here; would be inventing a node type for a table nothing
-// writes, exactly what §1.1/§1.3 exist to prevent. If real usage shows up
-// later, add it then.
+// §HONEST TRADEOFF, NOT HIDDEN — sovereignty over centralization means
+// these copies can drift from lib/node-schemas.js's originals if the
+// canonical shape changes later and this copy isn't re-synced. Same
+// regression this codebase already names for hat/component's own
+// central schema files (lib/node-schemas.js's own header: "if
+// hat-forge.js's HAT_SCHEMA... change later, these... schema files will
+// silently go stale"). Real cost of real sovereignty, not concealed.
 
 const fs = require('fs');
 const path = require('path');
 const nodeExport = require('../../lib/node-export.js');
-const shared = require('../../lib/node-schemas.js');
 
 const SCHEMAS_DIR = __dirname;
 
-function loadLocal() {
+function loadAll() {
   const out = {};
-  // §CHANGED 2026-09-12 — same rename as lib/node-schemas.js's own files:
-  // guardian_job.schema -> schema.guardian_job, etc. Node type as the
-  // real file extension, last.
-  const files = fs.readdirSync(SCHEMAS_DIR).filter(f => f.startsWith('schema.'));
+  const files = fs.readdirSync(SCHEMAS_DIR).filter((f) => f.startsWith('schema.'));
   for (const f of files) {
     const doc = nodeExport.importFromFile(path.join(SCHEMAS_DIR, f));
     if (doc.type !== 'schema') {
@@ -98,24 +38,13 @@ function loadLocal() {
   return out;
 }
 
-const LOCAL = loadLocal();
+const SCHEMAS = loadAll();
 
-const SHARED_TYPES = ['artifact', 'guardian_listener', 'ledger', 'gap', 'event', 'capability', 'hook_contract', 'fault'];
+function get(type) { return SCHEMAS[type] || null; }
 
-function get(type) {
-  if (LOCAL[type]) return LOCAL[type];
-  if (SHARED_TYPES.includes(type)) return shared.get(type);
-  return null;
-}
-
-/** list() -> every type guardian real-uses, tagged by where it's defined. */
+/** list() -> every type guardian owns, all of them real, local files — no shared reference left. */
 function list() {
-  const local = Object.entries(LOCAL).map(([type, s]) => ({ type, status: s.status, source: s.source, definedIn: 'guardian/schemas' }));
-  const ref = SHARED_TYPES.map(type => {
-    const s = shared.get(type);
-    return { type, status: s ? s.status : 'MISSING', source: s ? s.source : null, definedIn: 'lib/node-schemas (shared)' };
-  });
-  return [...local, ...ref];
+  return Object.entries(SCHEMAS).map(([type, s]) => ({ type, status: s.status, source: s.source, definedIn: 'guardian/schemas' }));
 }
 
-module.exports = { get, list, LOCAL, SHARED_TYPES, MODULE_ID: 'guardian-schemas', VERSION: '1.0.0' };
+module.exports = { get, list, SCHEMAS, MODULE_ID: 'guardian-schemas', VERSION: '2.0.0' };

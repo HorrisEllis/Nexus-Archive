@@ -68,5 +68,3 @@ module.exports = {
   TopoKernel, SISOBus, SNREngine, EVENT_TYPES,
   MODULE_ID: 'topo-kernel', VERSION: '1.0.0',
 };
-
-module.exports = { TopoKernel, MODULE_ID: 'topo-kernel', VERSION: '1.0.0' };

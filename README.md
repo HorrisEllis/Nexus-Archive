@@ -1,99 +1,96 @@
-# NEXUS SYSTEM — v5.1.0
+# NEXUS node-taxonomy session deliverables
 
-> **⚠ SUPERSEDED — DO NOT TREAT AS CURRENT**
-> This README describes an earlier intended architecture (Emergence/.eg-exclusive, `nexus-eg/` tree: crystalball, cockpit, siphon, seam, guardian-ext). That architecture is not what exists in this codebase — zero `.eg` files are present; the actual system is plain Node/JS (cortex/, guardian/, idearium/, lib/, etc.). This file has not been kept in sync and should not be read as a description of current state.
->
-> **Canonical, actively-maintained source of truth: `lib/version.js`** — current system version, per-phase build status, and per-module versions all live there. As of this note: system v0.7.8, Phase 12 (User Model) complete.
->
-> The content below is preserved as historical record, not deleted, since it may describe a real prior design direction worth understanding — but treat every claim in it (file counts, ports, structure) as potentially describing a different system than the one on disk.
->
-> **2026-09-10:** fourteen other stale, session-dated docs that had accumulated at project root (old handoffs, patch notes, one-off audits) were consolidated and moved to `_archive/root-docs-consolidated-2026-09-10/` — see that folder's `README.md` for the full mapping of what moved where. This file and `MANIFEST.json` were deliberately left at root, banner intact, since they're conventional filenames and already self-describe their own superseded status rather than needing archival.
+Everything built this session, laid out at the real repo-relative paths it
+belongs at. Drop this directly over a checkout of the real NEXUS tree —
+every path here matches where the corresponding real file lives.
 
-## Complete Architecture in Emergence
+## Corrected this pass — full sovereignty, not reference
 
-**Author:** James Brooks (Erosmancer)  
-**Language:** Emergence (.eg) — exclusively  
-**Files:** 115  
-**SNR:** 98.4%–100% across all files  
-**Axiom violations:** 0  
+The first version of this zip had each system's `schemas/index.js`
+reference `lib/node-schemas.js` at runtime for shared types (a real,
+working `SHARED_TYPES` + `shared.get()` pattern, copied from
+`guardian/schemas/index.js`). Corrected on your direct instruction: that's
+not actually sovereign — a system referencing a central module for most of
+its own types still depends on it. Every system now has a genuine,
+individual, local copy of every schema file it uses — **140 real
+`schema.<type>` files total**, zero cross-system schema references left,
+zero runtime dependency on `lib/node-schemas.js` from any system's own
+`schemas/index.js`.
 
----
+Found and fixed a real gap while doing this: `hook`, `wire`, and `system`
+had been registered in `KNOWN_TYPES` and treated as `REAL` throughout this
+session's mapping — but no `schema.hook`/`schema.wire`/`schema.system` file
+had ever actually been created in `lib/node-schemas/`. Materializing
+sovereign copies required a real source file to copy from, which is what
+surfaced it. Built all three now, grounded in `loom/schema/hook.js`'s real
+`HOOK_SCHEMA` and `loom/schema/wire.js`'s real `WIRE_SCHEMA` (both `REAL`);
+`schema.system` stays `OPEN` — real grounding, no real persisted record
+found to check it against.
 
-> The spec is the container. The .eg file runs the system. No coding syntax exists in this session.
+**The honest tradeoff, not hidden**: sovereignty over centralization means
+these 140 files can drift from each other and from whatever
+`lib/node-schemas/` becomes later, if a canonical shape changes and a
+system's local copy isn't re-synced. That's the same regression this
+codebase already names for its own `hat`/`component` central schemas
+("if HAT_SCHEMA... change later, these... schema files will silently go
+stale"). Real cost of real sovereignty — every sovereign `schemas/index.js`
+says so in its own header comment, not just here.
 
----
+## What's here
 
-## Structure
+- `NODE-TAXONOMY.md` — the central, 33-slot node taxonomy. Read this first.
+- `lib/node-export.js` — updated `KNOWN_TYPES` (33, up from the original 20).
+- `lib/node-schemas/` — the shared originals these sovereign copies were
+  made from, including the 3 newly-built `hook`/`wire`/`system` files.
+- `lib/agent-tools/tools/clear-glass/search-engine.js` — the generic
+  `clearglass.search_engine.tool` (register/search/list/delete/
+  register_from_pick/export_node).
+- `lib/agent-tools/tools/execution/dedup-table.js` — `dedup_table`, wraps
+  `cortex/memory/table-deduplicator.js`.
+- `lib/node-index.js` — a live, jaaDB-backed index + per-type ledger for
+  any node type (`nodes_<type>` / `nodes_<type>_ledger` tables), additive
+  to the real file-based model, not a replacement for it.
+- `guardian/lib/node-registry.js` — patched to call `lib/node-index.js`
+  on every real add/change/delete, alongside its existing flat-file
+  ledger, which is untouched.
+- `test-new-plugins.js`, `test-node-index.js` — real, passing,
+  end-to-end tests, run against a real (temp-directory-redirected)
+  `jaaDB` and a real `node-export.js` round-trip.
+- **One `<system>/spec/<system>.node-taxonomy.md` per system** — the
+  stripped taxonomy (only node types that system actually, really uses).
+- **One `<system>/schemas/index.js` per system**, now purely local
+  (`loadAll()` over that folder only — no shared-registry reference),
+  plus every `schema.<type>` file that system actually uses, materialized
+  as a real, individual, standalone copy.
 
-```
-nexus-eg/
-├── foundation/          14 files — SISO primitives, Cobalt bus, FileStore, poll registry, admin server
-├── memory/               6 files — JAA-DB (28 tables), agent-memory, continuous-stream, feedback-weighter, fix-map, lattice-index
-├── core/                 7 files — RAID (4 files), translation, manifest-generator, usage
-├── crystalball/          5 files — CrystalBall wiring, BEP engine, lattice-bridge, MCL, MQL (5-lane)
-├── gate/                 3 files — gap-finder, gate-runner, healer
-├── agents/               6 files — dispatcher, ollama, claude, base, chatgpt, gemini
-├── orion/                4 files — sensor, record, policy, verify
-├── versionium/           2 files — core, causality
-├── automation/           2 files — engine, queue-manager
-├── canvas/               9 files — renderer, cfr-physics, cfr-render, cfr-rewind, image-analyzer, node-inspector, rewind-scrubber, nas-router, tauri-ws
-├── guardian-ext/        12 files — app, background, cfr, ir-layer, handshake, content, popup, module-base, claude, chatgpt, instagram, threads
-├── guardian-server/      9 files — server, api-7820, wss-7821, jaa, memory-7823, dropzone-7822, cli, agents, cobalt-bridge
-├── userscript/          16 files — toast, gates, tab-claim, siso-bus, dom-scanner, artifact-store, download-intercept, seam-tab, queue, snr-detector, pa, gap-hunter, greeting, gtci-inject, realtime-sync, tab-discovery
-├── cockpit/              5 files — core (SISOKernel+JAA+Bayesian), pipeline (14 nodes+evaluator), forge (self-mod), cli, ui (v10)
-├── idearium/             5 files — core (IdeaOS+tension+SNR), cli, api, event, gate
-├── siphon/               3 files — siphon, pulse, watchman
-├── seam/                 3 files — spec-parser, verdict-detector, seam-delivery
-└── system/               4 files — boot, topology, data-flows, seam-contracts
-```
+## Real-tested, not just written
 
----
+Every `schemas/index.js` was actually `require()`'d (or, for `idearium`,
+`import()`'d) against a real checkout and its `list()` called. One genuine
+surprise surfaced by that testing: **`idearium` is written in real ES
+modules** (`idearium/package.json` has `"type": "module"`, and
+`idearium/index.js`/`registry-components.js` use real `import`/`export`).
+Every other system here is CommonJS. `idearium/schemas/index.js` is real
+ESM to match — and now that it no longer needs to dynamically `import()`
+the shared CJS registry, `get()`/`list()` are synchronous again, same as
+every other system's.
 
-## Ports
+A second real bug was found and fixed while testing `lib/node-index.js`:
+`guardian/jaa-store.js`'s real `insert()` uses `row.id` as its own internal
+Map key. The first ledger design reused a node's own id as a ledger-row
+field, so repeated entries for one node silently overwrote each other
+instead of accumulating. Fixed by moving the node's id to a `nodeId` field
+on ledger rows.
 
-| Port | Layer | Purpose |
-|------|-------|---------|
-| 3748 | Cortex | Source of truth — JAA + Cobalt + RAID + ORION |
-| 4800 | Forge/Idearium | IDE + pipeline + spec parser |
-| 7800 | Rheon IDE | Seam language IDE |
-| 7771 | Tauri WS | Desktop Rust bridge |
-| 7820 | Guardian HTTP | Agent API + Cockpit |
-| 7821 | Guardian WSS | Browser userscript bridge |
-| 7822 | Dropzone | File server (LAN) |
-| 7823 | Memory server | JAA query surface (LAN) |
-| 11434 | Ollama | Local LLM |
+## What's flagged, not resolved
 
----
+- **`job` vs `guardian_job`** — strong evidence they're the same shape, not unified.
+- **`versionium_commit`, `ollama_job`, `clearglass_search_engine`,
+  `healer_proposal`** — genuinely single-system-only types, each with its
+  own local schema file. Not proposed as central.
+- **`intelligence`'s `fault_taxonomy` and `sigma_record`** are honestly
+  `status: OPEN` — the real source only names the writer, not the fields.
+- **`schema.system`** is `OPEN` — grounded in `capability-map.js`'s real
+  `SYSTEMS` map, but nothing persists an actual "system" record anywhere.
+- **`bridge`** has no real directory in this snapshot — nothing was created for it.
 
-## Laws
-
-```
-LAW_I    Local first — Ollama before cloud
-LAW_II   JAA write before behavior
-LAW_III  No module imports another — JAA only
-LAW_IV   Schema over code
-LAW_V    CLI first — UI is a skin
-LAW_VI   Toast on every failure
-
-§1.1  Nothing exists until proven
-§1.2  Nothing silently fails
-§2.1  Persistence is the golden rule
-§M1   Every module: init(cfg) + stop() only
-§M2   Modules only read/write declared tables
-§M3   Poll interval is module configuration
-§A3   Every row carries causedBy or source
-```
-
----
-
-## Using the Emerge compiler
-
-```bash
-node emerge-cli.js check foundation/siso-event.eg
-node emerge-cli.js compile foundation/siso-event.eg
-node emerge-cli.js watch          # watch all .eg files
-```
-
----
-
-*NEXUS SYSTEM v5.1.0 · All Emergence · James Brooks · Portland, Oregon · 2026*
