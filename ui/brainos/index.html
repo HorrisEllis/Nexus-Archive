@@ -74,21 +74,20 @@
 
 <div class="main">
 
-  <!-- LEFT SIDEBAR — §RESTRUCTURED 2026-09-12: James, "sidebars are tab
-       dependent not static." Content now swaps per active main tab
-       (setMainTab() in brainos-app.js toggles which .sb-section shows),
-       instead of always showing mesh nodes regardless of tab. -->
+  <!-- LEFT SIDEBAR — real mesh nodes, from the same real listMeshView()
+       data the canvas renders. §UN-RESTRUCTURED 2026-09-12: James,
+       "remove the sidebar from the automation tab." The workflow list
+       that used to live here (#sb-automation, added earlier this same
+       day) moved back into automation-body's own .auto-wrap as a real
+       list column — this sidebar is canvas-only again, and setMainTab()
+       now hides it for the automation tab the same way it already does
+       for pipeline. -->
   <div class="sidebar" id="sidebar">
     <div class="sb-section act" id="sb-canvas">
       <div class="sb-head">Mesh Nodes</div>
       <div class="node-list" id="node-list">
         <div class="empty-state">waiting for real data…</div>
       </div>
-    </div>
-    <div class="sb-section" id="sb-automation">
-      <div class="sb-head">Workflows</div>
-      <div id="auto-wf-list"></div>
-      <button class="hbtn g" id="auto-new" style="width:100%;margin-top:8px">+ NEW WORKFLOW</button>
     </div>
   </div>
 

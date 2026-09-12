@@ -405,22 +405,14 @@
     }).join('');
   }
 
-  let _sidebarWfBound = false;
   async function mountAutomationPanel() {
-    // §RESTRUCTURED 2026-09-12 — James: "sidebar is for the workflows."
-    // The workflow list + its own "+ NEW WORKFLOW" button now live in
-    // the persistent left sidebar (#sb-automation, index.html), not
-    // duplicated inside this panel — bound once, independent of
-    // automation-body's own mount flag, since the sidebar node exists
-    // in the DOM from page load regardless of which tab is active.
-    if (!_sidebarWfBound) {
-      _sidebarWfBound = true;
-      document.getElementById('auto-new').addEventListener('click', async () => {
-        const r = await api('/automation/workflows', { method: 'POST', body: JSON.stringify({ name: 'New Workflow' }) });
-        if (r.ok) { _selectedWfId = r.workflow.id; await _refreshWfList(); _renderEditor(); }
-        else alert(`Failed to create workflow: ${r.error || 'unknown error'}`);
-      });
-    }
+    // §UN-RESTRUCTURED 2026-09-12 — James: "remove the sidebar from
+    // the automation tab." The workflow list + "+ NEW WORKFLOW"
+    // button move back into this panel's own .auto-wrap as a real
+    // list column (.auto-list-col) — this panel is now fullscreen
+    // (setMainTab() hides #sidebar for this tab), so the list needs
+    // its own home again rather than the sidebar it briefly had
+    // earlier this same day.
     const host = document.getElementById('automation-body');
     if (!host || host.dataset.mounted) { await _refreshWfList(); await _refreshLog(); _renderRunQueue(); return; }
     host.dataset.mounted = '1';
@@ -433,6 +425,11 @@
         <input type="file" id="auto-import-file" accept="application/json" style="display:none">
       </div>
       <div class="auto-wrap">
+        <div class="auto-col auto-list-col">
+          <div class="sb-head">Workflows</div>
+          <div id="auto-wf-list"></div>
+          <button class="hbtn g" id="auto-new" style="width:100%;margin-top:8px">+ NEW WORKFLOW</button>
+        </div>
         <div class="auto-col auto-editor-col"><div id="auto-editor"><div class="empty-state">select or create a workflow</div></div></div>
         <div class="auto-col auto-log-col">
           <div class="panel-title" style="font-size:9px;margin-bottom:6px">RUN QUEUE</div>
@@ -441,6 +438,11 @@
           <div id="auto-log"></div>
         </div>
       </div>`;
+    document.getElementById('auto-new').addEventListener('click', async () => {
+      const r = await api('/automation/workflows', { method: 'POST', body: JSON.stringify({ name: 'New Workflow' }) });
+      if (r.ok) { _selectedWfId = r.workflow.id; await _refreshWfList(); _renderEditor(); }
+      else alert(`Failed to create workflow: ${r.error || 'unknown error'}`);
+    });
     document.getElementById('auto-run-all').addEventListener('click', async () => {
       for (const wf of _wfs.filter((w) => w.status === 'active')) await api(`/automation/workflows/${wf.id}/run`, { method: 'POST' });
       await _refreshWfList(); _refreshLog();

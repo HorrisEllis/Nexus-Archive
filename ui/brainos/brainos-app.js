@@ -31,22 +31,24 @@
       const el = document.getElementById('panel-' + tab);
       if (el) el.classList.add('act');
     }
-    // §RESTRUCTURED 2026-09-12 — James: "sidebars are tab dependent not
-    // static. pipeline is fullscreen." Sidebar content now swaps per
-    // tab (canvas -> mesh nodes, automation -> workflows, matching the
-    // reference's own layout); pipeline hides both the left sidebar and
-    // right panel entirely so the pipeline canvas gets the full width,
-    // same as the reference's PIPELINE view has neither.
+    // §RESTRUCTURED 2026-09-12, then §UN-RESTRUCTURED same day — James
+    // first asked for a tab-dependent sidebar (canvas -> mesh nodes,
+    // automation -> workflows), then: "remove the sidebar from the
+    // automation tab." Sidebar is canvas-only again; automation now
+    // hides it and goes fullscreen, same treatment pipeline already
+    // had (its own workflow list moved into automation-body's own
+    // .auto-wrap, see mountAutomationPanel() in brainos-automation.js).
     const sidebar = document.getElementById('sidebar');
     const rpanel = document.querySelector('.rpanel');
     if (tab === 'pipeline') {
       sidebar.style.display = 'none';
       rpanel.style.display = 'none';
+    } else if (tab === 'automation') {
+      sidebar.style.display = 'none';
+      rpanel.style.display = '';
     } else {
       sidebar.style.display = '';
       rpanel.style.display = '';
-      document.getElementById('sb-canvas').classList.toggle('act', tab === 'canvas');
-      document.getElementById('sb-automation').classList.toggle('act', tab === 'automation');
     }
     if (tab === 'bayes') fetchBayes();
     if (tab === 'pipeline') { fetchPipeline(); window.BrainOSAutomation.mountPipelinePanel(); }
