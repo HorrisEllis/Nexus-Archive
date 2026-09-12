@@ -542,6 +542,89 @@ spec:
         (a route with no declared capability, or a capability with 0 routes,
         gets flagged, not silently passed).
 
+    N3_stray_root_files_found_after_N1:
+      status: DONE — 2026-09-11, found via James spot-checking, not this session's own sweep
+      depends_on: []
+      done: >
+        N1 only searched for *.md — missed non-.md root clutter. Found:
+        phase_map_11.html (216-entry phasemap dashboard, zero code
+        references) moved to docs/. nexus-roadmap-combined.html found to
+        be a byte-identical duplicate of an existing docs/ copy — root
+        copy removed, not moved (moving over an identical file is a
+        no-op with extra steps). ollama-runtime.js (flagged in N2's own
+        notes as needing to move to ollama/, never executed then) moved
+        to ollama/ollama-runtime.js — 4 real requirers repointed
+        (idearium/agent-suite, orchestrator/lib/autonomous-loop.js,
+        emerge/emerge-ide.js, tests/modules/ollama-runtime.test.js).
+        Real bug caught by the move, same __dirname-relative class as
+        N2's: the file's own internal require('./ollama/config.js')
+        was correct when it lived at root (config.js really was one
+        level down, inside ollama/) and silently wrong once the file
+        itself moved into ollama/ (would have resolved to a nonexistent
+        ollama/ollama/config.js) — fixed to './config.js'. Verified:
+        tests/modules/ollama-runtime.test.js 8/8 (was crashing on
+        MODULE_NOT_FOUND before the fix), idearium/agent-suite and
+        orchestrator/lib/autonomous-loop.js both load clean.
+      flagged_not_resolved: >
+        powershell.exe found at repo root — real Windows PE32+ executable,
+        454KB, zero references anywhere in the codebase. Not moved,
+        not deleted, not touched. This needs a real answer from James
+        directly (what it is, why it's there) before any disposition —
+        an unreferenced Windows binary in a Node.js repo is a real
+        finding to flag, not file away as clutter.
+      still_present_flagged_not_executed: >
+        blueprint-index.json (generated output, "builtBy":
+        "blueprint-index", real live generator at lib/blueprint-index.js),
+        writeback-failures.jsonl (a real runtime error log,
+        emerge/cortex-query/writeback.js writes to it — this is state,
+        not code, and CLAUDE.md's own rule says "NEVER commit data/**"
+        — this file being tracked in git at all looks like exactly the
+        violation that rule exists to prevent, not touched pending real
+        decision), verification-manifest.json (its own _meta says
+        "human-authored... NOT generated" — real, deliberate, checked-in
+        content, not clutter, candidate for docs/ but not urgent).
+        None moved — each needs its own real check of the generator/
+        writer's hardcoded path before touching, same discipline as
+        everything else this session, not done here due to budget.
+
+    AR2_decentralize_interaction_contracts:
+      status: OPEN — real scope mapped, not executed, larger than D1
+      depends_on: [D1_diagnostic_real_folder]
+      real_scope_found: >
+        contracts/nexus-interaction-contract.js (554 lines) already has
+        per-system sections (ORCHESTRATOR, GUARDIAN, CORTEX, ARCHITECT,
+        IDEARIUM, BRIDGE [retired], COPILOT, CLEAR-GLASS, DIAGNOSTIC) —
+        exactly the centralized content each system's own
+        interaction-contract.json should hold instead (most sovereign
+        systems already have one — versionium/, nexus-healer/, cortex/
+        all do). Not a static data file: also carries live logic — a
+        Contract API, versioned contract snapshots (hash-keyed Map),
+        snapshot-bound validation, and a circuit breaker for UI contract
+        loading — real, active machinery orchestrator/orchestrator.js
+        calls at runtime. Decentralizing means rebuilding that logic to
+        read N per-system files instead of one central object, not just
+        copying data out. contracts/SYSTEM-CONTRACTS.js (1007 lines) is a
+        separate, much broader thing — AXIOMS/EVENTS/GAPS/FAULTS/EDGES/
+        DELTAS/LEDGERS/CAUSAL_PHYSICS, with only one sub-section
+        (INTERACTION_CONTRACTS) touching this at all, and that
+        sub-section is itself cross-system policy (seam contracts,
+        universal rules like "every request carries X-Bridge-UUID"), not
+        per-system content to redistribute — likely stays put, out of
+        scope for this specific phase.
+      blocked_on: >
+        diagnostic doesn't have a real folder yet (D1) — its section in
+        nexus-interaction-contract.js has nowhere real to land until D1
+        lands first.
+      not_executed_why: >
+        Larger than D1 (which was itself deferred for size — 44 files,
+        2667 lines) and requires the same repoint-and-verify-per-file
+        discipline this session used throughout (T3, N1, N2, N3) at
+        bigger scale: rebuild live Contract API logic against N files,
+        repoint orchestrator/orchestrator.js + 2 real test files
+        (tests/modules/interaction-contract.test.js, tests/brutal.test.js),
+        decide SYSTEM-CONTRACTS.js's fate separately. Not started this
+        session — logged precisely so it doesn't need re-discovery.
+
   build_order_recommendation: >
     T3 (WARP/SISO) first — it blocks T2 and touches 25 real files, cheapest
     to derisk now before anything else is built on top of it. T1 (scaffold

@@ -7,7 +7,7 @@ const http = require('http');
 // MODEL_CATALOG/bestFor() — re-exporting the real default/fallback here
 // too means they can converge on the one real config without adding a
 // second new require path.
-const { DEFAULT_MODEL, FALLBACK_MODEL } = require('./ollama/config.js');
+const { DEFAULT_MODEL, FALLBACK_MODEL } = require('./config.js');
 function normalizeEndpoint(url) {
   if (!url) return 'http://localhost:11434';
   if (!url.startsWith('http://') && !url.startsWith('https://')) {
