@@ -1,0 +1,30 @@
+envelope: 1
+uuid: nexus-export-capability-idearium.gap.open
+type: capability
+id: idearium.gap.open
+context: idearium/registry-components.js real capability export
+intent: null
+summary: null
+system: idearium
+tags: []
+exported_at: 1789250730200
+source: idearium.registry-components:idearium.gap.open
+payload:
+  id: idearium.gap.open
+  namespace: idearium
+  name: gap.open
+  version: 1.0.0
+  grammar:
+    - open gap
+    - gap open
+  route:
+    method: POST
+    path: /api/gaps
+  intent: []
+  description: Open a new gap
+  params: []
+  tags:
+    - idearium
+  permissions:
+    - system
+  hooks: {}

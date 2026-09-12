@@ -1,0 +1,29 @@
+envelope: 1
+uuid: nexus-export-capability-cortex.cfr.compounds
+type: capability
+id: cortex.cfr.compounds
+context: cortex/registry-components.js real capability export
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789250730086
+source: cortex.registry-components:cortex.cfr.compounds
+payload:
+  id: cortex.cfr.compounds
+  namespace: cortex
+  name: cfr.compounds
+  version: 3.5.0
+  grammar:
+    - cfr compounds
+  route:
+    method: POST
+    path: /cfr/compounds
+  intent: []
+  description: Compound effect scan (ripple/wave/tidal)
+  params: []
+  tags:
+    - cortex
+  permissions:
+    - system
+  hooks: {}

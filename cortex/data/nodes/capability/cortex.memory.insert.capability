@@ -1,0 +1,42 @@
+envelope: 1
+uuid: nexus-export-capability-cortex.memory.insert
+type: capability
+id: cortex.memory.insert
+context: cortex/registry-components.js real capability export
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789250730075
+source: cortex.registry-components:cortex.memory.insert
+payload:
+  id: cortex.memory.insert
+  namespace: cortex
+  name: memory.insert
+  version: 3.5.0
+  grammar:
+    - memory insert
+  route:
+    method: POST
+    path: /api/memory/insert
+  intent:
+    - persist
+    - write
+    - log
+  description: Insert row into any JAA table
+  params: []
+  tags:
+    - cortex
+    - memory
+  permissions:
+    - system
+  hooks:
+    in:
+      - id: cortex.memory.insert.receive
+        intent:
+          - persist
+          - write
+          - log
+        contract: nexus-interaction-contract-v1::cortex
+        tags:
+          - memory

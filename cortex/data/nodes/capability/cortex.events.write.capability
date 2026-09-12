@@ -1,0 +1,30 @@
+envelope: 1
+uuid: nexus-export-capability-cortex.events.write
+type: capability
+id: cortex.events.write
+context: cortex/registry-components.js real capability export
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789250730084
+source: cortex.registry-components:cortex.events.write
+payload:
+  id: cortex.events.write
+  namespace: cortex
+  name: events.write
+  version: 3.5.0
+  grammar:
+    - events write
+  route:
+    method: POST
+    path: /api/event
+  intent: []
+  description: Write event to JAA event_log
+  params: []
+  tags:
+    - cortex
+    - ledger
+  permissions:
+    - system
+  hooks: {}

@@ -1,0 +1,30 @@
+envelope: 1
+uuid: nexus-export-capability-idearium.snr.current
+type: capability
+id: idearium.snr.current
+context: idearium/registry-components.js real capability export
+intent: null
+summary: null
+system: idearium
+tags: []
+exported_at: 1789250730192
+source: idearium.registry-components:idearium.snr.current
+payload:
+  id: idearium.snr.current
+  namespace: idearium
+  name: snr.current
+  version: 1.0.0
+  grammar:
+    - current snr
+    - snr current
+  route:
+    method: GET
+    path: /api/snr
+  intent: []
+  description: Current SNR (signal-to-noise) score
+  params: []
+  tags:
+    - idearium
+  permissions:
+    - system
+  hooks: {}

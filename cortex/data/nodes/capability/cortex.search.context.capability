@@ -1,0 +1,29 @@
+envelope: 1
+uuid: nexus-export-capability-cortex.search.context
+type: capability
+id: cortex.search.context
+context: cortex/registry-components.js real capability export
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789250730112
+source: cortex.registry-components:cortex.search.context
+payload:
+  id: cortex.search.context
+  namespace: cortex
+  name: search.context
+  version: 3.5.0
+  grammar:
+    - search context
+  route:
+    method: POST
+    path: /api/search/context
+  intent: []
+  description: Context assembly for search query
+  params: []
+  tags:
+    - cortex
+  permissions:
+    - system
+  hooks: {}

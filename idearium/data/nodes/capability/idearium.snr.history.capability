@@ -1,0 +1,30 @@
+envelope: 1
+uuid: nexus-export-capability-idearium.snr.history
+type: capability
+id: idearium.snr.history
+context: idearium/registry-components.js real capability export
+intent: null
+summary: null
+system: idearium
+tags: []
+exported_at: 1789250730193
+source: idearium.registry-components:idearium.snr.history
+payload:
+  id: idearium.snr.history
+  namespace: idearium
+  name: snr.history
+  version: 1.0.0
+  grammar:
+    - history snr
+    - snr history
+  route:
+    method: GET
+    path: /api/snr/history
+  intent: []
+  description: Historical SNR score timeline
+  params: []
+  tags:
+    - idearium
+  permissions:
+    - system
+  hooks: {}

@@ -1,0 +1,29 @@
+envelope: 1
+uuid: nexus-export-capability-cortex.snapshot.list
+type: capability
+id: cortex.snapshot.list
+context: cortex/registry-components.js real capability export
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789250730105
+source: cortex.registry-components:cortex.snapshot.list
+payload:
+  id: cortex.snapshot.list
+  namespace: cortex
+  name: snapshot.list
+  version: 3.5.0
+  grammar:
+    - snapshot list
+  route:
+    method: GET
+    path: /api/snapshots
+  intent: []
+  description: Snapshot list
+  params: []
+  tags:
+    - cortex
+  permissions:
+    - system
+  hooks: {}

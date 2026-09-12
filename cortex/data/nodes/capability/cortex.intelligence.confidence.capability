@@ -1,0 +1,29 @@
+envelope: 1
+uuid: nexus-export-capability-cortex.intelligence.confidence
+type: capability
+id: cortex.intelligence.confidence
+context: cortex/registry-components.js real capability export
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789250730104
+source: cortex.registry-components:cortex.intelligence.confidence
+payload:
+  id: cortex.intelligence.confidence
+  namespace: cortex
+  name: intelligence.confidence
+  version: 3.5.0
+  grammar:
+    - intelligence confidence
+  route:
+    method: GET
+    path: /api/intelligence/confidence
+  intent: []
+  description: Confidence score for query
+  params: []
+  tags:
+    - cortex
+  permissions:
+    - system
+  hooks: {}

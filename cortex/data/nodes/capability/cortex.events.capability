@@ -1,0 +1,30 @@
+envelope: 1
+uuid: nexus-export-capability-cortex.events
+type: capability
+id: cortex.events
+context: cortex/registry-components.js real capability export
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789250730074
+source: cortex.registry-components:cortex.events
+payload:
+  id: cortex.events
+  namespace: cortex
+  name: events
+  version: 3.5.0
+  grammar:
+    - events
+  route:
+    method: GET
+    path: /events
+  intent: []
+  description: SSE — all cortex events
+  params: []
+  tags:
+    - cortex
+    - stream
+  permissions:
+    - system
+  hooks: {}

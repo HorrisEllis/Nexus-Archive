@@ -1,0 +1,30 @@
+envelope: 1
+uuid: nexus-export-capability-idearium.events.log
+type: capability
+id: idearium.events.log
+context: idearium/registry-components.js real capability export
+intent: null
+summary: null
+system: idearium
+tags: []
+exported_at: 1789250730193
+source: idearium.registry-components:idearium.events.log
+payload:
+  id: idearium.events.log
+  namespace: idearium
+  name: events.log
+  version: 1.0.0
+  grammar:
+    - log events
+    - events log
+  route:
+    method: GET
+    path: /api/events
+  intent: []
+  description: Recent internal event log
+  params: []
+  tags:
+    - idearium
+  permissions:
+    - system
+  hooks: {}

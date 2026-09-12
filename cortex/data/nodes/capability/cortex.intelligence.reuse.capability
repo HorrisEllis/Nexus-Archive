@@ -1,0 +1,29 @@
+envelope: 1
+uuid: nexus-export-capability-cortex.intelligence.reuse
+type: capability
+id: cortex.intelligence.reuse
+context: cortex/registry-components.js real capability export
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789250730100
+source: cortex.registry-components:cortex.intelligence.reuse
+payload:
+  id: cortex.intelligence.reuse
+  namespace: cortex
+  name: intelligence.reuse
+  version: 3.5.0
+  grammar:
+    - intelligence reuse
+  route:
+    method: GET
+    path: /api/intelligence/reuse
+  intent: []
+  description: SEAM reuse candidates
+  params: []
+  tags:
+    - cortex
+  permissions:
+    - system
+  hooks: {}

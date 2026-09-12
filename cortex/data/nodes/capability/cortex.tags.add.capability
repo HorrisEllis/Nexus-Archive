@@ -1,0 +1,29 @@
+envelope: 1
+uuid: nexus-export-capability-cortex.tags.add
+type: capability
+id: cortex.tags.add
+context: cortex/registry-components.js real capability export
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789250730112
+source: cortex.registry-components:cortex.tags.add
+payload:
+  id: cortex.tags.add
+  namespace: cortex
+  name: tags.add
+  version: 3.5.0
+  grammar:
+    - tags add
+  route:
+    method: POST
+    path: /api/tags
+  intent: []
+  description: Add tag
+  params: []
+  tags:
+    - cortex
+  permissions:
+    - system
+  hooks: {}

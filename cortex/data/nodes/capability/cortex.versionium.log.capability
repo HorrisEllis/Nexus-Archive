@@ -1,0 +1,29 @@
+envelope: 1
+uuid: nexus-export-capability-cortex.versionium.log
+type: capability
+id: cortex.versionium.log
+context: cortex/registry-components.js real capability export
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789250730106
+source: cortex.registry-components:cortex.versionium.log
+payload:
+  id: cortex.versionium.log
+  namespace: cortex
+  name: versionium.log
+  version: 3.5.0
+  grammar:
+    - versionium log
+  route:
+    method: GET
+    path: /api/versionium/log
+  intent: []
+  description: Version commit log
+  params: []
+  tags:
+    - cortex
+  permissions:
+    - system
+  hooks: {}

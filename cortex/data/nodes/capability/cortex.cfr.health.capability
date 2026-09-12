@@ -1,0 +1,29 @@
+envelope: 1
+uuid: nexus-export-capability-cortex.cfr.health
+type: capability
+id: cortex.cfr.health
+context: cortex/registry-components.js real capability export
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789250730084
+source: cortex.registry-components:cortex.cfr.health
+payload:
+  id: cortex.cfr.health
+  namespace: cortex
+  name: cfr.health
+  version: 3.5.0
+  grammar:
+    - cfr health
+  route:
+    method: GET
+    path: /cfr/health
+  intent: []
+  description: CFR field health — sigma, regime, coherence
+  params: []
+  tags:
+    - cortex
+  permissions:
+    - system
+  hooks: {}

@@ -1,0 +1,48 @@
+envelope: 1
+uuid: nexus-export-capability-eravos.organism.spawn
+type: capability
+id: eravos.organism.spawn
+context: eravos/registry-components.js real capability export
+intent: null
+summary: null
+system: eravos
+tags: []
+exported_at: 1789250730184
+source: eravos.registry-components:eravos.organism.spawn
+payload:
+  id: eravos.organism.spawn
+  namespace: eravos
+  name: organism.spawn
+  version: 3.0.0
+  grammar:
+    - eravos spawn
+    - spawn organism
+  route:
+    method: POST
+    path: /api/organisms
+  intent:
+    - compose
+    - visualize
+    - spawn
+  description: Spawn an organism by id onto the canvas
+  params: []
+  tags:
+    - eravos
+  permissions:
+    - system
+  hooks:
+    in:
+      - id: eravos.organism.spawn.receive
+        intent:
+          - compose
+          - visualize
+          - spawn
+        contract: nexus-interaction-contract-v1::eravos
+        tags:
+          - spawn
+    out:
+      - id: eravos.organism.spawn.complete
+        wires_to:
+          - cortex.raid.feedback
+        tags:
+          - spawned

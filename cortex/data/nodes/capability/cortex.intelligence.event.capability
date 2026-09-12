@@ -1,0 +1,29 @@
+envelope: 1
+uuid: nexus-export-capability-cortex.intelligence.event
+type: capability
+id: cortex.intelligence.event
+context: cortex/registry-components.js real capability export
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789250730100
+source: cortex.registry-components:cortex.intelligence.event
+payload:
+  id: cortex.intelligence.event
+  namespace: cortex
+  name: intelligence.event
+  version: 3.5.0
+  grammar:
+    - intelligence event
+  route:
+    method: POST
+    path: /api/intelligence/event
+  intent: []
+  description: Feed event for analysis
+  params: []
+  tags:
+    - cortex
+  permissions:
+    - system
+  hooks: {}

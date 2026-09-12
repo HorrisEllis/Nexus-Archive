@@ -1,0 +1,30 @@
+envelope: 1
+uuid: nexus-export-capability-idearium.snapshot.list
+type: capability
+id: idearium.snapshot.list
+context: idearium/registry-components.js real capability export
+intent: null
+summary: null
+system: idearium
+tags: []
+exported_at: 1789250730201
+source: idearium.registry-components:idearium.snapshot.list
+payload:
+  id: idearium.snapshot.list
+  namespace: idearium
+  name: snapshot.list
+  version: 1.0.0
+  grammar:
+    - list snapshot
+    - snapshot list
+  route:
+    method: GET
+    path: /api/snapshots
+  intent: []
+  description: List saved snapshots
+  params: []
+  tags:
+    - idearium
+  permissions:
+    - system
+  hooks: {}

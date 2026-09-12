@@ -1,0 +1,29 @@
+envelope: 1
+uuid: nexus-export-capability-cortex.intelligence.failures
+type: capability
+id: cortex.intelligence.failures
+context: cortex/registry-components.js real capability export
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789250730092
+source: cortex.registry-components:cortex.intelligence.failures
+payload:
+  id: cortex.intelligence.failures
+  namespace: cortex
+  name: intelligence.failures
+  version: 3.5.0
+  grammar:
+    - intelligence failures
+  route:
+    method: GET
+    path: /api/intelligence/failures
+  intent: []
+  description: Failure mode taxonomy
+  params: []
+  tags:
+    - cortex
+  permissions:
+    - system
+  hooks: {}

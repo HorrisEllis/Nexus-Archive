@@ -1,0 +1,29 @@
+envelope: 1
+uuid: nexus-export-capability-cortex.tags.list
+type: capability
+id: cortex.tags.list
+context: cortex/registry-components.js real capability export
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789250730112
+source: cortex.registry-components:cortex.tags.list
+payload:
+  id: cortex.tags.list
+  namespace: cortex
+  name: tags.list
+  version: 3.5.0
+  grammar:
+    - tags list
+  route:
+    method: GET
+    path: /api/tags
+  intent: []
+  description: All tags in memory
+  params: []
+  tags:
+    - cortex
+  permissions:
+    - system
+  hooks: {}

@@ -1,0 +1,29 @@
+envelope: 1
+uuid: nexus-export-capability-cortex.chat.log
+type: capability
+id: cortex.chat.log
+context: cortex/registry-components.js real capability export
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789250730107
+source: cortex.registry-components:cortex.chat.log
+payload:
+  id: cortex.chat.log
+  namespace: cortex
+  name: chat.log
+  version: 3.5.0
+  grammar:
+    - chat log
+  route:
+    method: GET
+    path: /api/chat-log
+  intent: []
+  description: Co-pilot conversation log
+  params: []
+  tags:
+    - cortex
+  permissions:
+    - system
+  hooks: {}

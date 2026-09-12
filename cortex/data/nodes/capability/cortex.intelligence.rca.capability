@@ -1,0 +1,29 @@
+envelope: 1
+uuid: nexus-export-capability-cortex.intelligence.rca
+type: capability
+id: cortex.intelligence.rca
+context: cortex/registry-components.js real capability export
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789250730098
+source: cortex.registry-components:cortex.intelligence.rca
+payload:
+  id: cortex.intelligence.rca
+  namespace: cortex
+  name: intelligence.rca
+  version: 3.5.0
+  grammar:
+    - intelligence rca
+  route:
+    method: GET
+    path: /api/intelligence/rca
+  intent: []
+  description: Root cause analysis findings
+  params: []
+  tags:
+    - cortex
+  permissions:
+    - system
+  hooks: {}

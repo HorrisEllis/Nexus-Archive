@@ -1,0 +1,30 @@
+envelope: 1
+uuid: nexus-export-capability-idearium.spec.create
+type: capability
+id: idearium.spec.create
+context: idearium/registry-components.js real capability export
+intent: null
+summary: null
+system: idearium
+tags: []
+exported_at: 1789250730196
+source: idearium.registry-components:idearium.spec.create
+payload:
+  id: idearium.spec.create
+  namespace: idearium
+  name: spec.create
+  version: 1.0.0
+  grammar:
+    - create spec
+    - spec create
+  route:
+    method: POST
+    path: /api/specs
+  intent: []
+  description: Create a new spec from an idea
+  params: []
+  tags:
+    - idearium
+  permissions:
+    - system
+  hooks: {}

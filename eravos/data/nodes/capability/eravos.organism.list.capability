@@ -1,0 +1,29 @@
+envelope: 1
+uuid: nexus-export-capability-eravos.organism.list
+type: capability
+id: eravos.organism.list
+context: eravos/registry-components.js real capability export
+intent: null
+summary: null
+system: eravos
+tags: []
+exported_at: 1789250730184
+source: eravos.registry-components:eravos.organism.list
+payload:
+  id: eravos.organism.list
+  namespace: eravos
+  name: organism.list
+  version: 3.0.0
+  grammar:
+    - eravos organisms
+  route:
+    method: GET
+    path: /api/organisms
+  intent: []
+  description: List all mounted organisms
+  params: []
+  tags:
+    - eravos
+  permissions:
+    - system
+  hooks: {}

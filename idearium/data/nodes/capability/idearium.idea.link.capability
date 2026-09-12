@@ -1,0 +1,30 @@
+envelope: 1
+uuid: nexus-export-capability-idearium.idea.link
+type: capability
+id: idearium.idea.link
+context: idearium/registry-components.js real capability export
+intent: null
+summary: null
+system: idearium
+tags: []
+exported_at: 1789250730194
+source: idearium.registry-components:idearium.idea.link
+payload:
+  id: idearium.idea.link
+  namespace: idearium
+  name: idea.link
+  version: 1.0.0
+  grammar:
+    - link idea
+    - idea link
+  route:
+    method: POST
+    path: /api/ideas/:uuid/link
+  intent: []
+  description: Link two ideas together
+  params: []
+  tags:
+    - idearium
+  permissions:
+    - system
+  hooks: {}

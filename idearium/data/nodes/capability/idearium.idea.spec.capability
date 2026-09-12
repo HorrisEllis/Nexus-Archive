@@ -1,0 +1,30 @@
+envelope: 1
+uuid: nexus-export-capability-idearium.idea.spec
+type: capability
+id: idearium.idea.spec
+context: idearium/registry-components.js real capability export
+intent: null
+summary: null
+system: idearium
+tags: []
+exported_at: 1789250730195
+source: idearium.registry-components:idearium.idea.spec
+payload:
+  id: idearium.idea.spec
+  namespace: idearium
+  name: idea.spec
+  version: 1.0.0
+  grammar:
+    - spec idea
+    - idea spec
+  route:
+    method: POST
+    path: /api/ideas/:uuid/spec
+  intent: []
+  description: Promote an idea into a spec
+  params: []
+  tags:
+    - idearium
+  permissions:
+    - system
+  hooks: {}

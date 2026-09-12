@@ -1,0 +1,30 @@
+envelope: 1
+uuid: nexus-export-capability-idearium.idea.update
+type: capability
+id: idearium.idea.update
+context: idearium/registry-components.js real capability export
+intent: null
+summary: null
+system: idearium
+tags: []
+exported_at: 1789250730194
+source: idearium.registry-components:idearium.idea.update
+payload:
+  id: idearium.idea.update
+  namespace: idearium
+  name: idea.update
+  version: 1.0.0
+  grammar:
+    - update idea
+    - idea update
+  route:
+    method: PATCH
+    path: /api/ideas/:uuid
+  intent: []
+  description: Update an idea's fields
+  params: []
+  tags:
+    - idearium
+  permissions:
+    - system
+  hooks: {}

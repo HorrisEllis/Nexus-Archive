@@ -1,0 +1,30 @@
+envelope: 1
+uuid: nexus-export-capability-idearium.gap.show
+type: capability
+id: idearium.gap.show
+context: idearium/registry-components.js real capability export
+intent: null
+summary: null
+system: idearium
+tags: []
+exported_at: 1789250730200
+source: idearium.registry-components:idearium.gap.show
+payload:
+  id: idearium.gap.show
+  namespace: idearium
+  name: gap.show
+  version: 1.0.0
+  grammar:
+    - show gap
+    - gap show
+  route:
+    method: GET
+    path: /api/gaps/:uuid
+  intent: []
+  description: Get a single gap by uuid
+  params: []
+  tags:
+    - idearium
+  permissions:
+    - system
+  hooks: {}

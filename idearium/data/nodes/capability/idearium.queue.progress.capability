@@ -1,0 +1,30 @@
+envelope: 1
+uuid: nexus-export-capability-idearium.queue.progress
+type: capability
+id: idearium.queue.progress
+context: idearium/registry-components.js real capability export
+intent: null
+summary: null
+system: idearium
+tags: []
+exported_at: 1789250730206
+source: idearium.registry-components:idearium.queue.progress
+payload:
+  id: idearium.queue.progress
+  namespace: idearium
+  name: queue.progress
+  version: 1.0.0
+  grammar:
+    - progress queue
+    - queue progress
+  route:
+    method: POST
+    path: /api/queue/:queueId/progress
+  intent: []
+  description: Record progress against a queue item
+  params: []
+  tags:
+    - idearium
+  permissions:
+    - system
+  hooks: {}

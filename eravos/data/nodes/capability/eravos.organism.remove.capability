@@ -1,0 +1,29 @@
+envelope: 1
+uuid: nexus-export-capability-eravos.organism.remove
+type: capability
+id: eravos.organism.remove
+context: eravos/registry-components.js real capability export
+intent: null
+summary: null
+system: eravos
+tags: []
+exported_at: 1789250730184
+source: eravos.registry-components:eravos.organism.remove
+payload:
+  id: eravos.organism.remove
+  namespace: eravos
+  name: organism.remove
+  version: 3.0.0
+  grammar:
+    - eravos organism remove
+  route:
+    method: DELETE
+    path: /api/organisms/:uuid
+  intent: []
+  description: Remove an organism
+  params: []
+  tags:
+    - eravos
+  permissions:
+    - system
+  hooks: {}

@@ -1,0 +1,30 @@
+envelope: 1
+uuid: nexus-export-capability-cortex.intelligence.predict
+type: capability
+id: cortex.intelligence.predict
+context: cortex/registry-components.js real capability export
+intent: null
+summary: null
+system: cortex
+tags: []
+exported_at: 1789250730104
+source: cortex.registry-components:cortex.intelligence.predict
+payload:
+  id: cortex.intelligence.predict
+  namespace: cortex
+  name: intelligence.predict
+  version: 3.5.0
+  grammar:
+    - intelligence predict
+  route:
+    method: GET
+    path: /api/intelligence/predict
+  intent: []
+  description: Predicted next gap from precursors
+  params: []
+  tags:
+    - cortex
+    - cognition
+  permissions:
+    - system
+  hooks: {}
