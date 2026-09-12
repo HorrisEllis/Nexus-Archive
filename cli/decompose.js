@@ -58,8 +58,9 @@ for (const a of args.slice(2)) {
 
 if (!mode || !targetFile || !['analyze', 'extract'].includes(mode)) {
   console.error('Usage:');
-  console.error('  node cli/decompose.js analyze <file>');
-  console.error('  node cli/decompose.js extract <file> --route=<path> --system=<name>');
+  console.error('  node cli/decompose.js analyze <file> [--mode=route|registry]');
+  console.error('  node cli/decompose.js extract <file> --route=<path> --system=<name>              (mode=route, default)');
+  console.error('  node cli/decompose.js extract <file> --mode=registry --block=<CONST_NAME> --system=<name> [--kind=node|tools|commands]');
   process.exit(1);
 }
 
@@ -176,6 +177,141 @@ function freeVariables(blockSrc) {
   return free.sort();
 }
 
+// ── Registry block finder — same brace-depth walker, different shape ───────
+// Monoliths like contracts/SYSTEM-CONTRACTS.js aren't route dispatchers —
+// they're `const NAME = Object.freeze({ ... });` data registries, one const
+// per taxonomy (AXIOMS, EVENTS, GAPS, ...). Anchored to column 0 (top-level
+// only) so a nested object literal inside one of these consts is never
+// mistaken for a second top-level block.
+function findRegistryBlocks(src) {
+  const lines = src.split('\n');
+  const blocks = [];
+  const headerRe = /^const\s+([A-Z][A-Z0-9_]*)\s*=\s*Object\.freeze\(\s*\{/;
+
+  let i = 0;
+  while (i < lines.length) {
+    const m = lines[i].match(headerRe);
+    if (!m) { i++; continue; }
+    const startLine = i;
+    let depth = 0;
+    let started = false;
+    let inString = null;
+    let inLineComment = false;
+    let inBlockComment = false;
+    let j = i;
+    outer:
+    for (; j < lines.length; j++) {
+      inLineComment = false;
+      const line = lines[j];
+      for (let k = 0; k < line.length; k++) {
+        const c = line[k];
+        const next = line[k + 1];
+        if (inLineComment) continue;
+        if (inBlockComment) { if (c === '*' && next === '/') { inBlockComment = false; k++; } continue; }
+        if (inString) { if (c === '\\') { k++; continue; } if (c === inString) inString = null; continue; }
+        if (c === '/' && next === '/') { inLineComment = true; continue; }
+        if (c === '/' && next === '*') { inBlockComment = true; k++; continue; }
+        if (c === "'" || c === '"' || c === '`') { inString = c; continue; }
+        if (c === '{') { depth++; started = true; }
+        else if (c === '}') {
+          depth--;
+          if (started && depth === 0) { break outer; }
+        }
+      }
+    }
+    // The matched line ends in `{` but the real statement continues past
+    // the `}` with `);` (the Object.freeze close-paren + semicolon) —
+    // absorb that onto the same end line so extraction doesn't clip it.
+    let endLine = j;
+    if (lines[endLine] && /^\s*\}\s*\)\s*;?\s*$/.test(lines[endLine])) { /* whole close line — fine as-is */ }
+    blocks.push({
+      name: m[1],
+      startLine: startLine + 1, endLine: endLine + 1,
+      body: lines.slice(startLine, endLine + 1).join('\n'),
+    });
+    i = j + 1;
+  }
+  return blocks;
+}
+
+// Which output kind a registry block's own name implies, unless overridden
+// with --kind. Kept as a small, honest heuristic — not a hardcoded mapping
+// pretending to know every future registry name — and always overridable.
+function inferKind(name) {
+  const n = name.toUpperCase();
+  if (n.includes('TOOL')) return 'tools';
+  if (n.includes('COMMAND') || n.includes('CLI')) return 'commands';
+  return 'node';
+}
+
+function analyzeRegistry() {
+  const src = fs.readFileSync(filePath, 'utf8');
+  const blocks = findRegistryBlocks(src);
+  console.log(`[decompose] ${path.relative(ROOT, filePath)}: ${src.split('\n').length} lines, ${blocks.length} extractable registry block(s)\n`);
+  for (const b of blocks) {
+    const size = b.endLine - b.startLine + 1;
+    console.log(`  ${b.name} — lines ${b.startLine}-${b.endLine} (${size} lines) — kind: ${inferKind(b.name)} (override with --kind)`);
+  }
+}
+
+function extractRegistry() {
+  if (!flags.block) { console.error('[decompose] extract --mode=registry requires --block=<CONST_NAME>'); process.exit(1); }
+  if (!flags.system) { console.error('[decompose] extract requires --system=<name>'); process.exit(1); }
+
+  const src = fs.readFileSync(filePath, 'utf8');
+  const blocks = findRegistryBlocks(src);
+  const target = blocks.find(b => b.name === flags.block);
+  if (!target) { console.error(`[decompose] no top-level const "${flags.block}" found in ${targetFile}`); process.exit(1); }
+
+  const kind = flags.kind || inferKind(target.name);
+  const slug = target.name.toLowerCase().replace(/_/g, '-');
+  const system = flags.system;
+  const outDir = path.join(ROOT, system, kind === 'node' ? 'nodes' : kind);
+  fs.mkdirSync(outDir, { recursive: true });
+  const ext = kind === 'node' ? 'node' : kind === 'tools' ? 'tool' : 'command';
+  const nodeFile = path.join(outDir, `${slug}.${ext}.js`);
+  const nodeId = `${system}.${slug}.${ext}`;
+
+  if (fs.existsSync(nodeFile)) { console.error(`[decompose] ${path.relative(ROOT, nodeFile)} already exists — refusing to overwrite`); process.exit(1); }
+
+  // target.body is `const NAME = Object.freeze({ ... });` verbatim — export
+  // the same expression under module.exports instead of re-deriving it, so
+  // the extracted file is byte-identical in meaning, not a re-transcription.
+  const bodyWithoutConst = target.body.replace(/^const\s+[A-Z][A-Z0-9_]*\s*=\s*/, '');
+  const nodeContent = `'use strict';
+/**
+ * ${path.relative(ROOT, nodeFile)} — extracted from ${path.relative(ROOT, filePath)}
+ * Real node id: ${nodeId}
+ * §EXTRACTED 2026-09-12 — cli/decompose.js --mode=registry, block ${target.name}.
+ * Verbatim body — this extraction moves the const, it does not re-derive it,
+ * so nothing about the taxonomy itself changed, only where it lives.
+ */
+module.exports = ${bodyWithoutConst}
+`;
+  fs.writeFileSync(nodeFile, nodeContent);
+
+  // Replace the inline const in the source file with a require of the
+  // extracted node — same "thin delegating reference" discipline the
+  // route mode already uses, just an assignment instead of a call.
+  const lines = src.split('\n');
+  const before = lines.slice(0, target.startLine - 1);
+  const after = lines.slice(target.endLine);
+  const relRequire = './' + path.relative(path.dirname(filePath), nodeFile).replace(/\\/g, '/').replace(/\.js$/, '');
+  const newSrc = [...before, `const ${target.name} = require('${relRequire}');`, ...after].join('\n');
+  fs.writeFileSync(filePath, newSrc);
+
+  const { execFileSync } = require('child_process');
+  try {
+    execFileSync(process.execPath, ['--check', nodeFile]);
+    execFileSync(process.execPath, ['--check', filePath]);
+  } catch (e) {
+    console.error(`[decompose] syntax check FAILED after extraction — this needs manual review, not left silently broken:\n${e.message}`);
+    process.exit(1);
+  }
+
+  console.log(`[decompose] extracted ${target.name} (kind: ${kind}) from ${path.relative(ROOT, filePath)} -> ${path.relative(ROOT, nodeFile)} (${target.endLine - target.startLine + 1} lines moved). Both files verified syntax-clean.`);
+}
+
 function analyze() {
   const src = fs.readFileSync(filePath, 'utf8');
   const blocks = findRouteBlocks(src);
@@ -283,5 +419,5 @@ ${innerBody}
   console.log(`[decompose] extracted ${target.route} from ${path.relative(ROOT, filePath)} -> ${path.relative(ROOT, nodeFile)} (${target.endLine - target.startLine + 1} lines moved). Both files verified syntax-clean.`);
 }
 
-if (mode === 'analyze') analyze();
-else extract();
+if (mode === 'analyze') { if (flags.mode === 'registry') analyzeRegistry(); else analyze(); }
+else { if (flags.mode === 'registry') extractRegistry(); else extract(); }

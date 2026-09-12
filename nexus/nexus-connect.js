@@ -80,14 +80,38 @@ const HEALTH_PATHS = {
   loom:         '/health',
 };
 
+// ── Lattice feed — the real cross-system relationship signal ───────────────
+// docs/nexus-relationship-shape.spec build_order_v0_2 step 8, done at the
+// actual point of contact instead of inferred from a log line after the
+// fact (see intelligence/lattice/fanin-listener.js's poll reconciler,
+// which tried causedBy-inference and found the signal essentially never
+// present in real ledger data — this is the honest fix, not a second
+// guess). Lazy-required so a lattice failure can never break a real
+// cross-system call, and so there's no load-order dependency on the
+// lattice existing before nexus-connect does.
+let _lattice = null;
+function _feedLattice(from, to, eventPath, ok) {
+  if (!from || !to || from === to) return; // self-calls aren't a pair
+  try {
+    if (!_lattice) _lattice = require('../intelligence/lattice/associative-lattice');
+    // A failed cross-system call is real, direct evidence of friction —
+    // better grounded than any inference. A successful one is left at 0
+    // and handled by field.js's own eventType-based nudge, same as every
+    // other caller of updateEdge().
+    _lattice.updateEdge(from, to, eventPath, ok ? 0 : 0.7).catch(() => {});
+  } catch (_) { /* lattice unavailable — the real cross-system call is unaffected */ }
+}
+
 // ── Gated HTTP helper ─────────────────────────────────────────────────────────
 // §1.2: never swallows errors silently — always returns { ok, data, error, uuid, ms }
 function _req(system, method, path, body, timeout = 5000) {
   const callUuid = randomUUID();
   const port     = PORTS[system];
   if (!port) return Promise.resolve({ ok:false, error:`[nexus-connect] unknown system: ${system}`, uuid:callUuid, ms:0 });
+  const fromSystem = process.env.NEXUS_SYSTEM_ID || 'nexus';
 
-  return new Promise(resolve => {
+  return new Promise(resolveOuter => {
+    const resolve = (result) => { _feedLattice(fromSystem, system, path, result.ok); resolveOuter(result); };
     const t0      = Date.now();
     const payload = body ? JSON.stringify(body) : null;
     const opts = {
