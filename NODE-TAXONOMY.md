@@ -1,4 +1,4 @@
-# Node Taxonomy — 33 slots (current)
+# Node Taxonomy — 35 slots (current)
 
 Reconciled from three disagreeing sources (the zip snapshot, the `node-export.js`
 you uploaded directly, and this thread's own running list) — see the
@@ -42,6 +42,22 @@ this session's fixes.
 | 31 | `input` | REAL, built | Union of guardian's `createJob()` destructure and copilot's real `POST /api/prompt` body. Only `provider` common to both. Copilot's meta-CLI router (argv into a spawned system `cli.js`) is a second real injection mode, noted, not separately schema'd. |
 | 32 | `output` | REAL, built | Union of guardian's `GET /response/:jobId` and copilot's parsed `/api/prompt` reply. `ok`/`response`/`error` common to both. |
 | 33 | `note` | REAL, found on re-check | Doubly grounded: `intelligence/schemas.js`'s real `agent_notes` table and `lib/agent-tools/tools/coordination/agent-notes.js`'s real tool, same field set independently. Missed in the original 32 — surfaced only after being asked directly whether anything was missing. Possibly the real target of copilot's own `note` intent (→ cortex's push-recall), not fully confirmed as the identical shape. |
+| 34 | `hypothesis` | REAL | `copilot/lib/user-model.js`'s real `user_model_hypotheses` JAA table — added after the "33 slots" framing above was written; doc lag, not a functional gap (see `lib/node-schemas/schema.hypothesis`). |
+| 35 | `agent_tool` | OPEN | **Genuinely distinct from `.tool`, not a naming variant of it** — `lib/agent-tools/naming.js`'s real `agentToolName(provider, agentName, name)` builds `provider.agentName.name.agent.tool`, and its `parseName()` returns a different `kind` (`'agent_tool'` vs `'tool'`) for it, a different id shape than `.tool`'s `system.name.tool`. `schema.tool`'s own header used to claim the opposite ("is agent.tool a separate type? it isn't") — that claim is superseded, left visible with a correction note rather than deleted. Marked `OPEN`: the naming grammar is real and tested (`tests/modules/test-tool-naming-convention.js` TN-003/TN-009), but zero real `.agent.tool` instances have been built or registered anywhere yet — `lib/agent-tools/index.js` only references the convention in a comment. Promote to `REAL` once one actually exists. |
+
+## Explicitly not in this taxonomy: MCP tools
+
+`nexus_grep`, `nexus_read_range`, and the rest of `orchestrator/lib/mcp-tools-tokensave.js` /
+`orchestrator/lib/mcp-server.js`'s `TOOLS` array are **not** `.tool`, `.agent.tool`, or any other
+node type here — checked and excluded on purpose. They use flat snake_case names with zero
+relation to `lib/agent-tools/naming.js`'s dotted convention, and they're consumed over the MCP
+protocol (stdio/SSE) by external clients, not through this codebase's internal agent-tool loop.
+Recorded here explicitly so this doesn't quietly get read as "just another `.tool`" later.
+Whether protocol-layer tools deserve their own taxonomy is a separate architectural decision, not
+resolved by this note.
+
+Also not a tool node: `cli/decompose.js` — developer-run build tooling (extracts code into real
+node files), never agent-facing, never registered in any tool loop.
 
 ## Left agnostic on purpose (not forced this session)
 
