@@ -149,6 +149,8 @@ const SUITES = [
   'mco6-reconcile-on-boot.test.js',
   'mco10-compartment-dom-ledger.test.js',
   'mco11-contract-repo-provision.test.js',
+  'mco15-component-boundary-check.test.js',
+  'mco15-component-exec-test.test.js',
   'test-gap-finder.js',
   'test-raid-decision-record.js',
   'test-raid-constitution-gate.js',

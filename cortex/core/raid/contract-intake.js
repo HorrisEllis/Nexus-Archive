@@ -578,7 +578,7 @@ function _advanceToProcessing(queueId) {
  * this same contract, never the file this call is about to produce
  * itself.
  */
-function _advanceToOutputFolder(queueId, row, resultPayload) {
+async function _advanceToOutputFolder(queueId, row, resultPayload) {
   const fs = require('fs');
   const perSystemDir = _resolveOutputDir(row.system);
   if (row.system && !perSystemDir) {
@@ -589,24 +589,40 @@ function _advanceToOutputFolder(queueId, row, resultPayload) {
   const alreadyHadOutput = fs.existsSync(expectedPath);
 
   let outputArtifactPath;
+  let viaFallback = false;
   try {
     const { exportToFile } = require('../../../lib/node-export.js');
     outputArtifactPath = exportToFile('contract', queueId, resultPayload, { system: row.system, intent: row.intention, source: row.source }, outputDir);
   } catch (e) {
-    // §1.2 — a failed output write must never silently fabricate
-    // OUTPUT_FOLDER/QC_PENDING; the row stays at its last real stage
-    // (PROCESSING) and the failure is visible, not swallowed.
-    console.warn(`[${MODULE_ID}] output artifact write failed (stage stays at PROCESSING, not fabricated): ${e.message}`);
-    return { ok: false, error: e.message };
+    // §MCO13 2026-09-13 — "create a compartment as a fallback so nothing
+    // gets lost" (James). Real fallback, not a design placeholder: if the
+    // primary output-dir write fails, try the contract's own real repo
+    // (MCO11's already-provisioned compartment-as-repo, row.repoUuid) —
+    // reuses writeContractRepoFile() as-is, no new mechanism. Still
+    // honest either way: no repoUuid, or the fallback write itself
+    // fails, and the row stays at PROCESSING with the real failure
+    // visible, never fabricated into OUTPUT_FOLDER/QC_PENDING.
+    console.warn(`[${MODULE_ID}] primary output artifact write failed for ${queueId}: ${e.message} — trying compartment fallback`);
+    if (!row.repoUuid) {
+      console.warn(`[${MODULE_ID}] no real repoUuid on this contract — no compartment to fall back to`);
+      return { ok: false, error: e.message };
+    }
+    const fallback = await writeContractRepoFile(row.repoUuid, `output/${queueId}.json`, JSON.stringify(resultPayload));
+    if (!fallback.ok) {
+      console.warn(`[${MODULE_ID}] compartment fallback also failed for ${queueId}: ${fallback.reason} — stage stays at PROCESSING, not fabricated`);
+      return { ok: false, error: e.message, fallbackError: fallback.reason };
+    }
+    outputArtifactPath = `repo:${row.repoUuid}/${fallback.path}`;
+    viaFallback = true;
   }
 
-  jaaDB.update(TABLE, queueId, { stage: STAGE.OUTPUT_FOLDER, outputArtifactPath, updatedAt: Date.now() });
-  _raidLedger.record('raid.contract.stage.output_folder', { queueId, outputArtifactPath }, { source: 'raid', causedBy: queueId });
+  jaaDB.update(TABLE, queueId, { stage: STAGE.OUTPUT_FOLDER, outputArtifactPath, outputViaFallback: viaFallback, updatedAt: Date.now() });
+  _raidLedger.record(viaFallback ? 'raid.contract.stage.output_folder_fallback' : 'raid.contract.stage.output_folder', { queueId, outputArtifactPath }, { source: 'raid', causedBy: queueId });
 
   jaaDB.update(TABLE, queueId, { stage: STAGE.QC_PENDING, alreadyHadOutput, updatedAt: Date.now() });
   _raidLedger.record('raid.contract.stage.qc_pending', { queueId, alreadyHadOutput }, { source: 'raid', causedBy: queueId });
 
-  return { ok: true, stage: STAGE.QC_PENDING, outputArtifactPath, alreadyHadOutput };
+  return { ok: true, stage: STAGE.QC_PENDING, outputArtifactPath, alreadyHadOutput, viaFallback };
 }
 
 /** listQueue(filter) — real, current queue state. */
@@ -801,7 +817,7 @@ async function processNext(executor) {
   // returned early) — a genuinely real result exists to write, not a
   // placeholder. queued.system/intention/source are read from the row
   // captured at dequeue; unlike stage, these never change mid-run.
-  _advanceToOutputFolder(queued.uuid, queued, {
+  await _advanceToOutputFolder(queued.uuid, queued, {
     queueId: queued.uuid,
     status: finalStatus,
     verdict: resolved.trace_log?.find(t => t.event === 'QA_QC')?.data?.verdict ?? null,

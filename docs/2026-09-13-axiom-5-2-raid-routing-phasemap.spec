@@ -159,6 +159,36 @@ spec:
       reconciliation) is needed before wiring anything else here, not a
       continuation of the original named list."
 
+  MCO12_guardian_audit_complete:
+    depends_on: [MCO12_guardian_list_was_unreliable]
+    status: "DONE 2026-09-13. All 20 real POST routes in guardian/server.js
+      (guardian/interaction-contract.json's own reconciled list) checked
+      individually, direct code read, not assumed. CONCLUSION: zero real
+      gaps. Guardian was never missing RAID integration — it already has
+      it, through purpose-built mechanisms rather than the generic
+      submit/execute/report pattern architect's routes needed:
+      /build (raid._approveTool() — a real approval gate), /api/intake
+      (already correlates to the EXISTING RAID contract behind a
+      dispatched job — raid.listQueue().find(dispatchedJobId===jobId) —
+      strictly better than a redundant new observability contract would
+      be), /api/copilot/prompt (already calls real POST /api/raid/decide).
+      /api/intake/verdict|promote|rollback are governance actions on that
+      same already-correlated record. seam/retry, wake-job-ack,
+      organism-queue/:id/ack, providers/:name/spawn are control/ack
+      actions on already-existing work, not new content. bus/emit,
+      api/guardian/cfr/event (a pure proxy to cortex's own generic
+      /api/event), command, command/tools, cli/exec, chatgpt-mode/query
+      are generic relays or caller-decided dispatches, same exclusion
+      class /command already established. result/heartbeat/stream/:jobId
+      are NCP protocol internals already covered by guardian's own real
+      job-durability system (P22-P24)."
+    gate: "MET — by finding, not by wiring. Applying the observability
+      pattern anywhere in this list would either duplicate an
+      already-real, more-correct mechanism or misfit a control/relay
+      action that was never 'work' in the RAID contract sense. Track D
+      is now honestly complete for both systems it named: architect
+      needed and got 3 real routes wired; guardian needed nothing."
+
   honest_risks:
     - "The observability pattern this reuses never gates or authorizes —
       per contract-boundary.js's own resolveBoundary() docstring, an

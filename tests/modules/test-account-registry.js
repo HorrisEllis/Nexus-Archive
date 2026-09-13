@@ -73,5 +73,41 @@ test('T-008', 'removeAccount archives (not deletes) — §0.3 nothing lost', () 
   assert.ok(!stillListed, 'a removed account drops off the active list');
 });
 
+// §MCO14 2026-09-13 — real tests for the new provider-registration
+// mechanism (the actual gap: PROVIDERS was hardcoded, a genuinely new
+// agent name had nowhere to go without a code edit).
+const newProvider = `test-agent-${tag}`;
+
+test('T-009', 'a genuinely new provider name is rejected before registration', () => {
+  const r = ar.addAccount(newProvider, 'work');
+  assert.ok(r.error, 'an unregistered new provider must still be rejected');
+});
+
+test('T-010', 'registerProvider makes a new provider name real', () => {
+  const r = ar.registerProvider(newProvider, { note: 'test-only agent' });
+  assert.ok(!r.error, 'a genuinely new name must register cleanly');
+  assert.strictEqual(r.dispatchable, false, '§HONEST SCOPE — registration never claims dispatchability');
+  assert.ok(ar.listKnownProviders().includes(newProvider), 'the new provider must be visible in the real, current list');
+});
+
+test('T-011', 'addAccount now works for the newly-registered provider', () => {
+  const r = ar.addAccount(newProvider, 'work', { credentialRef: 'kc:test' });
+  assert.ok(!r.error, 'addAccount must succeed once the provider is real');
+  assert.strictEqual(r.provider, newProvider);
+});
+
+test('T-012', 'registering an already-known provider (seed or registered) is refused', () => {
+  const r1 = ar.registerProvider('claude'); // already in the hardcoded seed list
+  assert.ok(r1.error, 'a seed provider must not be re-registered');
+  const r2 = ar.registerProvider(newProvider); // already registered by T-010
+  assert.ok(r2.error, 'an already-registered provider must not be registered twice');
+});
+
+test('T-013', 'listKnownProviders includes every seed provider plus registered ones', () => {
+  const all = ar.listKnownProviders();
+  for (const p of ar.PROVIDERS) assert.ok(all.includes(p), `seed provider ${p} must still be listed`);
+  assert.ok(all.includes(newProvider), 'the newly-registered provider must be listed too');
+});
+
 _log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
