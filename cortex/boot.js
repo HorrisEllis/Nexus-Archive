@@ -501,6 +501,22 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // §MCO10 2026-09-13 — real query surface for compartment_dom_ledger,
+  // same n/filter shape as /api/events above so a caller already familiar
+  // with that convention needs nothing new. Filters by compartmentUuid
+  // (the ledger's real key) or queueId when given.
+  if (p === '/api/compartment-dom-ledger') {
+    const n               = parseInt(url.searchParams.get('n') || '50');
+    const compartmentUuid = url.searchParams.get('compartmentUuid');
+    const queueId         = url.searchParams.get('queueId');
+    let rows = jaaDB.tail('compartment_dom_ledger', n * 4); // over-fetch before filtering, same pattern as /api/events' source filter
+    if (compartmentUuid) rows = rows.filter(r => r.compartmentUuid === compartmentUuid);
+    if (queueId)         rows = rows.filter(r => r.queueId === queueId);
+    rows = rows.slice(-n);
+    json(res, 200, { ok: true, entries: rows, total: rows.length });
+    return;
+  }
+
   // §NEW 2026-09-06 — James: "SESSIONS (we can use the chat logs.)"
   // BrainOS-v2's original SESSIONS tab had no real nexus equivalent —
   // removed. Real chat_log data exists (lib/chat-logger.js writes it,
@@ -1597,6 +1613,22 @@ server.listen(PORT, '127.0.0.1', () => {
   // listener. Now required above as `bus`, wired into /api/event and
   // /api/gaps (POST) so both cross-process events and cortex's own gap
   // creation fan out live, and passed to liminal-space for real below.
+  //
+  // ── Compartment DOM ledger (§MCO10 2026-09-13) ──────────────────────────
+  // James: "stream the DOM to the compartment ledger per contract using
+  // the compartment uuid." Reuses this exact real path — clear-glass has
+  // no in-process jaa (same real cross-process boundary agent-mesh.js's
+  // _raidDecide/gap-reporting already cross), so it POSTs to /api/event
+  // like everything else in this section, rather than a second ingest
+  // surface being invented. A single fixed bus event name is used —
+  // nexus-bus is a plain EventEmitter, no wildcard matching — the real
+  // DOM event's own subtype (dom.snapshot / dom.mutation / etc, clear-
+  // glass's own vocabulary) travels inside the payload, not the bus name.
+  bus.on('compartment.dom.event', (payload) => {
+    const { recordDomEvent } = require('../lib/compartment-dom-ledger.js');
+    const result = recordDomEvent(jaaDB, payload, uid);
+    if (!result.ok) console.warn(`[cortex] compartment_dom_ledger: ${result.reason}`);
+  });
   // §VS1 2026-09-02 — versionium.init()/setDeps() and versionium/
   // causality's own init() used to live here (this process fed them
   // cortex's own in-process _field state directly). Both are gone —

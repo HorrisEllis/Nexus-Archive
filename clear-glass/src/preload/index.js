@@ -288,6 +288,11 @@ contextBridge.exposeInMainWorld('ClearGlass', {
 
   // ── DOM event bridge (called from injected page scripts) ──────────────
   _sendDomEvent: (data) => ipcRenderer.send('dom:event', data),
+  // §MCO10 2026-09-13 — real hook to associate the live DOM stream with a
+  // RAID compartment/contract. Returns the real, current {compartmentUuid,
+  // queueId} the main process now holds, not just an ack.
+  setActiveCompartment: (compartmentUuid, queueId) =>
+    ipcRenderer.invoke('compartment:set-active', { compartmentUuid, queueId }),
   _sendPickResult: (data) => ipcRenderer.send('dom:pick-result', data),
   // §ADDED 2026-09-02 — real cookie-vault round-trip. Same, established
   // fire-into-main-process pattern as the two lines above; the real

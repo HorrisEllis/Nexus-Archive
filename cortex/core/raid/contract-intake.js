@@ -59,6 +59,93 @@ function _resolveInputDir(system) {
   return fs.existsSync(dir) ? dir : null;
 }
 
+// §MCO11 2026-09-13 — real cross-process provisioning + work-surface
+// query/write, both against idearium's real /api/repos (fixed earlier
+// this pass to actually accept compartmentId). IDEARIUM_PORT matches
+// idearium/config.js's own real default (4800) — not guessed.
+const IDEARIUM_PORT = parseInt(process.env.IDEARIUM_PORT || '4800', 10);
+
+function _ideariumRequest(method, reqPath, body) {
+  return new Promise((resolve) => {
+    const http = require('http');
+    const payload = body ? JSON.stringify(body) : null;
+    const req = http.request({
+      hostname: '127.0.0.1', port: IDEARIUM_PORT, path: reqPath, method, timeout: 2000,
+      headers: payload ? { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) } : {},
+    }, (res) => {
+      let raw = '';
+      res.on('data', (c) => raw += c);
+      res.on('end', () => {
+        try { resolve({ status: res.statusCode, body: JSON.parse(raw) }); }
+        catch (_) { resolve(null); }
+      });
+    });
+    req.on('error',   () => resolve(null)); // honest-degrade — matching _raidDecide's own contract
+    req.on('timeout', () => { req.destroy(); resolve(null); });
+    if (payload) req.write(payload);
+    req.end();
+  });
+}
+
+async function _provisionContractRepo(queued, compartmentId) {
+  const { buildRepoIngestBody } = require('../../../lib/contract-repo-provision.js');
+  const built = buildRepoIngestBody(queued, compartmentId);
+  if (!built.ok) {
+    console.warn(`[${MODULE_ID}] not provisioning a repo for ${queued && queued.uuid}: ${built.reason}`);
+    return null;
+  }
+  const res = await _ideariumRequest('POST', '/api/repos', built.body);
+  if (!res || res.status >= 400 || !res.body || !res.body.repo || !res.body.repo.uuid) return null;
+  const repoUuid = res.body.repo.uuid;
+
+  // §MCO11 real finding — the create response above does NOT include the
+  // real file listing (confirmed directly: 'files' is absent from POST
+  // /api/repos' response body). idearium's spec-engine chunking renames
+  // every real file on ingest (confirmed directly: a file sent as
+  // 'CONTRACT.md' comes back stored as '00-contract-md.md') — a caller
+  // that assumed the path it sent would still be the path to read back
+  // would silently fail every time. One extra real GET resolves the
+  // actual current listing rather than guessing or hardcoding a
+  // transformation rule this file doesn't own.
+  const listing = await _ideariumRequest('GET', `/api/repos/${encodeURIComponent(repoUuid)}`);
+  const realFiles = (listing && listing.body && listing.body.repo && Array.isArray(listing.body.repo.files))
+    ? listing.body.repo.files.map(f => f.path)
+    : [];
+  if (realFiles.length) {
+    try { jaaDB.update(TABLE, queued.uuid, { repoFiles: realFiles, updatedAt: Date.now() }); } catch (_) {}
+  } else {
+    console.warn(`[${MODULE_ID}] contract ${queued.uuid}: repo ${repoUuid} provisioned but its real file listing could not be confirmed — repoFiles left unset, not guessed`);
+  }
+  return repoUuid;
+}
+
+/**
+ * queryContractRepoFile(repoUuid, relPath) / writeContractRepoFile(...) —
+ * the real "work surface query" James asked for: read/write a file inside
+ * a contract's real, provisioned repo, over idearium's already-real
+ * GET/POST /api/repos/:uuid/file. Honest-degrade — resolves {ok:false}
+ * rather than throwing, same contract as every other cross-process call
+ * in this file.
+ */
+async function queryContractRepoFile(repoUuid, relPath) {
+  if (!repoUuid || !relPath) return { ok: false, reason: 'repoUuid and relPath required' };
+  const res = await _ideariumRequest('GET', `/api/repos/${encodeURIComponent(repoUuid)}/file?path=${encodeURIComponent(relPath)}`);
+  if (!res) return { ok: false, reason: 'idearium unreachable' };
+  if (res.status >= 400) return { ok: false, reason: (res.body && res.body.error) || `HTTP ${res.status}` };
+  return { ok: true, ...res.body };
+}
+
+async function writeContractRepoFile(repoUuid, relPath, content) {
+  if (!repoUuid || !relPath || typeof content !== 'string') {
+    return { ok: false, reason: 'repoUuid, relPath, and string content required' };
+  }
+  const res = await _ideariumRequest('POST', `/api/repos/${encodeURIComponent(repoUuid)}/file`, { path: relPath, content });
+  if (!res) return { ok: false, reason: 'idearium unreachable' };
+  if (res.status >= 400) return { ok: false, reason: (res.body && res.body.error) || `HTTP ${res.status}` };
+  return { ok: true, ...res.body };
+}
+
+
 // §MCO4 2026-09-13 — output-side twin of _resolveInputDir(), same
 // fs.existsSync-checked real-directory-or-null contract, same shared
 // fallback pattern. Real per-system output/ dirs created alongside this
@@ -658,6 +745,22 @@ async function processNext(executor) {
   try { jaaDB.update(TABLE, queued.uuid, { status: STATUS.RUNNING, compartmentId: compartment.id, updatedAt: Date.now() }); } catch (_) {}
   _advanceToProcessing(queued.uuid);
 
+  // §MCO11 2026-09-13 — "raid creates a compartment for the contract to
+  // use as a repo." Real cross-process call to idearium's real /api/repos
+  // (the fix earlier this pass made compartmentId actually reach
+  // RepoLayer.ingest()) — same honest-degrade http pattern already
+  // proven by agent-mesh.js's _raidDecide() and this session's own
+  // compartment-dom-ledger reporter: never throws, resolves null on any
+  // failure, so an unreachable idearium degrades this to exactly "no
+  // repo/work-surface for this contract," never a blocked or failed
+  // PROCESSING stage over a repo-provisioning problem.
+  const repoUuid = await _provisionContractRepo(queued, compartment.id);
+  if (repoUuid) {
+    try { jaaDB.update(TABLE, queued.uuid, { repoUuid, updatedAt: Date.now() }); } catch (_) {}
+  } else {
+    console.warn(`[${MODULE_ID}] contract ${queued.uuid}: no real repo provisioned (idearium unreachable or refused) — PROCESSING continues without a work surface`);
+  }
+
   const resolved = executor
     ? await compartmentEngine.execute(compartment, executor)
     : await compartmentEngine.execute(compartment, () => _realAgentExecutor(queued));
@@ -1140,4 +1243,4 @@ function reconcileOnBoot() {
   return { resumed, retried, escalated, checked: orphaned.length };
 }
 
-module.exports = { submitContract, submitIdeariumChunk, submitBuildPhaseContract, synthesizeContract, BUILD_CONTRACT_SCHEMA, reportExternalOutcome, acknowledge, listQueue, processNext, reconcileOnBoot, MODULE_ID, VERSION, STATUS, STAGE };
+module.exports = { submitContract, submitIdeariumChunk, submitBuildPhaseContract, synthesizeContract, BUILD_CONTRACT_SCHEMA, reportExternalOutcome, acknowledge, listQueue, processNext, reconcileOnBoot, MODULE_ID, VERSION, STATUS, STAGE, queryContractRepoFile, writeContractRepoFile };

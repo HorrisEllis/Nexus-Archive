@@ -1325,7 +1325,14 @@ async function handle(req, res, route, query, body) {
       // (resolved live off specUuid every read — RepoLayer._enrich) shows
       // chunks landing as each one completes. files[] path unchanged for
       // every existing drag-and-drop caller.
-      const { name, files, source, ideaUuid, specUuid } = body;
+      // §MCO11 2026-09-13 — James: "raid creates a compartment for the
+      // contract to use as a repo." Traced first: RepoLayer.ingest()
+      // (idearium/repo/index.js) already accepts and stores compartmentId
+      // — SBP1's own real, designed link between a repo and a real COS
+      // compartment — but this HTTP layer never forwarded it. Not a naming
+      // collision after all; a real, designed connection that was one
+      // destructured field short of working end to end.
+      const { name, files, source, ideaUuid, specUuid, compartmentId } = body;
       if (!name) return err(res, 400, 'name required');
       if (!specUuid && (!Array.isArray(files) || files.length === 0)) {
         return err(res, 400, 'specUuid or files[] required');
@@ -1334,6 +1341,7 @@ async function handle(req, res, route, query, body) {
         name, specUuid: specUuid || undefined, files: files || [],
         source: source || (specUuid ? 'repo-first' : 'drop'),
         ideaUuid: ideaUuid || null,
+        compartmentId: compartmentId || null,
       });
       if (result.error) return err(res, 400, result.error);
       return ok(res, result);

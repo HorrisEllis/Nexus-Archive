@@ -11,6 +11,50 @@
 const { webContents, BrowserWindow, ipcMain } = require('electron');
 const { randomUUID: uuidv4 } = require('crypto'); // §BUGFIX 2026-08-23 — the real 'uuid' npm package was never installed (checked node_modules and package.json directly); this crashed every real file that required it, including boot-critical ones. Node's own built-in produces the identical UUID format, zero dependency.
 
+// §MCO10 2026-09-13 — James: "stream the DOM to the compartment ledger per
+// contract using the compartment uuid." Same real cross-process HTTP
+// pattern already proven by clear-glass/src/mesh/agent-mesh.js's
+// _raidDecide() — 127.0.0.1:NEXUS_PORT, short timeout, resolves rather
+// than throws on any failure, so an unreachable cortex degrades this to
+// exactly "the DOM stream keeps working locally, nothing gets ledgered"
+// — never a blocked or crashed DOM stream.
+//
+// activeCompartmentUuid below is deliberately simple, in-memory, per-
+// process state — NOT wired to any real RAID dispatch yet, because
+// ClearGlass is not yet a real RAID contract destination (that's a
+// separate, unbuilt piece of work). setActiveCompartment() is the real,
+// explicit hook for whenever that wiring exists; until then a DOM event
+// with no active compartment is reported honestly (see _bindIpc below)
+// rather than tagged with a fabricated uuid.
+let activeCompartmentUuid = null;
+let activeQueueId         = null;
+
+function _reportCompartmentDomEvent(data) {
+  if (!activeCompartmentUuid) return; // §1.2 — nothing to ledger, not fabricated
+  const http = require('http');
+  const body = JSON.stringify({
+    type: 'compartment.dom.event',
+    payload: {
+      compartmentUuid: activeCompartmentUuid,
+      queueId:         activeQueueId,
+      type:            data.type || 'dom.event',
+      agentId:         data.agentId || null,
+      dom:             data,
+      ts:              data.ts || Date.now(),
+    },
+  });
+  const req = http.request({
+    hostname: '127.0.0.1', port: parseInt(process.env.NEXUS_PORT || '3748', 10),
+    path: '/api/event', method: 'POST', timeout: 1200,
+    headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+  }, (res) => { res.on('data', () => {}); });
+  req.on('error',   () => {}); // honest-degrade, matching _raidDecide's own contract
+  req.on('timeout', () => req.destroy());
+  req.write(body);
+  req.end();
+}
+
+
 // Injected into every page — the DOM mesh observer
 const DOM_OBSERVER_SCRIPT = `
 (function() {
@@ -202,6 +246,18 @@ class DomArchaeology {
   _bindIpc() {
     ipcMain.on('dom:event', (event, data) => {
       this.sse.emit(data.type || 'dom.event', { ...data, ts: data.ts || Date.now() });
+      _reportCompartmentDomEvent(data); // §MCO10 — additive, never blocks the existing SSE path above
+    });
+
+    // §MCO10 2026-09-13 — real, explicit hook for associating the live DOM
+    // stream with a real RAID compartment/contract, once something (future
+    // work — ClearGlass is not yet a RAID dispatch destination) actually
+    // calls it. Until then activeCompartmentUuid stays null and DOM events
+    // are never ledgered — an honest gap, not a fabricated association.
+    ipcMain.handle('compartment:set-active', (event, { compartmentUuid, queueId } = {}) => {
+      activeCompartmentUuid = compartmentUuid || null;
+      activeQueueId         = queueId || null;
+      return { ok: true, compartmentUuid: activeCompartmentUuid, queueId: activeQueueId };
     });
 
     ipcMain.on('dom:pick-result', (event, data) => {
