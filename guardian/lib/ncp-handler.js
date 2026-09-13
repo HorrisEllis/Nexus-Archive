@@ -153,7 +153,12 @@ function createNCPMessageHandler(deps) {
       case 'NCP_CHUNK': {
         if (jobId && text) {
           const full = msg.full || null;
-          updateJob(jobId, { status: 'streaming', lastChunk: Date.now() });
+          // §RENAMED 2026-09-13 — James: "why not job.responding then
+          // job.complete?" was 'streaming'; renamed for the clearer real
+          // lifecycle story (pinging -> dispatched -> responding ->
+          // complete). Checked first: zero real strict-equality readers
+          // of the old string anywhere in the codebase, safe rename.
+          updateJob(jobId, { status: 'responding', lastChunk: Date.now() });
           bus.emit('guardian.job.chunk', { jobId, text, full, provider });
           cockpitBroadcast({ type: 'job.chunk', jobId, text, full, provider, ts: Date.now() });
 
@@ -553,6 +558,23 @@ function createNCPMessageHandler(deps) {
         // Tab acknowledged a claim request — update provider registry
         const key = `${provider}:${tabId}`;
         if (activeQueues.size) bus.emit('guardian.tab.claimed', { provider, tabId });
+        break;
+      }
+
+      // §BUILT 2026-09-13 — James: "each .job created has to wait until
+      // the gate clears. the event gate sends the ping command, doesn't
+      // dispatch until ping is returned, then dispatch the job." Real
+      // round trip, same proven shape as GUARDIAN_CLAIM/GUARDIAN_CLAIM_ACK
+      // just above — guardian/lib/dispatcher.js's new _pingProvider()
+      // sends GUARDIAN_PING and waits on this exact event before letting
+      // a job's real content go out. This is a genuine confirmation the
+      // tab's own JS is alive and actively processing SSE messages right
+      // now — stronger evidence than isConnected()'s passive heartbeat
+      // staleness check alone, which only proves the tab answered
+      // SOMETHING within the last 30s, not that it can process a real
+      // dispatch this instant.
+      case 'GUARDIAN_PING_ACK': {
+        bus.emit('guardian.ncp.pong', { provider, tabId, pingId: msg.pingId });
         break;
       }
 

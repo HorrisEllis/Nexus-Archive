@@ -13,14 +13,90 @@
  * DOM elements this module still reads/writes directly (#assistant-in,
  * #assistant-out) are the co-pilot input bar itself — genuinely this
  * module's own concern, not shell chrome, so that part is NOT injected.
+ *
+ * §FIXED 2026-09-13 — James: (1) "the inject dom observer/mutation
+ * listener should stream live the response. jobid, jobstatus." (2) "the
+ * floating menu cli, and copilot dont get a response." Two real, separate
+ * things, both traced to real code, not fixed by guessing:
+ *
+ *   (2) was ui/lib/api.js's post() aborting after a hardcoded 8 real
+ *   seconds against a backend that routinely takes far longer —
+ *   guardian/ask.js's own askSync defaults to 90000ms, and a real,
+ *   successful NCP round trip observed this same session took ~17s.
+ *   send() below now passes a real, matching timeout explicitly (see
+ *   ui/lib/api.js's own header for the full trace).
+ *
+ *   (1) is real, live progress the widget never showed. Every piece
+ *   already existed and was already flowing, just never reaching here:
+ *   guardian's own DOM mutation observer (guardian/userscript-<agent>.js)
+ *   already emits real, live job.chunk/job.complete events the instant a
+ *   response streams in; guardian/server.js's cockpitBroadcast() already
+ *   pushes them over the SSE connection the shell keeps open
+ *   (`gdEs`, /api/guardian/events) — but gdEs.onmessage only ever used
+ *   them to trigger a jobs-list refresh, never fed them here. onGuardianEvent()
+ *   below is that missing wire: called from the shell's existing gdEs
+ *   listener, it live-updates jobId/status/text while send()'s own
+ *   post() is still in flight. Correlation is deliberately best-effort
+ *   (a job's exact id isn't known to this widget until guardian assigns
+ *   one) — the same honest "most likely, not guaranteed" discipline
+ *   guardian/lib/jobs.js's own _findActiveJobForProvider already uses for
+ *   the identical real problem. The FINAL rendered answer always comes
+ *   from post()'s own resolution (RAID classification, hats, everything
+ *   the richer /api/prompt pipeline does) — the live preview is exactly
+ *   that, a preview, replaced the moment the real response lands.
  */
 window.CoPilot = (() => {
   let _deps = null; // { B, CH_META, getCurCh, tune, post }
   const _hist = [];
   let _histIdx = -1;
 
+  // §FIXED 2026-09-13 — a real dispatch chain (copilot -> guardian -> NCP
+  // round trip) routinely runs well past the platform's old 8s default;
+  // this matches guardian/ask.js's own real askSync default so the
+  // client stops giving up before the server does.
+  const DISPATCH_TIMEOUT_MS = 90000;
+
+  // Live-progress state for the one in-flight request, if any. Not a
+  // queue — this widget sends one prompt at a time (the input is cleared
+  // and disabled-by-convention while a send is out), so one slot is
+  // honest, not a limitation being papered over.
+  let _pending = null; // { startedAt, jobId, out, statusEl, textEl }
+
   function init(deps) {
     _deps = deps;
+  }
+
+  /**
+   * onGuardianEvent(evt) — called by the shell's existing gdEs.onmessage
+   * (ui/tv-shell/index.html) for every real message on guardian's already-
+   * open SSE connection. Only acts while a send() is genuinely waiting;
+   * a no-op otherwise; never throws (a live-progress miss must never
+   * break the real response the caller is still waiting for).
+   */
+  function onGuardianEvent(evt) {
+    if (!_pending || !evt || !evt.type) return;
+    try {
+      const isJobEvent = evt.type.startsWith('job.');
+      if (!isJobEvent) return;
+
+      // Adopt the first plausible jobId seen after this request started —
+      // best-effort correlation, named as such (see header).
+      if (!_pending.jobId && evt.jobId && (evt.ts || Date.now()) >= _pending.startedAt) {
+        _pending.jobId = evt.jobId;
+      }
+      if (!_pending.jobId || evt.jobId !== _pending.jobId) return;
+
+      if (evt.type === 'job.chunk' && typeof evt.full === 'string') {
+        _pending.statusEl.textContent = `job ${_pending.jobId.slice(0, 8)} · streaming · ${evt.full.length}ch`;
+        _pending.textEl.textContent = evt.full;
+      } else if (evt.type === 'job.dispatched' || evt.type === 'job.confirmed') {
+        _pending.statusEl.textContent = `job ${_pending.jobId.slice(0, 8)} · dispatched`;
+      } else if (evt.type === 'job.complete') {
+        _pending.statusEl.textContent = `job ${_pending.jobId.slice(0, 8)} · complete — finalizing…`;
+      } else if (evt.type === 'job.error') {
+        _pending.statusEl.textContent = `job ${_pending.jobId.slice(0, 8)} · error — waiting for the real result…`;
+      }
+    } catch (_) { /* live preview only — never let this break the real response */ }
   }
 
   /**
@@ -54,11 +130,18 @@ window.CoPilot = (() => {
     // clear is the only client-side command — everything else goes to co-pilot
     if (q.toLowerCase() === 'clear') { out.style.display = 'none'; return; }
 
-    // Show thinking indicator
-    const thinking = document.createElement('span');
-    thinking.textContent = '…';
-    thinking.style.cssText = 'opacity:.4;font-style:italic';
-    out.appendChild(thinking);
+    // Live-progress placeholder — replaces the old bare "…" indicator.
+    // statusEl carries jobId/status once guardian assigns one; textEl
+    // fills in with the real, live streamed text as it arrives.
+    const statusEl = document.createElement('div');
+    statusEl.style.cssText = 'opacity:.5;font-style:italic;font-size:11px;font-family:monospace';
+    statusEl.textContent = '… dispatching';
+    const textEl = document.createElement('div');
+    textEl.style.cssText = 'opacity:.7;margin-top:4px;white-space:pre-wrap';
+    out.appendChild(statusEl);
+    out.appendChild(textEl);
+
+    _pending = { startedAt: Date.now(), jobId: null, out, statusEl, textEl };
 
     // Pass current channel context + live UI state to co-pilot
     let uiSnapshot = null;
@@ -70,8 +153,9 @@ window.CoPilot = (() => {
       channelName: CH_META[curCh]?.name || 'Overview',
       uiState: uiSnapshot,
       contextOpts: { intent: q },
-    });
+    }, DISPATCH_TIMEOUT_MS);
 
+    _pending = null;
     out.textContent = '';
 
     if (cp === null) {
@@ -136,5 +220,6 @@ window.CoPilot = (() => {
     }
   }
 
-  return { init, send, navigateHistory };
+  return { init, send, navigateHistory, onGuardianEvent };
 })();
+

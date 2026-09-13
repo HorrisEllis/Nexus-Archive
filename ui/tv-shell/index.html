@@ -1144,7 +1144,23 @@ function connectSSE(){
   // Guardian SSE for job updates — proxied through orchestrator
   try{
     const gdEs=new EventSource(`${B.orch}/api/guardian/events`);
-    gdEs.onmessage=e=>{try{const d=JSON.parse(e.data);if(d.type&&(d.type.includes('job')||d.type.includes('guardian')))gdLoadJobs()}catch(_){}};
+    // §FIXED 2026-09-13 — James: "the inject dom observer/mutation
+    // listener should stream live the response. jobid, jobstatus...
+    // the floating menu cli, and copilot dont get a response." This
+    // connection already carries every real job.chunk/job.dispatched/
+    // job.complete/job.error event guardian's own mutation observer
+    // emits (guardian/server.js's cockpitBroadcast) — onmessage below
+    // used to throw that data away, only using it to trigger a jobs-
+    // list refresh. Now also handed to CoPilot.onGuardianEvent (ui/
+    // copilot/copilot.js), which live-updates the floating widget while
+    // a request is in flight — a real no-op when nothing is pending.
+    gdEs.onmessage=e=>{
+      try{
+        const d=JSON.parse(e.data);
+        if(d.type&&(d.type.includes('job')||d.type.includes('guardian')))gdLoadJobs();
+        if(window.CoPilot&&typeof window.CoPilot.onGuardianEvent==='function')window.CoPilot.onGuardianEvent(d);
+      }catch(_){}
+    };
   }catch(_){}
   // Idearium SSE for live card refresh — proxied through orchestrator
   // (Phase 23.5 lockdown: idearium is reached via the orchestrator gateway,

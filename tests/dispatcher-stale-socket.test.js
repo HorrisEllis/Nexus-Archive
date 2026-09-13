@@ -29,19 +29,38 @@ const assert = require('assert');
 const { createDispatcher } = require('../guardian/lib/dispatcher.js');
 
 let passed = 0, failed = 0;
-function test(id, desc, fn) {
-  try { fn(); console.log(`  ✓ ${id} ${desc}`); passed++; }
+async function test(id, desc, fn) {
+  try { await fn(); console.log(`  ✓ ${id} ${desc}`); passed++; }
   catch (e) { console.error(`  ✗ ${id} ${desc}\n    ${e.stack}`); failed++; }
 }
 
+// §UPDATED 2026-09-13 — the real bus now needs on()/off(), not just
+// emit(): guardian/lib/dispatcher.js's new _pingProvider() (James: "the
+// event gate sends the ping command, doesn't dispatch until ping is
+// returned") listens for a real 'guardian.ncp.pong' event before letting
+// a job's content go out. A minimal, real (not mocked-away) EventEmitter
+// shape — the same three methods the real bus this file depends on
+// actually has — so this stays a genuine test of the real gate logic,
+// not a bypass of it. pingTimeoutMs is set very short here (real
+// production default is 3000ms) so these tests that never emit a real
+// pong don't spend 3 real seconds waiting on one.
 function makeDeps(pushReturns) {
   const updates = [];
   const emitted = [];
   const pendingQueue = new Map();
+  const listeners = new Map(); // event name -> Set<fn>
+  const bus = {
+    emit: (name, payload) => {
+      emitted.push({ name, payload });
+      for (const fn of listeners.get(name) || []) fn({ data: payload });
+    },
+    on: (name, fn) => { if (!listeners.has(name)) listeners.set(name, new Set()); listeners.get(name).add(fn); },
+    off: (name, fn) => { listeners.get(name)?.delete(fn); },
+  };
   return {
     deps: {
       updateJob: (id, patch) => updates.push({ id, patch }),
-      bus: { emit: (name, payload) => emitted.push({ name, payload }) },
+      bus,
       ncp: {
         isConnected: () => true,          // guardian believes chatgpt is connected — real, matches the actual log
         push: () => pushReturns,          // the real write outcome under test
@@ -50,43 +69,48 @@ function makeDeps(pushReturns) {
       cockpitBroadcast: () => {},
       dispatchToMistral: () => Promise.resolve(),
       dispatchToDeepseek: () => Promise.resolve(),
+      pingTimeoutMs: 20, // fast — no real pong is ever emitted in these tests
     },
     updates, emitted, pendingQueue,
   };
 }
 
-test('DSS-001', 'a real write that reaches zero clients (stale socket) is requeued, never falsely marked delivered', () => {
-  const { deps, updates, emitted, pendingQueue } = makeDeps(0);
-  const dispatcher = createDispatcher(deps);
-  const job = { id: 'job-1', provider: 'chatgpt', command: 'ping' };
+async function main() {
+  await test('DSS-001', 'a real write that reaches zero clients (stale socket) is requeued, never falsely marked delivered', async () => {
+    const { deps, updates, emitted, pendingQueue } = makeDeps(0);
+    const dispatcher = createDispatcher(deps);
+    const job = { id: 'job-1', provider: 'chatgpt', command: 'ping' };
 
-  dispatcher._doDispatch(job);
+    await dispatcher._doDispatch(job);
 
-  const deliveredUpdate = updates.find(u => u.patch.status === 'delivered');
-  assert.strictEqual(deliveredUpdate, undefined, 'job must NOT be marked delivered when the real write reached zero clients');
+    const deliveredUpdate = updates.find(u => u.patch.status === 'delivered');
+    assert.strictEqual(deliveredUpdate, undefined, 'job must NOT be marked delivered when the real write reached zero clients');
 
-  const queuedUpdate = updates.find(u => u.patch.status === 'queued');
-  assert.ok(queuedUpdate, 'job must be marked queued instead');
-  assert.ok(queuedUpdate.patch.queueReason.includes('stale'), `queueReason should explain the stale-socket cause, got: ${queuedUpdate.patch.queueReason}`);
+    const queuedUpdate = updates.find(u => u.patch.status === 'queued');
+    assert.ok(queuedUpdate, 'job must be marked queued instead');
+    assert.ok(queuedUpdate.patch.queueReason.includes('stale'), `queueReason should explain the stale-socket cause, got: ${queuedUpdate.patch.queueReason}`);
 
-  assert.ok(pendingQueue.get('chatgpt')?.includes(job), 'job must actually be requeued for real retry, not just logged and dropped');
+    assert.ok(pendingQueue.get('chatgpt')?.includes(job), 'job must actually be requeued for real retry, not just logged and dropped');
 
-  const queuedEvent = emitted.find(e => e.name === 'guardian.job.queued' && e.payload.reason === 'stale_socket');
-  assert.ok(queuedEvent, 'a real guardian.job.queued event with reason:stale_socket must fire, so anything watching the bus can see this happened');
-});
+    const queuedEvent = emitted.find(e => e.name === 'guardian.job.queued' && e.payload.reason === 'stale_socket');
+    assert.ok(queuedEvent, 'a real guardian.job.queued event with reason:stale_socket must fire, so anything watching the bus can see this happened');
+  });
 
-test('DSS-002', 'a real write that reaches at least one client is still marked delivered — the fix does not break the working case', () => {
-  const { deps, updates } = makeDeps(1);
-  const dispatcher = createDispatcher(deps);
-  const job = { id: 'job-2', provider: 'chatgpt', command: 'ping' };
+  await test('DSS-002', 'a real write that reaches at least one client is still marked delivered — the fix does not break the working case', async () => {
+    const { deps, updates } = makeDeps(1);
+    const dispatcher = createDispatcher(deps);
+    const job = { id: 'job-2', provider: 'chatgpt', command: 'ping' };
 
-  dispatcher._doDispatch(job);
+    await dispatcher._doDispatch(job);
 
-  const deliveredUpdate = updates.find(u => u.patch.status === 'delivered');
-  assert.ok(deliveredUpdate, 'a real successful push must still mark the job delivered');
-  const queuedUpdate = updates.find(u => u.patch.status === 'queued');
-  assert.strictEqual(queuedUpdate, undefined, 'a real successful push must not also requeue the job');
-});
+    const deliveredUpdate = updates.find(u => u.patch.status === 'delivered');
+    assert.ok(deliveredUpdate, 'a real successful push must still mark the job delivered');
+    const queuedUpdate = updates.find(u => u.patch.status === 'queued');
+    assert.strictEqual(queuedUpdate, undefined, 'a real successful push must not also requeue the job');
+  });
 
-console.log(`\n${passed} passed, ${failed} failed`);
-process.exitCode = failed ? 1 : 0;
+  console.log(`\n${passed} passed, ${failed} failed`);
+  process.exitCode = failed ? 1 : 0;
+}
+
+main();

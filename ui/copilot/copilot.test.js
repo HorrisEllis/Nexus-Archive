@@ -105,6 +105,46 @@ async function run() {
   await new Promise(r => setTimeout(r, 400)); // send() uses a 350ms setTimeout before calling tune()
   check(tuneCalls6[0] === 1, 'navigate action calls the injected tune() with the correct channel index');
 
+  // ── Case 7: onGuardianEvent live-updates status/text while a send() is
+  //    in flight, then the real response replaces it once post() resolves ─
+  const w7 = freshDom();
+  let resolvePost;
+  const postPromise = new Promise((resolve) => { resolvePost = resolve; });
+  let capturedTimeout = null;
+  w7.CoPilot.init({
+    B: { orch: 'http://127.0.0.1:9000' }, CH_META: [{ id: 'ch-overview' }], getCurCh: () => 0,
+    tune: () => {},
+    post: async (url, body, timeoutMs) => { capturedTimeout = timeoutMs; return postPromise; },
+  });
+  w7.document.getElementById('assistant-in').value = 'hello';
+  const sendPromise = w7.CoPilot.send();
+
+  // A live chunk event arrives while the dispatch is still pending.
+  w7.CoPilot.onGuardianEvent({ type: 'job.chunk', jobId: 'job-abc123', full: 'partial live text', ts: Date.now() });
+  const outDuring = w7.document.getElementById('assistant-out').textContent;
+  check(outDuring.includes('job-abc1') && outDuring.includes('streaming') && outDuring.includes('partial live text'),
+    'onGuardianEvent renders live jobId/status/text into #assistant-out while send() is pending');
+  check(capturedTimeout === 90000, 'send() passes a real, matching dispatch timeout (90000ms) to post(), not the old 8s default');
+
+  // An event for a DIFFERENT jobId is ignored (best-effort correlation
+  // must not let an unrelated job overwrite this one's live preview).
+  w7.CoPilot.onGuardianEvent({ type: 'job.chunk', jobId: 'unrelated-job', full: 'should not appear', ts: Date.now() });
+  check(!w7.document.getElementById('assistant-out').textContent.includes('should not appear'),
+    'onGuardianEvent ignores events for a jobId other than the one already adopted');
+
+  // Real response lands — replaces the live preview entirely.
+  resolvePost({ ok: true, text: 'the real final answer' });
+  await sendPromise;
+  check(w7.document.getElementById('assistant-out').textContent === 'the real final answer',
+    'the real post() response replaces the live preview once it resolves');
+
+  // ── Case 8: onGuardianEvent never throws with no pending send ──────────
+  const w8 = freshDom();
+  let threw8 = false;
+  try { w8.CoPilot.onGuardianEvent({ type: 'job.chunk', jobId: 'x', full: 'y' }); }
+  catch (e) { threw8 = true; }
+  check(!threw8, 'onGuardianEvent is a safe no-op when no send() is in flight');
+
   console.log(`\n${failures === 0 ? 'ALL PASSED' : failures + ' FAILED'} — copilot.js ${failures === 0 ? 'is a safe drop-in replacement for the inline asSend()' : 'has real regressions, do not ship'}`);
   process.exit(failures === 0 ? 0 : 1);
 }

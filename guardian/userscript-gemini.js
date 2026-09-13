@@ -846,6 +846,8 @@ function _handleServerMessage(msg) {
     case 'GUARDIAN_CLAIM':
       if (msg.tabId===MY_TAB||msg.tabId==='any') { claimTab(); ncpPost(NCP_RESULT,{type:'GUARDIAN_CLAIM_ACK',tabId:MY_TAB,provider:PROVIDER}); toast('Tab claimed — ACTIVE','success',2000); }
       break;
+    // §BUILT 2026-09-13 — real ping/pong gate, same shape as GUARDIAN_CLAIM/GUARDIAN_CLAIM_ACK above.
+    case 'GUARDIAN_PING': ncpPost(NCP_RESULT,{type:'GUARDIAN_PING_ACK',pingId:msg.pingId,tabId:MY_TAB,provider:PROVIDER}); break;
     case 'GUARDIAN_RELEASE': releaseTab(); break;
     case 'GUARDIAN_JOB': currentJobId = msg.jobId; handleJob(msg); break;
     case 'NEXUS_CONTEXT_RESPONSE': if (msg.context) _intelligenceCtx = msg.context; break;

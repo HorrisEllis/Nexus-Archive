@@ -1122,7 +1122,19 @@ function connectSSE(){
   // Guardian SSE for job updates — proxied through orchestrator
   try{
     const gdEs=new EventSource(`${B.orch}/api/guardian/events`);
-    gdEs.onmessage=e=>{try{const d=JSON.parse(e.data);if(d.type&&(d.type.includes('job')||d.type.includes('guardian')))gdLoadJobs()}catch(_){}};
+    // §FIXED 2026-09-13 — same real fix as ui/tv-shell/index.html (see
+    // that file's comment for the full trace): this connection already
+    // carries live job.chunk/job.dispatched/job.complete/job.error
+    // events; hand them to CoPilot.onGuardianEvent so the floating
+    // widget on THIS surface gets the same live jobId/status/text
+    // progress, not just tv-shell's.
+    gdEs.onmessage=e=>{
+      try{
+        const d=JSON.parse(e.data);
+        if(d.type&&(d.type.includes('job')||d.type.includes('guardian')))gdLoadJobs();
+        if(window.CoPilot&&typeof window.CoPilot.onGuardianEvent==='function')window.CoPilot.onGuardianEvent(d);
+      }catch(_){}
+    };
   }catch(_){}
   // Idearium SSE for live card refresh — proxied through orchestrator
   // (Phase 23.5 lockdown: idearium is reached via the orchestrator gateway,

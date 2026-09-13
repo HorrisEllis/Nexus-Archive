@@ -1341,7 +1341,7 @@ bus.register(new SISOGate('ncp.stream.chunk', (chunk) => {
   if (!job._streamBuffer) job._streamBuffer = '';
   job._streamBuffer += token;
   job._streamSeq  = seq;
-  job.status      = done ? 'complete' : 'streaming';
+  job.status      = done ? 'complete' : 'responding';
   cockpitBroadcast({ type:'STREAM_TOKEN', jobId, token, done, seq, provider, ts: Date.now() });
   if (done) {
     job.result = job._streamBuffer;
@@ -1997,10 +1997,22 @@ function handleExtendedRoutes(req, res, url, method) {
     const streamJobId = url.pathname.slice('/stream/'.length);
     const existing = jobs.get(streamJobId);
 
+    // §FIXED 2026-09-13 — James: "the inject dom observer/mutation
+    // listener should stream live the response. jobid, jobstatus."
+    // Every event on this stream now carries the real jobId (the
+    // client already knows it from the URL, but a caller juggling more
+    // than one stream — or logging these messages independently of the
+    // connection they arrived on — had no way to tell them apart) and a
+    // real, distinct `status` string instead of only a `done` boolean —
+    // 'responding'/'complete'/'error' mirror the exact same real values
+    // this job's own `status` field takes elsewhere (jobs.js's
+    // createJob/updateJob), not a second, separate vocabulary invented
+    // here.
+
     // Already finished before the client even connected — one message, done.
     if (existing && (existing.status === 'complete' || existing.status === 'error' || existing.status === 'delivered_confirmed')) {
       res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive', 'Access-Control-Allow-Origin': '*' });
-      res.write(`data: ${JSON.stringify({ text: existing.result || existing.response || '', done: true })}\n\n`);
+      res.write(`data: ${JSON.stringify({ jobId: streamJobId, status: existing.status, text: existing.result || existing.response || '', done: true })}\n\n`);
       res.end();
       return true;
     }
@@ -2010,7 +2022,7 @@ function handleExtendedRoutes(req, res, url, method) {
     const _onChunk = (ev) => {
       if (ev.data?.jobId !== streamJobId) return;
       const text = ev.data.token ?? ev.data.text ?? '';
-      if (text) res.write(`data: ${JSON.stringify({ text, done: false })}\n\n`);
+      if (text) res.write(`data: ${JSON.stringify({ jobId: streamJobId, status: 'responding', text, done: false })}\n\n`);
       if (ev.data.done) _finish('');
     };
     const _onComplete = (ev) => {
@@ -2019,15 +2031,15 @@ function handleExtendedRoutes(req, res, url, method) {
     };
     const _onError = (ev) => {
       if (ev.data?.jobId !== streamJobId) return;
-      res.write(`data: ${JSON.stringify({ error: ev.data.error || 'job failed', done: true })}\n\n`);
+      res.write(`data: ${JSON.stringify({ jobId: streamJobId, status: 'error', error: ev.data.error || 'job failed', done: true })}\n\n`);
       _cleanup(); try { res.end(); } catch(_) {}
     };
     let _finished = false;
     function _finish(finalText) {
       if (_finished) return; // both a chunk carrying done:true and a separate complete event can fire — one real end, not two
       _finished = true;
-      if (finalText) res.write(`data: ${JSON.stringify({ text: finalText, done: true })}\n\n`);
-      else res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+      if (finalText) res.write(`data: ${JSON.stringify({ jobId: streamJobId, status: 'complete', text: finalText, done: true })}\n\n`);
+      else res.write(`data: ${JSON.stringify({ jobId: streamJobId, status: 'complete', done: true })}\n\n`);
       _cleanup();
       try { res.end(); } catch(_) {}
     }

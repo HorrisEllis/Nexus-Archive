@@ -1106,6 +1106,14 @@ function _handleServerMessage(msg) {
         toast('Tab claimed — ACTIVE', 'success', 2000);
       }
       break;
+    // §BUILT 2026-09-13 — James: "each .job created has to wait until
+    // the gate clears. the event gate sends the ping command." Same real
+    // round trip as GUARDIAN_CLAIM/GUARDIAN_CLAIM_ACK just above —
+    // guardian/lib/dispatcher.js's _pingProvider() waits on this ack
+    // before letting a real job's content go out.
+    case 'GUARDIAN_PING':
+      ncpPost(NCP_RESULT, { type:'GUARDIAN_PING_ACK', pingId:msg.pingId, tabId:MY_TAB, provider:PROVIDER });
+      break;
     case 'GUARDIAN_RELEASE': releaseTab(); break;
     case 'GUARDIAN_JOB':     currentJobId = msg.jobId; handleJob(msg); break;
     case 'NEXUS_CONTEXT_RESPONSE':

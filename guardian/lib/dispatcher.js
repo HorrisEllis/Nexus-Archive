@@ -45,7 +45,7 @@ const { randomUUID } = require('crypto');
  * cockpitBroadcast(data), dispatchToMistral(job) → Promise).
  */
 function createDispatcher(deps) {
-  const { updateJob, bus, ncp, pendingQueue, cockpitBroadcast, dispatchToMistral, dispatchToDeepseek } = deps;
+  const { updateJob, bus, ncp, pendingQueue, cockpitBroadcast, dispatchToMistral, dispatchToDeepseek, pingTimeoutMs } = deps;
   for (const [name, fn] of Object.entries({ updateJob, bus, ncp, cockpitBroadcast, dispatchToMistral, dispatchToDeepseek })) {
     if (!fn) throw new Error(`[dispatcher] missing required dependency: ${name}`);
   }
@@ -65,7 +65,55 @@ function createDispatcher(deps) {
     return;
   }
 
-  function _doDispatch(job) {
+  /**
+   * _pingProvider(provider, timeoutMs) — real round trip, same proven
+   * shape as GUARDIAN_CLAIM/GUARDIAN_CLAIM_ACK: push a GUARDIAN_PING,
+   * wait for the matching GUARDIAN_PING_ACK's real bus event
+   * ('guardian.ncp.pong', wired in guardian/lib/ncp-handler.js). Genuine
+   * confirmation the tab's own JS is alive and processing SSE messages
+   * RIGHT NOW — stronger evidence than isConnected()'s passive heartbeat
+   * staleness check, which only proves the tab answered something within
+   * the last 30s.
+   *
+   * §HONEST SCOPE — this proves the tab is *responsive*, not that the
+   * page is on the right view or that the composer element specifically
+   * exists; that failure mode still surfaces the same way it always has,
+   * as injectText() honestly failing inside handleJob(). A ping cannot
+   * prove the DOM element it hasn't looked at yet is there.
+   */
+  function _pingProvider(provider, timeoutMs = pingTimeoutMs || 3000) {
+    return new Promise((resolve) => {
+      const pingId = randomUUID();
+      let settled = false;
+      const onPong = (ev) => {
+        if (ev?.data?.provider !== provider || ev?.data?.pingId !== pingId) return;
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        bus.off('guardian.ncp.pong', onPong);
+        resolve({ ok: true });
+      };
+      const timer = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        bus.off('guardian.ncp.pong', onPong);
+        resolve({ ok: false, reason: 'ping timeout' });
+      }, timeoutMs);
+      bus.on('guardian.ncp.pong', onPong);
+      const sent = ncp.push(provider, { type: 'GUARDIAN_PING', pingId });
+      if (sent === 0) {
+        // Real evidence up front — no client actually received the
+        // write, no reason to wait out the full timeout for nothing.
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        bus.off('guardian.ncp.pong', onPong);
+        resolve({ ok: false, reason: 'ping write reached 0 clients' });
+      }
+    });
+  }
+
+  async function _doDispatch(job) {
     // §BUILT 2026-07-13 — Clear Glass command surface, not a chat provider.
     if (job.provider === 'browser') {
       let _approval;
@@ -203,6 +251,35 @@ function createDispatcher(deps) {
     // of view, so it gets the exact same real recovery path — requeued,
     // a fresh tab requested — instead of being falsely marked delivered
     // with nothing left to ever retry it.
+
+    // §BUILT 2026-09-13 — James: "each .job created has to wait until
+    // the gate clears. the event gate sends the ping command, doesn't
+    // dispatch until ping is returned, then dispatch the job." Real
+    // gate, real evidence, before the real content ever goes out.
+    // §FAIL-OPEN-ON-UNCERTAIN-EVIDENCE — same rule copilot/lifeline.js's
+    // own _tryGuardian already uses for the identical shape of problem
+    // (fail CLOSED when you have real evidence something is wrong, fail
+    // OPEN when you have none): a ping timeout alone doesn't prove the
+    // tab is dead — the ack could have been dropped, delayed, or the
+    // main thread briefly busy with something else entirely legitimate.
+    // Only refuse to dispatch when the ping AND the passive heartbeat
+    // both say the same thing — two independent signals agreeing is
+    // real evidence; one uncertain signal alone is not.
+    updateJob(job.id, { status: 'pinging', pingedAt: Date.now() });
+    const ping = await _pingProvider(job.provider);
+    if (!ping.ok && !ncp.isConnected(job.provider)) {
+      if (!pendingQueue.has(job.provider)) pendingQueue.set(job.provider, []);
+      pendingQueue.get(job.provider).push(job);
+      updateJob(job.id, { status: 'queued', queuedAt: Date.now(),
+        queueReason: `ping gate failed (${ping.reason}) and heartbeat also stale — real evidence, not dispatching blind` });
+      console.log(`[guardian] ${job.id} → ${job.provider}: ping gate failed (${ping.reason}), heartbeat also stale — requeued`);
+      bus.emit('guardian.job.queued', { jobId: job.id, provider: job.provider, reason: 'ping_gate_failed' });
+      return false;
+    }
+    if (!ping.ok) {
+      console.warn(`[guardian] ${job.id} → ${job.provider}: ping gate did not clear (${ping.reason}) but heartbeat is still healthy — dispatching anyway (uncertain evidence, not refusing on it alone)`);
+    }
+
     const sent = ncp.push(job.provider, {
       type: 'GUARDIAN_JOB', jobId: job.id, command: job.command,
       provider: job.provider, prompt: job.prompt, content: job.content,

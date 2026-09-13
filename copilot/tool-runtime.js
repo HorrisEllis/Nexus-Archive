@@ -189,7 +189,26 @@ function makeNcpCallModel(dispatchToAgent, opts = {}) {
       .join('\n');
 
     const fullPrompt = [system, _toolInstructions(scoped), convo].filter(Boolean).join('\n\n');
-    const result = await dispatchToAgent(fullPrompt, opts);
+    // §FIXED 2026-09-13 — James: screenshots showing chatgpt's real,
+    // dispatched prompt with TWO complete, DIFFERENT-SYNTAX tool catalogs
+    // stacked in one message ([[TOOL: name {...}]] followed by a second,
+    // full ```tool``` fenced-block catalog) — the exact same class of bug
+    // guardian/ask.js's own 2026-09-02 fix already found and fixed for
+    // ITS OWN internal manifest ("two independent tool-call mechanisms...
+    // never reconciled"), but not for this specific chain: fullPrompt
+    // above ALREADY embeds this loop's own complete _toolInstructions(),
+    // and dispatchToAgent (copilot/lifeline.js's _tryGuardian) defaults
+    // `tools: opts.tools || ESCALATION_TOOLS` — opts here never set
+    // `tools`, so ESCALATION_TOOLS fell through every time, and
+    // guardian/userscript-<agent>.js's own _buildToolsHeader(tools) then
+    // prepended a SECOND, complete, [[TOOL:...]]-syntax catalog on top.
+    // Real fix, at the source rather than patched downstream: this loop
+    // is always the single source of truth for tool instructions once
+    // fullPrompt is built, so it explicitly tells guardian not to build
+    // its own — `tools:[]` is truthy (empty array), so it overrides the
+    // `|| ESCALATION_TOOLS` fallback correctly rather than being treated
+    // as unset.
+    const result = await dispatchToAgent(fullPrompt, { ...opts, tools: [] });
     if (!result || !result.ok) {
       // §FIXED 2026-09-11 — this used to always return the canned
       // '[NCP dispatch failed — no response]' string, the exact string
@@ -208,7 +227,45 @@ function makeNcpCallModel(dispatchToAgent, opts = {}) {
         // distinguishable downstream, not silently presented as identical.
         return { text: recovered.response, toolCalls: null, viaLedgerFallback: true, recoveredJobId: jobId };
       }
-      return { text: (result && result.text) || '[NCP dispatch failed — no response]', toolCalls: null };
+      // §FIXED 2026-09-13 — James: "with the no response, need to know
+      // why, like give me gap or error id... everything error needs to
+      // log for every system." This fallback previously returned a bare
+      // string with nothing behind it — no id, no record of promptLen/
+      // provider/jobId to actually investigate why. Every other failure
+      // branch in this same function already reports to lib/gap-field.js
+      // (copilot/lifeline.js's own _tryGuardian does too, on its own
+      // throw/empty-response paths) — this was the one silent gap in an
+      // otherwise-consistent pattern. type/dedup_key stay stable per
+      // provider so repeat failures bump occurrences on the same real
+      // gap row instead of creating a new one every time (see this
+      // file's own _dedupKey — same discipline as every other reporter).
+      let gapUuid = null;
+      try {
+        const gapField = require('../lib/gap-field');
+        const rep = gapField.report({
+          type: 'copilot.ncp-dispatch-no-response',
+          body: `NCP dispatch returned no usable response for provider "${opts.provider || 'unknown'}"` +
+            (jobId ? ` (jobId ${jobId}, GET /response/:jobId recovery also came back empty)` : ' (no jobId — recovery was never reachable)'),
+          source: opts.provider || 'copilot',
+          domain: 'system',
+          severity: 'medium',
+          meta: {
+            jobId,
+            provider: opts.provider || null,
+            promptLength: fullPrompt.length,
+            recoveryAttempted: !!jobId,
+            resultError: (result && result.error) || null,
+          },
+        });
+        gapUuid = rep.gap && rep.gap.uuid;
+      } catch (e) {
+        console.warn(`[copilot/tool-runtime] gap report for NCP no-response failed (non-fatal): ${e.message}`);
+      }
+      return {
+        text: (result && result.text) || `[NCP dispatch failed — no response${gapUuid ? ` — gap ${gapUuid}` : ''}]`,
+        toolCalls: null,
+        gapUuid,
+      };
     }
 
     const toolCalls = _parseToolBlocks(result.text);
