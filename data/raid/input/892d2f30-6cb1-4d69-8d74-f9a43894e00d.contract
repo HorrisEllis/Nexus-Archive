@@ -1,0 +1,47 @@
+envelope: 1
+uuid: nexus-export-contract-892d2f30-6cb1-4d69-8d74-f9a43894e00d
+type: contract
+id: 892d2f30-6cb1-4d69-8d74-f9a43894e00d
+context: null
+intent: gaps.open
+summary: null
+system: null
+tags: []
+exported_at: 1789318611977
+source: architect
+occurrences: 1
+firstSeenAt: 1789318611977
+lastSeenAt: 1789318611977
+fingerprint: null
+payload:
+  uuid: 892d2f30-6cb1-4d69-8d74-f9a43894e00d
+  status: queued
+  intention: gaps.open
+  dir: null
+  language: null
+  stage: queued
+  system: null
+  source: architect
+  sourceDropId: null
+  boundary:
+    key: architect:gaps.open
+    primitive: architect/service.js POST /api/gaps
+    invariants: []
+    principles:
+      - §1.2
+      - §5.2
+  file: null
+  title: gap opened
+  forAgent: null
+  contract:
+    content: gaps.open:33c657c9-dfc4-4d7d-afbf-53849867c14b
+    title: gap opened
+  dependsOn: []
+  onFail:
+    action: retry
+    maxRetries: 2
+  retryCount: 0
+  compartmentId: null
+  verdict: null
+  createdAt: 1789318611976
+  updatedAt: 1789318611976

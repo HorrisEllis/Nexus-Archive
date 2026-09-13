@@ -1,0 +1,48 @@
+envelope: 1
+uuid: nexus-export-contract-eca3fc40-ca05-476c-8f87-99c99617bbe8
+type: contract
+id: eca3fc40-ca05-476c-8f87-99c99617bbe8
+context: null
+intent: map.scan
+summary: null
+system: null
+tags: []
+exported_at: 1789318657806
+source: architect
+occurrences: 1
+firstSeenAt: 1789318657806
+lastSeenAt: 1789318657806
+fingerprint: null
+payload:
+  uuid: eca3fc40-ca05-476c-8f87-99c99617bbe8
+  status: queued
+  intention: map.scan
+  dir: null
+  language: null
+  stage: queued
+  system: null
+  source: architect
+  sourceDropId: null
+  boundary:
+    key: architect:map.scan
+    primitive: architect/service.js POST /api/map/scan
+    invariants: []
+    principles:
+      - §1.2
+      - §5.2
+  file: /home/claude/nexus_new/nexus/lib/agent-router.js
+  title: topology map scan
+  forAgent: null
+  contract:
+    content: map.scan:/home/claude/nexus_new/nexus/lib/agent-router.js
+    file: /home/claude/nexus_new/nexus/lib/agent-router.js
+    title: topology map scan
+  dependsOn: []
+  onFail:
+    action: retry
+    maxRetries: 2
+  retryCount: 0
+  compartmentId: null
+  verdict: null
+  createdAt: 1789318657806
+  updatedAt: 1789318657806

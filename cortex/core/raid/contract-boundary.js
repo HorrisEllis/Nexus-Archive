@@ -142,6 +142,29 @@ const REGISTRY = {
     invariants: [],
     principles: ['§1.2', '§5.2'],
   },
+  // §MCO12 2026-09-13 (Track D continuation) — the 3 remaining architect
+  // routes confirmed to be real write work, not reads. blueprint.diff and
+  // snr.check were named as Track D candidates too but checked directly
+  // this pass and excluded: both are pure read/compute (blueprint.diff
+  // reads two existing blueprints and diffs them; snr.check calls
+  // snrGate.check() with no jaa write anywhere in the handler) — same
+  // reads-are-excluded principle MCO7 already applied to GETs, just
+  // caught on a POST verb this time. Only these 3 do real jaa.insert().
+  'architect:map.scan': {
+    primitive:  'architect/service.js POST /api/map/scan',
+    invariants: [],
+    principles: ['§1.2', '§5.2'],
+  },
+  'architect:translate.utl': {
+    primitive:  'architect/service.js POST /api/translate/utl',
+    invariants: [],
+    principles: ['§1.2', '§5.2'],
+  },
+  'architect:gaps.open': {
+    primitive:  'architect/service.js POST /api/gaps',
+    invariants: [],
+    principles: ['§1.2', '§5.2'],
+  },
 };
 
 /**

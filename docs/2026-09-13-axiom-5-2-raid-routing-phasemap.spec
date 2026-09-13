@@ -121,6 +121,44 @@ spec:
       change (breaks the sync response contract) than what §5.2's real
       traffic actually calls for here."
 
+  MCO12_architect_remaining_routes:
+    depends_on: [MCO8]
+    status: "DONE 2026-09-13. All 5 architect candidates MCO7 named checked
+      individually — 2 correctly excluded (blueprint.diff, snr.check are
+      pure read/compute, zero jaa.insert in either handler, same
+      reads-excluded principle MCO7 already applied to GETs, just on a
+      POST verb this time), 3 real write-work routes wired
+      (map.scan/translate.utl/gaps.open) and verified LIVE against a
+      real booted architect instance — real raid_contract_queue rows
+      confirmed with status:pass after properly waiting out jaaDB's
+      debounced flush (a first check without the wait showed 0 rows,
+      false-negative, same timing class this codebase's own changelog
+      already documents for cross-process JAA writes)."
+    gate: "MET. architect/service.js's real write routes all have RAID
+      observability now; its real read/compute routes correctly don't."
+
+  MCO12_guardian_list_was_unreliable:
+    depends_on: []
+    status: "FINDING, not yet actioned. MCO7's guardian route list (bus/emit,
+      artifacts, ledger, memory/ingest, queue/cancel, seam/retry,
+      blueprint/compile) was checked individually this pass, per the
+      honest_risks note this file already carried. 4 of 7 don't exist as
+      real routes anywhere in guardian/server.js at all (ledger,
+      memory/ingest, queue/cancel, blueprint.compile) — the original list
+      was named, not verified, for guardian specifically, unlike the
+      routes that actually got built. Of the 2 that exist: bus/emit is a
+      generic broadcast relay (caller supplies both type and data, no
+      single well-defined intention to tag it with — same exclusion class
+      as /command); seam/retry is a control action on an already-running
+      SEAM chunk, not new work being created — a different category from
+      map.scan/translate.utl/gaps.open, which each produce new persisted
+      content. artifacts is a GET (read), also mis-listed."
+    gate: "NOT MET, and possibly moot — a fresh, real audit of guardian's
+      actual write-work routes (same direct-grep discipline already
+      applied to architect and to guardian's own interaction-contract.json
+      reconciliation) is needed before wiring anything else here, not a
+      continuation of the original named list."
+
   honest_risks:
     - "The observability pattern this reuses never gates or authorizes —
       per contract-boundary.js's own resolveBoundary() docstring, an

@@ -449,8 +449,29 @@ async function boot() {
         if (method === 'POST' && action === 'utl') {
           const { text } = await readBody(req);
           if (!text) return json(res, 400, { ok: false, error: 'text required' });
+          // §MCO12 2026-09-13 (Track D continuation) — same additive,
+          // observability-only pattern as blueprint.scan (MCO8): real
+          // write work below (event_log insert) with no RAID trail
+          // before now. A submission/report failure never blocks the
+          // real translate.utl() call.
+          let raidQueueId = null;
+          try {
+            const intake = require('../cortex/core/raid/contract-intake.js');
+            raidQueueId = intake.submitContract(
+              { content: `translate.utl:${text.slice(0, 80)}`, title: 'translate.utl' },
+              { source: 'architect', intention: 'translate.utl' }
+            ).queueId;
+          } catch (e) {
+            console.warn('[architect/service] could not submit real RAID observability contract (translate proceeds regardless):', e.message);
+          }
           const result = translate.utl(text);
           jaa.insert('event_log', { type: 'architect.utl.processed', payload: { type_signature: result.type_signature, confidence: result.confidence, constraints: result.constraints.length }, source: 'translate', ts: Date.now() });
+          if (raidQueueId) {
+            try {
+              const i2 = require('../cortex/core/raid/contract-intake.js');
+              i2.reportExternalOutcome(raidQueueId, { status: i2.STATUS.PASS });
+            } catch (_) { /* best-effort */ }
+          }
           return json(res, 200, { ok: true, result });
         }
 
@@ -565,12 +586,38 @@ async function boot() {
         if (method === 'POST' && action === 'scan') {
           const { rootPath, opts } = await readBody(req);
           if (!rootPath) return json(res, 400, { ok: false, error: 'rootPath required' });
+          // §MCO12 2026-09-13 (Track D continuation) — same pattern as
+          // blueprint.scan/translate.utl above.
+          let raidQueueId = null;
+          try {
+            const intake = require('../cortex/core/raid/contract-intake.js');
+            raidQueueId = intake.submitContract(
+              { content: `map.scan:${rootPath}`, file: rootPath, title: 'topology map scan' },
+              { source: 'architect', intention: 'map.scan' }
+            ).queueId;
+          } catch (e) {
+            console.warn('[architect/service] could not submit real RAID observability contract (map scan proceeds regardless):', e.message);
+          }
           try {
             const map = scanTopology(rootPath, opts || {});
             const record = jaa.insert('topology_maps', { data: map, causedBy: 'api.map.scan' });
             busEmit('architect.map.scanned', { id: record.uuid, rootPath, fileCount: map.files.length, gapCount: map.gaps.length });
+            if (raidQueueId) {
+              try {
+                const i2 = require('../cortex/core/raid/contract-intake.js');
+                i2.reportExternalOutcome(raidQueueId, { status: i2.STATUS.PASS });
+              } catch (_) { /* best-effort */ }
+            }
             return json(res, 201, { ok: true, map, id: record.uuid });
-          } catch(e) { return json(res, 500, { ok: false, error: e.message }); }
+          } catch(e) {
+            if (raidQueueId) {
+              try {
+                const i2 = require('../cortex/core/raid/contract-intake.js');
+                i2.reportExternalOutcome(raidQueueId, { status: i2.STATUS.FAIL, verdict: e.message });
+              } catch (_) { /* best-effort */ }
+            }
+            return json(res, 500, { ok: false, error: e.message });
+          }
         }
         if (method === 'GET' && !action) {
           const maps = jaa.query('topology_maps', () => true, 20).map(r => ({ id: r.uuid, ...r.data, ts: r.ts }));
@@ -589,8 +636,25 @@ async function boot() {
         if (method === 'POST') {
           const body = await readBody(req);
           const gap = { id: randomUUID(), status: 'open', ...body, createdAt: Date.now() };
+          // §MCO12 2026-09-13 (Track D continuation) — same pattern.
+          let raidQueueId = null;
+          try {
+            const intake = require('../cortex/core/raid/contract-intake.js');
+            raidQueueId = intake.submitContract(
+              { content: `gaps.open:${gap.id}`, title: 'gap opened' },
+              { source: 'architect', intention: 'gaps.open' }
+            ).queueId;
+          } catch (e) {
+            console.warn('[architect/service] could not submit real RAID observability contract (gap creation proceeds regardless):', e.message);
+          }
           const record = jaa.insert('gaps', { op: 'open', data: gap, causedBy: body.causedBy || 'api', ts: Date.now() });
           busEmit('architect.gap.opened', { id: gap.id, severity: gap.severity });
+          if (raidQueueId) {
+            try {
+              const i2 = require('../cortex/core/raid/contract-intake.js');
+              i2.reportExternalOutcome(raidQueueId, { status: i2.STATUS.PASS });
+            } catch (_) { /* best-effort */ }
+          }
           return json(res, 201, { ok: true, gap, uuid: record.uuid });
         }
       }
