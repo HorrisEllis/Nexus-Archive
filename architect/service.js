@@ -360,10 +360,42 @@ async function boot() {
         if (method === 'POST' && action === 'scan') {
           const { rootPath, opts } = await readBody(req);
           if (!rootPath) return json(res, 400, { ok: false, error: 'rootPath required' });
+          // §MCO8 2026-09-13 — track_d (axiom §5.2 compliance). This
+          // route had zero RAID observability before now — real write
+          // work with no trail. Submitted for observability only, same
+          // additive pattern idearium's chunk-dispatch already proved
+          // (2026-08-29): architect's own fromScan() below remains the
+          // REAL, unmodified execution path; a submission failure here
+          // must never block the real scan (§HONEST LIMIT, same as
+          // idearium's).
+          let raidQueueId = null;
+          try {
+            const intake = require('../cortex/core/raid/contract-intake.js');
+            raidQueueId = intake.submitContract(
+              { content: `blueprint.scan:${rootPath}`, file: rootPath, title: 'blueprint scan' },
+              { source: 'architect', intention: 'blueprint.scan' }
+            ).queueId;
+          } catch (e) {
+            console.warn('[architect/service] could not submit real RAID observability contract (scan proceeds regardless):', e.message);
+          }
           try {
             const bp = blueprint.fromScan(rootPath, opts || {});
+            if (raidQueueId) {
+              try {
+                const i2 = require('../cortex/core/raid/contract-intake.js');
+                i2.reportExternalOutcome(raidQueueId, { status: i2.STATUS.PASS });
+              } catch (_) { /* best-effort, see above */ }
+            }
             return json(res, 201, { ok: true, blueprint: bp });
-          } catch(e) { return json(res, 500, { ok: false, error: e.message }); }
+          } catch(e) {
+            if (raidQueueId) {
+              try {
+                const i2 = require('../cortex/core/raid/contract-intake.js');
+                i2.reportExternalOutcome(raidQueueId, { status: i2.STATUS.FAIL, verdict: e.message });
+              } catch (_) { /* best-effort, see above */ }
+            }
+            return json(res, 500, { ok: false, error: e.message });
+          }
         }
         // POST /api/blueprint/diff
         if (method === 'POST' && action === 'diff') {

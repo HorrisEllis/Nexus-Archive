@@ -1004,6 +1004,28 @@ async function handle(req, res, route, query, body) {
         sections: built.length, ts: Date.now(),
       });
 
+      // §MCO8 2026-09-13 — track_d (axiom §5.2 compliance, docs/2026-09-13-
+      // axiom-5-2-raid-routing-phasemap.spec). This is the LEGACY
+      // spec.build route — real, heavy write work (drives
+      // compileIdeariumSpec() below) that had zero RAID observability,
+      // unlike the newer spec-engine chunk path a few hundred lines
+      // above in this same file, which already submits+reports via RAID
+      // (§RAID-SOURCE 2026-08-29). Reusing that exact proven, additive
+      // pattern and the already-registered 'idearium:build' boundary
+      // (cortex/core/raid/contract-boundary.js) rather than inventing a
+      // second one for the same real system doing the same kind of
+      // work. Never blocks: a submission failure here must not stop a
+      // real spec build (§HONEST LIMIT, same as the chunk path's own).
+      let _raidQueueId = null;
+      try {
+        _raidQueueId = _require('../../cortex/core/raid/contract-intake.js').submitContract(
+          { content: `spec.build:${params.uuid}`, file: null, title: spec.name || params.uuid },
+          { source: 'idearium', intention: 'build' }
+        ).queueId;
+      } catch (e) {
+        console.warn('[idearium/api] could not submit real RAID observability contract for spec.build (build proceeds regardless):', e.message);
+      }
+
       // ── Actually compile — this used to be the gap: spec.build only
       // flipped a phase field and never touched emerge/compiler, which is
       // a real, separate, working Tier 0/1 compiler. compileIdeariumSpec()
@@ -1037,6 +1059,15 @@ async function handle(req, res, route, query, body) {
         // and nothing ever moved it forward. Advance it now so the UI
         // stops showing "building" for a build that's already done.
         os.emit('idearium.spec.update', { uuid: params.uuid, fields: { phase: 'complete' } });
+        // §MCO8 2026-09-13 — report the already-known, real outcome back
+        // to RAID (see submission above), same best-effort pattern as
+        // the chunk-dispatch path's own reportExternalOutcome call.
+        if (_raidQueueId) {
+          try {
+            const _intake = _require('../../cortex/core/raid/contract-intake.js');
+            _intake.reportExternalOutcome(_raidQueueId, { status: _intake.STATUS.PASS });
+          } catch (_) { /* best-effort, see above */ }
+        }
       } else {
         os.emit('idearium.error', { op: 'spec.build.compile', reason: compileResult.error });
         // Compile failed — don't leave the spec parked on 'building' forever
@@ -1044,6 +1075,12 @@ async function handle(req, res, route, query, body) {
         // Fall back to 'specced' so the UI reflects reality and a rebuild
         // can be re-attempted.
         os.emit('idearium.spec.update', { uuid: params.uuid, fields: { phase: 'specced' } });
+        if (_raidQueueId) {
+          try {
+            const _intake = _require('../../cortex/core/raid/contract-intake.js');
+            _intake.reportExternalOutcome(_raidQueueId, { status: _intake.STATUS.FAIL, verdict: compileResult.error || null });
+          } catch (_) { /* best-effort, see above */ }
+        }
       }
 
       // Notify orchestrator

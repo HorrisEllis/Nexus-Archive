@@ -130,6 +130,18 @@ const REGISTRY = {
     invariants: [],
     principles: ['§1.2'],
   },
+  // §MCO8 2026-09-13 — track_d (axiom §5.2 compliance, docs/2026-09-13-
+  // axiom-5-2-raid-routing-phasemap.spec). architect/service.js's real
+  // POST /api/blueprint/scan had zero RAID wiring before this — a real,
+  // synchronous write action with no observability trail at all. Reuses
+  // the exact submitContract()+reportExternalOutcome() additive pattern
+  // idearium's chunk-dispatch already proved safe (§1.2: never blocks
+  // real work on a RAID call failing).
+  'architect:blueprint.scan': {
+    primitive:  'architect/service.js POST /api/blueprint/scan',
+    invariants: [],
+    principles: ['§1.2', '§5.2'],
+  },
 };
 
 /**
