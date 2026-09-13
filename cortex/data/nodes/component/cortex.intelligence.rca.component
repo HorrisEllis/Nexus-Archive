@@ -2,51 +2,20 @@ envelope: 1
 uuid: nexus-export-component-cortex.intelligence.rca
 type: component
 id: cortex.intelligence.rca
-context: >-
-  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
-  the actual runtime table this node type's schema is grounded in
+context: cortex/tools/table-materializer.js — decompiled from cortex JAA table "components"
 intent: null
 summary: null
 system: cortex
 tags: []
-exported_at: 1789252178092
-source: data/cortex/memory/components.json:cortex.intelligence.rca
+exported_at: 1789275153128
+source: cortex.table-materializer.components
+occurrences: 1
+firstSeenAt: 1789275153128
+lastSeenAt: 1789275153128
+fingerprint: cortex::GET /api/intelligence/rca
 payload:
-  blueprint_ns: null
-  capabilities: []
-  tier: T1
-  resolution:
-    max_level: pattern
-  lifecycle: versioned
-  earned_roles: []
   id: cortex.intelligence.rca
+  uuid: 6de9834f-b999-44ad-ab88-0e5f5f1dddfd
   namespace: cortex
   name: intelligence.rca
   version: 3.5.0
-  grammar:
-    - intelligence rca
-  route:
-    method: GET
-    path: /api/intelligence/rca
-  description: Root cause analysis findings
-  params: []
-  tags:
-    - cortex
-  permissions:
-    - system
-  hooks: {}
-  registeredBy: cortex
-  registeredAt: 1789169841586
-  examples: []
-  events:
-    emits: []
-    listensTo: []
-  returns:
-    type: object
-    render: json
-  comp_properties: {}
-  available: true
-  deprecated: false
-  deprecatedBy: null
-  uuid: 6de9834f-b999-44ad-ab88-0e5f5f1dddfd
-  updatedAt: 1789179438460

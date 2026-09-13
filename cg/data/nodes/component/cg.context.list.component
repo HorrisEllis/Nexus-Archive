@@ -1,0 +1,21 @@
+envelope: 1
+uuid: nexus-export-component-cg.context.list
+type: component
+id: cg.context.list
+context: cortex/tools/table-materializer.js — decompiled from cortex JAA table "components"
+intent: null
+summary: null
+system: cg
+tags: []
+exported_at: 1789275152982
+source: cortex.table-materializer.components
+occurrences: 2
+firstSeenAt: 1789275152982
+lastSeenAt: 1789275152986
+fingerprint: cg::GET /contexts
+payload:
+  id: cg.context.list
+  uuid: e3151167-b753-4c90-b89c-e9663d1300e9
+  namespace: cg
+  name: context.list
+  version: 3.0.0

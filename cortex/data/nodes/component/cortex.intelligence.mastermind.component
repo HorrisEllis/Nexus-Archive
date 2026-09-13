@@ -2,52 +2,20 @@ envelope: 1
 uuid: nexus-export-component-cortex.intelligence.mastermind
 type: component
 id: cortex.intelligence.mastermind
-context: >-
-  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
-  the actual runtime table this node type's schema is grounded in
+context: cortex/tools/table-materializer.js — decompiled from cortex JAA table "components"
 intent: null
 summary: null
 system: cortex
 tags: []
-exported_at: 1789252178093
-source: data/cortex/memory/components.json:cortex.intelligence.mastermind
+exported_at: 1789275153133
+source: cortex.table-materializer.components
+occurrences: 1
+firstSeenAt: 1789275153133
+lastSeenAt: 1789275153133
+fingerprint: cortex::GET /api/intelligence/mastermind
 payload:
-  blueprint_ns: null
-  capabilities: []
-  tier: T1
-  resolution:
-    max_level: pattern
-  lifecycle: versioned
-  earned_roles: []
   id: cortex.intelligence.mastermind
+  uuid: 78745295-9cc4-452d-bebc-9f87dd5661d5
   namespace: cortex
   name: intelligence.mastermind
   version: 3.5.0
-  grammar:
-    - intelligence mastermind
-  route:
-    method: GET
-    path: /api/intelligence/mastermind
-  description: MASTERMIND strategic analysis
-  params: []
-  tags:
-    - cortex
-    - cognition
-  permissions:
-    - system
-  hooks: {}
-  registeredBy: cortex
-  registeredAt: 1789169841586
-  examples: []
-  events:
-    emits: []
-    listensTo: []
-  returns:
-    type: object
-    render: json
-  comp_properties: {}
-  available: true
-  deprecated: false
-  deprecatedBy: null
-  uuid: 78745295-9cc4-452d-bebc-9f87dd5661d5
-  updatedAt: 1789179438463

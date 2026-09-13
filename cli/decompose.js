@@ -47,77 +47,146 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.join(__dirname, '..');
-const args = process.argv.slice(2);
-const mode = args[0];
-const targetFile = args[1];
+// §FIXED 2026-09-13 — precommit-check.js's real require()-crash gate
+// found this: every function below (analyze/extract/etc.) closes over
+// mode/targetFile/flags/filePath as module-level bindings, but the
+// argv-parsing and usage-exit that filled them ran unconditionally at
+// require-time — a plain require('./cli/decompose.js') (exactly what
+// that precommit check, and any future test, does) always hit the
+// "no args" branch and process.exit(1)'d before anything else could
+// run. Bindings stay module-level (closures below are unaffected); only
+// the CLI-specific reading/validation/dispatch is now guarded so this
+// file is safely requirable with zero side effects when not run as the
+// actual CLI entry point.
+let mode, targetFile, filePath;
 const flags = {};
-for (const a of args.slice(2)) {
-  const m = a.match(/^--([\w-]+)=(.*)$/);
-  if (m) flags[m[1]] = m[2];
-}
 
-if (!mode || !targetFile || !['analyze', 'extract'].includes(mode)) {
-  console.error('Usage:');
-  console.error('  node cli/decompose.js analyze <file> [--mode=route|registry]');
-  console.error('  node cli/decompose.js extract <file> --route=<path> --system=<name>              (mode=route, default)');
-  console.error('  node cli/decompose.js extract <file> --mode=registry --block=<CONST_NAME> --system=<name> [--kind=node|tools|commands]');
-  process.exit(1);
-}
+if (require.main === module) {
+  const args = process.argv.slice(2);
+  mode = args[0];
+  targetFile = args[1];
+  for (const a of args.slice(2)) {
+    const m = a.match(/^--([\w-]+)=(.*)$/);
+    if (m) flags[m[1]] = m[2];
+  }
 
-const filePath = path.isAbsolute(targetFile) ? targetFile : path.join(ROOT, targetFile);
-if (!fs.existsSync(filePath)) { console.error(`[decompose] no such file: ${filePath}`); process.exit(1); }
+  if (!mode || !targetFile || !['analyze', 'extract'].includes(mode)) {
+    console.error('Usage:');
+    console.error('  node cli/decompose.js analyze <file> [--mode=route|registry]');
+    console.error('  node cli/decompose.js extract <file> --route=<path> --system=<name>              (mode=route, default)');
+    console.error('  node cli/decompose.js extract <file> --mode=registry --block=<CONST_NAME> --system=<name> [--kind=node|tools|commands]');
+    process.exit(1);
+  }
+
+  filePath = path.isAbsolute(targetFile) ? targetFile : path.join(ROOT, targetFile);
+  if (!fs.existsSync(filePath)) { console.error(`[decompose] no such file: ${filePath}`); process.exit(1); }
+}
 
 // ── Block finder — real brace-depth tracking, not regex-guessed boundaries ──
 // Finds every top-level `if (p === '...'` [&& method === '...'] `) {` block
 // and returns its exact start/end line (inclusive), by walking braces,
 // strings, and comments character-by-character so a brace inside a string
 // or comment is never miscounted.
+// §GENERALIZED 2026-09-13 — James: "I want to be able to use it in case
+// any monoliths happen. Which it has in ollama and copilot." Checked all
+// 3 real monoliths directly before touching this, not guessed: cortex/
+// boot.js uses `p === '/x'` (the only convention this matched before);
+// copilot/server.js ALSO uses `p`, but in BOTH orders — 8 blocks path-
+// first, 18 blocks method-first (`method === 'GET' && p === '/x'`), which
+// the old header regex, anchored to path-first only, silently missed;
+// guardian/server.js uses a different path variable entirely
+// (`url.pathname`), overwhelmingly method-first (106 of 107 real blocks)
+// — matched ZERO blocks under the old regex, confirmed via a real
+// `analyze` run before this change (0 of 4174 lines). ollama/server.js
+// checked too: already decomposed to 118 lines with its own routes/ dir,
+// genuinely nothing left to extract there right now.
+// Route condition text is captured VERBATIM (condText) rather than
+// reconstructed from parsed parts — extract() below reuses it unmodified
+// when writing the delegating stub back, so a rewritten guardian route
+// still reads `url.pathname === ...`, never introduces an undefined `p`.
+// Deliberately still NOT matched: `.startsWith(...)`/regex `.test(...)`
+// dynamic routes (guardian has several, e.g. `/^\/queue\/retry\//`) —
+// real, but a genuinely different extraction shape (no fixed route
+// string to slug/register), out of scope for this pass, not silently
+// mismatched as a false extractable.
 function findRouteBlocks(src) {
   const lines = src.split('\n');
   const blocks = [];
-  const headerRe = /if\s*\(\s*p\s*===\s*'([^']+)'(?:\s*\|\|\s*p\s*===\s*'([^']+)')?\s*(?:&&\s*method\s*===\s*'(\w+)')?\s*\)\s*\{/;
+  const lineRe = /^\s*if\s*\((.+)\)\s*\{\s*$/;
+  const pathRe   = /(?:\bp|\burl\.pathname)\s*===\s*'(\/[^']*)'/;
+  const altRe    = /\|\|\s*(?:\bp|\burl\.pathname)\s*===\s*'(\/[^']*)'/;
+  const methodRe = /\bmethod\s*===\s*'(\w+)'/;
 
   let i = 0;
   while (i < lines.length) {
-    const m = lines[i].match(headerRe);
-    if (!m) { i++; continue; }
+    const lm = lines[i].match(lineRe);
+    if (!lm) { i++; continue; }
+    const cond = lm[1];
+    const pm = cond.match(pathRe);
+    if (!pm) { i++; continue; } // an unrelated if(...) { ending the line — not a route condition
+    const am = cond.match(altRe);
+    const mm = cond.match(methodRe);
+    const m = [null, pm[1], am ? am[1] : undefined, mm ? mm[1] : undefined];
     const startLine = i;
-    // Walk from the opening brace on this line, tracking depth across
-    // real code only (strings/comments excluded from brace counting).
-    let depth = 0;
-    let started = false;
-    let inString = null; // "'", '"', or '`'
-    let inLineComment = false;
-    let inBlockComment = false;
-    let j = i;
-    outer:
-    for (; j < lines.length; j++) {
-      inLineComment = false;
-      const line = lines[j];
-      for (let k = 0; k < line.length; k++) {
-        const c = line[k];
-        const next = line[k + 1];
-        if (inLineComment) continue;
-        if (inBlockComment) { if (c === '*' && next === '/') { inBlockComment = false; k++; } continue; }
-        if (inString) { if (c === '\\') { k++; continue; } if (c === inString) inString = null; continue; }
-        if (c === '/' && next === '/') { inLineComment = true; continue; }
-        if (c === '/' && next === '*') { inBlockComment = true; k++; continue; }
-        if (c === "'" || c === '"' || c === '`') { inString = c; continue; }
-        if (c === '{') { depth++; started = true; }
-        else if (c === '}') {
-          depth--;
-          if (started && depth === 0) { break outer; }
-        }
-      }
-    }
+    const j = walkBraceBlock(lines, i);
     blocks.push({
       route: m[1], altRoute: m[2] || null, method: m[3] || null,
+      condText: cond, // verbatim source condition — reused as-is on write-back, never reconstructed
       startLine: startLine + 1, endLine: j + 1, // 1-indexed for human display
       body: lines.slice(startLine, j + 1).join('\n'),
     });
     i = j + 1;
   }
   return blocks;
+}
+
+// §FOUND WHILE GENERALIZING 2026-09-13 — a real, pre-existing bug in the
+// two brace-depth walkers below (findRouteBlocks/findRegistryBlocks),
+// exposed by guardian/server.js's real /version handler (line 1678):
+// `content.match(/version['":\s]+['"v]?(\d+\.\d+\.\d+)/i)` — a regex
+// literal containing bare quote characters inside a character class.
+// Neither walker has any concept of a regex literal; it read the first
+// `'` inside `['":\s]` as a STRING START, then hunted for the next `'`
+// to close it — real braces crossed in between were silently never
+// counted. Confirmed directly: before this fix, /version's block was
+// measured at 2504 lines (1672-4175, past EOF), swallowing every real
+// route after it, which is why guardian first reported only 5 blocks
+// instead of the ~106 real ones. Fixed with a shared walker that adds
+// genuine regex-literal tracking (including character classes, where an
+// unescaped `/` does NOT end the regex) using the same regex-vs-division
+// heuristic every real JS tokenizer uses: a `/` starts a regex when the
+// last real code character before it is NOT an identifier char, digit,
+// `)`, or `]` (i.e. not a value a division would apply to).
+function walkBraceBlock(lines, startIdx) {
+  let depth = 0, started = false;
+  let inString = null, inLineComment = false, inBlockComment = false;
+  let inRegex = false, inRegexClass = false;
+  let lastSig = '';
+  for (let j = startIdx; j < lines.length; j++) {
+    inLineComment = false;
+    const line = lines[j];
+    for (let k = 0; k < line.length; k++) {
+      const c = line[k], next = line[k + 1];
+      if (inLineComment) continue;
+      if (inBlockComment) { if (c === '*' && next === '/') { inBlockComment = false; k++; } continue; }
+      if (inRegex) {
+        if (c === '\\') { k++; continue; }
+        if (c === '[') { inRegexClass = true; continue; }
+        if (c === ']') { inRegexClass = false; continue; }
+        if (c === '/' && !inRegexClass) inRegex = false;
+        continue;
+      }
+      if (inString) { if (c === '\\') { k++; continue; } if (c === inString) inString = null; continue; }
+      if (c === '/' && next === '/') { inLineComment = true; continue; }
+      if (c === '/' && next === '*') { inBlockComment = true; k++; continue; }
+      if (c === "'" || c === '"' || c === '`') { inString = c; continue; }
+      if (c === '/' && !/[\w$)\]]/.test(lastSig)) { inRegex = true; continue; }
+      if (c === '{') { depth++; started = true; }
+      else if (c === '}') { depth--; if (started && depth === 0) return j; }
+      if (!/\s/.test(c)) lastSig = c;
+    }
+  }
+  return lines.length - 1; // unterminated by EOF — caller treats this range with suspicion
 }
 
 // ── Free-variable detector — real, not assumed. Collects identifiers
@@ -193,32 +262,7 @@ function findRegistryBlocks(src) {
     const m = lines[i].match(headerRe);
     if (!m) { i++; continue; }
     const startLine = i;
-    let depth = 0;
-    let started = false;
-    let inString = null;
-    let inLineComment = false;
-    let inBlockComment = false;
-    let j = i;
-    outer:
-    for (; j < lines.length; j++) {
-      inLineComment = false;
-      const line = lines[j];
-      for (let k = 0; k < line.length; k++) {
-        const c = line[k];
-        const next = line[k + 1];
-        if (inLineComment) continue;
-        if (inBlockComment) { if (c === '*' && next === '/') { inBlockComment = false; k++; } continue; }
-        if (inString) { if (c === '\\') { k++; continue; } if (c === inString) inString = null; continue; }
-        if (c === '/' && next === '/') { inLineComment = true; continue; }
-        if (c === '/' && next === '*') { inBlockComment = true; k++; continue; }
-        if (c === "'" || c === '"' || c === '`') { inString = c; continue; }
-        if (c === '{') { depth++; started = true; }
-        else if (c === '}') {
-          depth--;
-          if (started && depth === 0) { break outer; }
-        }
-      }
-    }
+    const j = walkBraceBlock(lines, i);
     // The matched line ends in `{` but the real statement continues past
     // the `}` with `);` (the Object.freeze close-paren + semicolon) —
     // absorb that onto the same end line so extraction doesn't clip it.
@@ -375,9 +419,9 @@ ${innerBody}
   const before = lines.slice(0, target.startLine - 1);
   const after = lines.slice(target.endLine);
   const relRequire = './' + path.relative(path.dirname(filePath), nodeFile).replace(/\\/g, '/').replace(/\.js$/, '');
-  const condition = target.altRoute
-    ? `p === '${target.route}' || p === '${target.altRoute}'`
-    : `p === '${target.route}'${target.method ? ` && method === '${target.method}'` : ''}`;
+  // Verbatim, not reconstructed — preserves whichever real path variable
+  // (p or url.pathname) and condition order the source file actually used.
+  const condition = target.condText;
   const delegateLines = [
     `  if (${condition}) {`,
     `    require('${relRequire}')(req, res, { ${free.join(', ')} });`,
@@ -419,5 +463,7 @@ ${innerBody}
   console.log(`[decompose] extracted ${target.route} from ${path.relative(ROOT, filePath)} -> ${path.relative(ROOT, nodeFile)} (${target.endLine - target.startLine + 1} lines moved). Both files verified syntax-clean.`);
 }
 
-if (mode === 'analyze') { if (flags.mode === 'registry') analyzeRegistry(); else analyze(); }
-else { if (flags.mode === 'registry') extractRegistry(); else extract(); }
+if (require.main === module) {
+  if (mode === 'analyze') { if (flags.mode === 'registry') analyzeRegistry(); else analyze(); }
+  else { if (flags.mode === 'registry') extractRegistry(); else extract(); }
+}

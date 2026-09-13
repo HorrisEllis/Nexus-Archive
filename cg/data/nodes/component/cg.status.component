@@ -1,0 +1,21 @@
+envelope: 1
+uuid: nexus-export-component-cg.status
+type: component
+id: cg.status
+context: cortex/tools/table-materializer.js — decompiled from cortex JAA table "components"
+intent: null
+summary: null
+system: cg
+tags: []
+exported_at: 1789275152969
+source: cortex.table-materializer.components
+occurrences: 3
+firstSeenAt: 1789275152969
+lastSeenAt: 1789275153005
+fingerprint: cg::GET /status
+payload:
+  id: cg.status
+  uuid: 9ab81c42-de5e-4632-bf46-704d69ced548
+  namespace: cg
+  name: status
+  version: 3.0.0

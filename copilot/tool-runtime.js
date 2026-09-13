@@ -21,6 +21,33 @@
 
 const agentTools = require('../lib/agent-tools');
 const http = require('http');
+const path = require('path');
+const nodeExport = require('../lib/node-export.js');
+const { uid } = require('../cortex/memory/jaa-db');
+
+// §ADDED 2026-09-13 — the .injection node type. James: "every time
+// something gets prepended to a dispatch, there'd be a real node
+// recording what and why" (see lib/node-schemas/schema.injection,
+// status:REAL). Written at the one real construction site
+// (makeNcpCallModel's callModel, below) every call, primed or not —
+// a skipped injection is real data too, not just a sent one. Same
+// non-fatal discipline as this file's own gapField.report() calls:
+// a write failure here must never break the real dispatch it's
+// describing.
+// Overridable for tests, same convention as test-node-index.js's JAA_DATA_DIR
+// redirect — real writes must never land in the real data dir during a test run.
+const INJECTION_NODES_DIR = process.env.COPILOT_INJECTION_DIR || path.join(__dirname, 'data', 'nodes', 'injection');
+function _recordInjection(payload) {
+  try {
+    nodeExport.exportToFile('injection', uid(), payload, {
+      context: 'copilot/tool-runtime.js makeNcpCallModel callModel',
+      system: 'copilot',
+      source: 'copilot.tool-runtime.makeNcpCallModel',
+    }, INJECTION_NODES_DIR);
+  } catch (e) {
+    console.warn(`[copilot/tool-runtime] .injection record failed (non-fatal): ${e.message}`);
+  }
+}
 
 // §ADDED 2026-09-11 — the fallback lookup for makeNcpCallModel's failure
 // path below. GET /response/:jobId already exists on guardian's server
@@ -142,17 +169,81 @@ function _parseToolBlocks(text) {
   return commands;
 }
 
-function _toolInstructions(toolSchemas) {
-  const list = toolSchemas.map(t => `- ${t.function.name}: ${t.function.description}`).join('\n');
+function _toolInstructions(toolSchemas, opts = {}) {
+  // §FIXED 2026-09-13 — James: "i bet you its the agent model." Right
+  // instinct, exact real cause: runViaAgent() (below) already bakes
+  // lib/agent-tools/tool-guide.js's full "how and when to use" prose —
+  // name + description + edge-case + prefer-this-over-that, for every
+  // real tool — into systemPrompt BEFORE this function ever runs. This
+  // function then re-listed every tool's own full description a SECOND
+  // time, in a different format, for the exact same real purpose. Two
+  // real, independently-built, both-correct pieces that were never
+  // reconciled — same collision class as the earlier `tools:[]` fix,
+  // just one level up: that one stopped GUARDIAN duplicating the
+  // catalog; this stops COPILOT duplicating it against its own already-
+  // included guide.
+  //
+  // guide:true (passed by makeNcpCallModel below, since runViaAgent's
+  // systemPrompt always includes toolGuide()) renders ONLY what
+  // toolGuide() genuinely does not say — the exact machine-readable
+  // calling syntax — plus a bare name list, not a second copy of every
+  // description. Defaults to the original, fuller format for any other
+  // real caller that hasn't already given the model a guide.
+  const list = opts.guide
+    ? toolSchemas.map(t => t.function.name).join(', ')
+    : toolSchemas.map(t => `- ${t.function.name}: ${t.function.description}`).join('\n');
   return [
     'You have real tools available. To use one, respond with EXACTLY this format (a fenced code block, nothing else in that block):',
     '```tool',
     '{"name": "tool_name_here", "arguments": {"param": "value"}}',
     '```',
     'Only one tool call per response. If you don\'t need a tool, just answer normally in plain text — no fenced block.',
-    'Available tools:',
+    opts.guide ? 'Available tools (see YOUR TOOLS above for what each does and when to use it):' : 'Available tools:',
     list,
   ].join('\n');
+}
+
+// §FIXED 2026-09-13 — James: "i have no idea that the problem. i type
+// mdawp in tv ui floating menu cli and it pastes a mountain." Traced:
+// every single call to callModel() below rebuilds and resends the
+// FULL system context (copilot-context.js's 7-layer L0-L6 assembly +
+// axioms + user model + session history + recall context) AND the
+// complete tool catalog (_toolInstructions() above, 60+ real tools with
+// full descriptions) — regardless of how trivial the actual message is.
+// A 5-character "mdawp" produces the exact same multi-thousand-word
+// paste as a real, complex request, every time, because nothing here
+// ever asked "does the live tab this is going to already have this
+// context from a moment ago?"
+//
+// It usually does: guardian dispatches into ONE real, persistent
+// browser tab per provider (clear-glass/src/providers/host.js) that
+// keeps its own real conversational memory as long as it stays alive.
+// Re-sending the whole mountain on every turn of an ongoing exchange is
+// real, unnecessary, repeated cost — the tab already has it.
+//
+// §HONEST LIMIT — the real provider often isn't resolved yet at this
+// point (RAID can still be routing 'auto'), and there is no live,
+// cross-process signal here for "was this exact tab destroyed and
+// recreated since I last sent full context" — clear-glass/src/
+// providers/host.js's own real idle-timeout (IDLE_TIMEOUT_MS, 120000ms
+// default) is the only real, named number that bounds how long a tab
+// can go quiet before ProviderHost genuinely destroys and later
+// recreates it, wiping its conversational memory. Reusing that exact
+// constant here, not inventing a new one: a provider heard from within
+// the last 120s is treated as still the same live, already-primed tab
+// (skip the mountain); anything older, or a provider never primed
+// before, gets the real, full context again. When genuinely uncertain
+// (provider not yet resolved), this errs toward sending full context —
+// an occasional repeated mountain is a real cost, but silently losing
+// tool access mid-conversation because a guess about tab freshness was
+// wrong would be a worse one.
+const PROVIDER_IDLE_MS = 120000; // matches clear-glass/src/providers/host.js's own real IDLE_TIMEOUT_MS
+const _lastPrimedAt = new Map(); // provider -> ts of the most recent exchange (full or short)
+
+function _isFreshlyPrimed(provider) {
+  if (!provider || provider === 'auto') return false; // unresolved — can't know which tab this is, don't guess
+  const last = _lastPrimedAt.get(provider);
+  return typeof last === 'number' && (Date.now() - last) < PROVIDER_IDLE_MS;
 }
 
 /**
@@ -188,7 +279,22 @@ function makeNcpCallModel(dispatchToAgent, opts = {}) {
       })
       .join('\n');
 
-    const fullPrompt = [system, _toolInstructions(scoped), convo].filter(Boolean).join('\n\n');
+    const primed = _isFreshlyPrimed(opts.provider);
+    const fullPrompt = primed
+      ? convo // already has real, live tools/context from moments ago — just the real new turn
+      : [system, _toolInstructions(scoped, { guide: true }), convo].filter(Boolean).join('\n\n');
+    const _lastPrimedTs = _lastPrimedAt.get(opts.provider);
+    _recordInjection({
+      provider: opts.provider || 'auto',
+      primed,
+      injectedSystemPrompt: !primed,
+      injectedToolGuide: !primed,
+      toolCount: scoped.length,
+      promptLength: fullPrompt.length,
+      idleMsThreshold: PROVIDER_IDLE_MS,
+      ...(typeof _lastPrimedTs === 'number' ? { msSinceLastPrimed: Date.now() - _lastPrimedTs } : {}),
+    });
+    if (opts.provider && opts.provider !== 'auto') _lastPrimedAt.set(opts.provider, Date.now());
     // §FIXED 2026-09-13 — James: screenshots showing chatgpt's real,
     // dispatched prompt with TWO complete, DIFFERENT-SYNTAX tool catalogs
     // stacked in one message ([[TOOL: name {...}]] followed by a second,
@@ -287,7 +393,13 @@ function makeNcpCallModel(dispatchToAgent, opts = {}) {
  * system prompt discipline (tool-guide, memory, live stream), as ollama.
  */
 async function runViaAgent(agent, dispatchToAgent, userPrompt, opts = {}) {
-  const callModel = makeNcpCallModel(dispatchToAgent, { ...(opts.modelOpts || {}), toolScope: opts.toolScope });
+  // §FIXED 2026-09-13 — provider was never actually threaded into
+  // makeNcpCallModel's opts (only modelOpts/toolScope were), so the
+  // real, resolved agent this call is going to was invisible inside
+  // callModel() — the "skip resending full context to an already-primed
+  // tab" check above could never fire, since opts.provider was always
+  // undefined regardless of which real agent this dispatch targets.
+  const callModel = makeNcpCallModel(dispatchToAgent, { ...(opts.modelOpts || {}), toolScope: opts.toolScope, provider: agent });
   const systemPrompt = [
     `You are the NEXUS co-pilot, currently running as ${agent}. You have tools; use them to read files, run diagnostics, query memory, and act on the system.`,
     'ALWAYS look for a tool that can fulfill the request before answering from memory or escalating. Prefer a tool over a guess.',

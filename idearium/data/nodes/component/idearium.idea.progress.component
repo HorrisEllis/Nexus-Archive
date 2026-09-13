@@ -1,0 +1,21 @@
+envelope: 1
+uuid: nexus-export-component-idearium.idea.progress
+type: component
+id: idearium.idea.progress
+context: cortex/tools/table-materializer.js — decompiled from cortex JAA table "components"
+intent: null
+summary: null
+system: idearium
+tags: []
+exported_at: 1789275152899
+source: cortex.table-materializer.components
+occurrences: 1
+firstSeenAt: 1789275152899
+lastSeenAt: 1789275152899
+fingerprint: idearium::POST /api/ideas/:uuid/progress
+payload:
+  id: idearium.idea.progress
+  uuid: 391e34ca-6526-4123-861d-dfdd62be7fd4
+  namespace: idearium
+  name: idea.progress
+  version: 1.0.0

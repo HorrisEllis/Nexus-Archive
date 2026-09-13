@@ -1,0 +1,21 @@
+envelope: 1
+uuid: nexus-export-component-idearium.repo.show
+type: component
+id: idearium.repo.show
+context: cortex/tools/table-materializer.js — decompiled from cortex JAA table "components"
+intent: null
+summary: null
+system: idearium
+tags: []
+exported_at: 1789275152951
+source: cortex.table-materializer.components
+occurrences: 1
+firstSeenAt: 1789275152951
+lastSeenAt: 1789275152951
+fingerprint: idearium::GET /api/repos/:uuid
+payload:
+  id: idearium.repo.show
+  uuid: b6216422-c533-4111-a959-6422127e0905
+  namespace: idearium
+  name: repo.show
+  version: 1.0.0

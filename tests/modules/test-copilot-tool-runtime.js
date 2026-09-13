@@ -91,6 +91,43 @@ const rt = require(path.join(ROOT, 'copilot/tool-runtime.js'));
     assert.ok(/guardian/i.test(digest), 'digest must reflect real events');
   });
 
+  // §FIXED 2026-09-13 — James: "i type mdawp in tv ui floating menu cli
+  // and it pastes a mountain." then, correctly: "i bet you its the
+  // agent model." Real cause: runViaAgent()'s own systemPrompt already
+  // bakes in lib/agent-tools/tool-guide.js's full per-tool "how and
+  // when to use" prose; makeNcpCallModel()'s callModel() then
+  // re-described every tool a SECOND time via the old _toolInstructions.
+  await test('T-010', 'runViaAgent does not duplicate the tool guide — no tool description appears twice in one real dispatched prompt', async () => {
+    let capturedPrompt = null;
+    const dispatchToAgent = async (prompt) => { capturedPrompt = prompt; return { ok: true, text: 'ok' }; };
+    await rt.runViaAgent('chatgpt', dispatchToAgent, 'mdawp', {});
+    assert.ok(capturedPrompt, 'a real prompt must have been captured');
+    // Pick a real tool whose description is long/distinctive enough that
+    // an accidental second copy would be unambiguous, not a coincidental
+    // substring hit.
+    const marker = 'blind\\[\\] comes FIRST in the reply';
+    const hits = (capturedPrompt.match(new RegExp(marker, 'g')) || []).length;
+    assert.strictEqual(hits, 1, `query_movement's own distinctive edge-case text must appear exactly once in the real dispatched prompt, found ${hits}`);
+  });
+
+  await test('T-011', 'a second real dispatch to the SAME still-fresh provider skips the full tool guide/context entirely', async () => {
+    const prompts = [];
+    const dispatchToAgent = async (prompt) => { prompts.push(prompt); return { ok: true, text: 'ok' }; };
+    await rt.runViaAgent('claude', dispatchToAgent, 'first real turn', {});
+    await rt.runViaAgent('claude', dispatchToAgent, 'second real turn, moments later', {});
+    assert.ok(prompts[0].length > 1000, 'the first real turn to a provider must carry the full context — nothing to be "already primed" from yet');
+    assert.ok(prompts[1].length < prompts[0].length / 5, `the second real turn to the SAME still-fresh provider must be dramatically shorter than the first (got ${prompts[1].length} vs ${prompts[0].length})`);
+    assert.ok(/second real turn/.test(prompts[1]), 'the short prompt must still carry the actual new real user turn');
+  });
+
+  await test('T-012', 'a different provider is NOT treated as already primed by another provider\'s recent turn', async () => {
+    const prompts = [];
+    const dispatchToAgent = async (prompt) => { prompts.push(prompt); return { ok: true, text: 'ok' }; };
+    await rt.runViaAgent('gemini', dispatchToAgent, 'priming gemini', {});
+    await rt.runViaAgent('perplexity', dispatchToAgent, 'a genuinely different, never-primed provider', {});
+    assert.ok(prompts[1].length > 1000, 'a provider that has never been dispatched to before must get the real, full context, regardless of another provider\'s recent activity');
+  });
+
   console.log(`\n${passed} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);
 })();

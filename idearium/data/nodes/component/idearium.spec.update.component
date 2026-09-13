@@ -1,0 +1,21 @@
+envelope: 1
+uuid: nexus-export-component-idearium.spec.update
+type: component
+id: idearium.spec.update
+context: cortex/tools/table-materializer.js — decompiled from cortex JAA table "components"
+intent: null
+summary: null
+system: idearium
+tags: []
+exported_at: 1789275152907
+source: cortex.table-materializer.components
+occurrences: 1
+firstSeenAt: 1789275152907
+lastSeenAt: 1789275152907
+fingerprint: idearium::PATCH /api/specs/:uuid
+payload:
+  id: idearium.spec.update
+  uuid: 789f5160-4f27-404f-a05f-b775ad8a36af
+  namespace: idearium
+  name: spec.update
+  version: 1.0.0

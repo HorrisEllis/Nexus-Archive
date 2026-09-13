@@ -2,51 +2,20 @@ envelope: 1
 uuid: nexus-export-component-cortex.chat.log
 type: component
 id: cortex.chat.log
-context: >-
-  real, live jaaDB row migrated from data/cortex/memory/components.json — cortex's own memory store,
-  the actual runtime table this node type's schema is grounded in
+context: cortex/tools/table-materializer.js — decompiled from cortex JAA table "components"
 intent: null
 summary: null
 system: cortex
 tags: []
-exported_at: 1789252178095
-source: data/cortex/memory/components.json:cortex.chat.log
+exported_at: 1789275153148
+source: cortex.table-materializer.components
+occurrences: 1
+firstSeenAt: 1789275153148
+lastSeenAt: 1789275153148
+fingerprint: cortex::GET /api/chat-log
 payload:
-  blueprint_ns: null
-  capabilities: []
-  tier: T1
-  resolution:
-    max_level: pattern
-  lifecycle: versioned
-  earned_roles: []
   id: cortex.chat.log
+  uuid: e0a75705-6ab3-4087-b72d-27e573e76989
   namespace: cortex
   name: chat.log
   version: 3.5.0
-  grammar:
-    - chat log
-  route:
-    method: GET
-    path: /api/chat-log
-  description: Co-pilot conversation log
-  params: []
-  tags:
-    - cortex
-  permissions:
-    - system
-  hooks: {}
-  registeredBy: cortex
-  registeredAt: 1789169841586
-  examples: []
-  events:
-    emits: []
-    listensTo: []
-  returns:
-    type: object
-    render: json
-  comp_properties: {}
-  available: true
-  deprecated: false
-  deprecatedBy: null
-  uuid: e0a75705-6ab3-4087-b72d-27e573e76989
-  updatedAt: 1789179438475

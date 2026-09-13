@@ -1,0 +1,21 @@
+envelope: 1
+uuid: nexus-export-component-idearium.spec.export
+type: component
+id: idearium.spec.export
+context: cortex/tools/table-materializer.js — decompiled from cortex JAA table "components"
+intent: null
+summary: null
+system: idearium
+tags: []
+exported_at: 1789275152914
+source: cortex.table-materializer.components
+occurrences: 1
+firstSeenAt: 1789275152914
+lastSeenAt: 1789275152914
+fingerprint: idearium::GET /api/specs/:uuid/export
+payload:
+  id: idearium.spec.export
+  uuid: fbc4636a-953e-4b95-b1f1-9b13598688fa
+  namespace: idearium
+  name: spec.export
+  version: 1.0.0

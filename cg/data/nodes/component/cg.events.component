@@ -1,0 +1,21 @@
+envelope: 1
+uuid: nexus-export-component-cg.events
+type: component
+id: cg.events
+context: cortex/tools/table-materializer.js — decompiled from cortex JAA table "components"
+intent: null
+summary: null
+system: cg
+tags: []
+exported_at: 1789275152971
+source: cortex.table-materializer.components
+occurrences: 1
+firstSeenAt: 1789275152971
+lastSeenAt: 1789275152971
+fingerprint: cg::GET /events
+payload:
+  id: cg.events
+  uuid: e1370d1b-0f57-45c6-a7cf-751ceaa3a157
+  namespace: cg
+  name: events
+  version: 3.0.0
