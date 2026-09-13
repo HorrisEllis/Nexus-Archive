@@ -398,4 +398,18 @@ class DomArchaeology {
   listPicks() { return [...this.picks.values()]; }
 }
 
+// §MCO19 2026-09-13 — real, direct (same-process) way for another file in
+// this same ClearGlass main process (bridge.js, for a new HTTP route) to
+// set the same real activeCompartmentUuid/activeQueueId this file's own
+// ipcMain.handle('compartment:set-active', ...) already sets — same
+// module-level state, two real entry points (one for the renderer via
+// IPC, one for an external HTTP caller like RAID via a new bridge.js
+// route), not two competing copies of the state.
+function setActiveCompartment(compartmentUuid, queueId) {
+  activeCompartmentUuid = compartmentUuid || null;
+  activeQueueId         = queueId || null;
+  return { ok: true, compartmentUuid: activeCompartmentUuid, queueId: activeQueueId };
+}
+
 module.exports = DomArchaeology;
+module.exports.setActiveCompartment = setActiveCompartment;

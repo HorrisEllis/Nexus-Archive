@@ -7,6 +7,30 @@
  * THE single source of truth for every system endpoint, port,
  * expected shape, SSE event name, and CLI command.
  *
+ * §DEPRECATED 2026-09-13 (MCO18, Track B item 3) — this file's SYSTEMS
+ * object had already, confirmably drifted from every real system it
+ * described (guardian's copy diverged route-by-route, found and fixed
+ * earlier this session; the same reconciliation has now been done for
+ * every other real key here: architect, cortex, orchestrator, idearium,
+ * copilot, diagnostic). Each of those systems now has its own real,
+ * reconciled interaction-contract.json, checked directly against that
+ * system's own live route dispatcher, not against this file. This
+ * object is left in place per §A-4 (append-only, deprecate never
+ * delete) but should no longer be read as authoritative for any system
+ * — read <system>/interaction-contract.json instead. orchestrator.js's
+ * real GET /api/contract/:system endpoint should be repointed to read
+ * from each system's own file rather than this one — that repointing
+ * is real, separate work this pass did not do (orchestrator.js itself
+ * was not modified).
+ *
+ * 'bridge' below is NOT reconciled and should not be — Bridge itself
+ * was retired earlier this session; a per-system contract file for a
+ * system that no longer exists would be fabricating relevance for
+ * something real evidence says doesn't exist. Left as-is, historical.
+ *
+ * THE single source of truth for every system endpoint, port,
+ * expected shape, SSE event name, and CLI command.
+ *
  * §AXIOM: CLI = UI = API — same commands, same shapes, same ports.
  * §A-2:   Hooks are the wire. This contract IS the wire map.
  * §A-4:   Living — append-only. Deprecate, never delete.

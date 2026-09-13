@@ -65,6 +65,14 @@ function _resolveInputDir(system) {
 // idearium/config.js's own real default (4800) — not guessed.
 const IDEARIUM_PORT = parseInt(process.env.IDEARIUM_PORT || '4800', 10);
 
+// §MCO19 2026-09-13 — real, confirmed browser-driven NCP providers (each
+// has a real userscript with site-specific DOM selectors, confirmed
+// during MCO14's account-registry work — not every entry in PROVIDERS
+// there is browser-driven; ollama/mistral are local/API-only, deliberately
+// excluded here).
+const BROWSER_PROVIDERS = new Set(['claude', 'chatgpt', 'gemini', 'perplexity', 'deepseek']);
+const CLEARGL_IPC_PORT = parseInt(process.env.CLEARGL_IPC_PORT || '7702', 10);
+
 function _ideariumRequest(method, reqPath, body) {
   return new Promise((resolve) => {
     const http = require('http');
@@ -85,6 +93,61 @@ function _ideariumRequest(method, reqPath, body) {
     if (payload) req.write(payload);
     req.end();
   });
+}
+
+function _clearglassRequest(method, reqPath, body) {
+  return new Promise((resolve) => {
+    const http = require('http');
+    const payload = body ? JSON.stringify(body) : null;
+    const req = http.request({
+      hostname: '127.0.0.1', port: CLEARGL_IPC_PORT, path: reqPath, method, timeout: 2000,
+      headers: payload ? { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) } : {},
+    }, (res) => {
+      let raw = '';
+      res.on('data', (c) => raw += c);
+      res.on('end', () => { try { resolve({ status: res.statusCode, body: JSON.parse(raw) }); } catch (_) { resolve(null); } });
+    });
+    req.on('error',   () => resolve(null)); // honest-degrade — same contract as _ideariumRequest
+    req.on('timeout', () => { req.destroy(); resolve(null); });
+    if (payload) req.write(payload);
+    req.end();
+  });
+}
+
+/**
+ * _dispatchToClearGlass(queued, compartmentId) — real dispatch into a
+ * live browser agent. Two real HTTP calls: tag the compartment first (so
+ * MCO10's DOM ledger actually has something real to attribute events to),
+ * then trigger the real, gate-registered mesh.route() via POST /cmd.
+ *
+ * §HONEST SCOPE — this dispatches real work and returns as soon as
+ * ClearGlass acknowledges the dispatch (per its own real POST /cmd
+ * contract: "Result will arrive on SSE stream"). It does NOT wait for or
+ * consume that SSE result to advance the contract to OUTPUT_FOLDER —
+ * that correlation (a real SSE client inside RAID's own process,
+ * matching a queueId back to a completed mesh.route() result) is real,
+ * separate work this pass did not build. Today, a browser-dispatched
+ * contract's OUTPUT_FOLDER still comes from compartmentEngine.execute()'s
+ * own real result below, same as before this function existed — this
+ * function adds a real, live side-effect (the browser genuinely does the
+ * work) without yet closing the loop on consuming its real result.
+ */
+async function _dispatchToClearGlass(queued, compartmentId) {
+  const tag = await _clearglassRequest('POST', '/compartment/set-active', { compartmentUuid: compartmentId, queueId: queued.uuid });
+  if (!tag) {
+    console.warn(`[${MODULE_ID}] contract ${queued.uuid}: ClearGlass unreachable at compartment tagging — browser dispatch skipped, PROCESSING continues via the COS path regardless`);
+    return { ok: false, reason: 'clearglass unreachable' };
+  }
+  const dispatch = await _clearglassRequest('POST', '/cmd', {
+    eventType: 'mesh.route',
+    data: { prompt: queued.content || queued.intention, preferAgent: queued.forAgent, requestId: queued.uuid },
+  });
+  if (!dispatch || !dispatch.body || !dispatch.body.ok) {
+    console.warn(`[${MODULE_ID}] contract ${queued.uuid}: real ClearGlass dispatch failed or unacknowledged — PROCESSING continues via the COS path regardless`);
+    return { ok: false, reason: 'dispatch not acknowledged' };
+  }
+  _raidLedger.record('raid.contract.dispatched.clearglass', { queueId: queued.uuid, forAgent: queued.forAgent, compartmentId }, { source: 'raid', causedBy: queued.uuid });
+  return { ok: true };
 }
 
 async function _provisionContractRepo(queued, compartmentId) {
@@ -777,6 +840,21 @@ async function processNext(executor) {
     console.warn(`[${MODULE_ID}] contract ${queued.uuid}: no real repo provisioned (idearium unreachable or refused) — PROCESSING continues without a work surface`);
   }
 
+  // §MCO19 2026-09-13 — James: "yes do it" (ClearGlass as a real RAID
+  // PROCESSING destination). Real design decision, not guessed: only
+  // contracts whose forAgent names a real browser-driven NCP provider
+  // route into ClearGlass — everything else keeps using the COS sandbox
+  // above exactly as before (untouched). Dispatch itself reuses ClearGlass's
+  // own real, already-registered gate pipeline (POST :7702/cmd ->
+  // emit('mesh.route', ...) -> meshRouteGate -> mesh.route(), confirmed
+  // wired at boot via registerAll()) rather than inventing a new
+  // mechanism. Same honest-degrade cross-process pattern as every other
+  // call in this file — an unreachable ClearGlass never blocks
+  // PROCESSING, it just means no browser dispatch happened.
+  if (BROWSER_PROVIDERS.has(queued.forAgent)) {
+    await _dispatchToClearGlass(queued, compartment.id);
+  }
+
   const resolved = executor
     ? await compartmentEngine.execute(compartment, executor)
     : await compartmentEngine.execute(compartment, () => _realAgentExecutor(queued));
@@ -1259,4 +1337,4 @@ function reconcileOnBoot() {
   return { resumed, retried, escalated, checked: orphaned.length };
 }
 
-module.exports = { submitContract, submitIdeariumChunk, submitBuildPhaseContract, synthesizeContract, BUILD_CONTRACT_SCHEMA, reportExternalOutcome, acknowledge, listQueue, processNext, reconcileOnBoot, MODULE_ID, VERSION, STATUS, STAGE, queryContractRepoFile, writeContractRepoFile };
+module.exports = { submitContract, submitIdeariumChunk, submitBuildPhaseContract, synthesizeContract, BUILD_CONTRACT_SCHEMA, reportExternalOutcome, acknowledge, listQueue, processNext, reconcileOnBoot, MODULE_ID, VERSION, STATUS, STAGE, queryContractRepoFile, writeContractRepoFile, BROWSER_PROVIDERS, _dispatchToClearGlass, _advanceToOutputFolder };

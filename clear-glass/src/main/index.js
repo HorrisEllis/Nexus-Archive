@@ -1410,6 +1410,23 @@ async function bootstrap() {
       ok: true, system: MODULE_ID, version: CG_VERSION,
       ssePort: SSE_PORT, ipcPort: IPC_PORT, tlsPort: TLS_PORT, ts: Date.now(),
     }));
+    // §MCO19 2026-09-13 — James: "get it done" on ClearGlass as a real RAID
+    // PROCESSING destination. This is the real, external (HTTP, not IPC)
+    // entry point RAID needs to tag the live DOM stream (MCO10) with a
+    // real compartment uuid before dispatching real browser work via
+    // POST /cmd — same direct-function-call convention already used by
+    // /cli/bgtab above (require('../main/index').listBackgroundTabs?.()),
+    // not a new pattern. Calls the same real, shared module-level state
+    // archaeology.js's own ipcMain.handle('compartment:set-active', ...)
+    // already uses — one real state, two real entry points.
+    ipcBridge.app.post('/compartment/set-active', (req, res) => {
+      try {
+        const { setActiveCompartment } = require('../dom/archaeology');
+        res.json(setActiveCompartment(req.body?.compartmentUuid, req.body?.queueId));
+      } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+      }
+    });
     ipcBridge.app.get('/options', (req, res) => res.json(nexusOptions?.get() || {}));
     ipcBridge.app.get('/status', (req, res) => res.json(getStatus ? getStatus() : { ok: true }));
     // §BUILT 2026-09-08 — James: "all of the clearglass features;
