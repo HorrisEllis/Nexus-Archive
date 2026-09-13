@@ -1,1 +1,0 @@
-{"uuid":"0d64555b-2a13-48d3-b949-f011c26b090f","system":"cortex","component":"cortex.intelligence.rca","action":"registered","status":"ok","tags":["cortex"],"detail":"Root cause analysis findings","causedBy":"cortex","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1789169841604}

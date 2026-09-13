@@ -222,7 +222,7 @@ const ALL_KERNELS = [
     phase: 3, healthUrl: 'http://127.0.0.1:4800/health' },
   { name: 'architect',    cmd: 'node', args: ['architect/service.js'],
     phase: 3, healthUrl: 'http://127.0.0.1:3747/health' },
-  { name: 'diagnostic',   cmd: 'node', args: ['service/nexus-diagnostic.js'],
+  { name: 'diagnostic',   cmd: 'node', args: ['diagnostic/nexus-diagnostic.js'],
     critical: true, phase: 2, healthUrl: 'http://127.0.0.1:7825/health' },
   { name: 'eravos',       cmd: 'node', args: ['eravos/server.js'],
     phase: 3, healthUrl: 'http://127.0.0.1:3751/health' },

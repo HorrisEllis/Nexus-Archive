@@ -177,7 +177,7 @@ async function _bootSystems(ledgerWrite, orchPort, connectBridgeSSE, _eventLedge
     },
     {
       systemId: 'diagnostic', port: 7825, healthPath: '/status',
-      label: 'Diagnostic',    cmd: path.join(ROOT, 'service', 'nexus-diagnostic.js'), args: [],
+      label: 'Diagnostic',    cmd: path.join(ROOT, 'diagnostic', 'nexus-diagnostic.js'), args: [],
       // §MONITOR: boots last — needs all other systems running to monitor them
     },
   ];

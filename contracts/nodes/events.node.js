@@ -83,6 +83,46 @@ module.exports = Object.freeze({
     LAW_VIOLATION:    'contract.law_violation',
   },
 
+  // ── RAID contract lifecycle (MCO3c 2026-09-13) ─────────────────────────────
+  // §GAP CLOSED — SUBMITTED/ACKNOWLEDGED/REJECTED/PASS/FAIL are NOT new:
+  // cortex/core/raid/contract-intake.js's submitContract() (2026-09-02),
+  // acknowledge() (RR4/2026-08-30), and reportExternalOutcome() have all
+  // been recording these to the real RAID ledger already — verified by
+  // grepping the exact literal strings in that file, not assumed from
+  // naming convention. They were simply never registered here, an
+  // independent documentation gap found this session, not introduced by
+  // it. COMPLETE is new — IC5's real, previously-unnamed completion event,
+  // added here rather than left implicit.
+  //
+  // Deliberately namespaced raid.contract.* — NOT under the CONTRACT block
+  // above. CONTRACT.* means "did a system's behavior violate its contract"
+  // (structural/behavioral/temporal verification, guardian's own real
+  // siso.emits list). RAID.CONTRACT.* means "where is this unit of work in
+  // its lifecycle" — a different axis entirely. Checked before adding:
+  // 'raid.contract.complete' does not collide with anything in the CONTRACT
+  // block above or anywhere else in this file (§10.3, one meaning per name).
+  RAID: {
+    CONTRACT_SUBMITTED:    'raid.contract.submitted',
+    CONTRACT_ACKNOWLEDGED: 'raid.contract.acknowledged',
+    CONTRACT_REJECTED:     'raid.contract.rejected',
+    CONTRACT_PASS:         'raid.contract.pass',
+    CONTRACT_FAIL:         'raid.contract.fail',
+    CONTRACT_COMPLETE:     'raid.contract.complete',
+    // §MCO4 2026-09-13 — the 5 real stage-transition events
+    // contract-intake.js's new _advanceTo*() functions actually emit,
+    // wiring STAGE's remaining dead values. Same raid.contract.* namespace
+    // as the six above (lifecycle position, not pass/fail verification).
+    CONTRACT_STAGE_INPUT_FOLDER:  'raid.contract.stage.input_folder',
+    CONTRACT_STAGE_SYSTEM_QUEUE:  'raid.contract.stage.system_queue',
+    CONTRACT_STAGE_PROCESSING:    'raid.contract.stage.processing',
+    CONTRACT_STAGE_OUTPUT_FOLDER: 'raid.contract.stage.output_folder',
+    CONTRACT_STAGE_QC_PENDING:    'raid.contract.stage.qc_pending',
+    // §MCO6/IC9 2026-09-13 — real boot-time reconciliation outcomes.
+    CONTRACT_RECONCILED_RESUMED:   'raid.contract.reconciled.resumed',
+    CONTRACT_RECONCILED_RETRIED:   'raid.contract.reconciled.retried',
+    CONTRACT_RECONCILED_ESCALATED: 'raid.contract.reconciled.escalated',
+  },
+
   // ── Bridge lifecycle ───────────────────────────────────────────────────────
   // ── Orchestrator ───────────────────────────────────────────────────────────
   ORCHESTRATOR: {

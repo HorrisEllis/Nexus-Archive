@@ -1,7 +1,7 @@
 'use strict';
 /**
  * tests/modules/test-diagnostic-heal-path.js — pins the 2026-07-24 fixes to
- * service/nexus-diagnostic.js's heal path, found while scanning
+ * diagnostic/nexus-diagnostic.js's heal path, found while scanning
  * cortex/self-heal ahead of making diagnostic-and-repair sovereign.
  *
  * THREE broken things, all silent, all in the "declared but never worked"
@@ -39,7 +39,7 @@ function test(id, desc, fn) {
 }
 
 const ROOT = path.join(__dirname, '../..');
-const SRC = fs.readFileSync(path.join(ROOT, 'service/nexus-diagnostic.js'), 'utf8');
+const SRC = fs.readFileSync(path.join(ROOT, 'diagnostic/nexus-diagnostic.js'), 'utf8');
 
 test('DHP-001', 'the nonexistent escalation.escalate() call is GONE — it never existed and never worked', () => {
   assert.ok(!/escModule\.escalate\(/.test(SRC), 'escalate() call must be removed');

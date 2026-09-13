@@ -12,12 +12,34 @@
  * corrected against contract-intake.js's own real submitContract() call
  * sites, none of which ever set opts.system (grep-checked, all 5).
  *
- * §HONEST SCOPE — exactly the 4 real (source, intention) pairs that exist
- * in this codebase today (self-heal:heal, idearium:build, agent-mesh:build,
- * copilot:build — every real submitContract() call site, confirmed by
- * grep, not a partial sample). No speculative rows added ahead of real
- * traffic, per IC3_intention_taxonomy_per_system's own sequencing rule
- * (docs/2026-08-30-interaction-contract-context-phasemap.spec).
+ * §HONEST SCOPE — every real (source, intention) pair that exists in this
+ * codebase today: self-heal (see §KEY-SHAPE FIX below), idearium:build,
+ * agent-mesh:build, officiator:build, officiator-synthesis-tool:build,
+ * copilot:build. No speculative rows added ahead of real traffic, per
+ * IC3_intention_taxonomy_per_system's own sequencing rule
+ * (docs/2026-08-30-interaction-contract-context-phasemap.spec). The count
+ * in this comment previously said "4" and was already stale against the
+ * officiator/officiator-synthesis-tool rows added 2026-09-03 below — fixed
+ * here (§1.1, same class of drift as the count in this comment itself).
+ *
+ * §KEY-SHAPE FIX 2026-09-13 — found via a real runtime log: "no registered
+ * boundary for self-heal:heal:memory_pressure ... REGISTRY has 6 real
+ * row(s) today". cortex/self-heal/index.js's real _enterFailureMode()
+ * submits intention: `heal:${gapType}`, so the real key is
+ * `self-heal:heal:${gapType}` (3 segments) — not `self-heal:heal` (2
+ * segments), which never matches anything real and was dead on arrival.
+ * gapType is not free text: _attemptLevel1() (same file) hard-checks it
+ * against faultTaxonomy.KNOWN_FAULT_CLASSES before this point is ever
+ * reached, so the real, closed set of values is exactly the 8 in
+ * cortex/self-heal/fault-taxonomy.js's frozen KNOWN_FAULT_CLASSES array —
+ * confirmed by reading it directly, not inferred. Only 'memory_pressure'
+ * has been directly observed in real log data so far; the other 7 are
+ * registered because _enterFailureMode() already treats all 8 identically
+ * (same call, same code path) — this completes real, already-shipped
+ * coverage, not speculation about a fault class that doesn't exist yet.
+ * resolveBoundary() does exact-match only, no fuzzy/prefix matching (see
+ * its own docstring below) — one explicit row per real fault class, not a
+ * wildcard, to keep that contract unchanged.
  *
  * §PRIMITIVE FIELD — per synthesis-contract.spec's corrected boundary.
  * primitive note: 2 of these 4 (self-heal, agent-mesh) have no HTTP
@@ -30,7 +52,46 @@
  */
 
 const REGISTRY = {
-  'self-heal:heal': {
+  // §KEY-SHAPE FIX 2026-09-13 — one explicit row per real value in
+  // fault-taxonomy.js's frozen KNOWN_FAULT_CLASSES, replacing the single
+  // dead 'self-heal:heal' row (see header comment). All 8 share the same
+  // primitive/principles as the row they replace — only the key changes.
+  'self-heal:heal:stale_module': {
+    primitive:  'cortex/self-heal (MODULE_ID)',
+    invariants: [],
+    principles: ['§1.2'],
+  },
+  'self-heal:heal:timeout': {
+    primitive:  'cortex/self-heal (MODULE_ID)',
+    invariants: [],
+    principles: ['§1.2'],
+  },
+  'self-heal:heal:api_degraded': {
+    primitive:  'cortex/self-heal (MODULE_ID)',
+    invariants: [],
+    principles: ['§1.2'],
+  },
+  'self-heal:heal:queue_saturated': {
+    primitive:  'cortex/self-heal (MODULE_ID)',
+    invariants: [],
+    principles: ['§1.2'],
+  },
+  'self-heal:heal:memory_pressure': {
+    primitive:  'cortex/self-heal (MODULE_ID)',
+    invariants: [],
+    principles: ['§1.2'],
+  },
+  'self-heal:heal:bottleneck': {
+    primitive:  'cortex/self-heal (MODULE_ID)',
+    invariants: [],
+    principles: ['§1.2'],
+  },
+  'self-heal:heal:circuit_breaker': {
+    primitive:  'cortex/self-heal (MODULE_ID)',
+    invariants: [],
+    principles: ['§1.2'],
+  },
+  'self-heal:heal:import_error': {
     primitive:  'cortex/self-heal (MODULE_ID)',
     invariants: [],
     principles: ['§1.2'],

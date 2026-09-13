@@ -1,1 +1,0 @@
-{"uuid":"9a44bfa3-a0f9-43dc-9c1c-58a130505993","system":"guardian","component":"guardian.gaps.summary","action":"registered","status":"ok","tags":["guardian"],"detail":"Gap summary by type + severity","causedBy":"guardian","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1789169839940}

@@ -1,1 +1,0 @@
-{"uuid":"42402251-01f9-4aba-bed9-0c47f23f1cc3","system":"eros","component":"eros.observer.watch","action":"registered","status":"ok","tags":["eros","observer"],"detail":"Start DOM observer on tab","causedBy":"erosmancer-os","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1789169840159}

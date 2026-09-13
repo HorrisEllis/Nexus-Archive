@@ -20,14 +20,22 @@ module.exports = Object.freeze({
   },
 
   // Universal rules every contract must satisfy
+  // §FIX 2026-09-13 (MCO1c) — line 12's own §RETIRED 2026-09-06 note said
+  // Bridge was removed, but these three rules still named it, undetected
+  // until now. Bridge references removed. nexus-connect is left in place —
+  // confirmed still real (grep: guardian/lib/ncp-handler.js, guardian/
+  // server.js, loom/server.js, hooks/ollama.hooks.js, hooks/copilot.hooks.js)
+  // — not assumed retired just because Bridge was. The two Bridge-specific
+  // header rules are dropped rather than reworded onto nexus-connect: no
+  // X-Bridge-UUID/X-Bridge-Source equivalent for nexus-connect was found in
+  // any of those five real files, so inventing one here would be a
+  // fabricated rule, not a corrected one (§1.1).
   UNIVERSAL_RULES: [
     'Respond to GET /health within 3000ms',
     'Emit UDP pulse on :7777 every 10s',
     'Register with orchestrator on boot via POST :9000/api/register',
     'Write boot record to event_log on successful start',
-    'Never call another system directly — always via Bridge or nexus-connect',
-    'Every request carries X-Bridge-UUID if it crossed Bridge',
-    'Every request carries X-Bridge-Source identifying the originating system',
+    'Never call another system directly — always via nexus-connect (or RAID, per §5.2, for contract-governed work)',
     'Requests must be idempotent — retrying must not cause duplicate state',
     'All errors are loud and specific — §1.2',
     'No stubs in production — §1.3',

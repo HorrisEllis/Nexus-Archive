@@ -141,7 +141,7 @@ const nexusBus       = (() => { try { return require('../nexus/nexus-bus');     
 const nexusQuery     = (() => { try { return require('../nexus/nexus-query');         } catch(e) { return null; } })();
 const nexusKnowledge = (() => { try { return require('../nexus/nexus-knowledge');     } catch(e) { return null; } })();
 const nexusCFR       = (() => { try { return require('../nexus/nexus-cfr-influence'); } catch(e) { return null; } })();
-const nexusHealLoop  = (() => { try { return require('../service/nexus-heal-loop');     } catch(e) { return null; } })();
+const nexusHealLoop  = (() => { try { return require('../diagnostic/nexus-heal-loop');     } catch(e) { return null; } })();
 try { ({ spawn: spawnChild } = require('child_process')); } catch(e) { spawnChild = null; }
 
 const PORT    = parseInt(process.env.ORCHESTRATOR_PORT || '9000');
@@ -1803,7 +1803,7 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
   // gaps/:id/fix) rather than through orchestrator, which works but bypasses
   // Phase 23.5-style centralized routing. Adding the proxy so `heal` can be
   // registered into component-registry (same pattern as forge/snapshot) —
-  // confirmed POST /gaps/:uuid/fix is real, in service/nexus-diagnostic.js.
+  // confirmed POST /gaps/:uuid/fix is real, in diagnostic/nexus-diagnostic.js.
   if (sub==='diagnostic') {
     const action = seg[2] || '';
     const uuid   = seg[3] || '';
@@ -2540,7 +2540,7 @@ if (nexusBus) {
   // §GAP CLOSED 2026-07-09 — heal-loop has always listened on THIS
   // in-process bus, but every real gap is produced in another process:
   // guardian's userscripts emit 'cortex.gap.found' on guardian's bus, and
-  // service/nexus-diagnostic.js (:7825) broadcasts 'gap.found' to its own
+  // diagnostic/nexus-diagnostic.js (:7825) broadcasts 'gap.found' to its own
   // SSE clients. connectBridgeRelay() pipes bridge SSE into broadcast()
   // (orchestrator's SSE fan-out), never into bus.emit(). So no gap has
   // ever crossed into heal-loop. lib/gap-relay.js is that missing wire —

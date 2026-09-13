@@ -1,1 +1,0 @@
-{"uuid":"fc3dc8cf-0ba7-4474-b480-29cef7ec46fe","system":"idearium","component":"idearium.queue.show","action":"registered","status":"ok","tags":["idearium"],"detail":"Get queue item status","causedBy":"idearium","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1789169840023}

@@ -1,1 +1,0 @@
-{"uuid":"17ec4e71-b0b1-48c4-b2be-b20f21698fb3","system":"cg","component":"cg.window.close","action":"registered","status":"ok","tags":["cg","window"],"detail":"Close agent window (hides to tray)","causedBy":"clear-glass","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1789169840090}

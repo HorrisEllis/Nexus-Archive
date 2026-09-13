@@ -1,1 +1,0 @@
-{"uuid":"13002321-fce7-4498-8e4b-9264d62803c6","system":"cortex","component":"cortex.snapshot.create","action":"registered","status":"ok","tags":["cortex","snapshot"],"detail":"Create snapshot","causedBy":"cortex","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1789169841613}

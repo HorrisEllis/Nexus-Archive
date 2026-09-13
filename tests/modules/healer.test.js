@@ -154,7 +154,7 @@ if (selfHealModule) {
 
   t('trust tiers: UI files are tier 1 (safe to auto-apply)', () => {
     assert(selfHealModule[1].modules.has('ui/index.html'), 'ui/index.html should be tier 1');
-    assert(selfHealModule[1].modules.has('service/nexus-diagnostic.js'), 'diagnostic should be tier 1');
+    assert(selfHealModule[1].modules.has('diagnostic/nexus-diagnostic.js'), 'diagnostic should be tier 1');
   }, { invariant: true });
 
   t('[INV] trust tiers: no file appears in both tier 1 and tier 3', () => {

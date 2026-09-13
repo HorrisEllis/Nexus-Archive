@@ -1,1 +1,0 @@
-{"uuid":"a192cec0-3e40-4bba-a13f-7be3f78044da","system":"idearium","component":"idearium.idea.tension","action":"registered","status":"ok","tags":["idearium"],"detail":"Recompute tension score for an idea","causedBy":"idearium","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1789169839970}

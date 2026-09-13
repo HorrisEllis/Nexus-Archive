@@ -79,7 +79,16 @@ await test('GATE-001', 'a contract with an allowed agent+intent auto-acknowledge
   assert.strictEqual(result.status, 'pass');
 
   const rowAfter = intake.listQueue().find(r => r.uuid === queueId);
-  assert.strictEqual(rowAfter.stage, intake.STAGE.HANDSHAKE_VERIFIED, 'expected processNext() to have auto-acknowledged this contract');
+  // §MCO4 2026-09-13 — this assertion pinned HANDSHAKE_VERIFIED back when
+  // that was the last real reachable stage. It no longer is: a contract
+  // that genuinely PASSes now really progresses all the way to
+  // QC_PENDING (input artifact verified, RAID's own dequeue, processing,
+  // a real output artifact written). Checking acknowledgedBy directly is
+  // the real, un-stale proof "processNext() auto-acknowledged this
+  // contract" — the thing this test actually asserts in its own name —
+  // and QC_PENDING is the honest end state for a real PASS today.
+  assert.strictEqual(rowAfter.acknowledgedBy, 'raid-processNext-auto', 'expected processNext() to have auto-acknowledged this contract');
+  assert.strictEqual(rowAfter.stage, intake.STAGE.QC_PENDING, 'a real PASS now genuinely reaches QC_PENDING, not just HANDSHAKE_VERIFIED');
 });
 
 await test('GATE-002', 'a contract with a refused agent+intent is blocked at processNext(), never dispatched', async () => {

@@ -1,1 +1,0 @@
-{"uuid":"6b419a83-4097-4665-80ce-18a5852f5268","system":"cortex","component":"cortex.events.write","action":"registered","status":"ok","tags":["cortex","ledger"],"detail":"Write event to JAA event_log","causedBy":"cortex","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1789169841596}

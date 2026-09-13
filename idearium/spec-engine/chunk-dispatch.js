@@ -117,13 +117,31 @@ function _memoryJaa() {
  */
 async function _dispatchChunkOnce(chunkPrompt, chunk, dispatchFn, opts = {}) {
   const jaa = _memoryJaa();
+  // §RR2 2026-09-13 (MCO2) — the real gap RR2 named: this fell back to a
+  // hardcoded 'ollama' with zero reasoning when opts.preferAgent wasn't
+  // given. An explicit preferAgent still wins outright (§user-directed,
+  // same convention _decide()'s own preferredAgent check uses) — this
+  // only replaces the previously-unreasoned default, never a caller's
+  // real choice. RAID unreachable → same 'ollama' default as before
+  // (§1.2 — a fidelity layer being down must not block real dispatch).
+  let resolvedProvider = opts.preferAgent || null;
+  if (!resolvedProvider) {
+    try {
+      const raid = require('../../cortex/core/raid');
+      const decision = raid.decideForContract({
+        intention: `build:${chunk.chunkTitle || chunk.sectionTitle || 'chunk'}`,
+        content: chunkPrompt,
+      });
+      resolvedProvider = decision.agent;
+    } catch (_) { /* RAID unreachable — real dispatch proceeds regardless */ }
+  }
   const comp = new QueueCompartment({
     queueId:      opts.specUuid || 'idearium-spec',
     chunkIdx:     chunk.chunkIdx,
     chunkTitle:   chunk.chunkTitle || chunk.sectionTitle,
     chunkContent: chunkPrompt,     // the "expected content" Detector profiles against — the prompt itself, same role SEAMQueue gives it
     builtPrompt:  chunkPrompt,
-    provider:     opts.preferAgent || 'ollama',
+    provider:     resolvedProvider || 'ollama',
     axioms:       opts.axioms || [],
     total:        opts.total || 1,
     jaa,

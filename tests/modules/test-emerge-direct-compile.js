@@ -65,7 +65,7 @@ async function run() {
   });
 
   test('EM-008', 'diagnostic no longer polls a :4242/status that nothing serves anymore', () => {
-    const diagSrc = fs.readFileSync(path.join(__dirname, '../../service/nexus-diagnostic.js'), 'utf8');
+    const diagSrc = fs.readFileSync(path.join(__dirname, '../../diagnostic/nexus-diagnostic.js'), 'utf8');
     assert.ok(!/emerge:\s*\{\s*port:\s*4242/.test(diagSrc));
   });
 

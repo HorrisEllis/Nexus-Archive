@@ -38,7 +38,7 @@ async function test(id, desc, fn) {
 }
 
 const ROOT = path.join(__dirname, '../..');
-const DIAG = fs.readFileSync(path.join(ROOT, 'service/nexus-diagnostic.js'), 'utf8');
+const DIAG = fs.readFileSync(path.join(ROOT, 'diagnostic/nexus-diagnostic.js'), 'utf8');
 const ORCH = fs.readFileSync(path.join(ROOT, 'orchestrator', 'orchestrator.js'), 'utf8');
 const AP   = fs.readFileSync(path.join(ROOT, 'nexus', 'autopilot.js'), 'utf8');
 

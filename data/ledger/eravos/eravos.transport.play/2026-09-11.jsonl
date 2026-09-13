@@ -1,1 +1,0 @@
-{"uuid":"8785d2d8-1f48-4915-bfb7-da0b19a7fbe8","system":"eravos","component":"eravos.transport.play","action":"registered","status":"ok","tags":["eravos"],"detail":"Start playback","causedBy":"eravos","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1789169840178}

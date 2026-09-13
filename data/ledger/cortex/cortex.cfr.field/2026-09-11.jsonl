@@ -1,1 +1,0 @@
-{"uuid":"71d643ff-7110-4dd2-998c-6ee7ce8e8ef6","system":"cortex","component":"cortex.cfr.field","action":"registered","status":"ok","tags":["cortex"],"detail":"Live CFR field state","causedBy":"cortex","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1789169841598}

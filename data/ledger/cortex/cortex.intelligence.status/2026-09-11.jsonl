@@ -1,1 +1,0 @@
-{"uuid":"e4891198-4c7a-473b-957c-606d099b128b","system":"cortex","component":"cortex.intelligence.status","action":"registered","status":"ok","tags":["cortex"],"detail":"Intelligence core status","causedBy":"cortex","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1789169841601}

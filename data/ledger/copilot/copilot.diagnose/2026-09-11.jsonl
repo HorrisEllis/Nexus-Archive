@@ -1,1 +1,0 @@
-{"uuid":"6f4e3240-c727-4ed3-bb2c-8c942b05c51a","system":"copilot","component":"copilot.diagnose","action":"registered","status":"ok","tags":["copilot"],"detail":"Start recursive fractal diagnosis","causedBy":"copilot","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1789169840221}

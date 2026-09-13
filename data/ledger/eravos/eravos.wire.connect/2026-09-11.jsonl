@@ -1,1 +1,0 @@
-{"uuid":"aa39f6e8-2625-4593-bd0d-9515d5eaf2f7","system":"eravos","component":"eravos.wire.connect","action":"registered","status":"ok","tags":["eravos"],"detail":"Connect two organism hooks","causedBy":"eravos","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1789169840172}

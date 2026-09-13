@@ -46,8 +46,44 @@ const path = require('path');
 // already established, so a real test never writes into the real
 // input/ folder a live system would actually watch.
 const RAID_INPUT_DIR = process.env.RAID_INPUT_DIR || path.join(__dirname, '../../../data/raid/input');
+
+// §MCO3a 2026-09-13 — resolves a real per-system input/ dir for a contract's
+// destination system, checked against the actual filesystem (fs.existsSync),
+// not just string-built and assumed. Returns null (not a fabricated path) for
+// an unset or not-yet-real system — the caller falls back to RAID_INPUT_DIR
+// and logs it, per §1.2.
+function _resolveInputDir(system) {
+  if (!system) return null;
+  const fs = require('fs');
+  const dir = path.join(__dirname, '../../../', system, 'input');
+  return fs.existsSync(dir) ? dir : null;
+}
+
+// §MCO4 2026-09-13 — output-side twin of _resolveInputDir(), same
+// fs.existsSync-checked real-directory-or-null contract, same shared
+// fallback pattern. Real per-system output/ dirs created alongside this
+// change for the same 9 systems that already have real input/ dirs
+// (cortex, guardian, idearium, ollama, intelligence, eravos, emerge,
+// architect, copilot) — MCO3a wired the read side of this convention;
+// nothing had ever created the write side until now.
+const RAID_OUTPUT_DIR = process.env.RAID_OUTPUT_DIR || path.join(__dirname, '../../../data/raid/output');
+function _resolveOutputDir(system) {
+  if (!system) return null;
+  const fs = require('fs');
+  const dir = path.join(__dirname, '../../../', system, 'output');
+  return fs.existsSync(dir) ? dir : null;
+}
+
 const { createCFRLedger } = require('../../../intelligence/cfr/ledger');
-const EVENTS = require('./event-taxonomy');
+// §MCO4 2026-09-13 DRIFT FIX — `const EVENTS = require('./event-taxonomy')`
+// removed from here: flagged in MCO3's commit as a dead import, confirmed
+// again before touching this file — zero references to `EVENTS.` anywhere
+// in this module. event-taxonomy.js itself is real (RAID's own ET1-pattern
+// event *descriptions*, matching guardian/clear-glass/orchestrator's own
+// event-taxonomy.js convention) — not deleted, just never actually wired to
+// anything in this file, so the import was pure noise. Every real event this
+// module emits is still a raw string literal, same as before this fix;
+// closing the dead-import drift is not the same as closing that gap.
 
 const MODULE_ID = 'cortex/core/raid/contract-intake';
 const VERSION = '1.0.0';
@@ -298,9 +334,29 @@ function submitContract(contract, opts = {}) {
   // lib/node-export.js's own real .contract type (already real, built
   // earlier this session, grounded in this exact BUILD_CONTRACT_SCHEMA)
   // rather than inventing a second file format for the same real data.
+  //
+  // §MCO3a 2026-09-13 — real per-system routing. This always wrote to
+  // RAID_INPUT_DIR alone despite the comment above (line ~42) already
+  // claiming to follow "the same per-system input/ convention" — checked
+  // directly: 9 real per-system input/ dirs exist on disk today (cortex,
+  // guardian, idearium, ollama, intelligence, eravos, emerge, architect,
+  // copilot) and this never wrote to any of them. _resolveInputDir()
+  // below checks the real filesystem rather than trusting row.system
+  // blindly — a typo'd or not-yet-real system name falls back to the
+  // shared dir, logged, not silently misdirected into a folder nothing
+  // will ever watch (§1.2).
   try {
     const { exportToFile } = require('../../../lib/node-export.js');
-    exportToFile('contract', queueId, row, { system: row.system, intent: row.intention, source: row.source }, RAID_INPUT_DIR);
+    const perSystemDir = _resolveInputDir(row.system);
+    if (row.system && !perSystemDir) {
+      console.warn(`[${MODULE_ID}] contract ${queueId}: system '${row.system}' has no real input/ directory — using shared ${RAID_INPUT_DIR} instead (§1.2)`);
+    }
+    const inputArtifactPath = exportToFile('contract', queueId, row, { system: row.system, intent: row.intention, source: row.source }, perSystemDir || RAID_INPUT_DIR);
+    // §MCO4 2026-09-13 — the real path this file actually landed at,
+    // persisted onto the row so the later INPUT_FOLDER stage transition
+    // can verify THIS artifact still exists, rather than re-deriving a
+    // path and hoping it matches (§1.1).
+    try { jaaDB.update(TABLE, queueId, { inputArtifactPath }); } catch (_) {}
   } catch (e) {
     // §1.2 — a failed tangible-file write must never block the real,
     // already-working JAA-backed queue this contract still lives in.
@@ -363,7 +419,107 @@ function acknowledge(queueId, { system } = {}) {
   }
   jaaDB.update(TABLE, queueId, { stage: STAGE.HANDSHAKE_VERIFIED, updatedAt: Date.now(), acknowledgedBy: system || null });
   _raidLedger.record('raid.contract.acknowledged', { queueId, acknowledgedBy: system || null }, { source: 'raid', causedBy: queueId });
-  return { ok: true, stage: STAGE.HANDSHAKE_VERIFIED };
+
+  // §MCO4 2026-09-13 — real, immediate next step: verify the tangible
+  // .contract file submitContract() wrote is still really there, and only
+  // then advance past HANDSHAKE_VERIFIED. A failed verification leaves the
+  // row honestly at HANDSHAKE_VERIFIED rather than reporting INPUT_FOLDER
+  // for a file that isn't real.
+  const inputAdv = _advanceToInputFolder(queueId, row);
+
+  return { ok: true, stage: inputAdv.ok ? STAGE.INPUT_FOLDER : STAGE.HANDSHAKE_VERIFIED };
+}
+
+// §MCO4 2026-09-13 — wiring STAGE's five remaining dead values. Per this
+// phasemap's own gate: each transition is a real jaaDB write + a real
+// _raidLedger event, always; a NEW physical artifact ONLY where something
+// genuinely changes location on disk (INPUT_FOLDER, OUTPUT_FOLDER). No
+// artifact is fabricated for SYSTEM_QUEUE or PROCESSING — nothing physical
+// happens at either, so neither gets one (§1.1).
+
+/**
+ * _advanceToInputFolder(queueId, row) — verifies the SAME real artifact
+ * submitContract() already wrote (row.inputArtifactPath) still exists on
+ * disk, and only then tags stage HANDSHAKE_VERIFIED -> INPUT_FOLDER. This
+ * is proof the tangible file genuinely landed and is still there by the
+ * time handshake clears — not a second write, and not skipped just
+ * because the write already happened earlier in real time.
+ */
+function _advanceToInputFolder(queueId, row) {
+  const fs = require('fs');
+  if (!row.inputArtifactPath || !fs.existsSync(row.inputArtifactPath)) {
+    console.warn(`[${MODULE_ID}] contract ${queueId}: no real input artifact found at "${row.inputArtifactPath || '(none recorded)'}" — staying at HANDSHAKE_VERIFIED, not fabricating INPUT_FOLDER`);
+    return { ok: false, error: 'input artifact missing or never recorded' };
+  }
+  jaaDB.update(TABLE, queueId, { stage: STAGE.INPUT_FOLDER, updatedAt: Date.now() });
+  _raidLedger.record('raid.contract.stage.input_folder', { queueId, inputArtifactPath: row.inputArtifactPath }, { source: 'raid', causedBy: queueId });
+  return { ok: true, stage: STAGE.INPUT_FOLDER };
+}
+
+/**
+ * _advanceToSystemQueue(queueId) — state+event only, no artifact (§1.1).
+ * James, confirmed 2026-09-13: this stage names RAID's OWN dequeue — the
+ * moment processNext() below selects a row as the one real unit of work
+ * it's about to run — not a report-back from the destination system's own
+ * internal queue, which no system anywhere in this tree does today. That
+ * cross-system reporting is real future scope (IC5's pilot destination
+ * work), not something to fabricate here to make this stage feel more real
+ * than it is.
+ */
+function _advanceToSystemQueue(queueId) {
+  jaaDB.update(TABLE, queueId, { stage: STAGE.SYSTEM_QUEUE, updatedAt: Date.now() });
+  _raidLedger.record('raid.contract.stage.system_queue', { queueId }, { source: 'raid', causedBy: queueId });
+  return { ok: true, stage: STAGE.SYSTEM_QUEUE };
+}
+
+/** _advanceToProcessing(queueId) — state+event only, no artifact (§1.1). */
+function _advanceToProcessing(queueId) {
+  jaaDB.update(TABLE, queueId, { stage: STAGE.PROCESSING, updatedAt: Date.now() });
+  _raidLedger.record('raid.contract.stage.processing', { queueId }, { source: 'raid', causedBy: queueId });
+  return { ok: true, stage: STAGE.PROCESSING };
+}
+
+/**
+ * _advanceToOutputFolder(queueId, row, resultPayload) — writes the real
+ * result artifact to the destination system's real output/ dir (or the
+ * shared RAID_OUTPUT_DIR fallback, logged, same §1.2 pattern as the input
+ * side), then folds PROCESSING -> OUTPUT_FOLDER -> QC_PENDING into one
+ * function, per this phasemap's own text: "idempotency check ... built
+ * into this last transition, not separate." The idempotency check itself
+ * — does a real output for this uuid already exist — is read from disk
+ * BEFORE the write below, so `alreadyHadOutput` reflects a PRIOR run of
+ * this same contract, never the file this call is about to produce
+ * itself.
+ */
+function _advanceToOutputFolder(queueId, row, resultPayload) {
+  const fs = require('fs');
+  const perSystemDir = _resolveOutputDir(row.system);
+  if (row.system && !perSystemDir) {
+    console.warn(`[${MODULE_ID}] contract ${queueId}: system '${row.system}' has no real output/ directory — using shared ${RAID_OUTPUT_DIR} instead (§1.2)`);
+  }
+  const outputDir = perSystemDir || RAID_OUTPUT_DIR;
+  const expectedPath = path.join(outputDir, `${queueId}.contract`);
+  const alreadyHadOutput = fs.existsSync(expectedPath);
+
+  let outputArtifactPath;
+  try {
+    const { exportToFile } = require('../../../lib/node-export.js');
+    outputArtifactPath = exportToFile('contract', queueId, resultPayload, { system: row.system, intent: row.intention, source: row.source }, outputDir);
+  } catch (e) {
+    // §1.2 — a failed output write must never silently fabricate
+    // OUTPUT_FOLDER/QC_PENDING; the row stays at its last real stage
+    // (PROCESSING) and the failure is visible, not swallowed.
+    console.warn(`[${MODULE_ID}] output artifact write failed (stage stays at PROCESSING, not fabricated): ${e.message}`);
+    return { ok: false, error: e.message };
+  }
+
+  jaaDB.update(TABLE, queueId, { stage: STAGE.OUTPUT_FOLDER, outputArtifactPath, updatedAt: Date.now() });
+  _raidLedger.record('raid.contract.stage.output_folder', { queueId, outputArtifactPath }, { source: 'raid', causedBy: queueId });
+
+  jaaDB.update(TABLE, queueId, { stage: STAGE.QC_PENDING, alreadyHadOutput, updatedAt: Date.now() });
+  _raidLedger.record('raid.contract.stage.qc_pending', { queueId, alreadyHadOutput }, { source: 'raid', causedBy: queueId });
+
+  return { ok: true, stage: STAGE.QC_PENDING, outputArtifactPath, alreadyHadOutput };
 }
 
 /** listQueue(filter) — real, current queue state. */
@@ -471,6 +627,15 @@ async function processNext(executor) {
     }
   }
 
+  // §MCO4 2026-09-13 — real stage progression up to PROCESSING. Read the
+  // row's CURRENT real stage fresh rather than trusting `queued` (captured
+  // before the auto-ack above may have just moved it) — a contract already
+  // past HANDSHAKE_VERIFIED/INPUT_FOLDER via its own earlier explicit
+  // caller only advances from wherever it genuinely already is, never
+  // backward, never skipped.
+  const freshRow = jaaDB.query(TABLE, r => r.uuid === queued.uuid, 1)[0] || queued;
+  if (freshRow.stage === STAGE.INPUT_FOLDER) _advanceToSystemQueue(queued.uuid);
+
   const intent = {
     uuid: uid(),
     verb: 'implement',
@@ -491,6 +656,7 @@ async function processNext(executor) {
   compartment._contract = queued.contract;
 
   try { jaaDB.update(TABLE, queued.uuid, { status: STATUS.RUNNING, compartmentId: compartment.id, updatedAt: Date.now() }); } catch (_) {}
+  _advanceToProcessing(queued.uuid);
 
   const resolved = executor
     ? await compartmentEngine.execute(compartment, executor)
@@ -526,6 +692,18 @@ async function processNext(executor) {
       verdict: resolved.trace_log?.find(t => t.event === 'QA_QC')?.data?.verdict ?? null,
     });
   } catch (_) {}
+
+  // §MCO4 2026-09-13 — real terminal stage progression. Reached only for
+  // an actual terminal outcome (both retry/fallback branches above already
+  // returned early) — a genuinely real result exists to write, not a
+  // placeholder. queued.system/intention/source are read from the row
+  // captured at dequeue; unlike stage, these never change mid-run.
+  _advanceToOutputFolder(queued.uuid, queued, {
+    queueId: queued.uuid,
+    status: finalStatus,
+    verdict: resolved.trace_log?.find(t => t.event === 'QA_QC')?.data?.verdict ?? null,
+    trace_log: resolved.trace_log || null,
+  });
 
   // §FIX 2026-09-03 — James: "runs an escalation strategy using
   // diagnostic system, over and over until it either proceeds or fails
@@ -869,4 +1047,97 @@ function reportExternalOutcome(queueId, { status, verdict } = {}) {
   }
 }
 
-module.exports = { submitContract, submitIdeariumChunk, submitBuildPhaseContract, synthesizeContract, BUILD_CONTRACT_SCHEMA, reportExternalOutcome, acknowledge, listQueue, processNext, MODULE_ID, VERSION, STATUS, STAGE };
+/**
+ * reconcileOnBoot() — §MCO6/IC9 2026-09-13 — a real boot-time
+ * reconciliation pass. Queries JAA's already-durable raid_contract_queue
+ * for every real row that hasn't genuinely reached QC_PENDING, cross-
+ * references the real physical output artifact, and decides resume /
+ * retry / escalate — never trusting anything that only ever lived in
+ * the prior process's memory (§1.1).
+ *
+ * §CORRECTED WHILE BUILDING — first version of this function only
+ * scanned status===RUNNING. Traced the real write order in processNext()
+ * before shipping that: the status write (PASS/FAIL) happens BEFORE
+ * _advanceToOutputFolder's real artifact write, not after — so a crash
+ * in that real window leaves a row with a TERMINAL status but a stage
+ * still stuck at PROCESSING/OUTPUT_FOLDER and no real output artifact.
+ * status===RUNNING alone would never find that row at all. The real
+ * orphan condition is stage !== QC_PENDING, regardless of status —
+ * status only changes which disposition is honest for a given row.
+ *
+ * Resume: a real output artifact already exists for this uuid — the
+ * work genuinely finished; only the stage bookkeeping never reached
+ * QC_PENDING. Reads the real artifact's own verdict rather than
+ * trusting whatever status the row happened to have when the prior
+ * process died, and finishes the real transition.
+ *
+ * Retry: status===RUNNING (still genuinely mid-flight, never resolved),
+ * no real output artifact, and onFail allows another attempt — re-queued
+ * exactly like processNext()'s own existing retry branch, same real
+ * retryCount bookkeeping, no second boot-time-only path.
+ *
+ * Escalate: everything else that isn't real progress — RUNNING with no
+ * retry left, OR a row that CLAIMS PASS/FAIL but has no real output
+ * artifact to back that claim (an inconsistency that must not be
+ * trusted silently, §1.1, regardless of which status it claims). Routed
+ * to self-heal via the SAME HEAL_REQUESTED emission processNext()'s own
+ * exhausted-failure path already uses (§10.3 — one real escalation
+ * ladder, not a second one for boot-time orphans).
+ *
+ * @returns {{resumed:Array, retried:Array, escalated:Array, checked:number}}
+ */
+function reconcileOnBoot() {
+  const fs = require('fs');
+  const allRows = listQueue();
+  const orphaned = allRows.filter((r) => r.stage !== STAGE.QC_PENDING && r.status !== STATUS.QUEUED && r.status !== STATUS.BLOCKED);
+
+  const resumed = [], retried = [], escalated = [];
+
+  for (const row of orphaned) {
+    const hasRealOutput = row.outputArtifactPath && fs.existsSync(row.outputArtifactPath);
+
+    if (hasRealOutput) {
+      let outcome = null;
+      try {
+        const { importFromFile } = require('../../../lib/node-export.js');
+        outcome = importFromFile(row.outputArtifactPath).payload;
+      } catch (_) { /* real read failure — falls through to the honest escalate below */ }
+      if (outcome) {
+        const finalStatus = outcome.status === STATUS.PASS ? STATUS.PASS : STATUS.FAIL;
+        jaaDB.update(TABLE, row.uuid, { status: finalStatus, stage: STAGE.QC_PENDING, verdict: outcome.verdict ?? null, updatedAt: Date.now() });
+        _raidLedger.record('raid.contract.reconciled.resumed', { queueId: row.uuid, outputArtifactPath: row.outputArtifactPath, status: finalStatus }, { source: 'raid', causedBy: row.uuid });
+        resumed.push({ queueId: row.uuid, status: finalStatus });
+        continue;
+      }
+      // a real file exists at the recorded path but couldn't be read as
+      // a real envelope — do NOT trust it; falls through to escalate.
+    }
+
+    if (row.status === STATUS.RUNNING && row.onFail && row.onFail.action === 'retry' && (row.retryCount || 0) < (row.onFail.maxRetries || 1)) {
+      const nextAttempt = (row.retryCount || 0) + 1;
+      jaaDB.update(TABLE, row.uuid, { status: STATUS.QUEUED, stage: STAGE.QUEUED, retryCount: nextAttempt, updatedAt: Date.now() });
+      _raidLedger.record('raid.contract.reconciled.retried', { queueId: row.uuid, attempt: nextAttempt }, { source: 'raid', causedBy: row.uuid });
+      retried.push({ queueId: row.uuid, attempt: nextAttempt });
+      continue;
+    }
+
+    jaaDB.update(TABLE, row.uuid, { status: STATUS.FAIL, updatedAt: Date.now(), blockReason: `found at stage "${row.stage}" (status "${row.status}") at boot with no real output artifact to back it — orphaned by a prior process death` });
+    _raidLedger.record('raid.contract.reconciled.escalated', { queueId: row.uuid, stage: row.stage, priorStatus: row.status }, { source: 'raid', causedBy: row.uuid });
+    if (row.source !== 'self-heal') {
+      try {
+        require('../../../nexus/nexus-bus.js').emit('HEAL_REQUESTED', {
+          gapType: 'raid_contract_orphaned_at_boot',
+          gapUuid: row.uuid,
+          body: `RAID contract "${row.title || row.uuid}" (source: ${row.source}) was found at stage "${row.stage}" at boot with no real output — a prior process died mid-job.`,
+        }, { source: 'raid-contract-intake-reconcile' });
+      } catch (e) {
+        console.warn(`[${MODULE_ID}] could not emit HEAL_REQUESTED for orphaned contract ${row.uuid}: ${e.message}`);
+      }
+    }
+    escalated.push({ queueId: row.uuid });
+  }
+
+  return { resumed, retried, escalated, checked: orphaned.length };
+}
+
+module.exports = { submitContract, submitIdeariumChunk, submitBuildPhaseContract, synthesizeContract, BUILD_CONTRACT_SCHEMA, reportExternalOutcome, acknowledge, listQueue, processNext, reconcileOnBoot, MODULE_ID, VERSION, STATUS, STAGE };

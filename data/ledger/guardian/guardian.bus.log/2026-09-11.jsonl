@@ -1,1 +1,0 @@
-{"uuid":"6aafa88e-b2de-4c84-9145-eefabb3c5e28","system":"guardian","component":"guardian.bus.log","action":"registered","status":"ok","tags":["guardian"],"detail":"Recent SISO bus log","causedBy":"guardian","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1789169839905}

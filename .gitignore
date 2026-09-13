@@ -36,6 +36,17 @@ guardian/memory_store/*.jsonl
 guardian/memory_store/*.json
 cortex/data/memory/*.json
 data/cortex/memory/*.json
+
+# §found 2026-09-13 while packaging a deliverable zip — cortex/data/
+# has three more real, accumulating runtime subdirs never covered by
+# any existing rule (only memory/*.json was): snapshots/ (cortex/
+# snapshot/index.js's NEX-SNAP writes, grows every boot), nodes/, and
+# node-index/. Zero files under any of the three were ever git-tracked
+# (confirmed via `git ls-files`) — this just makes that already-true
+# fact visible instead of relying on nobody running `git add -A` here.
+cortex/data/snapshots/
+cortex/data/nodes/
+cortex/data/node-index/
 data/ledger/*.jsonl
 idearium/data/idearium-repos.json
 writeback-failures.jsonl
@@ -58,6 +69,20 @@ idearium/data/specs/*/
 dist/
 build/
 *.asar
+
+# §MCO4 2026-09-13 — the real per-system input/ and output/ tangible-file
+# dirs (cortex, guardian, idearium, ollama, intelligence, eravos, emerge,
+# architect, copilot — MCO3a/MCO4) are the SAME category this section's own
+# rule already names: live accumulation, not source. They live outside
+# data/ on purpose (the whole point of moving off the single shared
+# data/raid/input), so the blanket data/ rule below doesn't reach them —
+# named explicitly here instead. The directories themselves stay real
+# (tracked via .gitkeep) so a fresh checkout has somewhere for a real
+# contract to land; the contract files a running system actually writes
+# into them do not belong in history any more than data/raid/input's ever
+# did.
+*/input/*.contract
+*/output/*.contract
 
 # All runtime state — never committed (§2.2, CLAUDE.md rule)
 data/

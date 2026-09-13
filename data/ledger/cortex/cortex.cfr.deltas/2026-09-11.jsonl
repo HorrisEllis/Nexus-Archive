@@ -1,1 +1,0 @@
-{"uuid":"bbecbfd5-3c78-400f-88e6-3e433fb2630e","system":"cortex","component":"cortex.cfr.deltas","action":"registered","status":"ok","tags":["cortex"],"detail":"Recent delta records","causedBy":"cortex","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1789169841599}

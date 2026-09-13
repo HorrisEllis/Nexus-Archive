@@ -52,20 +52,20 @@ test('F5: diagnostic boots after emerge (last)', () => {
 
 // Fix 6: remediation loop
 test('F6: diagnostic has remediationScan function', () =>
-  read('service/nexus-diagnostic.js').includes('function remediationScan'));
+  read('diagnostic/nexus-diagnostic.js').includes('function remediationScan'));
 test('F6: remediation writes to cortex', () =>
-  read('service/nexus-diagnostic.js').includes('diagnostic.remediation'));
+  read('diagnostic/nexus-diagnostic.js').includes('diagnostic.remediation'));
 test('F6: remediation logs to data/diagnostic/remediation.jsonl', () =>
-  read('service/nexus-diagnostic.js').includes('remediation.jsonl'));
+  read('diagnostic/nexus-diagnostic.js').includes('remediation.jsonl'));
 test('F6: remediation emits HEAL_REQUESTED', () =>
-  read('service/nexus-diagnostic.js').includes('HEAL_REQUESTED'));
+  read('diagnostic/nexus-diagnostic.js').includes('HEAL_REQUESTED'));
 test('F6: remediation runs on 30s interval', () =>
-  read('service/nexus-diagnostic.js').includes('setInterval(remediationScan, 30000)'));
+  read('diagnostic/nexus-diagnostic.js').includes('setInterval(remediationScan, 30000)'));
 test('F6: offline systems tracked by time', () =>
-  read('service/nexus-diagnostic.js').includes('_offlineSince'));
+  read('diagnostic/nexus-diagnostic.js').includes('_offlineSince'));
 test('F6: syntax check on critical files', () =>
-  read('service/nexus-diagnostic.js').includes('orchestrator.js') &&
-  read('service/nexus-diagnostic.js').includes('--check'));
+  read('diagnostic/nexus-diagnostic.js').includes('orchestrator.js') &&
+  read('diagnostic/nexus-diagnostic.js').includes('--check'));
 
 // §FIX 2026-09-02 — James, live: pasted the exact "'clear-glass' missed
 // its /status probe but registered 1s ago" log and asked to fix it.
@@ -75,16 +75,16 @@ test('F6: syntax check on critical files', () =>
 // keeping console.warn for a miss further from registration (the
 // pattern actually worth a human noticing).
 test('F7: registry-fallback online=true logic still present, unchanged', () =>
-  read('service/nexus-diagnostic.js').includes('online = true') &&
-  read('service/nexus-diagnostic.js').includes("onlineSource = 'registry-fallback'"));
+  read('diagnostic/nexus-diagnostic.js').includes('online = true') &&
+  read('diagnostic/nexus-diagnostic.js').includes("onlineSource = 'registry-fallback'"));
 test('F7: a near-registration probe miss (<5s) logs quietly, not as a warning', () => {
-  const src = read('service/nexus-diagnostic.js');
+  const src = read('diagnostic/nexus-diagnostic.js');
   return src.includes('sinceRegMs < 5000') && src.includes('console.log(msg)');
 });
 test('F7: a probe miss further from registration still warns', () =>
-  read('service/nexus-diagnostic.js').includes('else console.warn(msg)'));
+  read('diagnostic/nexus-diagnostic.js').includes('else console.warn(msg)'));
 test('F7: the real 15s fallback window itself is unchanged', () =>
-  read('service/nexus-diagnostic.js').includes('(Date.now() - lastSeen) < 15000'));
+  read('diagnostic/nexus-diagnostic.js').includes('(Date.now() - lastSeen) < 15000'));
 
 // §FIX 2026-09-02 — James, live: "should all be using the heartbeat
 // system anyways." Real root cause found (not the timing race F7
@@ -94,20 +94,20 @@ test('F7: the real 15s fallback window itself is unchanged', () =>
 // clear-glass now checks the real heartbeat/registry FIRST, skipping
 // its own direct probe when the registry already confirms it online.
 test('F8: clear-glass config carries preferHeartbeat:true', () => {
-  const src = read('service/nexus-diagnostic.js');
+  const src = read('diagnostic/nexus-diagnostic.js');
   const m = src.match(/'clear-glass':\{[^}]*preferHeartbeat:\s*true/);
   return !!m;
 });
 test('F8: pollSystem checks the registry before the direct probe when preferHeartbeat is set', () => {
-  const src = read('service/nexus-diagnostic.js');
+  const src = read('diagnostic/nexus-diagnostic.js');
   const preferIdx = src.indexOf('if (cfg.preferHeartbeat)');
   const probeIdx  = src.indexOf('// 1. Probe health endpoint');
   return preferIdx > -1 && probeIdx > -1 && preferIdx < probeIdx;
 });
 test('F8: a heartbeat-confirmed system is labeled onlineSource "heartbeat", not "probe"', () =>
-  read('service/nexus-diagnostic.js').includes("onlineSource = 'heartbeat'"));
+  read('diagnostic/nexus-diagnostic.js').includes("onlineSource = 'heartbeat'"));
 test('F8: the direct probe still runs as a real fallback if the registry has nothing recent', () => {
-  const src = read('service/nexus-diagnostic.js');
+  const src = read('diagnostic/nexus-diagnostic.js');
   // The probe block's own real guard — must still fire when online is
   // false, whether that's because preferHeartbeat found nothing or
   // because this is any other, non-preferHeartbeat system.
@@ -118,7 +118,7 @@ test('F8: the direct probe still runs as a real fallback if the registry has not
 // Syntax checks
 const { spawnSync } = require('child_process');
 const files = ['orchestrator/orchestrator.js','idearium/index.js','cortex/self-heal/index.js',
-  'architect/service.js','cli/boot-systems.js','service/nexus-diagnostic.js'];
+  'architect/service.js','cli/boot-systems.js','diagnostic/nexus-diagnostic.js'];
 for (const f of files) {
   test(`SYNTAX: ${f}`, () =>
     spawnSync('node', ['--check', path.join(ROOT, f)], { encoding:'utf8', timeout:5000 }).status === 0);

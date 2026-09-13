@@ -1,1 +1,0 @@
-{"uuid":"a638e4c2-ea90-47d7-aad3-afd400d7fc0a","system":"eros","component":"eros.os.start","action":"registered","status":"ok","tags":["eros"],"detail":"Start OS — connect CDP bridge, enable observer","causedBy":"erosmancer-os","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:313","ts":1789169840098}

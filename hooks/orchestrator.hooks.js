@@ -36,14 +36,14 @@ const HOOKS = [
   {
     id: "orchestrator-hook-nexus-heal-0011",
     name: "orchestrator-self-heal",
-    intent: "Trigger autonomous gap analysis and repair-spec generation. RELOCATED 2026-07-09 from cortex.hooks.js, where it declared POST /api/self-heal/run on cortex and referenced two phantom files (cortex/healer/index.js, cortex/self-heal/index.js). Neither cortex route nor those files ever existed. RELOCATED AGAIN 2026-08-23 — the real implementation is now service/nexus-heal-loop.js (moved from repo root into the diagnostic system's own real home, service/nexus-diagnostic.js's directory — docs/diagnostic-phase-map.spec confirms service/ as the diagnostic system's real location, port 7825), required by orchestrator.js:130 and served at POST /api/nexus/heal — verified live: it classifies the gap and returns a real repairSpec.",
+    intent: "Trigger autonomous gap analysis and repair-spec generation. RELOCATED 2026-07-09 from cortex.hooks.js, where it declared POST /api/self-heal/run on cortex and referenced two phantom files (cortex/healer/index.js, cortex/self-heal/index.js). Neither cortex route nor those files ever existed. RELOCATED AGAIN 2026-08-23 — the real implementation is now diagnostic/nexus-heal-loop.js (this session's own IC10: moved into the diagnostic system's real, own diagnostic/ folder — docs/diagnostic-phase-map.spec confirms service/ as the diagnostic system's real location, port 7825), required by orchestrator.js:130 and served at POST /api/nexus/heal — verified live: it classifies the gap and returns a real repairSpec.",
     type: "api",
     direction: "unidirectional",
     from: { surface: "*", layer: 0 },
     to: { surface: "orchestrator", layer: 1, port: 9000 },
     config: { path: "/api/nexus/heal", method: "POST" },
     contract: { axioms: ["1.2"], sideEffects: ["classifies gap", "builds repairSpec", "may dispatch to architect"], idempotent: false, methodEnforced: true },
-    references: { files: ["service/nexus-heal-loop.js", "lib/gap-relay.js"] },
+    references: { files: ["diagnostic/nexus-heal-loop.js", "lib/gap-relay.js"] },
     status: "active",
     updatedAt: "2026-07-09T00:00:00Z"
   },

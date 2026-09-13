@@ -906,7 +906,7 @@ async function diagCrossSystem() {
     record('cross', 'diagnostic-service', 'PASS');
   } else {
     console.log(warn('  Diagnostic service :7825 not running'));
-    fix_cmd('Start diagnostic service', 'node service/nexus-diagnostic.js',
+    fix_cmd('Start diagnostic service', 'node diagnostic/nexus-diagnostic.js',
       'Provides continuous system monitoring, gap detection, friction scoring');
     await ledger('cross.diagnostic', 'WARN');
     record('cross', 'diagnostic-service', 'WARN');

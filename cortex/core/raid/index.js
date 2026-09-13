@@ -792,6 +792,76 @@ async function verify(decision = {}) {
   };
 }
 
+// ── decideForContract — RR1's real, additive fidelity-based selection ───────
+// §BUILT 2026-09-13 (MCO2/RR1) — deliberately NOT added inside _decide()
+// above. _decide() is documented as pure and pinned: tests/modules/
+// raid-fitness-real-terms.test.js's T-007 explicitly asserts "_decide
+// without faultClass → SNR gate never engages (existing behavior
+// untouched)" and pins the exact resulting agent for a real fixture.
+// Reusing that function for general fidelity-scored contract routing
+// would either break T-007 or require silently special-casing around it —
+// exactly the "silent second path those tests can't see" _decide()'s own
+// SNR-gate comment already warns against. This is a new, separate,
+// additive function instead (§3.1 — phased, independently-verifiable
+// piece, not a rewrite of pinned logic).
+//
+// Checked before wiring this in anywhere: guardian/server.js's real
+// POST /command handler explicitly does NOT want this. Its own comment,
+// read directly: "Provider here is explicitly chosen by the caller, not
+// RAID-picked — that's correct, the console/CLI already decided who
+// handles this." That is a deliberate, already-reasoned design decision,
+// not an oversight RR1 is meant to fix — this function must never be
+// wired into that call path. The real, uncontested gap is elsewhere:
+// idearium/spec-engine/chunk-dispatch.js's `opts.preferAgent || 'ollama'`
+// — a hardcoded, unreasoned fallback with no explicit caller decision
+// behind it at all (confirmed by reading that file directly).
+//
+// Reuses the SAME _fitness()/_agentAvailable() machinery _decide()'s own
+// "computed chain" branch already uses below — no second scoring formula
+// (§8.6). Deliberately does NOT apply LAW_I's chatgpt-first default here:
+// LAW_I is James's explicit stated preference for the DEFAULT fallback
+// chain on raw calls ("use ChatGPT and Gemini since they're free"), not a
+// claim that chatgpt has the highest fidelity for every contract — this
+// function answers a different, narrower question (which agent fits THIS
+// contract's real fitness terms best) on purpose, for the specific real
+// gap named above, not as a universal replacement for LAW_I.
+function decideForContract(contract = {}, health = _health, weights = _weights) {
+  const cluster = _cluster(contract.intention || contract.content || contract.title || '');
+  const callerComponentId = contract.componentId || null;
+  const chain = ['chatgpt', 'gemini', 'ollama', 'claude', 'perplexity', 'deepseek'];
+  const survivors = chain.filter(name => _agentAvailable(name, health, {}));
+
+  if (!survivors.length) {
+    // §1.2 — never fabricate a winner when nothing is available; same
+    // unconditional-reserve law LAW_III already relies on in _decide().
+    return {
+      agent: 'claude', cluster, score: null, tokenBudget: null,
+      reason: 'no survivors available — claude API unconditional reserve (LAW_III parity)',
+      candidates: [],
+    };
+  }
+
+  const ranked = survivors
+    .map(name => ({ name, score: _fitness(name, cluster, health, callerComponentId) }))
+    .sort((a, b) => b.score - a.score);
+
+  const best = ranked[0];
+  let tokenBudget = null;
+  try {
+    const { AGENT_CONSTRAINTS } = require('../../../lib/agent-router');
+    tokenBudget = AGENT_CONSTRAINTS[best.name] || null; // real gap: not every agent has a real entry (e.g. ollama) — null is honest, not fabricated
+  } catch (_) { /* agent-router unreachable — routing still returns, budget just null (§1.2) */ }
+
+  return {
+    agent: best.name,
+    cluster,
+    score: best.score,
+    tokenBudget,
+    reason: `RR1 fidelity ranking: highest fitness for '${cluster}' (${best.score.toFixed(3)})`,
+    candidates: ranked,
+  };
+}
+
 module.exports = {
   MODULE_ID, VERSION,
   _decide, _cluster, _health, _weights,
@@ -801,4 +871,5 @@ module.exports = {
   startHealthPoll, stopHealthPoll,
   _approveTool, _toolHealthSnapshot, recordDecision, verifyInIsolation, verify,
   init, stop, _onOrionClassified,
+  decideForContract,
 };
