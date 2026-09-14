@@ -1624,18 +1624,6 @@ server.listen(PORT, '127.0.0.1', () => {
   // nexus-bus is a plain EventEmitter, no wildcard matching — the real
   // DOM event's own subtype (dom.snapshot / dom.mutation / etc, clear-
   // glass's own vocabulary) travels inside the payload, not the bus name.
-  // §MCO20 2026-09-13 — closes MCO19's stated gap: a real ClearGlass
-  // dispatch result now advances the real contract past PROCESSING,
-  // reusing _advanceToOutputFolder as-is (no new mechanism).
-  bus.on('raid.contract.dispatched.clearglass.result', (payload) => {
-    if (!payload || !payload.queueId) return;
-    try {
-      const intake = require('./core/raid/contract-intake.js');
-      const row = intake.listQueue().find(r => r.uuid === payload.queueId);
-      if (row) intake._advanceToOutputFolder(row.uuid, row, { queueId: row.uuid, status: 'PASS', result: payload.result });
-    } catch (e) { console.warn(`[cortex] clearglass result handling failed: ${e.message}`); }
-  });
-
   bus.on('compartment.dom.event', (payload) => {
     const { recordDomEvent } = require('../lib/compartment-dom-ledger.js');
     const result = recordDomEvent(jaaDB, payload, uid);

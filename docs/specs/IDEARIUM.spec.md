@@ -1,22 +1,8 @@
 # IDEARIUM
-
-> **⚠ SUPERSEDED — 2026-09-13.** Nothing below this notice is corroborated by
-> `.git`, by `idearium/spec/idearium.spec` (the real, live spec — 72 verified
-> routes, `command_index: DONE`), by the node-taxonomy doc, or by any loom
-> scanner. The `.map`/`.spec`/`.nex` file trio, the `NEX0` binary header,
-> the miniworld manager, the revision manager, and the LAW_VIII/LAW_IX/
-> §A-1–§A-4 axioms referenced here do not appear anywhere else in this
-> codebase. This is aspirational content that was never wired — the exact
-> pattern §1.3 (no fake/stub/skeleton in production) and AXIOMS v3.1 §0.1
-> (reality is authority) exist to catch. Kept as historical record per §0.3
-> (information must never be lost) rather than deleted. For the current,
-> real spec, read `idearium/spec/idearium.spec` and
-> `docs/IDEARIUM-PHASE-MAP-v2.md`.
-
 **UUID:** nexus-sys-idearium-0000-2026-0531-004
 **Layer:** 9 — meta / IDE
 **Port:** :4800
-**Status:** SUPERSEDED — aspirational, unwired (see notice above)
+**Status:** active — expanded v9.0
 **Source:** NEXUS-SPEC-v9.spec, MASTEVOS-v9.spec
 
 ---

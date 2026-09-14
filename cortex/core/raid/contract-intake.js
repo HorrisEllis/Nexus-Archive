@@ -1337,4 +1337,4 @@ function reconcileOnBoot() {
   return { resumed, retried, escalated, checked: orphaned.length };
 }
 
-module.exports = { submitContract, submitIdeariumChunk, submitBuildPhaseContract, synthesizeContract, BUILD_CONTRACT_SCHEMA, reportExternalOutcome, acknowledge, listQueue, processNext, reconcileOnBoot, MODULE_ID, VERSION, STATUS, STAGE, queryContractRepoFile, writeContractRepoFile, BROWSER_PROVIDERS, _dispatchToClearGlass, _advanceToOutputFolder };
+module.exports = { submitContract, submitIdeariumChunk, submitBuildPhaseContract, synthesizeContract, BUILD_CONTRACT_SCHEMA, reportExternalOutcome, acknowledge, listQueue, processNext, reconcileOnBoot, MODULE_ID, VERSION, STATUS, STAGE, queryContractRepoFile, writeContractRepoFile, BROWSER_PROVIDERS, _dispatchToClearGlass };
