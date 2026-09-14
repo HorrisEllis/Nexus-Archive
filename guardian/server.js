@@ -963,6 +963,25 @@ server.listen(HTTP_PORT, '127.0.0.1', async () => {
   if (!result.ok) {
     console.error('[guardian §1.2] Boot sequence failed — check phases above');
   }
+
+  // §MCO19 2026-09-13 — James: "hook all of that into copilot, .command
+  // files and .tool files." Real, confirmed gap: guardian/lib/command-
+  // index-extract.js's extractCommandIndex() was only ever called live
+  // from GET /commands (a read, not a write) — the 49 real .command
+  // files already sitting in guardian/commands/ were written by a
+  // one-off script that no longer runs anywhere, so 5 new real routes
+  // this session (POST /api/raid/submit is cortex's, not guardian's;
+  // GET /ncp/clients, POST /dom/event, GET /api/responses are) had zero
+  // real .command files until this fix. Regenerates once at boot — same
+  // real, never-blocks-boot, fire-and-forget pattern every other post-
+  // boot step in this file already uses.
+  try {
+    const { generateCommandNodes } = require('../lib/generate-command-nodes.js');
+    const { extractCommandIndex } = require('./lib/command-index-extract.js');
+    const r = generateCommandNodes({ systemId: 'guardian', extractCommandIndex, destDir: require('path').join(__dirname, 'commands') });
+    console.log(`[guardian] .command nodes regenerated (${r.commandCount} real routes) — guardian/commands/`);
+  } catch (e) { console.warn('[guardian] .command node generation failed (non-fatal):', e.message); }
+
 });
 
 // ── Auto-upload for generated code blocks — real dropzone HTTP server is
@@ -1929,6 +1948,118 @@ function handleExtendedRoutes(req, res, url, method) {
       if (ncp.isConnected(p)) out[p] = 'connected';
     }
     pRes(res, 200, { ok:true, providers:out, channels: connected }); return true;
+  }
+
+  // §MCO-NCP-FANOUT 2026-09-13 — the real, non-lossy sibling /providers
+  // never had. /providers' own getProviders() collapses every client
+  // sharing a provider name down to one entry (confirmed directly —
+  // `providers[client.provider] = {...}` overwrites in a loop), so it
+  // could never show the exact real condition that caused the fan-out
+  // bug (3 real, simultaneously-connected chatgpt tabs). listClientsForProvider()
+  // (built alongside the dispatcher fix) is the real, complete list —
+  // this exposes it, and what dispatcher.js's own selectDispatchTarget()
+  // would actually pick right now, so a human or a copilot tool can see
+  // and diagnose a real multi-tab conflict before it causes another
+  // silent-race failure.
+  // §MCO16e 2026-09-13 — James: "streams the dom mutation live to
+  // guardian's sse, event ledger... .response would need to be a node
+  // type in the taxonomy... then used for the dom mutation listener...
+  // could have it create the node using the ledger, api." Real, separate
+  // stream from ClearGlass's existing direct-to-cortex path
+  // (_reportCompartmentDomEvent -> cortex :3748 /api/event, which already
+  // drives MCO10's compartment_dom_ledger and cortex's own SSE) — this is
+  // additive, not a replacement. Three real things happen here, all three
+  // asked for explicitly: (1) guardian's own real cockpit SSE
+  // (cockpitBroadcast — same real channel every other live guardian event
+  // already uses); (2) a real component-ledger entry (movement, tagged
+  // ['dom','response']); (3) a real, standalone `.response` node file
+  // (lib/node-export.js's exportToFile — the new, 37th real KNOWN_TYPE,
+  // schema.response) under guardian/data/nodes/response/, queryable via
+  // the new GET /api/responses below — "using the ledger, api" is both
+  // of the last two, not either/or. Never blocks or throws on a bad
+  // payload — reported, not crashed on (§1.2).
+  //
+  // §HONEST SCALE NOTE — a live MutationObserver can fire often; one
+  // real file per event is exactly what was asked for, not silently
+  // throttled or batched here. If real volume makes per-event files a
+  // problem, that's a real, separate, future capacity decision — not
+  // this route's to make unasked.
+  if (method==='POST' && url.pathname==='/dom/event') {
+    (async () => {
+      const body = await bodyJ(req);
+      const { compartmentUuid, queueId, type, agentId, dom, ts } = body || {};
+      const eventTs = ts || Date.now();
+      cockpitBroadcast({ type: 'guardian.dom.event', compartmentUuid: compartmentUuid || null, queueId: queueId || null, domEventType: type || 'unknown', agentId: agentId || null, ts: eventTs });
+      try {
+        require('../lib/component-ledger.js').write({
+          system: 'clear-glass', component: 'dom-archaeology', action: type || 'dom.event',
+          status: 'info', tags: ['dom', 'response', 'compartment'],
+          detail: { compartmentUuid: compartmentUuid || null, queueId: queueId || null, agentId: agentId || null, dom: dom || null },
+          contractUuid: queueId || null,
+        });
+      } catch (e) {
+        console.warn(`[guardian] /dom/event: component-ledger write failed (non-fatal, already broadcast via SSE): ${e.message}`);
+      }
+      let responseUuid = null;
+      if (compartmentUuid) {
+        // §1.2 — same rule lib/compartment-dom-ledger.js's own
+        // recordDomEvent() already enforces: no real compartmentUuid,
+        // no node — dropped and reported, not fabricated with a null key.
+        try {
+          const { randomUUID } = require('crypto');
+          responseUuid = randomUUID();
+          const { exportToFile } = require('../lib/node-export.js');
+          exportToFile('response', responseUuid, {
+            uuid: responseUuid, compartmentUuid, queueId: queueId || null,
+            domEventType: type || 'unknown', agentId: agentId || null,
+            payload: dom || null, ts: eventTs,
+          }, { system: 'guardian', tags: ['dom', 'compartment'] },
+          require('path').join(__dirname, 'data', 'nodes', 'response'));
+        } catch (e) {
+          console.warn(`[guardian] /dom/event: .response node write failed (non-fatal, already ledgered+broadcast): ${e.message}`);
+        }
+      } else {
+        console.warn('[guardian] /dom/event: no real compartmentUuid — SSE+ledger still ran, no .response node created (§1.2)');
+      }
+      pRes(res, 200, { ok: true, responseUuid });
+    })().catch((e) => {
+      console.warn(`[guardian] /dom/event failed (non-fatal): ${e.message}`);
+      try { pRes(res, 200, { ok: false, error: e.message }); } catch (_) {}
+    });
+    return true;
+  }
+
+  // §MCO16e 2026-09-13 — the real query side of the .response nodes just
+  // created above. Same real per-type directory convention every other
+  // node type in this repo already uses (guardian/data/nodes/<type>/).
+  if (method==='GET' && url.pathname==='/api/responses') {
+    try {
+      const fs2 = require('fs');
+      const path2 = require('path');
+      const dir = path2.join(__dirname, 'data', 'nodes', 'response');
+      const { importFromFile } = require('../lib/node-export.js');
+      const compartmentFilter = url.searchParams.get('compartmentUuid');
+      const limit = parseInt(url.searchParams.get('n') || url.searchParams.get('limit') || '50', 10);
+      let files = fs2.existsSync(dir) ? fs2.readdirSync(dir).filter(f => f.endsWith('.response')) : [];
+      let rows = files.map(f => { try { return importFromFile(path2.join(dir, f)).payload; } catch (_) { return null; } }).filter(Boolean);
+      if (compartmentFilter) rows = rows.filter(r => r.compartmentUuid === compartmentFilter);
+      rows.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+      pRes(res, 200, { ok: true, responses: rows.slice(0, limit), total: rows.length });
+    } catch (e) {
+      pRes(res, 200, { ok: false, error: e.message, responses: [] });
+    }
+    return true;
+  }
+
+
+  if (method==='GET' && url.pathname==='/ncp/clients') {
+    const provider = url.searchParams.get('provider');
+    if (!provider) { pRes(res, 400, { ok:false, error: 'provider query param required' }); return true; }
+    const clients = ncp.listClientsForProvider(provider);
+    const { selectDispatchTarget } = require('./lib/ncp-dispatch-target.js');
+    const selection = clients.length ? selectDispatchTarget(clients) : { ok: false, reason: 'no real connected clients' };
+    pRes(res, 200, { ok: true, provider, clients, wouldDispatchTo: selection });
+    return true;
   }
 
   // §BUILT 2026-09-03 — James: "adding agent on canvas opens tab in clear

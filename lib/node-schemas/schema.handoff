@@ -1,0 +1,45 @@
+envelope: 1
+uuid: nexus-export-schema-handoff
+type: schema
+id: handoff
+context: lib/node-schemas — shared node-type schema registry
+intent: null
+summary: null
+system: null
+tags: []
+exported_at: 1789340000000
+source: nexus.lib.node-export
+payload:
+  status: REAL
+  source: >-
+    §MCO17 2026-09-13 — James: "using the interaction contracts and .handoff." Grounded in loom's
+    real LoomContracts.recordHandoff(contractId, {system, note, meta}) (loom/contracts/index.js) —
+    the actual, already-running, enforced mechanism ("Tagged and tracked, each handoff"; refuses on
+    a closed contract, requires a real system name). This formalizes ONE handoff entry as a
+    standalone, exportable node — the same treatment raid_contract gave RAID's own queue rows —
+    rather than only ever living buried inside a contract's own handoffs[] array.
+  fields:
+    uuid:
+      type: string
+      required: true
+      description: real, unique id for this handoff node — distinct from the contract's own id
+    contractId:
+      type: string
+      required: true
+      description: the real loom contract this handoff belongs to — a handoff with no real contractId is refused, not fabricated
+    system:
+      type: string
+      required: true
+      description: which real system received the handoff — required by recordHandoff() itself, never defaulted
+    note:
+      type: string
+      required: false
+      description: real, human-authored context for this handoff — honestly empty string when none given
+    meta:
+      type: object
+      required: false
+      description: real, caller-supplied structured detail — passed through unchanged
+    ts:
+      type: number
+      required: true
+      description: real handoff timestamp — logical ordering axis for a contract's own handoff sequence

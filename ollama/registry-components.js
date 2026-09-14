@@ -26,6 +26,12 @@ const components=[
   _c('queue.status','GET','/api/queue','Queue depth and running count',{grammar:['ollama queue','oq']}),
   _c('models.list','GET','/api/models','Available local models',{grammar:['ollama models','om']}),
   _c('health','GET','/health','Ollama bridge health',{grammar:['ollama health']}),
+  // §MCO16f 2026-09-13 — James: "pointed to loom, the dynamic map
+  // registry." /commands (ollama/server.js, ollama/lib/command-index.js's
+  // buildCommandIndex()) is real and already live (docs/command-index-
+  // per-system.spec's own ollama phase) but was never declared here — the
+  // one real route loom's capability-map scanner had no way to see.
+  _c('commands','GET','/commands','Live, source-derived index of every real ollama command',{grammar:['ollama commands']}),
 ];
 module.exports={
   systemId:NS,version:V,port:3749,

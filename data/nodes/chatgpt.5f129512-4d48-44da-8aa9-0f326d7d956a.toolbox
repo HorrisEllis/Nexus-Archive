@@ -1,0 +1,213 @@
+envelope: 1
+uuid: nexus-export-toolbox-chatgpt.5f129512-4d48-44da-8aa9-0f326d7d956a
+type: toolbox
+id: chatgpt.5f129512-4d48-44da-8aa9-0f326d7d956a
+context: null
+intent: null
+summary: null
+system: null
+tags: []
+exported_at: 1789332862128
+source: lib/agent-tools/generate-tool-nodes.js
+occurrences: 1
+firstSeenAt: 1789332862128
+lastSeenAt: 1789332862128
+fingerprint: null
+payload:
+  agent: chatgpt
+  tools:
+    - name: read_file
+      uuid: 99086a8c-9911-49d6-9c41-846c45ef9340
+    - name: run_command
+      uuid: aae5b126-f7cc-49aa-b721-b70b3c517113
+    - name: diagnose
+      uuid: 92ed5e18-4e1c-4217-a22a-5ba9362881f4
+    - name: move_data
+      uuid: 7f541e33-89ed-4a16-bfb0-6bbb578874ff
+    - name: run_pipeline
+      uuid: 625f73ad-cf56-410e-8210-e69d4554afbc
+    - name: nexus_intelligence
+      uuid: ad21c543-c646-4dc0-a57f-7a84dcd9b739
+    - name: run_closed_loop
+      uuid: 0370909d-1462-4c79-b299-026009c3d254
+    - name: module_builder
+      uuid: 1474919e-695d-47ce-a86c-740e89267e19
+    - name: run_adversarial
+      uuid: 886d5079-cc1d-41db-8c68-074208956687
+    - name: axiom_check
+      uuid: 55dab21b-2e64-4573-ae9c-45a9c7c48317
+    - name: analyze
+      uuid: 3334c8bc-eef4-481a-8eb4-d9dfbaa1e2da
+    - name: intuition
+      uuid: af55f2d2-b838-4d2b-b4ec-700ec3a16ba0
+    - name: mastermind
+      uuid: 70bda4d3-1745-41f5-9132-2196bba60e44
+    - name: synthesize
+      uuid: bf4dfd62-dd87-46cc-951f-fbf354269ff8
+    - name: call_system
+      uuid: 39b6d653-b592-4a6b-8518-0dc1abe6dc88
+    - name: ui_spotlight
+      uuid: a3ac548f-4da1-4694-90af-67d522d0e609
+    - name: ui_nerve
+      uuid: 5d20219e-caa7-44bb-bee5-a195b1bd0e0f
+    - name: query_recall
+      uuid: 9a57f59b-e45a-48e7-82d1-ea29d6cca594
+    - name: browser_action
+      uuid: d77412a6-e54b-4bcd-a297-353910aa8032
+    - name: nexus_status
+      uuid: b3fb61db-5495-4bda-9f13-398e89cefabb
+    - name: query_movement
+      uuid: dca5f3bf-a092-41cb-a051-a642e8f4483f
+    - name: parse_lenses
+      uuid: 06106204-8778-44c7-9490-ecdd0e458675
+    - name: forge_tool
+      uuid: eac35b25-1dac-42e5-94be-4981fbf03b40
+    - name: propose_idea
+      uuid: 846c15a8-8eeb-4a93-82a1-0536ef98773d
+    - name: nexus_capability
+      uuid: bd97dd84-8af2-4e5f-a765-37990d402356
+    - name: schedule_task
+      uuid: 965d0dc2-3c23-4c07-904f-462ad11de4bd
+    - name: register_trigger
+      uuid: 485509ec-9f37-45f1-a1dd-04d1debb7818
+    - name: nexus_heal
+      uuid: 7f467d09-8cc1-4463-accd-fc269b7acbb4
+    - name: loom_scan
+      uuid: d471f569-16dc-4d9e-94a5-18c63b12b8d1
+    - name: stub_finder
+      uuid: c6858722-10c5-4a4d-a48a-938e7692ff95
+    - name: mock_data_finder
+      uuid: 4a863a7f-81bc-4e7c-a6f6-3e043db3e2b7
+    - name: raid_snr
+      uuid: eab16190-e722-4e0c-a971-3f2cb9514dfd
+    - name: spec_wizard
+      uuid: 896bf1f3-f947-4363-8538-1652bec0b98c
+    - name: system_priority
+      uuid: a4c883ec-13b4-4bce-b2c0-9cea16953cec
+    - name: rewind_replay
+      uuid: 8c3e0b2c-632d-4202-b436-ae91e2fe8567
+    - name: macro
+      uuid: 3f6c2ac4-51b8-4935-971a-8f5b89a98501
+    - name: copilot_identity
+      uuid: 13d8e2a9-4fe6-4676-83bd-c245bb04598b
+    - name: resource_monitor
+      uuid: 6f612742-aad6-4ee1-9395-0c128f5a2924
+    - name: agent_chat_search
+      uuid: 23bc3c67-2c52-42e0-99ab-e073f5485de3
+    - name: nexus_help
+      uuid: f44bf9b3-5100-49e7-a24d-d9b6f619f53c
+    - name: cos_compartment
+      uuid: 36ba9ebc-046a-447b-af00-f32b03afdd3b
+    - name: self_repair
+      uuid: 59fec00f-a71b-4e7f-9516-f5dc8a999825
+    - name: cos_simulate
+      uuid: 2d863f04-904a-49cb-b1b0-27582348f22a
+    - name: meta_query
+      uuid: 880ebb78-717c-4244-9dfc-1d996613b044
+    - name: run_chain
+      uuid: 0d22e739-d7f6-4e68-9b90-85fed03723c0
+    - name: hat_forge
+      uuid: 110af428-b2c1-467e-85f0-680e56e10fc7
+    - name: agent_capability
+      uuid: 84652651-e68d-457b-9bb9-0d185a8c3cd0
+    - name: agent_notes
+      uuid: 12a5f1d1-9193-450f-be5e-164d0d747a63
+    - name: nexus_wake_events
+      uuid: 197d1c2c-04c4-499e-a227-90ec1aabe9bf
+    - name: framework_builder
+      uuid: d1acf29a-7e33-4ac7-88ed-eac204f85440
+    - name: intelligence_query
+      uuid: 730a50d3-856f-4964-9c9d-c5fb52c1b1ef
+    - name: clear_glass_dom_archaeology
+      uuid: 37c00d52-496d-4c7f-a193-11628b1af0ba
+    - name: clear_glass_userscripts
+      uuid: cde91a25-5c41-42c0-8400-71e0cf5025f7
+    - name: clear_glass_tab_visibility
+      uuid: 2bcd125c-af0e-469c-87f5-0da3b7d7b2d7
+    - name: clear_glass_provider_deploy
+      uuid: 6e643d9a-eb8b-4a7d-b1b0-3841bdf32be1
+    - name: clear_glass_command_index
+      uuid: 4cbfce4d-e3fd-40e5-9187-5c6836a3fd15
+    - name: clear_glass_dom_mutate
+      uuid: 791ac8b0-957e-4ce7-b577-9a156437439b
+    - name: safe_apply
+      uuid: 02a39f5d-64f9-4590-a7e4-a047659f0955
+    - name: agent_council
+      uuid: 3a0e3259-4615-4c39-abbc-5c0685d5cf7f
+    - name: fault_log
+      uuid: c721ab61-8bdc-4780-8ce8-a69745da2621
+    - name: roundtable
+      uuid: 10fc2f80-09d7-4c22-b7e6-6d7a44aa17ec
+    - name: parallel_dispatch
+      uuid: 17def6aa-10c8-4997-9f19-f4aa756d9315
+    - name: emergence
+      uuid: a0a703f8-4cb3-4a1b-af78-55e90dffc5d5
+    - name: agent_chat
+      uuid: 0a0d44ae-eb0a-4ceb-b631-3b71b27ee522
+    - name: file_tree
+      uuid: c790f99a-06bf-4b13-9461-e69e628aef31
+    - name: search_files
+      uuid: f3f3b1d3-40ec-4b6c-88ec-284e94512016
+    - name: cos_archetype
+      uuid: a128b9ce-d5b3-4323-9669-ef2e55626fee
+    - name: cos_blueprint
+      uuid: 31c35669-0da8-42f4-8381-9f299e80b424
+    - name: cos_playground
+      uuid: d4b0156c-b113-4da3-bef2-fe858a10b503
+    - name: cos_plugin
+      uuid: b7430c2c-e9c6-4b96-97bc-a277a11ef005
+    - name: cos_vault
+      uuid: 264743c0-31ba-4743-bee6-54a29ca73c1e
+    - name: compiler_info
+      uuid: 584137ff-990d-443f-b0d4-1c3eaa081e37
+    - name: nexus_map
+      uuid: ecbd4060-e4f7-480d-882d-1f4e98790fbb
+    - name: axiom_manage
+      uuid: 88774d03-67eb-4a2d-ba59-43c8d7937ff6
+    - name: loom_register
+      uuid: 6b945425-1cd3-4c41-8b4e-39ba40970c9d
+    - name: switch_agent
+      uuid: 0ad5ef2c-b4b7-45c0-a47d-cceaa2c45a88
+    - name: intent_hat
+      uuid: 405bb10c-c5d3-4c97-8953-12ca88c18031
+    - name: notes_todo
+      uuid: 832deac7-8ed1-450b-b3e8-72e399235071
+    - name: versionium_commit
+      uuid: 735d8dc2-8066-4277-906d-b5c795d74144
+    - name: versionium_history
+      uuid: e3bb5b59-075e-4431-9b20-7d230694a485
+    - name: versionium_restore
+      uuid: 1f7ade2c-685a-4289-b678-17093e692f2d
+    - name: delete_file
+      uuid: 54cd4d26-5955-495c-8ce2-eb6bca484fa8
+    - name: ask_james
+      uuid: 68512a5f-40d2-4f36-bf4f-081275325677
+    - name: tool_config
+      uuid: b3791aec-b3ca-46f2-a9f9-3956fb624181
+    - name: ambiguity_pull
+      uuid: 98d121f7-135f-4dbd-8f59-abbaf3579424
+    - name: guardian_dispatch
+      uuid: 30a37a74-2ff0-480d-82cc-84056db9b7fd
+    - name: ollama_generate
+      uuid: df37aa92-5367-4ee3-9c44-f7d0cbc3c78b
+    - name: ncp_status
+      uuid: d1721b44-5eae-4fbd-8c24-0fd3ded44764
+    - name: ncp_clients
+      uuid: 26ee3807-6905-4bf4-b35c-a6076c899740
+    - name: agent_mesh_route
+      uuid: f56d19ad-24b1-40ab-82ea-e35ad4fbf0cd
+    - name: raid_submit_contract
+      uuid: 0286ceb4-17ea-42db-88c7-c1b792a92951
+    - name: cortex.restep.tool
+      uuid: 98d9a8c1-d0f5-45b4-b3e8-7453c8bcac2e
+    - name: cortex.node_tag.tool
+      uuid: e15c5d9a-4b6f-4fad-9e96-9da1e8209614
+    - name: guardian.build.tool
+      uuid: 95bc4981-8433-4f2d-8d69-f05be24ee0c1
+    - name: versionium.history.tool
+      uuid: e6d5a238-5f7c-4eab-841e-37c7619e2841
+    - name: versionium.snapshot.tool
+      uuid: bfd94a58-31fa-4374-a3f3-2889a0723c6d
+    - name: nexus.syntax_debug.tool
+      uuid: 662da192-31f5-4ba4-8b38-fa3311e835ad
+  toolCount: 97

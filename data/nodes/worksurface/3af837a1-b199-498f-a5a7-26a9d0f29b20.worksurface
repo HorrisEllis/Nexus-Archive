@@ -1,0 +1,38 @@
+envelope: 1
+uuid: nexus-export-worksurface-3af837a1-b199-498f-a5a7-26a9d0f29b20
+type: worksurface
+id: 3af837a1-b199-498f-a5a7-26a9d0f29b20
+context: null
+intent: null
+summary: null
+system: copilot
+tags: []
+exported_at: 1789364486387
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1789364486387
+lastSeenAt: 1789364486387
+fingerprint: null
+payload:
+  uuid: 3af837a1-b199-498f-a5a7-26a9d0f29b20
+  path: /tmp/exec-tool-test-J0kuTA/big.js
+  lineCount: 300
+  byteCount: 2589
+  chunkCount: 3
+  chunks:
+    - index: 0
+      startLine: 1
+      endLine: 100
+      lineCount: 100
+      contentHash: 78b35aae3f2e5ae9
+    - index: 1
+      startLine: 101
+      endLine: 200
+      lineCount: 100
+      contentHash: f9b1d7d2ce6a9303
+    - index: 2
+      startLine: 201
+      endLine: 300
+      lineCount: 100
+      contentHash: 24978a372fa911dc
+  createdAt: 1789364486387

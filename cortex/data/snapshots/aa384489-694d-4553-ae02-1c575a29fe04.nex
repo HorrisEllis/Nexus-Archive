@@ -1,0 +1,211 @@
+{
+  "format": "NEX-SNAP/1.0",
+  "snapId": "aa384489-694d-4553-ae02-1c575a29fe04",
+  "type": "pre_forge",
+  "tables": {
+    "working_memory": [],
+    "active_traces": [],
+    "cortex_memory": [],
+    "gaps": [],
+    "event_log": [
+      {
+        "uuid": "b97586dc-2212-4920-9549-d33d044f52d1",
+        "type": "compartment.fail",
+        "payload": {
+          "id": "d47e641a-bfaf-4989-af47-8a0200c59023",
+          "intent_uuid": "0a6830a1-d1e1-4587-88c2-bf26478c9605",
+          "reason": "QA/QC check failed",
+          "status": "REWOUND"
+        },
+        "source": "compartment-engine",
+        "ts": 1789323687496,
+        "id": "751e5112-fedc-4b3e-a01f-1a5de450da8f"
+      },
+      {
+        "uuid": "8744a171-7cb8-4863-85c1-b54e45cca1b4",
+        "type": "compartment.fail",
+        "payload": {
+          "id": "aaa18fc6-0e15-42a8-8a65-8da4dc2152c6",
+          "intent_uuid": "c098b7df-2394-44ea-91e6-6ca7bf575ad6",
+          "reason": "QA/QC check failed",
+          "status": "REWOUND"
+        },
+        "source": "compartment-engine",
+        "ts": 1789323687500,
+        "id": "137e8935-55f5-48ca-ab53-7f8e0789578f"
+      }
+    ],
+    "sigma_records": [],
+    "sigma_rollups": [],
+    "meta_observations": [],
+    "sigma_live": [],
+    "component_ledger": [],
+    "cfr_tension_history": [
+      {
+        "uuid": "b4686a24-8aa0-481d-b924-f22cd9251e10",
+        "source": "raid",
+        "systemId": "raid",
+        "tension": 0,
+        "friction": 0,
+        "slope": 0,
+        "sigma": 0,
+        "ts": 1789323687479,
+        "id": "0c387a7c-8afd-448c-acc4-5b8402f13ab1"
+      },
+      {
+        "uuid": "872dce6a-b775-49aa-b59c-708fb2388930",
+        "source": "raid",
+        "systemId": "raid",
+        "tension": 0.0205,
+        "friction": 0,
+        "slope": -1,
+        "sigma": 0,
+        "ts": 1789323687481,
+        "id": "bd069427-58ed-4b58-a177-8969ea0426bc"
+      }
+    ],
+    "constitution_decisions": [],
+    "chat_log": [],
+    "schema_drift": [],
+    "crystals": [],
+    "bep_patterns": [],
+    "trust_scores": [],
+    "fix_map": [],
+    "memory_unified": [],
+    "interstitial_spaces": [],
+    "hooks": [],
+    "tool_index": [],
+    "raid_contract_queue": [
+      {
+        "uuid": "27124094-54d8-4e2a-9495-c9d18c3bee54",
+        "status": "queued",
+        "intention": null,
+        "dir": null,
+        "language": null,
+        "stage": "handshake_verified",
+        "executionSurface": "internal",
+        "system": null,
+        "source": "test",
+        "sourceDropId": null,
+        "boundary": null,
+        "file": null,
+        "title": "RT-1: no onFail declared",
+        "forAgent": null,
+        "contract": {
+          "content": "a real test contract with no onFail declared",
+          "title": "RT-1: no onFail declared"
+        },
+        "dependsOn": [],
+        "onFail": {
+          "action": "retry",
+          "maxRetries": 2
+        },
+        "retryCount": 2,
+        "compartmentId": null,
+        "verdict": null,
+        "createdAt": 1789323687472,
+        "updatedAt": 1789323687500,
+        "id": "01762ebb-fe06-45db-b859-d61c149b9de8",
+        "acknowledgedBy": "raid-processNext-auto"
+      }
+    ],
+    "intake_drops": [],
+    "fault_taxonomy": [],
+    "forge_patches": [],
+    "raid_tunables": [],
+    "decay_log": [],
+    "settings": [
+      {
+        "id": "5ce5d858-1d64-40af-8a0a-6af28f98c79c",
+        "key": "session_greeting_enabled",
+        "value": "true",
+        "updated_ts": 1789323687474
+      },
+      {
+        "id": "979b889c-5a91-4a73-963f-770eebc877ef",
+        "key": "session_greeting_text",
+        "value": "Guardian session initialising. Please ask me: \"What are we calling this session?\" — then wait for my answer before we begin.",
+        "updated_ts": 1789323687474
+      },
+      {
+        "id": "dd385927-4215-4776-8209-722ef85d9111",
+        "key": "scan_debounce_ms",
+        "value": "1500",
+        "updated_ts": 1789323687474
+      },
+      {
+        "id": "821a7137-e5ee-466c-b90b-31caa0766a3d",
+        "key": "artifact_max",
+        "value": "500",
+        "updated_ts": 1789323687474
+      },
+      {
+        "id": "413c7f16-4b92-4b7e-889e-4845fbc846e1",
+        "key": "gap_min_score",
+        "value": "0.25",
+        "updated_ts": 1789323687474
+      },
+      {
+        "id": "6d0e19f5-2716-4935-9511-5d8f4b88448a",
+        "key": "gap_taxonomy_version",
+        "value": "3.0.0",
+        "updated_ts": 1789323687474
+      },
+      {
+        "id": "e9bd6884-b785-46b7-b583-83c3f7aa39aa",
+        "key": "pa_enabled",
+        "value": "true",
+        "updated_ts": 1789323687474
+      },
+      {
+        "id": "8ea992bb-d9ee-4e81-adfa-c8be32965a32",
+        "key": "memory_auto_push",
+        "value": "true",
+        "updated_ts": 1789323687474
+      },
+      {
+        "id": "249eaf2a-36dd-4843-a462-46e19aab63bb",
+        "key": "dropzone_auto_upload",
+        "value": "true",
+        "updated_ts": 1789323687474
+      },
+      {
+        "id": "91aa2000-2784-40b7-9066-6d11d14e2327",
+        "key": "stream_log_level",
+        "value": "EVENTS",
+        "updated_ts": 1789323687474
+      },
+      {
+        "id": "36cf0518-ac2e-430b-af64-30d606375962",
+        "key": "lan_host",
+        "value": "0.0.0.0",
+        "updated_ts": 1789323687474
+      },
+      {
+        "id": "896df797-689d-4abf-b822-e68788a9995a",
+        "key": "greeting_delay_ms",
+        "value": "1200",
+        "updated_ts": 1789323687474
+      },
+      {
+        "id": "474715c5-50df-4d6b-bae9-a2bd589b78ac",
+        "key": "poll_interval_ms",
+        "value": "500",
+        "updated_ts": 1789323687474
+      },
+      {
+        "id": "564f9dfc-c8e0-4763-96e1-982a4ec7cedf",
+        "key": "stable_count_threshold",
+        "value": "5",
+        "updated_ts": 1789323687474
+      }
+    ],
+    "components": [],
+    "compaction_log": [],
+    "dedup_log": []
+  },
+  "hashVersion": 2,
+  "cortex_state_hash": "053f229b3bb07141de90a538266d5c09e4ef705d98983b89102993a6442735c3",
+  "prev_snapshot_hash": "092ed97c7d46ca3111f824ceaccceb82a9be33af4771424454bb3662167fc7e2",
+  "createdAt": 1789323687500
+}

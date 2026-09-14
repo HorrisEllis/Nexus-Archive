@@ -65,14 +65,6 @@ function _resolveInputDir(system) {
 // idearium/config.js's own real default (4800) — not guessed.
 const IDEARIUM_PORT = parseInt(process.env.IDEARIUM_PORT || '4800', 10);
 
-// §MCO19 2026-09-13 — real, confirmed browser-driven NCP providers (each
-// has a real userscript with site-specific DOM selectors, confirmed
-// during MCO14's account-registry work — not every entry in PROVIDERS
-// there is browser-driven; ollama/mistral are local/API-only, deliberately
-// excluded here).
-const BROWSER_PROVIDERS = new Set(['claude', 'chatgpt', 'gemini', 'perplexity', 'deepseek']);
-const CLEARGL_IPC_PORT = parseInt(process.env.CLEARGL_IPC_PORT || '7702', 10);
-
 function _ideariumRequest(method, reqPath, body) {
   return new Promise((resolve) => {
     const http = require('http');
@@ -93,61 +85,6 @@ function _ideariumRequest(method, reqPath, body) {
     if (payload) req.write(payload);
     req.end();
   });
-}
-
-function _clearglassRequest(method, reqPath, body) {
-  return new Promise((resolve) => {
-    const http = require('http');
-    const payload = body ? JSON.stringify(body) : null;
-    const req = http.request({
-      hostname: '127.0.0.1', port: CLEARGL_IPC_PORT, path: reqPath, method, timeout: 2000,
-      headers: payload ? { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) } : {},
-    }, (res) => {
-      let raw = '';
-      res.on('data', (c) => raw += c);
-      res.on('end', () => { try { resolve({ status: res.statusCode, body: JSON.parse(raw) }); } catch (_) { resolve(null); } });
-    });
-    req.on('error',   () => resolve(null)); // honest-degrade — same contract as _ideariumRequest
-    req.on('timeout', () => { req.destroy(); resolve(null); });
-    if (payload) req.write(payload);
-    req.end();
-  });
-}
-
-/**
- * _dispatchToClearGlass(queued, compartmentId) — real dispatch into a
- * live browser agent. Two real HTTP calls: tag the compartment first (so
- * MCO10's DOM ledger actually has something real to attribute events to),
- * then trigger the real, gate-registered mesh.route() via POST /cmd.
- *
- * §HONEST SCOPE — this dispatches real work and returns as soon as
- * ClearGlass acknowledges the dispatch (per its own real POST /cmd
- * contract: "Result will arrive on SSE stream"). It does NOT wait for or
- * consume that SSE result to advance the contract to OUTPUT_FOLDER —
- * that correlation (a real SSE client inside RAID's own process,
- * matching a queueId back to a completed mesh.route() result) is real,
- * separate work this pass did not build. Today, a browser-dispatched
- * contract's OUTPUT_FOLDER still comes from compartmentEngine.execute()'s
- * own real result below, same as before this function existed — this
- * function adds a real, live side-effect (the browser genuinely does the
- * work) without yet closing the loop on consuming its real result.
- */
-async function _dispatchToClearGlass(queued, compartmentId) {
-  const tag = await _clearglassRequest('POST', '/compartment/set-active', { compartmentUuid: compartmentId, queueId: queued.uuid });
-  if (!tag) {
-    console.warn(`[${MODULE_ID}] contract ${queued.uuid}: ClearGlass unreachable at compartment tagging — browser dispatch skipped, PROCESSING continues via the COS path regardless`);
-    return { ok: false, reason: 'clearglass unreachable' };
-  }
-  const dispatch = await _clearglassRequest('POST', '/cmd', {
-    eventType: 'mesh.route',
-    data: { prompt: queued.content || queued.intention, preferAgent: queued.forAgent, requestId: queued.uuid },
-  });
-  if (!dispatch || !dispatch.body || !dispatch.body.ok) {
-    console.warn(`[${MODULE_ID}] contract ${queued.uuid}: real ClearGlass dispatch failed or unacknowledged — PROCESSING continues via the COS path regardless`);
-    return { ok: false, reason: 'dispatch not acknowledged' };
-  }
-  _raidLedger.record('raid.contract.dispatched.clearglass', { queueId: queued.uuid, forAgent: queued.forAgent, compartmentId }, { source: 'raid', causedBy: queued.uuid });
-  return { ok: true };
 }
 
 async function _provisionContractRepo(queued, compartmentId) {
@@ -255,6 +192,18 @@ const _raidLedger = createCFRLedger({
 const STATUS = Object.freeze({
   QUEUED: 'queued', RUNNING: 'running', PASS: 'pass', FAIL: 'fail', BLOCKED: 'blocked',
 });
+
+// §MCO16 2026-09-13 — James, explicit gate: "Routing signal: explicit
+// executionSurface: 'browser'." A contract's real dispatch destination is
+// declared by its submitter, not inferred from forAgent or intention — a
+// caller who wants ClearGlass says so. Two real values only: BROWSER routes
+// through _clearGlassExecutor below (real ClearGlass wire-server dispatch,
+// real compartment tagging); INTERNAL (the default — every contract that
+// existed before this landed) keeps today's exact behavior, zero change.
+// Real validation + request-shape decisions live in the pure, unit-tested
+// lib/clearglass-dispatch.js (§8.6 — same division of labor MCO11's
+// lib/contract-repo-provision.js already established), not duplicated here.
+const { EXECUTION_SURFACE, validateExecutionSurface, buildSetActiveBody, buildRouteBody, extractRouteText, validateDomStep, buildDomStepRequest, domStepResultFailed } = require('../../../lib/clearglass-dispatch.js');
 
 // §RR4 2026-08-30 — real, physical lifecycle-position tracker, separate
 // from STATUS (the dependency-graph state). Confirmed genuinely missing
@@ -402,6 +351,15 @@ function submitContract(contract, opts = {}) {
   if (!contract || typeof contract.content !== 'string') {
     throw new Error(`[${MODULE_ID}] submitContract requires a real contract with .content`);
   }
+  // §MCO16 2026-09-13 — refused, not silently accepted: an unrecognized
+  // executionSurface would otherwise fall through to INTERNAL below and
+  // misroute a contract its own submitter explicitly meant for the browser
+  // — a typo that would look like ordinary internal processing (§1.2, loud
+  // not silent failure for something that changes real dispatch behavior).
+  const executionSurfaceCheck = validateExecutionSurface(opts.executionSurface);
+  if (!executionSurfaceCheck.ok) {
+    throw new Error(`[${MODULE_ID}] submitContract: ${executionSurfaceCheck.reason}`);
+  }
   const queueId = uid();
   // §MERGED 2026-09-02 — real boundary resolution from a parallel
   // session's own real work (cortex/core/raid/contract-boundary.js,
@@ -426,6 +384,12 @@ function submitContract(contract, opts = {}) {
     dir: opts.dir || null,               // real working directory/file scope this contract touches
     language: opts.language || null,     // only when applicable — a code contract vs a prose contract
     stage: STAGE.QUEUED,
+    // §MCO16 2026-09-13 — real, explicit dispatch-destination declaration,
+    // read by processNext()'s default-executor choice below. Defaults to
+    // INTERNAL — every existing real caller (submitIdeariumChunk,
+    // submitBuildPhaseContract, synthesizeContract, spec-parser's own
+    // submissions) is completely unaffected unless it opts in.
+    executionSurface: executionSurfaceCheck.value,
     system: opts.system || null,         // which SYSTEM originated this contract (distinct from source, which names the subsystem/mechanism)
     source: opts.source || 'unknown',      // 'spec-parser' | 'loom' | 'idearium' | 'copilot' | 'self-heal'
     // §ADDED 2026-09-02 — cortex/core/raid/officiator.js's own real
@@ -821,7 +785,15 @@ async function processNext(executor) {
   // own end-state — read by the qaqcLayer extension above, nowhere else.
   compartment._contract = queued.contract;
 
-  try { jaaDB.update(TABLE, queued.uuid, { status: STATUS.RUNNING, compartmentId: compartment.id, updatedAt: Date.now() }); } catch (_) {}
+  // §MCO16 2026-09-13 — James, explicit gate: "persist compartmentUuid on
+  // the queue row." Same value as compartmentId above (compartment.id IS
+  // the real compartment uuid) — recorded under the field name
+  // lib/compartment-dom-ledger.js's own compartment_dom_ledger table
+  // already uses, so a human (or a future join query) can go
+  // raid_contract_queue.compartmentUuid -> compartment_dom_ledger.compartmentUuid
+  // directly, without knowing the two tables happen to mean the same
+  // thing by two different field names.
+  try { jaaDB.update(TABLE, queued.uuid, { status: STATUS.RUNNING, compartmentId: compartment.id, compartmentUuid: compartment.id, updatedAt: Date.now() }); } catch (_) {}
   _advanceToProcessing(queued.uuid);
 
   // §MCO11 2026-09-13 — "raid creates a compartment for the contract to
@@ -840,24 +812,20 @@ async function processNext(executor) {
     console.warn(`[${MODULE_ID}] contract ${queued.uuid}: no real repo provisioned (idearium unreachable or refused) — PROCESSING continues without a work surface`);
   }
 
-  // §MCO19 2026-09-13 — James: "yes do it" (ClearGlass as a real RAID
-  // PROCESSING destination). Real design decision, not guessed: only
-  // contracts whose forAgent names a real browser-driven NCP provider
-  // route into ClearGlass — everything else keeps using the COS sandbox
-  // above exactly as before (untouched). Dispatch itself reuses ClearGlass's
-  // own real, already-registered gate pipeline (POST :7702/cmd ->
-  // emit('mesh.route', ...) -> meshRouteGate -> mesh.route(), confirmed
-  // wired at boot via registerAll()) rather than inventing a new
-  // mechanism. Same honest-degrade cross-process pattern as every other
-  // call in this file — an unreachable ClearGlass never blocks
-  // PROCESSING, it just means no browser dispatch happened.
-  if (BROWSER_PROVIDERS.has(queued.forAgent)) {
-    await _dispatchToClearGlass(queued, compartment.id);
-  }
-
+  // §MCO16 2026-09-13 — real destination branch. A caller-supplied executor
+  // always wins, unchanged from before (an explicit caller decision is
+  // never overridden — same principle decideForContract's own header
+  // already documents for guardian/server.js's explicit provider choice).
+  // Only the DEFAULT (no explicit executor) now branches on the contract's
+  // own declared executionSurface — every contract that predates this
+  // field reads INTERNAL and gets exactly _realAgentExecutor, byte-for-byte
+  // the prior behavior.
+  const defaultExecutor = queued.executionSurface === EXECUTION_SURFACE.BROWSER
+    ? () => _clearGlassExecutor(queued, compartment)
+    : () => _realAgentExecutor(queued);
   const resolved = executor
     ? await compartmentEngine.execute(compartment, executor)
-    : await compartmentEngine.execute(compartment, () => _realAgentExecutor(queued));
+    : await compartmentEngine.execute(compartment, defaultExecutor);
 
   const finalStatus = resolved.status === 'PASS' ? STATUS.PASS : STATUS.FAIL;
 
@@ -1065,6 +1033,8 @@ const BUILD_CONTRACT_SCHEMA = Object.freeze({
   compartmentUuid:'string, optional — a real, specific existing compartment to target, not always freshly spawned',
   fileDirectory:  'string, optional — the real target directory this contract\'s work lands in',
   fileName:       'string, optional — the real target file name',
+  executionSurface: 'string, optional — "internal" (default) or "browser". §MCO16 2026-09-13: BROWSER routes this contract through _clearGlassExecutor (real ClearGlass dispatch + real compartment DOM tagging) instead of the default agent executor.',
+  domSteps: 'array, optional — §MCO16c 2026-09-13. Real page-interaction steps for a BROWSER contract: [{action:"query"|"mutate", providerId?, selector?, query?, cgId?, mutation?}], run in order against ClearGlass\'s real /dom/query and /dom/mutate. When present, these steps ARE the contract\'s work — no chat prompt is dispatched. Ignored for executionSurface INTERNAL.',
 });
 
 let _axiomRefsCache = null;
@@ -1146,6 +1116,13 @@ function synthesizeContract(req = {}) {
     dir: req.fileDirectory || null,
     language: req.language || null,
     dependsOn: Array.isArray(req.dependsOn) ? req.dependsOn : [],
+    // §MCO16 2026-09-13 — B1 schema had no executionSurface field before
+    // this; synthesizeContract() is the one real caller-facing API surface
+    // this schema already exposes (fileDirectory/fileName/axioms/tools all
+    // pass through the same way) — undefined here is real and correct for
+    // every existing real caller, who never set this and gets exactly
+    // today's INTERNAL default (submitContract's own real validation).
+    executionSurface: req.executionSurface || undefined,
   });
 
   // §REAL, ADDITIVE — the B1-specific fields (endState/conditions/
@@ -1217,6 +1194,115 @@ async function _realAgentExecutor(queueRow) {
     try { jaaDB.update(TABLE, queueRow.uuid, { dispatchedJobId: result.jobId, updatedAt: Date.now() }); } catch (_) {}
   }
   return { text: result.text };
+}
+
+// §MCO16 2026-09-13 — real RAID → ClearGlass boundary. CLEAR_GLASS_WIRE_PORT
+// matches clear-glass/src/main/index.js's own real WIRE_PORT default (7704)
+// exactly — not guessed independently.
+const CLEAR_GLASS_WIRE_PORT = parseInt(process.env.CLEAR_GLASS_WIRE_PORT || '7704', 10);
+
+// §MCO16 2026-09-13 — James, explicit gate: "Browser unavailable: retry/
+// fail/escalate, never silently fall back." Deliberately NOT the same
+// honest-degrade-to-null shape _ideariumRequest()/_erosRequest()-style
+// helpers elsewhere in this file use — those are for optional, additive
+// side effects (a repo provision, a DOM ledger tag) where "it didn't work"
+// is a fine outcome to continue past. A browser-destined contract's WHOLE
+// execution lives on this call; "it didn't work" here must become a real
+// thrown error, so it reaches execute()'s own catch (lib/compartment-
+// engine.js), becomes a real FAIL, and lets THIS contract's own onFail
+// policy (retry/fallbackAgent/halt — already built, unchanged) decide what
+// happens next. Silently degrading to _realAgentExecutor instead would be
+// exactly the "silent fallback" this gate explicitly refused.
+function _clearGlassRequest(reqPath, body) {
+  return new Promise((resolve, reject) => {
+    const http = require('http');
+    const payload = JSON.stringify(body || {});
+    const req = http.request({
+      hostname: '127.0.0.1', port: CLEAR_GLASS_WIRE_PORT, path: reqPath, method: 'POST', timeout: 15000,
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) },
+    }, (res) => {
+      let raw = '';
+      res.on('data', (c) => raw += c);
+      res.on('end', () => {
+        let parsed = null;
+        try { parsed = JSON.parse(raw); } catch (_) { /* handled below via parsed===null */ }
+        if (res.statusCode >= 400 || !parsed) {
+          return reject(new Error(`ClearGlass ${reqPath} returned HTTP ${res.statusCode}${parsed ? '' : ' (unparseable body)'}: ${raw.slice(0, 300)}`));
+        }
+        if (parsed.ok === false) return reject(new Error(`ClearGlass ${reqPath} refused: ${parsed.error || 'no reason given'}`));
+        resolve(parsed);
+      });
+    });
+    req.on('error',   (e) => reject(new Error(`ClearGlass unreachable on :${CLEAR_GLASS_WIRE_PORT}${reqPath}: ${e.code || e.message}`)));
+    req.on('timeout', () => { req.destroy(); reject(new Error(`ClearGlass ${reqPath} timed out on :${CLEAR_GLASS_WIRE_PORT}`)); });
+    req.write(payload);
+    req.end();
+  });
+}
+
+/**
+ * _clearGlassExecutor(queueRow, compartment) — the real executionSurface:
+ * 'browser' destination. Always begins with the same real set-active call
+ * (below). What happens next now genuinely branches on the contract's own
+ * shape:
+ *
+ *   - queueRow.contract.domSteps present (real, non-empty array): §MCO16c
+ *     2026-09-13, James: "finish the rest of it." Each step dispatches to
+ *     ClearGlass's /dom/query or /dom/mutate (main/index.js, backed by
+ *     ProviderHost.queryDom()/mutateDom() — real page-side
+ *     window.__cgDomMesh calls, not invented here) IN ORDER, one at a
+ *     time — a later step may depend on an earlier mutation having
+ *     already landed, so these are never parallelized. The first REAL
+ *     step-level failure (domStepResultFailed — a genuine
+ *     "no live window"/"element not found"/mesh-not-loaded result, not an
+ *     HTTP failure, which already throws separately) stops the sequence
+ *     immediately and throws with the failing step's index and reason —
+ *     it does NOT continue mutating on top of a step that didn't really
+ *     happen. domSteps contracts do NOT also dispatch a chat prompt via
+ *     /agent-mesh/route — the steps ARE the work; contract.content stays
+ *     required (submitContract's own existing invariant) but is not sent
+ *     anywhere as a prompt when domSteps drives execution.
+ *   - No real domSteps: unchanged from the first MCO16 pass — a single
+ *     /agent-mesh/route prompt dispatch.
+ *
+ * Returns {text} — same shape _realAgentExecutor returns either way.
+ */
+async function _clearGlassExecutor(queueRow, compartment) {
+  const setActive = buildSetActiveBody(compartment, queueRow);
+  if (!setActive.ok) throw new Error(`[${MODULE_ID}] _clearGlassExecutor: ${setActive.reason}`);
+  await _clearGlassRequest('/compartment/set-active', setActive.body);
+
+  const domSteps = Array.isArray(queueRow.contract && queueRow.contract.domSteps) ? queueRow.contract.domSteps : null;
+  if (domSteps && domSteps.length) {
+    const results = [];
+    for (let i = 0; i < domSteps.length; i++) {
+      const step = domSteps[i];
+      const built = buildDomStepRequest(step, queueRow.forAgent);
+      if (!built.ok) {
+        throw new Error(`[${MODULE_ID}] _clearGlassExecutor: domStep[${i}] refused: ${built.reason}`);
+      }
+      // §HONEST — an HTTP-level failure here (ClearGlass unreachable, a
+      // non-2xx/refused response) already throws inside _clearGlassRequest
+      // itself (same "never silently fall back" contract as set-active/
+      // route above) — nothing extra needed here for that case.
+      const result = await _clearGlassRequest(built.path, built.body);
+      if (domStepResultFailed(result)) {
+        throw new Error(`[${MODULE_ID}] _clearGlassExecutor: domStep[${i}] (${step.action} on ${built.body.providerId}) failed: ${result.reason || result.error || 'no reason given'}`);
+      }
+      results.push({ step: i, action: step.action, result });
+    }
+    return { text: JSON.stringify({ domSteps: results }) };
+  }
+
+  const route = buildRouteBody(queueRow);
+  if (!route.ok) throw new Error(`[${MODULE_ID}] _clearGlassExecutor: ${route.reason}`);
+  const routed = await _clearGlassRequest('/agent-mesh/route', route.body);
+
+  const text = extractRouteText(routed);
+  if (!text) {
+    throw new Error(`ClearGlass /agent-mesh/route returned no real text (compartment ${compartment.id}, queue ${queueRow.uuid})`);
+  }
+  return { text };
 }
 
 /**
@@ -1337,4 +1423,4 @@ function reconcileOnBoot() {
   return { resumed, retried, escalated, checked: orphaned.length };
 }
 
-module.exports = { submitContract, submitIdeariumChunk, submitBuildPhaseContract, synthesizeContract, BUILD_CONTRACT_SCHEMA, reportExternalOutcome, acknowledge, listQueue, processNext, reconcileOnBoot, MODULE_ID, VERSION, STATUS, STAGE, queryContractRepoFile, writeContractRepoFile, BROWSER_PROVIDERS, _dispatchToClearGlass };
+module.exports = { submitContract, submitIdeariumChunk, submitBuildPhaseContract, synthesizeContract, BUILD_CONTRACT_SCHEMA, reportExternalOutcome, acknowledge, listQueue, processNext, reconcileOnBoot, MODULE_ID, VERSION, STATUS, STAGE, EXECUTION_SURFACE, queryContractRepoFile, writeContractRepoFile, _clearGlassExecutor };

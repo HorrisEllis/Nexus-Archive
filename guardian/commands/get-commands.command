@@ -2,11 +2,7 @@ envelope: 1
 uuid: nexus-export-command-get-commands
 type: command
 id: get-commands
-context: >-
-  guardian/commands — one real, live-extracted route (idiom: single). Regenerate this file by
-  re-running this script if guardian/server.js's real dispatch changes — it is derived from the
-  literal file text, not hand-maintained, so a stale copy is a real drift risk if server.js moves on
-  and this file isn't regenerated.
+context: null
 intent: null
 summary: null
 system: guardian
@@ -14,8 +10,12 @@ tags:
   - guardian
   - command
   - single
-exported_at: 1789239400883
-source: guardian/lib/command-index-extract.js#extractCommandIndex()
+exported_at: 1789427750004
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1789427750004
+lastSeenAt: 1789427750004
+fingerprint: null
 payload:
   method: GET
   path: /commands

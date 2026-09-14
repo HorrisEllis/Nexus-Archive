@@ -20,12 +20,18 @@ const { randomUUID: uuidv4 } = require('crypto'); // §BUGFIX 2026-08-23 — the
 // — never a blocked or crashed DOM stream.
 //
 // activeCompartmentUuid below is deliberately simple, in-memory, per-
-// process state — NOT wired to any real RAID dispatch yet, because
-// ClearGlass is not yet a real RAID contract destination (that's a
-// separate, unbuilt piece of work). setActiveCompartment() is the real,
-// explicit hook for whenever that wiring exists; until then a DOM event
-// with no active compartment is reported honestly (see _bindIpc below)
-// rather than tagged with a fabricated uuid.
+// process state.
+//
+// §MCO16 2026-09-13 CLOSED — the gap this comment used to name ("ClearGlass
+// is not yet a real RAID contract destination") is closed: cortex/core/raid/
+// contract-intake.js's processNext() now calls main/index.js's real
+// POST /compartment/set-active for any contract with executionSurface ===
+// 'browser', BEFORE dispatching it, via setActiveCompartment() below — the
+// exact real hook this comment previously described as unwired. A DOM event
+// with no active compartment (executionSurface !== 'browser', or the
+// set-active call itself never landed) is still reported honestly (see
+// _bindIpc below) rather than tagged with a fabricated uuid — that part of
+// the original design is unchanged.
 let activeCompartmentUuid = null;
 let activeQueueId         = null;
 
@@ -249,16 +255,14 @@ class DomArchaeology {
       _reportCompartmentDomEvent(data); // §MCO10 — additive, never blocks the existing SSE path above
     });
 
-    // §MCO10 2026-09-13 — real, explicit hook for associating the live DOM
-    // stream with a real RAID compartment/contract, once something (future
-    // work — ClearGlass is not yet a RAID dispatch destination) actually
-    // calls it. Until then activeCompartmentUuid stays null and DOM events
-    // are never ledgered — an honest gap, not a fabricated association.
-    ipcMain.handle('compartment:set-active', (event, { compartmentUuid, queueId } = {}) => {
-      activeCompartmentUuid = compartmentUuid || null;
-      activeQueueId         = queueId || null;
-      return { ok: true, compartmentUuid: activeCompartmentUuid, queueId: activeQueueId };
-    });
+    // §MCO16 2026-09-13 — real caller now exists: main/index.js's wire-server
+    // route POST /compartment/set-active (RAID → ClearGlass, cross-process
+    // HTTP, RAID has no ipcRenderer to invoke this handler with). Both real
+    // entry points — this renderer-side IPC handle AND that HTTP route —
+    // now go through the ONE real setActiveCompartment() method below
+    // (§10.3 one write authority for this state, not two competing setters).
+    ipcMain.handle('compartment:set-active', (event, { compartmentUuid, queueId } = {}) =>
+      this.setActiveCompartment(compartmentUuid, queueId));
 
     ipcMain.on('dom:pick-result', (event, data) => {
       const pick = {
@@ -268,6 +272,21 @@ class DomArchaeology {
       };
       this.sse.emit('dom.picked', pick);
     });
+  }
+
+  // §MCO16 2026-09-13 — the one real setter for activeCompartmentUuid/
+  // activeQueueId, extracted out of the ipcMain.handle above so a SECOND
+  // real caller (main/index.js's new HTTP route, called from RAID —
+  // outside Electron, no ipcRenderer available to it) can reach the exact
+  // same state instead of a parallel one. Same honest contract as before:
+  // no validation of compartmentUuid's shape here (RAID owns that; a bad
+  // value just tags subsequent DOM events with a bad key, visible in the
+  // ledger, not silently rejected — §1.2, loud not silent).
+  setActiveCompartment(compartmentUuid, queueId) {
+    activeCompartmentUuid = compartmentUuid || null;
+    activeQueueId         = queueId || null;
+    this.sse.emit('compartment.active.changed', { compartmentUuid: activeCompartmentUuid, queueId: activeQueueId, ts: Date.now() });
+    return { ok: true, compartmentUuid: activeCompartmentUuid, queueId: activeQueueId };
   }
 
   // ── Query ─────────────────────────────────────────────────────────────
@@ -398,18 +417,4 @@ class DomArchaeology {
   listPicks() { return [...this.picks.values()]; }
 }
 
-// §MCO19 2026-09-13 — real, direct (same-process) way for another file in
-// this same ClearGlass main process (bridge.js, for a new HTTP route) to
-// set the same real activeCompartmentUuid/activeQueueId this file's own
-// ipcMain.handle('compartment:set-active', ...) already sets — same
-// module-level state, two real entry points (one for the renderer via
-// IPC, one for an external HTTP caller like RAID via a new bridge.js
-// route), not two competing copies of the state.
-function setActiveCompartment(compartmentUuid, queueId) {
-  activeCompartmentUuid = compartmentUuid || null;
-  activeQueueId         = queueId || null;
-  return { ok: true, compartmentUuid: activeCompartmentUuid, queueId: activeQueueId };
-}
-
 module.exports = DomArchaeology;
-module.exports.setActiveCompartment = setActiveCompartment;

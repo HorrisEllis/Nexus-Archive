@@ -1,0 +1,49 @@
+envelope: 1
+uuid: nexus-export-schema-response
+type: schema
+id: response
+context: >-
+  guardian/schemas — sovereign local copy. Origin: lib/node-schemas/schema.response (shared
+  canonical version, may have moved on independently since this copy was made — sovereignty means
+  guardian does not depend on it at runtime, not that the two can never drift).
+intent: null
+summary: null
+system: guardian
+tags: []
+exported_at: 1789330000100
+source: nexus.lib.node-export
+payload:
+  status: REAL
+  source: >-
+    §MCO16e 2026-09-13 — guardian is a real, direct writer of this type: POST /dom/event
+    (guardian/server.js) persists a real .response node for every live DOM mutation event it
+    receives, via lib/component-ledger.js's write() plus lib/node-export.js's exportToFile().
+  fields:
+    uuid:
+      type: string
+      required: true
+      description: real, unique id for this response event
+    compartmentUuid:
+      type: string
+      required: true
+      description: the real, live compartment this response belongs to — dropped, not fabricated, when absent
+    queueId:
+      type: string
+      required: false
+      description: the real RAID queue row this compartment is executing, when one exists
+    domEventType:
+      type: string
+      required: true
+      description: 'the real event kind — e.g. dom.mutation, dom.snapshot, dom.ready'
+    agentId:
+      type: string
+      required: false
+      description: which real agent/provider produced this event, when known
+    payload:
+      type: object
+      required: false
+      description: the real, event-specific data
+    ts:
+      type: number
+      required: true
+      description: real event timestamp — logical ordering axis

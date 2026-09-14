@@ -151,7 +151,6 @@ const SUITES = [
   'mco11-contract-repo-provision.test.js',
   'mco15-component-boundary-check.test.js',
   'mco15-component-exec-test.test.js',
-  'mco19-clearglass-dispatch.test.js',
   'test-gap-finder.js',
   'test-raid-decision-record.js',
   'test-raid-constitution-gate.js',

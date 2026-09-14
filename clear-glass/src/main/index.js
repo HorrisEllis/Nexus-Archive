@@ -166,6 +166,12 @@ let ctxMgr      = null;   // ContextMgr         — set in bootstrap()
 let driver      = null;   // ClearDriver        — set in bootstrap()
 let urlListener = null;   // UrlListener        — set in bootstrap()
 let apiSettings = null;   // ApiSettings        — set in bootstrap()
+// §MCO16 2026-09-13 — module-scope so _startWire()'s route handler (defined
+// and running BEFORE bootstrap() creates the real instance — confirmed
+// directly: _startWire is called earlier in boot than step 5 below) can
+// still reach it once it exists. Same pattern `driver`/`ctxMgr` above
+// already use for exactly this reason.
+let domArchaeology = null; // DomArchaeology     — set in bootstrap()
 let _heartbeatInterval = null;
 const windows        = new Map(); // agentId → BrowserWindow (visible)
 const bgTabs         = new Map(); // agentId → BrowserWindow (hidden service tabs)
@@ -616,6 +622,38 @@ async function _startWire() {
         return res.end(JSON.stringify(result));
       }
 
+      // §MCO16c 2026-09-13 — the write counterpart /dom/query never had,
+      // same real gap class contract.domSteps needs closed to be anything
+      // more than a query-only language. Real, existing page-side
+      // window.__cgDomMesh.mutate() (archaeology.js's own DOM_OBSERVER_
+      // SCRIPT) reached the same way queryDom() already reaches .query().
+      if (u === '/dom/mutate' && req.method === 'POST') {
+        const { providerId, cgId, selector, mutation } = parsed;
+        if (!providerId) { res.writeHead(400); return res.end(JSON.stringify({ ok: false, error: 'providerId required' })); }
+        const result = await providerHost.mutateDom(providerId, { cgId, selector, mutation });
+        res.writeHead(result.ok === false ? 502 : 200);
+        return res.end(JSON.stringify(result));
+      }
+
+      // §MCO16 2026-09-13 — the real RAID → ClearGlass boundary. James:
+      // "POST /compartment/set-active → shared DomArchaeology method."
+      // RAID (cortex/core/raid/contract-intake.js) lives outside Electron —
+      // no ipcRenderer to invoke 'compartment:set-active' with, so this is
+      // a SECOND real entry point into the exact same setActiveCompartment()
+      // method archaeology.js's own ipcMain.handle already calls (§10.3 —
+      // one write authority for this state, reached two real ways, not two
+      // competing setters). Called BEFORE a browser-destined contract is
+      // dispatched (see contract-intake.js's _clearGlassExecutor) so the
+      // real DOM stream that follows is genuinely tagged, not fabricated.
+      if (u === '/compartment/set-active' && req.method === 'POST') {
+        if (!domArchaeology) { res.writeHead(503); return res.end(JSON.stringify({ ok: false, error: 'DOM archaeology not yet initialized — ClearGlass still booting' })); }
+        const { compartmentUuid, queueId } = parsed;
+        if (!compartmentUuid) { res.writeHead(400); return res.end(JSON.stringify({ ok: false, error: 'compartmentUuid required' })); }
+        const result = domArchaeology.setActiveCompartment(compartmentUuid, queueId);
+        res.writeHead(200);
+        return res.end(JSON.stringify(result));
+      }
+
       // §NEW 2026-09-06 — James: "hook in the agent mesh in clearglass,
       // and guardian... how can i test it? my normal entry point is
       // worthless. the tv ui, cli." Real problem, confirmed before
@@ -1060,7 +1098,8 @@ async function bootstrap() {
   await ctxMgr.init();
 
   // 5. DOM archaeology — live DOM mesh via MutationObserver IPC
-  const dom = new DomArchaeology({ sse: { emit: (t, d) => emit(t, d) } });
+  domArchaeology = new DomArchaeology({ sse: { emit: (t, d) => emit(t, d) } });
+  const dom = domArchaeology;
 
   // 6. ClearDriver — sovereign automation, no Playwright
   driver = new ClearDriver({ ctxMgr, dom, vault, sse: { emit: (t, d) => emit(t, d) } });
@@ -1410,23 +1449,6 @@ async function bootstrap() {
       ok: true, system: MODULE_ID, version: CG_VERSION,
       ssePort: SSE_PORT, ipcPort: IPC_PORT, tlsPort: TLS_PORT, ts: Date.now(),
     }));
-    // §MCO19 2026-09-13 — James: "get it done" on ClearGlass as a real RAID
-    // PROCESSING destination. This is the real, external (HTTP, not IPC)
-    // entry point RAID needs to tag the live DOM stream (MCO10) with a
-    // real compartment uuid before dispatching real browser work via
-    // POST /cmd — same direct-function-call convention already used by
-    // /cli/bgtab above (require('../main/index').listBackgroundTabs?.()),
-    // not a new pattern. Calls the same real, shared module-level state
-    // archaeology.js's own ipcMain.handle('compartment:set-active', ...)
-    // already uses — one real state, two real entry points.
-    ipcBridge.app.post('/compartment/set-active', (req, res) => {
-      try {
-        const { setActiveCompartment } = require('../dom/archaeology');
-        res.json(setActiveCompartment(req.body?.compartmentUuid, req.body?.queueId));
-      } catch (e) {
-        res.status(500).json({ ok: false, error: e.message });
-      }
-    });
     ipcBridge.app.get('/options', (req, res) => res.json(nexusOptions?.get() || {}));
     ipcBridge.app.get('/status', (req, res) => res.json(getStatus ? getStatus() : { ok: true }));
     // §BUILT 2026-09-08 — James: "all of the clearglass features;

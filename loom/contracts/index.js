@@ -107,14 +107,34 @@ class LoomContracts {
    * Refuses on a closed contract — a handoff after close is either a
    * bug in the caller or evidence the contract shouldn't have closed
    * yet; either way, silently accepting it would hide which.
+   *
+   * §MCO17 2026-09-13 — James: "using the interaction contracts and
+   * .handoff." Every real handoff now also becomes a real, standalone
+   * `.handoff` node (lib/node-export.js's exportToFile — the 38th real
+   * KNOWN_TYPE, schema.handoff) under loom/data/nodes/handoff/, in
+   * addition to (never instead of) the existing append onto the
+   * contract's own handoffs[] array — same additive discipline MCO16e's
+   * DOM `.response` nodes used. A node-write failure is real and honest,
+   * logged, never allowed to undo the already-durable contract update
+   * above it (§1.2 — this loud, not the whole handoff silently lost).
    */
   recordHandoff(contractId, { system, note = '', meta = {} } = {}) {
     const c = this.registry.get(contractId);
     if (!c) throw new Error(`[loom/contracts] no such contract: ${contractId}`);
     if (c.status !== 'open') throw new Error(`[loom/contracts] cannot record a handoff on a ${c.status} contract`);
     if (!system) throw new Error('[loom/contracts] system is required for a handoff');
-    c.handoffs.push({ system, note, meta, ts: Date.now() });
-    return this.registry._put(c);
+    const ts = Date.now();
+    c.handoffs.push({ system, note, meta, ts });
+    const result = this.registry._put(c);
+    try {
+      const { exportToFile } = require('../../lib/node-export.js');
+      exportToFile('handoff', randomUUID(), { contractId, system, note, meta, ts },
+        { system: 'loom', tags: ['handoff', 'contract'] },
+        path.join(this.registry.dataDir, 'nodes', 'handoff'));
+    } catch (e) {
+      console.warn(`[loom/contracts] .handoff node write failed (non-fatal, contract's own handoffs[] already updated): ${e.message}`);
+    }
+    return result;
   }
 
   /**

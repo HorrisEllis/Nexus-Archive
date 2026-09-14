@@ -1,0 +1,23 @@
+envelope: 1
+uuid: nexus-export-handoff-a7978581-0386-4601-b724-0eed880db394
+type: handoff
+id: a7978581-0386-4601-b724-0eed880db394
+context: null
+intent: null
+summary: null
+system: loom
+tags:
+  - handoff
+  - contract
+exported_at: 1789331525267
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1789331525267
+lastSeenAt: 1789331525267
+fingerprint: null
+payload:
+  contractId: 5c89eb2e-0ac7-4f37-b3a6-703d70cb013d
+  system: idearium
+  note: chunk verified
+  meta: {}
+  ts: 1789331524989

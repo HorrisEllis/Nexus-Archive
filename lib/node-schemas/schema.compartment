@@ -1,0 +1,57 @@
+envelope: 1
+uuid: nexus-export-schema-compartment
+type: schema
+id: compartment
+context: lib/node-schemas — shared node-type schema registry
+intent: null
+summary: null
+system: null
+tags: []
+exported_at: 1789360000000
+source: nexus.lib.node-export
+payload:
+  status: REAL
+  source: >-
+    lib/compartment-engine.js's own real spawn() — the compartments JAA table row shape it has
+    always written, plus the new compartmentType field (§MCO21 2026-09-13, James: "It needs to be a
+    compartment type and schema"). Two real values today: 'standard' (every compartment that existed
+    before this — unchanged default) and 'worksurface' (a compartment whose working_memory came from
+    a project seed containing at least one lib/work-surface.js-backed file — too large for a single-
+    pass seed). spawn() refuses any other value rather than silently defaulting.
+  fields:
+    uuid:
+      type: string
+      required: true
+      description: real compartment id (compartment.id in-process, uuid in the JAA row)
+    intent_uuid:
+      type: string
+      required: true
+      description: the frozen intent (Phase 45 output) this compartment was spawned from
+    compartmentType:
+      type: string
+      required: true
+      description: '"standard" (default) or "worksurface" — see context above'
+    status:
+      type: string
+      required: true
+      description: 'RUNNING | PASS | FAIL | REWOUND | DELETED — compartment-engine.js STATUS'
+    snapId:
+      type: string
+      required: false
+      description: pre-spawn Cortex snapshot id, when the snapshot system was reachable
+    preSnapshotHash:
+      type: string
+      required: false
+      description: cortex_state_hash at spawn time, used for rewind verification
+    constraint_frame:
+      type: object
+      required: true
+      description: the frozen constraint frame this compartment operates under (axioms, budget, boundary, injected frameworks)
+    trace_log:
+      type: array
+      required: true
+      description: every real transition this compartment has gone through, append-only
+    createdAt:
+      type: number
+      required: true
+      description: real spawn timestamp

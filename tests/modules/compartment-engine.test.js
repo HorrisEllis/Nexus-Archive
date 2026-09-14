@@ -259,6 +259,33 @@ await test('T-022', 'validateWiring reports jaa/snapshot/constitutionalAI/bus/ta
   assert.ok('constitutionalAI' in checks);
 });
 
+// ── §H: compartmentType (§MCO21) ─────────────────────────────────────────────
+await test('T-023', 'spawn() defaults compartmentType to "standard" — every pre-existing caller unaffected', async () => {
+  reset();
+  const c = await ce.spawn({ intent: fakeIntent() });
+  assert.strictEqual(c.compartmentType, 'standard');
+  const row = _store.compartments.find(r => r.uuid === c.id);
+  assert.strictEqual(row.compartmentType, 'standard');
+});
+
+await test('T-024', 'spawn() accepts an explicit compartmentType: "worksurface"', async () => {
+  reset();
+  const c = await ce.spawn({ intent: fakeIntent(), compartmentType: 'worksurface' });
+  assert.strictEqual(c.compartmentType, 'worksurface');
+  const row = _store.compartments.find(r => r.uuid === c.id);
+  assert.strictEqual(row.compartmentType, 'worksurface');
+});
+
+await test('T-025', 'spawn() refuses an unrecognized compartmentType, never silently defaulting', async () => {
+  reset();
+  await assert.rejects(() => ce.spawn({ intent: fakeIntent(), compartmentType: 'bogus' }), /compartmentType must be one of/);
+});
+
+await test('T-026', 'COMPARTMENT_TYPE is exported with both real values', () => {
+  assert.strictEqual(ce.COMPARTMENT_TYPE.STANDARD, 'standard');
+  assert.strictEqual(ce.COMPARTMENT_TYPE.WORKSURFACE, 'worksurface');
+});
+
 })().then(() => {
   console.log(`\n${passed} passed  ${failed} failed`);
   if (failed > 0) process.exitCode = 1;

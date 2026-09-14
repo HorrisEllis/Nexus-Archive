@@ -959,6 +959,26 @@ const server = http.createServer(async (req, res) => {
   // file. Found by scripts/verify-wires.js, confirmed by hand. These
   // three routes were copilot's ONLY remaining gap against its own
   // registry (all 12 other checkable hooks verified real).
+  // §MCO16f 2026-09-13 — James: "copilot's tools and capabilities in the
+  // server.js and his tools... updated and pointed to loom, the dynamic
+  // map registry." Real, confirmed gap: lib/agent-tools/ has 97 real,
+  // live tools (as of this session) and zero HTTP surface for anything
+  // outside copilot's own process to discover them — not this file, not
+  // copilot/registry-components.js, not loom's capability-map scanner
+  // (which can only verify a route that actually exists). This is that
+  // real surface — declared as a real capability in registry-components.js
+  // right alongside it (see that file's own new tools.list entry), so
+  // loom/scanners/capability-map.js's verifyRoutes finds a route that's
+  // genuinely served, not a claim with nothing behind it.
+  if (method === 'GET' && p === '/api/tools') {
+    try {
+      const agentTools = require('../lib/agent-tools/index.js');
+      const schemas = agentTools.getToolSchemas();
+      json(res, 200, { ok: true, count: schemas.length, tools: schemas.map(s => ({ name: s.function.name, description: s.function.description })) });
+    } catch (e) { json(res, 500, { ok: false, error: e.message }); }
+    return;
+  }
+
   if (method === 'GET' && p === '/api/axioms') {
     try {
       const am = require('./axiom-manager.js');
@@ -2611,6 +2631,40 @@ server.listen(PORT, () => {
     require('../lib/triggers.js').start();
     console.log('[copilot] triggers started — persisted triggers hydrated and armed');
   } catch (e) { console.warn('[copilot] triggers not started:', e.message); }
+
+  // §MCO19 2026-09-13 — James: "hook all of that into copilot, .command
+  // files and .tool files." Real, confirmed gap: lib/agent-tools/
+  // generate-tool-nodes.js (regenerate + drift listener) already existed,
+  // fully real and working — grepped the whole tree before wiring this:
+  // its own startDriftListener() was never called anywhere outside a
+  // test file. Every .tool node on disk has been silently going stale
+  // since whenever it was last run by hand (confirmed directly: this
+  // session's own 3 new tools — clear_glass_dom_mutate, ncp_clients,
+  // raid_submit_contract — had zero real .tool files until generate()
+  // was run manually, moments before this fix). copilot is the natural
+  // owner, same reasoning as scheduler/triggers just above: it's the
+  // process that actually owns the live TOOLS registry these nodes
+  // describe. Regenerates once at boot (so a fresh process never starts
+  // with stale nodes) then keeps the real drift listener running.
+  try {
+    const toolNodes = require('../lib/agent-tools/generate-tool-nodes.js');
+    const r = toolNodes.generate();
+    toolNodes.startDriftListener();
+    console.log(`[copilot] .tool nodes regenerated (${r.toolCount} tools, ${r.toolboxCount} toolboxes) — drift listener armed`);
+  } catch (e) { console.warn('[copilot] .tool node generation not started:', e.message); }
+
+  // §MCO19 2026-09-13 — copilot's own real .command nodes, same real
+  // shared writer (lib/generate-command-nodes.js) guardian's own
+  // routes now use. copilot was never one of the 5 systems docs/
+  // command-index-per-system.spec named — genuinely new coverage,
+  // built because copilot's real routes (including this session's own
+  // GET /api/tools) had no real command-index anywhere before this.
+  try {
+    const { generateCommandNodes } = require('../lib/generate-command-nodes.js');
+    const { extractCommandIndex } = require('./lib/command-index-extract.js');
+    const r = generateCommandNodes({ systemId: 'copilot', extractCommandIndex, destDir: require('path').join(__dirname, 'commands') });
+    console.log(`[copilot] .command nodes regenerated (${r.commandCount} real routes) — copilot/commands/`);
+  } catch (e) { console.warn('[copilot] .command node generation failed (non-fatal):', e.message); }
 
   // §WIRED 2026-08-13 — R3 (docs/repair-contract-and-loom-hub-phasemap.spec)
   // built lib/autonomous-repair.js, the exact "loom notices and fixes itself"

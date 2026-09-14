@@ -1,0 +1,44 @@
+envelope: 1
+uuid: nexus-export-schema-manifest
+type: schema
+id: manifest
+context: lib/node-schemas — shared node-type schema registry
+intent: null
+summary: null
+system: null
+tags: []
+exported_at: 1789370000000
+source: nexus.lib.node-export
+payload:
+  status: REAL
+  source: >-
+    §MCO22 2026-09-13 — James: "I feel we need a manifest file or like use a cos node, something
+    that stores all the compartment metadata." Grounded in idearium/repo/index.js's own real,
+    already-named composition point (§SBP1 2026-08-28: "a repo can now point at BOTH its spec
+    content AND a real COS compartment... without either system needing to know about the other's
+    internals") — that field is a single compartmentId set once at ingest. This node is the real
+    history that field never captured: every compartment that has touched a repo over its life,
+    append-only, via lib/repo-manifest.js.
+  fields:
+    repoUuid:
+      type: string
+      required: true
+      description: the real idearium repo this manifest belongs to — one manifest per repo
+    specUuid:
+      type: string
+      required: false
+      description: the repo's own real specUuid at manifest-creation time, for cross-reference
+    compartments:
+      type: array
+      required: true
+      description: >-
+        real, append-only [{compartmentUuid, compartmentType, intentUuid, status, workSurfaces,
+        recordedAt}] — never rewritten or reordered, only appended to
+    createdAt:
+      type: number
+      required: true
+      description: real manifest creation timestamp
+    updatedAt:
+      type: number
+      required: true
+      description: real timestamp of the most recent compartment recorded
