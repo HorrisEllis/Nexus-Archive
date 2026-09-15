@@ -280,7 +280,16 @@ function createDispatcher(deps) {
       console.warn(`[guardian] ${job.id} → ${job.provider}: ping gate did not clear (${ping.reason}) but heartbeat is still healthy — dispatching anyway (uncertain evidence, not refusing on it alone)`);
     }
 
-    const sent = ncp.push(job.provider, {
+    // §FIXED 2026-09-15 — James: "it doubles every time." Was ncp.push(),
+    // which broadcasts a job to every client registered for this
+    // provider — the real source of doubled dispatch/acks/completion
+    // when clear-glass legitimately has more than one live client for
+    // one provider (pre-warm overlapping the real tab, or two windows
+    // briefly coexisting mid-restart). pushActive() targets exactly the
+    // one client currently tracked as active for this provider — see
+    // guardian/lib/ncp.js's own §FIXED note on why nothing gets force-
+    // closed to make that true, just correctly aimed.
+    const sent = ncp.pushActive(job.provider, {
       type: 'GUARDIAN_JOB', jobId: job.id, command: job.command,
       provider: job.provider, prompt: job.prompt, content: job.content,
       tools: job.tools || null,
@@ -296,7 +305,11 @@ function createDispatcher(deps) {
       return false;
     }
     updateJob(job.id, { status: 'delivered', deliveredAt: Date.now() });
-    console.log(`[guardian] dispatched ${job.id} → ${job.provider} via NCP (${sent} client${sent === 1 ? '' : 's'})`);
+    // §FIXED 2026-09-15 — pushActive() only ever returns 0 or 1 now (single-
+    // target, not a broadcast count), so the old "(N clients)" phrasing was
+    // stale — always printed "(1 client)" and implied a fan-out that no
+    // longer happens. Says what actually occurred instead.
+    console.log(`[guardian] dispatched ${job.id} → ${job.provider} via NCP (active client)`);
     try {
       const alk = require('../../intelligence/alk');
       alk.record({

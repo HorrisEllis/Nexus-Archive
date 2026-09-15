@@ -32,6 +32,11 @@ function makeDeps({ deepseekConnected }) {
       ncp: {
         isConnected: (p) => p === 'deepseek' ? deepseekConnected : false,
         push: () => { ncpPushed = true; return 1; },
+        // dispatcher.js's job-send path now calls pushActive() (single-
+        // target, see guardian/lib/ncp.js's 2026-09-15 REVISED fix)
+        // instead of push() — same "did the real NCP path get reached"
+        // signal this test checks for.
+        pushActive: () => { ncpPushed = true; return 1; },
       },
       pendingQueue: new Map(),
       cockpitBroadcast: () => {},

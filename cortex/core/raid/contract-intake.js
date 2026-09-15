@@ -833,10 +833,25 @@ async function processNext(executor) {
   // failure, so an unreachable idearium degrades this to exactly "no
   // repo/work-surface for this contract," never a blocked or failed
   // PROCESSING stage over a repo-provisioning problem.
-  const repoUuid = await _provisionContractRepo(queued, compartment.id);
-  if (repoUuid) {
+  // §FIXED 2026-09-15 — James: "idearium keeps chunking over and over."
+  // Traced, not guessed: this line ran unconditionally on EVERY call into
+  // this function, including every retry of the SAME contract (default
+  // onFail is {action:'retry', maxRetries:2} — see below — so a contract
+  // that fails once re-enters here up to 3 total times). _provisionContractRepo
+  // always POSTs /api/repos with files[] (never specUuid), and
+  // RepoLayer.ingest() (idearium/repo/index.js) unconditionally calls
+  // spec-engine's ingestFilesAsSpec() for that path — a brand-new spec is
+  // chunked and completed every single time, before its own rootHash dedup
+  // check ever runs. Dedup only ever suppressed a duplicate REPO record
+  // afterward; the wasted spec-creation + chunking already happened. A
+  // contract that already has a repoUuid on its row (set by an earlier
+  // attempt, read fresh at function entry above) already has a real,
+  // identical work surface — re-provisioning it just re-chunks the same
+  // CONTRACT.md content into a new, immediately-orphaned spec.
+  const repoUuid = freshRow.repoUuid || await _provisionContractRepo(queued, compartment.id);
+  if (repoUuid && repoUuid !== freshRow.repoUuid) {
     try { jaaDB.update(TABLE, queued.uuid, { repoUuid, updatedAt: Date.now() }); } catch (_) {}
-  } else {
+  } else if (!repoUuid) {
     console.warn(`[${MODULE_ID}] contract ${queued.uuid}: no real repo provisioned (idearium unreachable or refused) — PROCESSING continues without a work surface`);
   }
 

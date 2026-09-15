@@ -53,6 +53,12 @@ function makeDeps({ pushReturns = 1, isConnected = true, autoPong = false } = {}
           }
           return pushReturns;
         },
+        // dispatcher.js's job-send path now calls pushActive() (single-
+        // target, see guardian/lib/ncp.js's 2026-09-15 REVISED fix) instead
+        // of push(). These ping-gate tests only care about the ping/pong
+        // exchange (which still goes through push()), so pushActive just
+        // mirrors the same configurable return value for the actual job send.
+        pushActive: (provider, msg) => pushReturns,
       },
       pendingQueue,
       cockpitBroadcast: () => {},

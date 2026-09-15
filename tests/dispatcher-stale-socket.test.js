@@ -64,6 +64,10 @@ function makeDeps(pushReturns) {
       ncp: {
         isConnected: () => true,          // guardian believes chatgpt is connected — real, matches the actual log
         push: () => pushReturns,          // the real write outcome under test
+        // dispatcher.js's job-send path now calls pushActive() (single-
+        // target, see guardian/lib/ncp.js's 2026-09-15 REVISED fix) —
+        // same "real write outcome" semantics this test is exercising.
+        pushActive: () => pushReturns,
       },
       pendingQueue,
       cockpitBroadcast: () => {},

@@ -45,6 +45,22 @@ const { randomUUID } = require('crypto');
 function createNCPServer({ onMessage, onConnect, onDisconnect, busEmit } = {}) {
   // provider → { res, tabId, provider, connectedAt, lastHeartbeat }
   const _clients = new Map();
+  // §FIXED 2026-09-15, REVISED — James: "it doubles every time." Real
+  // cause, traced not guessed: dispatch (guardian/lib/dispatcher.js)
+  // called ncp.push(provider, ...), which BROADCASTS to every client
+  // registered for that provider — that's the actual doubling, not the
+  // connection registry. First version of this fix force-closed
+  // whichever client wasn't newest on connect, which regressed hard:
+  // when two clients for one provider are BOTH genuinely alive (clear-
+  // glass's pre-warm can legitimately overlap the real tab briefly,
+  // especially mid-autopilot-restart under memory pressure), closing
+  // one's socket just makes it reconnect and close the other in turn —
+  // confirmed live, both tabIds flapping "3 disconnects within 60s"
+  // simultaneously. Correct, narrower fix: track which client is
+  // CURRENT for dispatch purposes only. Never touch the older socket —
+  // let clear-glass's own lifecycle decide when it actually dies.
+  // provider → key of the most recently connected client.
+  const _activeByProvider = new Map();
 
   // §FIXED 2026-08-17 — James, direct: "the ncp tabs aren't connected...
   // this is vital." Traced a real, separate contributing bug beyond the
@@ -132,6 +148,15 @@ function createNCPServer({ onMessage, onConnect, onDisconnect, busEmit } = {}) {
       try { stale.res.end(); } catch(_) {}
       _clients.delete(key);
     }
+    // §FIXED 2026-09-15, REVISED — for a DIFFERENT tabId under the SAME
+    // provider (the pre-warm/spawn overlap). Only marks which client is
+    // CURRENT for dispatch; does NOT close whatever held the slot
+    // before. See this file's own header comment on why — closing a
+    // possibly-still-live socket here is what caused the flapping
+    // regression. If the prior connection really is dead, its own
+    // req.on('close') (below) or the staleness sweep will retire it on
+    // its own real timeline, not forced by a new arrival.
+    _activeByProvider.set(provider, key);
     const client = { res, tabId, provider, connectedAt: Date.now(), lastHeartbeat: Date.now() };
     _clients.set(key, client);
 
@@ -157,6 +182,7 @@ function createNCPServer({ onMessage, onConnect, onDisconnect, busEmit } = {}) {
       const current = _clients.get(key);
       if (current && current.res === res) {
         _clients.delete(key);
+        if (_activeByProvider.get(provider) === key) _activeByProvider.delete(provider);
         busEmit?.('ncp.client.disconnected', { provider, tabId, key }, 'INFO');
         onDisconnect?.({ provider, tabId, key });
       }
@@ -291,6 +317,16 @@ function createNCPServer({ onMessage, onConnect, onDisconnect, busEmit } = {}) {
         if (usage) client.usage = usage; // §US-GAP-01 — last-known usage/quota-limit state from the userscript
         if (chatId !== undefined) client.chatId = chatId;
         if (claimed !== undefined) client.claimed = claimed;
+        // §FIXED 2026-09-15 — graceful failover for the active-per-
+        // provider pointer (see the §FIXED note by _activeByProvider's
+        // declaration for why nothing here force-closes a socket): if
+        // whichever client was CURRENT for this provider has gone away
+        // (disconnected, or its entry no longer exists) and THIS client
+        // is still alive and heartbeating, it becomes current. Keeps
+        // dispatch always aimed at a real, live client without ever
+        // needing to kill another one to get there.
+        const activeKey = _activeByProvider.get(provider);
+        if (activeKey !== key && !_clients.has(activeKey)) _activeByProvider.set(provider, key);
       }
 
       res.writeHead(200, {
@@ -335,6 +371,35 @@ function createNCPServer({ onMessage, onConnect, onDisconnect, busEmit } = {}) {
       }
     }
     return sent;
+  }
+
+  /**
+   * §NEW 2026-09-15 — the real fix for "it doubles every time." push()
+   * above broadcasts to EVERY client for a provider — correct for
+   * things that genuinely should reach every tab (ledger writes, DOM-
+   * map requests), wrong for dispatching a single job, which used
+   * push() too and so fanned out to both a real tab and a pre-warmed
+   * or overlapping one, producing doubled dispatch/acks/completion.
+   * pushActive sends to exactly the one client currently tracked as
+   * CURRENT for this provider (_activeByProvider, kept correct by
+   * handleChannel on connect and handleHeartbeat's failover — see
+   * their own §FIXED notes) — never more than one, and never by force-
+   * closing anything else to get there. Returns 0/1, not a count, so a
+   * caller checking `sent === 0` (the existing "stale socket" queued-
+   * retry path) keeps working unchanged.
+   */
+  function pushActive(provider, data) {
+    const key = _activeByProvider.get(provider);
+    if (!key) return 0;
+    const client = _clients.get(key);
+    if (!client) return 0;
+    try {
+      return _write(client.res, data) ? 1 : 0;
+    } catch (e) {
+      busEmit?.('ncp.push.bad_payload', { provider, tabId: client.tabId, error: e.message }, 'ERROR');
+      console.error(`[ncp] pushActive('${provider}', ...) — bad payload, not a dead client: ${e.message}`);
+      return 0;
+    }
   }
 
   /**
@@ -416,6 +481,7 @@ function createNCPServer({ onMessage, onConnect, onDisconnect, busEmit } = {}) {
       // this is that exact bug's sibling, not a new mechanism.
       try { client.res.end(); } catch(_) {}
       _clients.delete(key);
+      if (_activeByProvider.get(client.provider) === key) _activeByProvider.delete(client.provider);
       busEmit?.('ncp.client.stale', { provider: client.provider, tabId: client.tabId, key, lastHeartbeat: client.lastHeartbeat }, 'WARN');
       onDisconnect?.({ provider: client.provider, tabId: client.tabId, key, reason: 'stale' });
     }
@@ -473,6 +539,7 @@ function createNCPServer({ onMessage, onConnect, onDisconnect, busEmit } = {}) {
     handleStream,
     // Push API
     push,
+    pushActive,
     pushTab,
     broadcast,
     // State
