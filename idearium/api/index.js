@@ -189,6 +189,7 @@ import { COMPONENTS as IDEARIUM_COMPONENTS } from '../registry-components.js';
 import path from 'path';
 import fs from 'fs';
 import { loadTable, appendRow, deleteRow, syncTable } from '../lib/db.js';
+import { runImportPipeline } from '../repo/import-pipeline.js';
 
 // §PROJECTS 2026-07-19 — "a place to store projects, easily." A flat
 // binary shelf for whole project archives (zips built elsewhere — MASTERMIND
@@ -237,6 +238,21 @@ let _repoLayer = null;
 function getRepoLayer() {
   if (!_repoLayer) _repoLayer = new RepoLayer({ ideaOS: getIdeaOS(), specEngine: getSpecEngine });
   return _repoLayer;
+}
+
+// §NEXUS-REPO-TOOLS 2026-09-15 — resolves a repo's real, physical,
+// materialized directory: the same computation RepoLayer.materialize()
+// falls back to internally, exposed here for handlers that need the dir
+// itself (to read atlas.json/chunks//indexes//verification.json) without
+// forcing a full re-materialize on every read. Falls back to a real
+// materialize() call only for the rare repo with no materializeDir set
+// yet (pre-project-import repos, ingested before that field existed).
+function _repoDiskDir(repoUuid) {
+  const repo = getRepoLayer().get(repoUuid);
+  if (!repo) return null;
+  if (repo.materializeDir) return repo.materializeDir;
+  const mat = getRepoLayer().materialize(repoUuid);
+  return mat.error ? null : mat.dir;
 }
 
 // §SHARED 2026-07-10 — the deterministic chunks-to-repo-files assembly that
@@ -653,6 +669,16 @@ function matchRoute(method, url) {
     ['POST',   ['api','repos',    ':uuid','file'],         'repo.file.write'],
     ['DELETE', ['api','repos',    ':uuid','file'],         'repo.file.delete'],
     ['GET',    ['api','repos',    ':uuid','export'],       'repo.export'],
+    // ── §NEXUS-REPO-TOOLS 2026-09-15 — read access to what
+    // import-pipeline.js's L2-L5 steps produce, for agent-suite's
+    // repository.* tools (NEXUS-001 ALWAYS_MAP_FIRST — an agent maps
+    // before it touches anything). All read-only except reindex.
+    ['GET',    ['api','repos',    ':uuid','map'],           'repo.map'],
+    ['GET',    ['api','repos',    ':uuid','chunks'],        'repo.chunks.list'],
+    ['GET',    ['api','repos',    ':uuid','chunks',':chunkId'], 'repo.chunks.get'],
+    ['GET',    ['api','repos',    ':uuid','symbols'],       'repo.symbols'],
+    ['GET',    ['api','repos',    ':uuid','verification'],  'repo.verification'],
+    ['POST',   ['api','repos',    ':uuid','reindex'],       'repo.reindex'],
   ];
 
   for (const [m, pattern, action] of dynRoutes) {
@@ -1499,12 +1525,27 @@ async function handle(req, res, route, query, body) {
       const mat = getRepoLayer().materialize(repoUuid);
       if (mat.error) return err(res, 500, `materialize after ingest failed: ${mat.error}`);
 
+      // §34 PROJECT_IMPORT — parse -> atlas -> chunks -> verify -> index,
+      // BEFORE the compartment resolves to import:ready below. Reads the
+      // enriched repo record (has .files, from the manifest ingest()
+      // just created) against the real materialized directory. A pipeline
+      // fault is surfaced in the response but never blocks finalize —
+      // the end-state below only checks files/manifest/project.json/git,
+      // unaffected by this — so an import still completes even if, say,
+      // a single file's chunk boundaries couldn't be indexed.
+      const enrichedRepo = getRepoLayer().get(repoUuid);
+      const pipeline = runImportPipeline(enrichedRepo, mat.dir);
+      if (pipeline.state === 'FAULT') {
+        console.error(`[api] project-import pipeline FAULT for ${repoUuid}: ${pipeline.error || 'see verification tiers'}`);
+      }
+
       const result = await pc.finalizeContainer({
         containerUuid: params.uuid, repoUuid, repoDir: mat.dir, fileCount: included.length,
       });
       return ok(res, {
         ...result, repo: ingestResult.repo, deduped: !!ingestResult.deduped,
         fileCount: included.length, omittedCount: omitted.length, omitted: omitted.slice(0, 50),
+        pipeline,
       });
     }
 
@@ -1608,6 +1649,85 @@ async function handle(req, res, route, query, body) {
         ...CORS,
       });
       return res.end(zipBuf);
+    }
+
+    // ── §NEXUS-REPO-TOOLS 2026-09-15 — read access to import-pipeline.js's
+    // L2-L5 output (atlas/chunks/symbols/verification), plus an explicit
+    // reindex trigger. Backs agent-suite's repository.* tools. All read
+    // straight from the repo's materialized directory on disk — the same
+    // real files a human or Git would see, never a second in-memory copy.
+    case 'repo.map': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const dir = _repoDiskDir(params.uuid);
+      if (!dir) return err(res, 500, 'could not resolve repo directory');
+      const p = path.join(dir, 'atlas.json');
+      if (!fs.existsSync(p)) return err(res, 404, 'no atlas yet — repo has not been through the import pipeline (see POST .../reindex)');
+      return ok(res, JSON.parse(fs.readFileSync(p, 'utf8')));
+    }
+
+    case 'repo.chunks.list': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const dir = _repoDiskDir(params.uuid);
+      if (!dir) return err(res, 500, 'could not resolve repo directory');
+      const p = path.join(dir, 'chunks', 'index.json');
+      if (!fs.existsSync(p)) return err(res, 404, 'no chunk index yet — repo has not been through the import pipeline (see POST .../reindex)');
+      let chunks = JSON.parse(fs.readFileSync(p, 'utf8'));
+      if (query.file) chunks = chunks.filter(c => c.file === query.file);
+      return ok(res, { chunks, total: chunks.length });
+    }
+
+    // §MINIMUM-SURFACE — spec §L7 WORK_SURFACE: an agent asks for ONE
+    // chunk's real content by id, not the whole file/repo, so a large
+    // repo never has to be loaded into model context to edit one function.
+    case 'repo.chunks.get': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const dir = _repoDiskDir(params.uuid);
+      if (!dir) return err(res, 500, 'could not resolve repo directory');
+      const idxPath = path.join(dir, 'chunks', 'index.json');
+      if (!fs.existsSync(idxPath)) return err(res, 404, 'no chunk index yet');
+      const entry = JSON.parse(fs.readFileSync(idxPath, 'utf8')).find(c => c.id === params.chunkId);
+      if (!entry) return err(res, 404, `chunk not found: ${params.chunkId}`);
+      const full = JSON.parse(fs.readFileSync(path.join(dir, 'chunks', entry._file), 'utf8'));
+      return ok(res, full);
+    }
+
+    case 'repo.symbols': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const dir = _repoDiskDir(params.uuid);
+      if (!dir) return err(res, 500, 'could not resolve repo directory');
+      const p = path.join(dir, 'indexes', 'symbols.json');
+      if (!fs.existsSync(p)) return err(res, 404, 'no symbol index yet — repo has not been through the import pipeline (see POST .../reindex)');
+      let symbols = JSON.parse(fs.readFileSync(p, 'utf8'));
+      if (query.q) { const q = query.q.toLowerCase(); symbols = symbols.filter(s => s.name.toLowerCase().includes(q)); }
+      return ok(res, { symbols, total: symbols.length });
+    }
+
+    case 'repo.verification': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const dir = _repoDiskDir(params.uuid);
+      if (!dir) return err(res, 500, 'could not resolve repo directory');
+      const p = path.join(dir, 'verification.json');
+      if (!fs.existsSync(p)) return err(res, 404, 'not verified yet — repo has not been through the import pipeline (see POST .../reindex)');
+      return ok(res, JSON.parse(fs.readFileSync(p, 'utf8')));
+    }
+
+    // §INCREMENTAL-REINDEX (§35) — explicit re-run for a repo whose files
+    // changed outside idearium's own write path (e.g. edited directly on
+    // disk, or after a manual git pull into the materialized dir). Every
+    // idearium-native edit (repo.file.write/delete) already triggers this
+    // automatically via RepoLayer's _materializeQuiet — see repo/index.js.
+    case 'repo.reindex': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const dir = _repoDiskDir(params.uuid);
+      if (!dir) return err(res, 500, 'could not resolve repo directory');
+      const pipeline = runImportPipeline(repo, dir);
+      return ok(res, { pipeline });
     }
 
     // ── Projects: flat zip shelf (§PROJECTS 2026-07-19) ────────────────────────

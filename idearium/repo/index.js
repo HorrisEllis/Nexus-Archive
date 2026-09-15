@@ -45,6 +45,7 @@ import path from 'path';
 import { randomUUID } from 'crypto';
 import { fileURLToPath } from 'url';
 import { loadTable, syncTable, migrateOnce } from '../lib/db.js';
+import { runImportPipeline } from './import-pipeline.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const COMPONENT_ID = 'nexus-id';   // idearium, in the UID registry
@@ -120,7 +121,14 @@ export class RepoLayer {
       // narrow and name-based on purpose: it does not special-case
       // "top-level files added later" generally, only the three real,
       // known artifacts project-container.js owns.
-      const PRESERVE = new Set(['.git', 'manifest.json', 'project.json']);
+      // §PIPELINE-ARTIFACTS 2026-09-15 — chunks/, atlas.json, indexes/,
+      // and verification.json are import-pipeline.js's L2-L5 output
+      // (parse/atlas/chunks/verify/index), written straight into this
+      // same outDir after ingest. Same reasoning as the three entries
+      // above: none of these are spec chunks, so without this they'd
+      // silently vanish the first time a later writeFile()/deleteFile()
+      // triggers a quiet re-materialize.
+      const PRESERVE = new Set(['.git', 'manifest.json', 'project.json', 'chunks', 'atlas.json', 'indexes', 'verification.json']);
       for (const entry of fs.readdirSync(outDir)) {
         if (PRESERVE.has(entry)) continue;
         fs.rmSync(path.join(outDir, entry), { recursive: true, force: true });
@@ -487,9 +495,25 @@ export class RepoLayer {
   // couldn't be regenerated — the manifest write above already
   // succeeded and IS the real, authoritative change; a materialize
   // failure here is logged, never thrown back at the caller.
+  //
+  // §REPO-018 2026-09-15 — "Mutation produces an updated repository
+  // map" (nexus-repository-system.spec §38/§43). A file write/delete
+  // through THIS layer (not just through project-import's finalize)
+  // now re-runs the L2-L5 pipeline (parse/atlas/chunks/verify/index)
+  // against the freshly materialized directory, so a repo's map never
+  // goes stale just because the edit came from writeFile()/deleteFile()
+  // rather than the initial import. Same non-fatal contract as
+  // materialize() itself — a reindex failure is logged, never thrown.
   _materializeQuiet(repoUuid) {
     const r = this.materialize(repoUuid);
-    if (r.error) console.warn(`[idearium/repo] materialize for ${repoUuid} failed after a real content change: ${r.error}`);
+    if (r.error) { console.warn(`[idearium/repo] materialize for ${repoUuid} failed after a real content change: ${r.error}`); return; }
+    try {
+      const repo = this.get(repoUuid);
+      const pipeline = runImportPipeline(repo, r.dir);
+      if (pipeline.state === 'FAULT') console.warn(`[idearium/repo] reindex for ${repoUuid} FAULTed after a real content change: ${pipeline.error || 'see verification tiers'}`);
+    } catch (e) {
+      console.warn(`[idearium/repo] reindex for ${repoUuid} threw after a real content change: ${e.message}`);
+    }
   }
 }
 

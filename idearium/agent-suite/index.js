@@ -44,6 +44,7 @@ const VERSION   = '1.0.0';
 const GUARDIAN_PORT  = parseInt(process.env.GUARDIAN_PORT   || '7820');
 const CORTEX_PORT    = parseInt(process.env.CORTEX_PORT     || '3748');
 const OLLAMA_PORT    = parseInt(process.env.OLLAMA_PORT     || '11434');
+const IDEARIUM_PORT  = parseInt(process.env.IDEARIUM_PORT   || '4800');
 
 // ── HTTP helper ───────────────────────────────────────────────────────────────
 async function _http(port, method, path, body = null, timeoutMs = 10000) {
@@ -78,7 +79,86 @@ async function _exec(command) {
   return r.data;
 }
 
-// ── Tool: system state snapshot ───────────────────────────────────────────────
+// ── idearium API wrapper ──────────────────────────────────────────────────────
+async function _api(method, pathStr, body = null) {
+  const r = await _http(IDEARIUM_PORT, method, `/api${pathStr}`, body, 10000);
+  if (!r.ok) return { error: r.data?.error || `idearium API ${method} ${pathStr} failed (status ${r.status})` };
+  return r.data;
+}
+
+// ── Tool: repository access — NEXUS-001 ALWAYS_MAP_FIRST ───────────────────
+// No traversal, synthesis, or mutation may happen against an unknown
+// repository surface (nexus-repository-system.spec §2). These give an
+// agent the deterministic MAP -> UNDERSTAND -> ACT lifecycle: get the
+// topology first (getRepositoryMap), find the minimum real chunk that
+// matters (getRepositorySymbols/getRepositoryChunks/getRepositoryChunk)
+// rather than loading the whole repo into context, then act
+// (editRepositoryFile) — every real edit re-runs the pipeline
+// automatically (repo/index.js's _materializeQuiet), so the map is
+// never stale after a mutation (§38, REPO-018).
+
+export async function listRepositories(filter = {}) {
+  const qs = Object.entries(filter).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
+  return _api('GET', `/repos${qs ? `?${qs}` : ''}`);
+}
+
+export async function getRepository(repoUuid) {
+  return _api('GET', `/repos/${repoUuid}`);
+}
+
+// The map (§4 ATLAS layer) — compressed topology, never raw source.
+// This is the real "MAP" step of NEXUS-001; call it before anything else.
+export async function getRepositoryMap(repoUuid) {
+  return _api('GET', `/repos/${repoUuid}/map`);
+}
+
+export async function getRepositorySymbols(repoUuid, query = null) {
+  return _api('GET', `/repos/${repoUuid}/symbols${query ? `?q=${encodeURIComponent(query)}` : ''}`);
+}
+
+// Chunk metadata only (id/file/range/symbols/hash) — the address, not the
+// content. Use getRepositoryChunk(repoUuid, chunkId) for the real text of
+// one specific chunk — the "minimum sufficient context" a work surface
+// should hand an agent (§L7/REPO-016), not the whole file or repo.
+export async function getRepositoryChunks(repoUuid, file = null) {
+  return _api('GET', `/repos/${repoUuid}/chunks${file ? `?file=${encodeURIComponent(file)}` : ''}`);
+}
+
+export async function getRepositoryChunk(repoUuid, chunkId) {
+  return _api('GET', `/repos/${repoUuid}/chunks/${chunkId}`);
+}
+
+export async function getRepositoryFile(repoUuid, filePath) {
+  return _api('GET', `/repos/${repoUuid}/file?path=${encodeURIComponent(filePath)}`);
+}
+
+export async function getRepositoryVerification(repoUuid) {
+  return _api('GET', `/repos/${repoUuid}/verification`);
+}
+
+// Deterministic modification (§L8/REPO-014/015 — a tool call, not the
+// model writing bytes itself). Real content change through RepoLayer;
+// repo/index.js reruns parse/atlas/chunks/verify/index right after, so
+// the caller doesn't have to remember to reindex separately.
+export async function editRepositoryFile(repoUuid, filePath, content) {
+  return _api('POST', `/repos/${repoUuid}/file`, { path: filePath, content });
+}
+
+export async function deleteRepositoryFile(repoUuid, filePath) {
+  const r = await _http(IDEARIUM_PORT, 'DELETE', `/api/repos/${repoUuid}/file?path=${encodeURIComponent(filePath)}`, null, 10000);
+  if (!r.ok) return { error: r.data?.error || 'delete failed' };
+  return r.data;
+}
+
+// §INCREMENTAL-REINDEX (§35) — explicit re-run, for a repo edited outside
+// idearium's own write path (e.g. a direct git pull into the materialized
+// directory). Native edits via editRepositoryFile/deleteRepositoryFile
+// already trigger this automatically and don't need it called separately.
+export async function reindexRepository(repoUuid) {
+  return _api('POST', `/repos/${repoUuid}/reindex`);
+}
+
+
 // Given to every agent before spec building starts.
 // Compact — designed to fit in a chunk prompt without dominating it.
 export async function getSystemContext() {
@@ -291,5 +371,9 @@ export default {
   getSystemContext, queryCortexMemory, getExistingSpecs,
   getGaps, dispatchRepair, getIdeas,
   generateWithOllama, buildChunkWithAgent, getNextWizardQuestion,
+  listRepositories, getRepository, getRepositoryMap, getRepositorySymbols,
+  getRepositoryChunks, getRepositoryChunk, getRepositoryFile,
+  getRepositoryVerification, editRepositoryFile, deleteRepositoryFile,
+  reindexRepository,
   MODULE_ID, VERSION,
 };
