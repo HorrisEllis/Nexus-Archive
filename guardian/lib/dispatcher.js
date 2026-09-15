@@ -344,6 +344,14 @@ function createDispatcher(deps) {
       provider: job.provider, prompt: job.prompt, content: job.content,
       tools: job.tools || null,
       hat: job.hat || null,
+      // §PHASE2 2026-09-15 (phasemap Bug 3) — guardian/lib/jobs.js's
+      // createJob() computes this once per job (see its own comment for
+      // the real command-list rule); handleJob() in guardian/userscript-
+      // chatgpt.js already reads msg.freshChat and navigates to a blank
+      // chat before injecting when it's true. This was the missing wire
+      // between the two — createJob() computed the flag but nothing
+      // forwarded it onto the wire the tab actually receives.
+      freshChat: job.freshChat !== false,
     };
     const sent = (targetTabId && typeof ncp.pushTab === 'function')
       ? (ncp.pushTab(job.provider, targetTabId, jobPayload) ? 1 : 0)

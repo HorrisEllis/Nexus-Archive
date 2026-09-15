@@ -2055,7 +2055,10 @@ function handleExtendedRoutes(req, res, url, method) {
       // §MCO16f 2026-09-14 — jobId/sequence added. Both are real fields the
       // live userscript observer has in scope and nothing could previously
       // carry: a DOM mutation belonging to a job had no way to say so.
-      const { compartmentUuid, queueId, type, agentId, dom, ts, jobId, sequence } = body || {};
+      // §PHASE4 2026-09-15 — command added the same way: the job command
+      // (ask/code/queue/tools) this event belongs to, so a node can
+      // self-describe what it was answering.
+      const { compartmentUuid, queueId, type, agentId, dom, ts, jobId, sequence, command } = body || {};
       const eventTs = ts || Date.now();
       cockpitBroadcast({ type: 'guardian.dom.event', compartmentUuid: compartmentUuid || null, queueId: queueId || null, domEventType: type || 'unknown', agentId: agentId || null, ts: eventTs });
       try {
@@ -2086,6 +2089,7 @@ function handleExtendedRoutes(req, res, url, method) {
         domEventType: type || 'unknown',
         agentId: agentId || null,
         sequence: typeof sequence === 'number' ? sequence : null,
+        command: command || null,
         payload: dom || null,
         ts: eventTs,
       });
@@ -2112,6 +2116,39 @@ function handleExtendedRoutes(req, res, url, method) {
           domEventType: type || 'unknown', agentId: agentId || null,
           sequence: typeof sequence === 'number' ? sequence : null,
           responseUuid, ts: eventTs,
+        });
+        // §PHASE5 2026-09-15 (phasemap Bug 6) — bus.emit()'s own automatic
+        // cockpitBroadcast (SISOStream.emit, above) only ever forwards
+        // {seq, type, ts, claimed} — confirmed by reading that method
+        // directly, not assumed — so the real `data` object passed to
+        // bus.emit() just above (jobId, domEventType, responseUuid, ...)
+        // never actually reaches an SSE client through that path. GET
+        // /api/responses was the only way anything outside this process
+        // could ever see a `.response` node's real content — that gap is
+        // the whole of Bug 6. This pushes the real, enriched event
+        // directly, the same way job.error already does at its own
+        // direct `cockpitBroadcast({ type: 'job.error', jobId, ... })`
+        // call site — a distinct type so it doesn't collide with the
+        // thin guardian.dom.response ping bus.emit already sends, and
+        // shaped `{type, ts, data}` to match what the cockpit's own
+        // existing "Live SISO Stream" panel already renders (its
+        // es.onmessage reads d.type/d.data directly — this is written to
+        // match that real, existing consumer, not a new one invented
+        // here). Includes command (Phase 4) and any truncated partial
+        // response text (Phase 3) so the live feed can actually show
+        // what the response said, not just that an event happened.
+        cockpitBroadcast({
+          type: 'guardian.response.live',
+          ts: eventTs,
+          data: {
+            jobId: jobId || null, compartmentUuid: compartmentUuid || null,
+            queueId: queueId || null, domEventType: type || 'unknown',
+            agentId: agentId || null,
+            sequence: typeof sequence === 'number' ? sequence : null,
+            command: command || null, responseUuid,
+            chars: (dom && typeof dom.chars === 'number') ? dom.chars : null,
+            partial: (dom && typeof dom.partial === 'string') ? dom.partial : null,
+          },
         });
         // A terminal DOM phase is the real signal that this job's response
         // actually landed — the watchdog stops sweeping it here rather than

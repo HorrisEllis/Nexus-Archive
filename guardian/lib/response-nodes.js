@@ -103,13 +103,18 @@ function _exporter() {
  * @param {string} evt.domEventType      one of DOM_PHASES
  * @param {string} [evt.agentId]         provider that produced it
  * @param {number} [evt.sequence]        monotonic index within one job/compartment
+ * @param {string} [evt.command]         §PHASE4 2026-09-15 (phasemap Bug 5) — the job
+ *                                       command (ask/code/queue/tools) this event belongs to,
+ *                                       so a node can self-describe what it was answering.
+ *                                       server.js's POST /dom/event already reads and forwards
+ *                                       this; this was the missing write-side half.
  * @param {object} [evt.payload]         the real event-specific data (delta, lengths, url)
  * @param {number} [evt.ts]
  */
 function writeResponseNode(evt = {}) {
   const {
     compartmentUuid = null, jobId = null, queueId = null,
-    domEventType, agentId = null, sequence = null, payload = null, ts,
+    domEventType, agentId = null, sequence = null, command = null, payload = null, ts,
   } = evt;
 
   // §1.2 — the real constraint the schema cannot express. A response node
@@ -136,6 +141,7 @@ function writeResponseNode(evt = {}) {
       domEventType,
       agentId,
       sequence,
+      command,
       payload,
       ts: ts || Date.now(),
     }, {

@@ -63,6 +63,13 @@ payload:
       type: string
       required: false
       description: which real agent/provider produced this event, when known
+    command:
+      type: string
+      required: false
+      description: >-
+        §PHASE4 2026-09-15 — the real job command (ask/code/queue/tools) this event belongs to,
+        when the event came from a job. Lets a node self-describe what it was answering without
+        joining back to the job store, which GET /api/responses does not do.
     payload:
       type: object
       required: false

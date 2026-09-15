@@ -133,10 +133,22 @@ function createJobStore() {
     // §ACK-INJECTION-FIX — computed once at creation, not per-dispatch-
     // retry, so a job's persona stays stable across any real redelivery.
     const hat = _suggestJobHat(prompt);
+    // §PHASE2 2026-09-15 (phasemap Bug 3 / open question) — the real
+    // command list this job store creates is 'queue', 'code', 'tools',
+    // 'wake', and whatever body.command carries through the general
+    // dispatch route (normally 'ask'). guardian/userscript-chatgpt.js's
+    // own goToNewChat() comment already states the intended rule this
+    // implements: fresh chat for every command EXCEPT a first 'tools'
+    // dispatch — a tool-call job's own follow-up turns never come back
+    // through createJob() at all (they re-inject via handleJob's local
+    // _onJobComplete loop, same jobId, same thread), so the only real
+    // case to exclude here is the initial 'tools' dispatch itself,
+    // which needs the tab's current context/thread, not a blank chat.
+    const freshChat = command !== 'tools';
     const job = {
       id, command, provider, prompt, content: content || null, source: source || null,
       tools: Array.isArray(tools) ? tools : null,
-      hat,
+      hat, freshChat,
       status: 'pending', response: '', ts: Date.now(), updatedAt: Date.now(),
     };
     jobs.set(id, job);
