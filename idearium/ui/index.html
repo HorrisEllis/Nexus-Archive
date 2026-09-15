@@ -588,6 +588,7 @@ body{display:flex;flex-direction:column;position:relative}
         <button class="tb-btn" style="margin-left:10px" onclick="pickLocalRepo()">open local nexus folder…</button>
         <button class="tb-btn" style="margin-left:6px" onclick="document.getElementById('repo-drop-input').click()">drop repo files…</button>
         <button class="tb-btn" style="margin-left:6px" onclick="exportApiRepo()">export .zip</button>
+        <button class="tb-btn" style="margin-left:6px;color:var(--coral)" onclick="archiveApiRepo()">archive repo</button>
         <input type="file" id="repo-drop-input" multiple style="display:none" onchange="ingestDroppedFiles(this.files)">
         <span class="ph-badge" id="repo-badge" style="margin-left:auto">no folder loaded</span>
       </div>

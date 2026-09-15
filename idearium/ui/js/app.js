@@ -1331,6 +1331,26 @@ async function deleteApiRepoFile(repoUuid, filePath) {
   } catch (e) { toast(`delete failed: ${e.message}`, 'err'); }
 }
 
+// §BUILT 2026-09-15 — archives a RepoLayer repo via the same DELETE
+// /api/repos/:uuid → repo.archive the API has already routed since the v2
+// redesign (see idearium/api/index.js's dynRoutes) — soft-delete only,
+// status flips to 'archived' and it drops out of the default repo list;
+// nothing on disk is touched (§7.4). No prior UI path called this at all.
+async function archiveApiRepo() {
+  if (!CURRENT_API_REPO) { toast('no repo loaded — open one first', 'err'); return; }
+  if (!confirm(`archive "${CURRENT_API_REPO.name}"? it'll drop out of the repo list — content itself is kept, not deleted.`)) return;
+  const uuid = CURRENT_API_REPO.uuid;
+  try {
+    await api(`/api/repos/${uuid}`, { method: 'DELETE' });
+    toast('repo archived', 'ok');
+    await loadApiRepos();
+    CURRENT_API_REPO = null; ACTIVE_API_FILE = null; _showIdeEditor(false);
+    renderApiRepoPanel(null);
+  } catch (e) {
+    toast('archive failed: ' + e.message, 'err');
+  }
+}
+
 async function pickLocalRepo() {
   try {
     if (!window.showDirectoryPicker) { toast('your browser does not support folder access — try Chrome/Edge','err'); return; }

@@ -551,6 +551,25 @@ const COMMANDS = {
     console.log('');
   },
 
+  // §BUILT 2026-09-15 — the API has had DELETE /api/repos/:uuid → repo.archive
+  // since the v2 redesign, but there was never a CLI path to it — only the
+  // UI could reach it, and until this same change the UI didn't either.
+  // Soft-delete, consistent with §7.4 and the same archive/restore pattern
+  // spec-engine's deleteSpec/restoreSpec already use: sets status='archived'
+  // (repo/index.js's archive()), filtered out of `repo list` by default,
+  // still visible with --all, nothing on disk touched or destroyed.
+  async 'repo.archive'(os, { positional }) {
+    const prefix = positional[0];
+    if (!prefix) die('usage: idearium repo archive <uuid>');
+    const repos = repoLayer().list({ includeArchived: true });
+    const repo = repos.find(r => r.uuid === prefix) || repos.find(r => r.uuid.startsWith(prefix)) || repos.find(r => r.uuid.endsWith(prefix));
+    if (!repo) die(`repo not found: ${prefix}`);
+    if (repo.status === 'archived') { console.log(gray(`  already archived: ${repo.name}`)); return; }
+    const result = repoLayer().archive(repo.uuid);
+    if (result.error) die(result.error);
+    console.log(`${mint('✓')} archived ${bold(repo.name)}  ${dim(shortRepo(repo.uuid))}`);
+  },
+
   // ── idearium gap ───────────────────────────────────────────────────────────
 
   async 'gap.list'(os, { flags }) {
@@ -707,7 +726,7 @@ async function main() {
     console.log(`  ${sky('idea')}   add | list | show | phase | link | tension | archive | search | tree`);
     console.log(`  ${sky('spec')}   new | show | list | check | export`);
     console.log(`  ${sky('speceng')} list | show <uuid> | build <uuid> | chunk-agent <spec> <chunk> <agent>`);
-    console.log(`  ${sky('repo')}   list | show <uuid>`);
+    console.log(`  ${sky('repo')}   list [--all] | show <uuid> | archive <uuid>`);
     console.log(`  ${sky('gap')}    list | show | open | resolve | ignore`);
     console.log(`  ${sky('push')}   [--message "..."] [--branch main]`);
     console.log(`  ${sky('log')}    [--n 20]`);
