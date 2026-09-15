@@ -552,6 +552,20 @@ function matchRoute(method, url) {
     // in one request — see handler for why the existing zip-ingest code
     // (idearium/repo/watcher.js) isn't called as-is.
     ['POST',   ['api','repos','import'],  'repo.import-archive'],
+    // ── Upload Project (§UPLOAD-PROJECT 2026-09-15) — the full prompt ->
+    // temp compartment -> dropzone -> "Import Repository" -> manifest/
+    // project.json/.git -> full repo page flow. A distinct namespace
+    // from /api/projects (the flat zip shelf above) and from
+    // /api/repos/import (the synchronous, no-compartment zip-to-repo
+    // path already used by ui/import-project's older screen) — this one
+    // is stateful across two requests (start, then finalize-or-cancel)
+    // because a real compartment has to exist BEFORE the file is
+    // dropped, per James's own ordering ("creates a temporary
+    // compartment (just in case the user cancels)... THEN a dropzone").
+    ['POST',   ['api','project-import','start'],            'project-import.start'],
+    ['POST',   ['api','project-import',':uuid','finalize'], 'project-import.finalize'],
+    ['POST',   ['api','project-import',':uuid','cancel'],   'project-import.cancel'],
+    ['GET',    ['api','project-import','config'],           'project-import.config'],
     // ── Projects (§PROJECTS 2026-07-19) — flat zip shelf, separate from repos ──
     ['GET',    ['api','projects'],                    'project.list'],
     ['POST',   ['api','projects'],                    'project.upload'],
@@ -1370,6 +1384,16 @@ async function handle(req, res, route, query, body) {
     // MAX_TOTAL_BYTES — imported directly, not re-derived; SKIP_DIRS/
     // TEXT_EXT aren't exported by that module, so matched here by value,
     // called out explicitly rather than silently duplicated).
+    // §REFACTORED 2026-09-15 — this case used to inline adm-zip
+    // extraction + SKIP_DIRS/TEXT_EXT/bounds directly here (see
+    // lib/zip-ingest.js's own header for the full account of why that
+    // was a second copy of lib/project-compartment.js's already-real
+    // bounds). Now calls the shared module — same behavior, same
+    // omission reasons, same dedup-relevant included[] shape — plus it
+    // now reads bounds from lib/project-import.config.js's ZIP block
+    // (the one configurable place for both this route and the
+    // project-import.* "Upload Project" flow below) instead of
+    // project-compartment.js's private constants.
     case 'repo.import-archive': {
       const { name, filename, contentBase64, ideaUuid } = body;
       if (!filename)       return err(res, 400, 'filename required');
@@ -1380,59 +1404,18 @@ async function handle(req, res, route, query, body) {
       if (!buf.length) return err(res, 400, 'empty file');
       if (!/\.zip$/i.test(filename)) return err(res, 400, 'only .zip archives are handled by this endpoint — use POST /api/repos for flat file drops');
 
-      const pc = _require('../../lib/project-compartment.js'); // MAX_FILES etc. — real, shared bounds
-      const MAX_FILES          = pc.MAX_FILES;
-      const MAX_BYTES_PER_FILE = pc.MAX_BYTES_PER_FILE;
-      const MAX_TOTAL_BYTES    = pc.MAX_TOTAL_BYTES;
-      // §MATCHED, NOT IMPORTED — project-compartment.js keeps these two
-      // private (not in its module.exports); values copied here on purpose
-      // so both places stay in sync by inspection, not coupled by a
-      // private-member import.
-      const SKIP_DIRS = new Set(['node_modules', '.git', '.svn', 'dist', 'build', '__pycache__', '.next']);
-      const TEXT_EXT  = new Set(['.js', '.ts', '.jsx', '.tsx', '.json', '.md', '.txt', '.py', '.html', '.css', '.yml', '.yaml', '.spec', '.sh']);
-
-      // §FIX 2026-09-03 — found by actually running this against a live
-      // server, not by review: `os` here is the local IdeaOS instance
-      // (`const os = getIdeaOS();` at the top of handle()), shadowing the
-      // module-level `import os from 'os'` for this entire function. Every
-      // other Node builtin this file needs mid-function goes through
-      // _require() for exactly this reason (see contract.live's own
-      // _require('fs')/_require('url')) — matched here, not a new pattern.
-      const tmpZip = path.join(_require('os').tmpdir(), `idearium-import-${crypto.randomUUID()}.zip`);
-      try { fs.writeFileSync(tmpZip, buf); }
-      catch (e) { return err(res, 500, `write temp zip failed: ${e.message}`); }
-
-      let entries;
-      try {
-        const AdmZip = _require('adm-zip');
-        const zip = new AdmZip(tmpZip);
-        entries = zip.getEntries().filter(e => !e.isDirectory).map(e => ({ entry: e, zip }));
-      } catch (e) {
-        try { fs.unlinkSync(tmpZip); } catch (_) {}
-        return err(res, 400, `could not read zip (adm-zip): ${e.message}`);
-      }
-
-      const included = [];
-      const omitted  = [];
-      let totalBytes = 0;
-      for (const { entry, zip } of entries) {
-        const rel = entry.entryName;
-        if (SKIP_DIRS.has(rel.split('/')[0]) || rel.split('/').some(seg => SKIP_DIRS.has(seg))) {
-          omitted.push({ path: rel, why: 'skipped dir (node_modules/.git/etc.)' }); continue;
-        }
-        if (included.length >= MAX_FILES) { omitted.push({ path: rel, why: 'maxFiles reached' }); continue; }
-        const ext = path.extname(rel).toLowerCase();
-        if (!TEXT_EXT.has(ext)) { omitted.push({ path: rel, why: `binary/unlisted extension (${ext || 'none'})` }); continue; }
-        if (totalBytes >= MAX_TOTAL_BYTES) { omitted.push({ path: rel, why: 'maxTotalBytes reached' }); continue; }
-        let text;
-        try { text = zip.readAsText(entry); }
-        catch (e) { omitted.push({ path: rel, why: `read failed: ${e.message}` }); continue; }
-        const truncated = text.length > MAX_BYTES_PER_FILE;
-        const slice = truncated ? text.slice(0, MAX_BYTES_PER_FILE) : text;
-        totalBytes += slice.length;
-        included.push({ path: rel, bytes: entry.header.size, content: slice, truncated });
-      }
-      try { fs.unlinkSync(tmpZip); } catch (_) {}
+      const cfg = _require('../../lib/project-import.config.js');
+      const { extractZipToFiles } = _require('../../lib/zip-ingest.js');
+      const extraction = extractZipToFiles({
+        buf,
+        maxFiles:        cfg.ZIP.maxFiles,
+        maxBytesPerFile: cfg.ZIP.maxBytesPerFile,
+        maxTotalBytes:   cfg.ZIP.maxTotalBytes,
+        skipDirs:        cfg.ZIP.skipDirs,
+        textExt:         cfg.ZIP.textExt,
+      });
+      if (!extraction.ok) return err(res, 400, extraction.error);
+      const { included, omitted } = extraction;
 
       if (!included.length) return err(res, 400, 'no text files matched the bounds — nothing to import (see omitted reasons for what was skipped)');
 
@@ -1440,6 +1423,88 @@ async function handle(req, res, route, query, body) {
       const result = getRepoLayer().ingest({ name: repoName, files: included, source: 'import', ideaUuid: ideaUuid || null });
       if (result.error) return err(res, 400, result.error);
       return ok(res, { ...result, fileCount: included.length, omittedCount: omitted.length, omitted: omitted.slice(0, 50) });
+    }
+
+    // ── Upload Project pipeline ─────────────────────────────────────────
+    // §UPLOAD-PROJECT 2026-09-15 — start() and cancel() are pure CJS,
+    // called directly (see lib/project-container.js's own §ARCHITECTURE
+    // note for why it never imports RepoLayer itself: RepoLayer is ESM,
+    // project-container.js is CJS, and Node's require() cannot load an
+    // ESM module — this file, already ESM and already bridging via
+    // _require for every other CJS lib/ module, IS the bridge point).
+    // finalize() is where the ESM-only step (RepoLayer.ingest()) has to
+    // happen, so THIS handler extracts the zip, calls RepoLayer.ingest(),
+    // then hands the real repoUuid/repoDir/fileCount to
+    // project-container.finalizeContainer() to write manifest.json/
+    // project.json/.git and resolve the compartment.
+    case 'project-import.config': {
+      const cfg = _require('../../lib/project-import.config.js');
+      return ok(res, { intentExamples: cfg.INTENT_EXAMPLES, zip: cfg.ZIP, staleAfterMs: cfg.COMPARTMENT.staleAfterMs });
+    }
+
+    case 'project-import.start': {
+      const { name, goal, intentText } = body;
+      const pc = _require('../../lib/project-container.js');
+      const result = await pc.startContainer({ name, goal, intentText });
+      if (!result.ok) return err(res, 400, result.error);
+      return ok(res, result);
+    }
+
+    case 'project-import.cancel': {
+      const pc = _require('../../lib/project-container.js');
+      const result = await pc.cancelContainer(params.uuid);
+      if (!result.ok) return err(res, 400, result.error);
+      return ok(res, result);
+    }
+
+    case 'project-import.finalize': {
+      const { filename, contentBase64 } = body;
+      if (!filename)      return err(res, 400, 'filename required');
+      if (!contentBase64) return err(res, 400, 'contentBase64 required (base64-encoded zip contents)');
+      let buf;
+      try { buf = Buffer.from(contentBase64, 'base64'); }
+      catch (e) { return err(res, 400, 'invalid base64 content'); }
+      if (!buf.length) return err(res, 400, 'empty file');
+      if (!/\.zip$/i.test(filename)) return err(res, 400, 'only .zip archives are supported — drop a single .zip');
+
+      const cfg = _require('../../lib/project-import.config.js');
+      const { extractZipToFiles } = _require('../../lib/zip-ingest.js');
+      const extraction = extractZipToFiles({
+        buf,
+        maxFiles:        cfg.ZIP.maxFiles,
+        maxBytesPerFile: cfg.ZIP.maxBytesPerFile,
+        maxTotalBytes:   cfg.ZIP.maxTotalBytes,
+        skipDirs:        cfg.ZIP.skipDirs,
+        textExt:         cfg.ZIP.textExt,
+      });
+      if (!extraction.ok) return err(res, 400, extraction.error);
+      const { included, omitted } = extraction;
+      if (!included.length) return err(res, 400, 'no text files matched the bounds — nothing to import (see omitted reasons for what was skipped)');
+
+      const pc = _require('../../lib/project-container.js');
+      // Repo name mirrors repo.import-archive's own fallback: an explicit
+      // name always wins, else derive one from the zip's own filename —
+      // the container's own `name` (from the start-prompt) is used for
+      // the compartment/manifest identity below, kept distinct on purpose
+      // (a repo can be renamed later; the container's declared name is
+      // what the end-state goal was written against).
+      const repoName = (body.name || filename.replace(/\.zip$/i, '')).slice(0, 200);
+      const ingestResult = getRepoLayer().ingest({
+        name: repoName, files: included, source: 'import-project', compartmentId: body.compartmentId || null,
+      });
+      if (ingestResult.error) return err(res, 400, ingestResult.error);
+
+      const repoUuid = ingestResult.repo.uuid;
+      const mat = getRepoLayer().materialize(repoUuid);
+      if (mat.error) return err(res, 500, `materialize after ingest failed: ${mat.error}`);
+
+      const result = await pc.finalizeContainer({
+        containerUuid: params.uuid, repoUuid, repoDir: mat.dir, fileCount: included.length,
+      });
+      return ok(res, {
+        ...result, repo: ingestResult.repo, deduped: !!ingestResult.deduped,
+        fileCount: included.length, omittedCount: omitted.length, omitted: omitted.slice(0, 50),
+      });
     }
 
     case 'repo.fork': {

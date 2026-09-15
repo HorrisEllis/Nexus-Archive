@@ -134,3 +134,106 @@
   overflow-y: auto;
 }
 .ip-omitted-row { padding: 2px 0; }
+
+/* ── added §UPLOAD-PROJECT 2026-09-15 — step indicator, prompt panel, chips ── */
+
+.ip-steps {
+  width: min(640px, 90vw);
+  display: flex;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.ip-step {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--edge);
+}
+.ip-step span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  border: 1px solid var(--rim);
+  font-size: 10px;
+}
+.ip-step.active { color: var(--bright); border-color: var(--ac-border); }
+.ip-step.active span { border-color: var(--ac-border); background: var(--ac-dim); }
+.ip-step.done { color: var(--dim); }
+.ip-step.done span { background: var(--ok); border-color: var(--ok); }
+
+.ip-panel {
+  width: min(640px, 90vw);
+  background: var(--panel);
+  border: 1px solid var(--edge);
+  border-radius: 8px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ip-label {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 8px;
+}
+
+.ip-text, .ip-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--ink);
+  border: 1px solid var(--rim);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+  padding: 8px 10px;
+  resize: vertical;
+}
+.ip-text:focus, .ip-textarea:focus { outline: none; border-color: var(--ac-border); }
+
+.ip-hint {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.ip-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.ip-chip {
+  font-size: 12px;
+  color: var(--dim);
+  background: transparent;
+  border: 1px solid var(--rim);
+  border-radius: 999px;
+  padding: 5px 12px;
+  cursor: pointer;
+}
+.ip-chip:hover { border-color: var(--ac-border); color: var(--bright); background: var(--ac-ghost); }
+
+.ip-form-actions {
+  margin-top: 10px;
+  display: flex;
+  gap: 10px;
+}
+.ip-form-actions .ip-btn { flex: 1; }
+
+.ip-container-note {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.ip-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

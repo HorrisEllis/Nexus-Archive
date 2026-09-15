@@ -93,7 +93,23 @@ export class RepoLayer {
       // behind after materialize() runs; the tree is always regenerated
       // to genuinely match the manifest's current, real state, not
       // merged with whatever happened to be there before.
+      //
+      // §PRESERVED 2026-09-15 — lib/project-container.js's finalize step
+      // writes manifest.json, project.json, and a real .git directory
+      // straight into this same outDir, AFTER the spec-engine manifest
+      // (this.get(repoUuid).files) was built — none of those three are
+      // spec chunks, so they were never going to survive the next
+      // deleteFile()/writeFile()-triggered materialize() (see
+      // _materializeQuiet's call sites) without this exclusion. Losing a
+      // repo's own .git history and its import manifest the first time
+      // someone edits a file in it would silently undo exactly what
+      // "Upload Project" was asked to produce — this skip-list is
+      // narrow and name-based on purpose: it does not special-case
+      // "top-level files added later" generally, only the three real,
+      // known artifacts project-container.js owns.
+      const PRESERVE = new Set(['.git', 'manifest.json', 'project.json']);
       for (const entry of fs.readdirSync(outDir)) {
+        if (PRESERVE.has(entry)) continue;
         fs.rmSync(path.join(outDir, entry), { recursive: true, force: true });
       }
 
