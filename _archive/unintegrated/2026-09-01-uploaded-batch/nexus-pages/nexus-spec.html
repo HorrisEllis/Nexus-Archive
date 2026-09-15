@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>NEXUS — Spec + Planner</title>
+  <link rel="stylesheet" href="src/ui/nexus.css"/>
+  <style>
+    /* ── standalone page overrides ── */
+    html,body{height:100%;margin:0;overflow:hidden;}
+    #app{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
+    #top-bar{flex-shrink:0;display:flex;align-items:center;gap:8px;padding:0 14px;height:36px;background:var(--bg1);border-bottom:1px solid var(--border);-webkit-app-region:drag;}
+    #nav-bar{flex-shrink:0;display:flex;align-items:stretch;height:30px;background:var(--bg2);border-bottom:1px solid var(--border);padding:0 10px;gap:1px;overflow-x:auto;}
+    #main{flex:1;min-height:0;position:relative;overflow:hidden;display:flex;flex-direction:column;}
+    .tab-panel{display:none;flex:1;min-height:0;flex-direction:column;overflow:hidden;}
+    .tab-panel.active{display:flex;}
+    /* page nav pill */
+    #page-nav{display:flex;gap:4px;margin-left:auto;}
+    #page-nav a{font-family:var(--display);font-size:9px;letter-spacing:.14em;color:var(--text3);padding:3px 8px;border:1px solid var(--border);border-radius:2px;text-decoration:none;transition:all .15s;}
+    #page-nav a:hover{color:var(--text);border-color:var(--border2);}
+    #page-nav a.current{color:var(--c);border-color:var(--c);opacity:.9;}
+  </style>
+</head>
+<body>
+<div id="app">
+  <div id="top-bar">
+    <span class="nxlogo rgb-text-anim" style="-webkit-app-region:no-drag">NEXUS</span>
+    <span class="nxver">v1.0.0</span>
+    <div class="pill pill-idle" id="pill-ai"><div class="pill-dot"></div><span id="pill-ai-txt">AI</span></div>
+    <div class="pill pill-idle" id="bridge-status-pill" style="margin-left:4px"><div class="pill-dot"></div><span id="bridge-status-txt">BRIDGE</span></div>
+    <div id="page-nav">
+      <a href="nexus-spec.html" class="current">SPEC + PLANNER</a>
+      <a href="nexus-coder.html">CODER + BUILDER</a>
+      <a href="nexus-compiler.html">COMPILER + CONSOLIDATOR</a>
+      <a href="nexus-testenv.html">TEST + DEBUG</a>
+    </div>
+  </div>
+  <nav id="nav-bar">
+    <button class="tab-btn" data-tab="roadmap" onclick="switchTab('roadmap')">ROADMAP</button>
+    <button class="tab-btn" data-tab="ideas"   onclick="switchTab('ideas')">IDEA TRACKER</button>
+  </nav>
+  <div id="main">
+    <!-- ══ ROADMAP (global) ══ -->
+    <section class="tab-panel" id="tab-roadmap" style="flex-direction:column">
+      <div class="proj-toolbar">
+        <span style="font-family:var(--display);font-size:13px;letter-spacing:.2em;color:var(--c)">GLOBAL ROADMAP</span>
+        <select class="finp" id="rm-project-filter" style="max-width:160px" onchange="renderRoadmap()"><option value="">All Projects</option></select>
+        <button class="btn ok" id="rm-add-btn">+ ITEM</button>
+        <span style="font-size:9px;color:var(--text3);margin-left:auto" id="rm-count">0 items</span>
+      </div>
+      <div class="rm-board" id="rm-board"></div>
+    </section>
+
+
+    <!-- ══ IDEA TRACKER ══ -->
+    <section class="tab-panel" id="tab-ideas" style="flex-direction:column">
+      <div class="proj-toolbar">
+        <span style="font-family:var(--display);font-size:13px;letter-spacing:.2em;color:var(--m)">IDEA TRACKER</span>
+        <select class="finp" id="it-type-filter" style="max-width:160px" onchange="renderIdeas()">
+          <option value="">All Types</option>
+          <option value="input">Inputs</option>
+          <option value="output">Outputs</option>
+          <option value="idea">Ideas</option>
+          <option value="error">Errors</option>
+        </select>
+        <select class="finp" id="it-proj-filter" style="max-width:160px" onchange="renderIdeas()"><option value="">All Projects</option></select>
+        <input class="finp" id="it-search" placeholder="Search ideas…" oninput="renderIdeas()" style="max-width:200px"/>
+        <button class="btn" onclick="ideaExport()">⬇ EXPORT</button>
+        <button class="btn danger" onclick="ideaClear()">CLEAR</button>
+        <button class="btn" onclick="openModal('chat-pipe-modal')" style="color:var(--m);border-color:rgba(204,68,255,.3);margin-left:auto">⟁ CHAT PIPE</button>
+      </div>
+      <div class="it-grid">
+        <div class="it-feed" id="it-feed"><div style="font-size:11px;color:var(--text3);font-style:italic;padding:20px">No ideas tracked yet. Use the console or builder to generate ideas.</div></div>
+        <div class="it-sidebar">
+          <div class="it-sidebar-head">ANALYTICS</div>
+          <div class="it-stats">
+            <div class="it-stat"><span>Total entries</span><span class="it-stat-val" id="it-total">0</span></div>
+            <div class="it-stat"><span>Inputs logged</span><span class="it-stat-val" id="it-inputs">0</span></div>
+            <div class="it-stat"><span>Outputs logged</span><span class="it-stat-val" id="it-outputs">0</span></div>
+            <div class="it-stat"><span>Ideas surfaced</span><span class="it-stat-val" id="it-ideas-count" style="color:var(--m)">0</span></div>
+            <div class="it-stat"><span>Errors logged</span><span class="it-stat-val" id="it-errors-count" style="color:var(--r)">0</span></div>
+          </div>
+          <div style="padding:0 14px;margin-bottom:10px">
+            <div class="chat-link-box" id="chat-link-box" style="display:none">
+              <div class="chat-link-label">LINKED CHAT</div>
+              <div class="chat-link-val" id="chat-link-val">—</div>
+              <button class="btn" style="font-size:9px;padding:2px 8px;margin-top:4px;color:var(--r)" onclick="chatPipeDisconnect()">DISCONNECT</button>
+            </div>
+          </div>
+          <div style="padding:0 14px">
+            <button class="btn primary" style="width:100%;padding:8px" onclick="openModal('chat-pipe-modal')">⟁ SET CLAUDE CHAT</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+  </div>
+</div>
+  <script src="src/ui/nexus-boot.js"></script>
+  <script src="src/ui/nexus-core.js"></script>
+  <script src="src/ui/nexus-uuid.js"></script>
+  <script src="src/ui/nexus-auth.js"></script>
+  <script src="src/ui/nexus-diag.js"></script>
+  <script src="src/ui/nexus-patches.js"></script>
+  <script src="src/ui/nexus-patch-modular.js"></script>
+  <script src="src/ui/nexus-phase1.js"></script>
+  <script src="src/ui/nexus-phase2.js"></script>
+  <script src="src/ui/nexus-phase3.js"></script>
+  <script src="src/ui/nexus-phase4.js"></script>
+  <script src="src/ui/nexus-phase5.js"></script>
+  <script src="src/ui/nexus-siso-fw.js"></script>
+  <script src="src/ui/nexus-siso-health.js"></script>
+  <script src="src/ui/nexus-guardian.js"></script>
+  <script src="src/ui/nexus-home.js"></script>
+<script>
+(function(){
+  // ── minimal tab switcher ──────────────────────────────────────
+  function switchTab(id){
+    document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b=>b.removeAttribute('data-active'));
+    const panel=document.getElementById('tab-'+id);
+    const btn=document.querySelector('[data-tab="'+id+'"]');
+    if(panel) panel.classList.add('active');
+    if(btn)   btn.dataset.active='true';
+    window._activeTab=id;
+  }
+  window.switchTab=switchTab;
+  // activate first tab on load
+  window.addEventListener('DOMContentLoaded',function(){
+    const first=document.querySelector('.tab-btn');
+    if(first) switchTab(first.dataset.tab);
+  });
+})();
+</script>
+</body>
+</html>

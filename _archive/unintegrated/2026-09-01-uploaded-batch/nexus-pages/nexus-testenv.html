@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>NEXUS — Test Env + Debugging</title>
+  <link rel="stylesheet" href="src/ui/nexus.css"/>
+  <style>
+    /* ── standalone page overrides ── */
+    html,body{height:100%;margin:0;overflow:hidden;}
+    #app{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
+    #top-bar{flex-shrink:0;display:flex;align-items:center;gap:8px;padding:0 14px;height:36px;background:var(--bg1);border-bottom:1px solid var(--border);-webkit-app-region:drag;}
+    #nav-bar{flex-shrink:0;display:flex;align-items:stretch;height:30px;background:var(--bg2);border-bottom:1px solid var(--border);padding:0 10px;gap:1px;overflow-x:auto;}
+    #main{flex:1;min-height:0;position:relative;overflow:hidden;display:flex;flex-direction:column;}
+    .tab-panel{display:none;flex:1;min-height:0;flex-direction:column;overflow:hidden;}
+    .tab-panel.active{display:flex;}
+    /* page nav pill */
+    #page-nav{display:flex;gap:4px;margin-left:auto;}
+    #page-nav a{font-family:var(--display);font-size:9px;letter-spacing:.14em;color:var(--text3);padding:3px 8px;border:1px solid var(--border);border-radius:2px;text-decoration:none;transition:all .15s;}
+    #page-nav a:hover{color:var(--text);border-color:var(--border2);}
+    #page-nav a.current{color:var(--g);border-color:var(--g);opacity:.9;}
+  </style>
+</head>
+<body>
+<div id="app">
+  <div id="top-bar">
+    <span class="nxlogo rgb-text-anim" style="-webkit-app-region:no-drag">NEXUS</span>
+    <span class="nxver">v1.0.0</span>
+    <div class="pill pill-idle" id="pill-ai"><div class="pill-dot"></div><span id="pill-ai-txt">AI</span></div>
+    <div class="pill pill-idle" id="bridge-status-pill" style="margin-left:4px"><div class="pill-dot"></div><span id="bridge-status-txt">BRIDGE</span></div>
+    <div id="page-nav">
+      <a href="nexus-spec.html">SPEC + PLANNER</a>
+      <a href="nexus-coder.html">CODER + BUILDER</a>
+      <a href="nexus-compiler.html">COMPILER + CONSOLIDATOR</a>
+      <a href="nexus-testenv.html" class="current">TEST + DEBUG</a>
+    </div>
+  </div>
+  <nav id="nav-bar">
+    <button class="tab-btn" data-tab="testenv" onclick="switchTab('testenv')" style="color:var(--g)">⬡ TEST ENV</button>
+    <button class="tab-btn" data-tab="tests"   onclick="switchTab('tests')"">TEST SUITE</button>
+    <button class="tab-btn" data-tab="diagnose" onclick="switchTab('diagnose')" style="color:var(--g)">⬡ DIAGNOSE</button>
+  </nav>
+  <div id="main">
+    <!-- ══ TEST ENVIRONMENT ══ -->
+    <section class="tab-panel" id="tab-testenv" style="flex-direction:column;">
+      <!-- TEST ENV top bar -->
+      <div style="flex-shrink:0;display:flex;align-items:center;gap:8px;padding:6px 14px;background:var(--bg1);border-bottom:1px solid var(--border);">
+        <span style="font-family:var(--display);font-size:14px;letter-spacing:.22em;color:var(--g);text-shadow:0 0 20px rgba(0,255,136,.3)">⬡ TEST ENVIRONMENT</span>
+        <span style="font-size:9px;color:var(--text3)">Sandboxed · PHP 8.3 · Apache2 · MySQL · Isolated Instances</span>
+        <div style="margin-left:auto;display:flex;gap:6px;align-items:center;">
+          <div class="pill pill-idle" id="te-status-pill"><div class="pill-dot"></div><span id="te-status-txt">OFFLINE</span></div>
+          <button class="btn ok" onclick="teStart()" style="font-size:10px">▶ START ENV</button>
+          <button class="btn danger" onclick="teStop()" style="font-size:10px">■ STOP</button>
+        </div>
+      </div>
+      <!-- TEST ENV sub-tabs -->
+      <div style="flex-shrink:0;display:flex;align-items:stretch;height:30px;background:var(--bg2);border-bottom:1px solid var(--border);padding:0 12px;gap:1px;">
+        <button class="ptab" data-tetab="dashboard" data-active="true" onclick="teSwitchTab('dashboard',this)">DASHBOARD</button>
+        <button class="ptab" data-tetab="instances" onclick="teSwitchTab('instances',this)">INSTANCES</button>
+        <button class="ptab" data-tetab="php" onclick="teSwitchTab('php',this)">PHP 8.3</button>
+        <button class="ptab" data-tetab="apache" onclick="teSwitchTab('apache',this)">APACHE2</button>
+        <button class="ptab" data-tetab="mysql" onclick="teSwitchTab('mysql',this)">MYSQL</button>
+        <button class="ptab" data-tetab="runner" onclick="teSwitchTab('runner',this)">TEST RUNNER</button>
+        <button class="ptab" data-tetab="browser" onclick="teSwitchTab('browser',this)">BROWSER SIM</button>
+        <button class="ptab" data-tetab="network" onclick="teSwitchTab('network',this)">NETWORK</button>
+        <button class="ptab" data-tetab="logs" onclick="teSwitchTab('logs',this)">LOGS</button>
+        <button class="ptab" data-tetab="tests" onclick="teSwitchTab('tests',this)" style="color:var(--g)">✓ TESTS</button>
+      </div>
+      <!-- TEST ENV panels -->
+      <div style="flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;">
+
+        <!-- DASHBOARD -->
+        <div class="te-sub" id="tes-dashboard" style="display:flex;flex:1;min-height:0;overflow:hidden;" data-tetab-panel="dashboard">
+          <div style="flex:1;min-height:0;overflow-y:auto;padding:14px 18px;">
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-bottom:16px;">
+              <div class="mcard"><div class="mcard-title">ACTIVE INSTANCES</div><div class="mcard-val neutral" id="te-inst-count">0</div></div>
+              <div class="mcard"><div class="mcard-title">PHP VERSION</div><div class="mcard-val neutral" id="te-php-ver">8.3.x</div></div>
+              <div class="mcard"><div class="mcard-title">APACHE STATUS</div><div class="mcard-val neutral" id="te-apache-status">STOPPED</div></div>
+              <div class="mcard"><div class="mcard-title">MYSQL STATUS</div><div class="mcard-val neutral" id="te-mysql-status">STOPPED</div></div>
+              <div class="mcard"><div class="mcard-title">OPEN PORTS</div><div class="mcard-val neutral" id="te-ports">—</div></div>
+              <div class="mcard"><div class="mcard-title">TESTS PASSED</div><div class="mcard-val ok" id="te-tests-pass">—</div></div>
+            </div>
+            <div style="font-family:var(--display);font-size:11px;letter-spacing:.2em;color:var(--text3);margin-bottom:10px">// QUICK ACTIONS</div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-bottom:16px;">
+              <button class="btn ok" style="padding:10px 14px;text-align:left" onclick="teSpawnInstance()">⊕ NEW SANDBOXED INSTANCE<br><span style="font-size:9px;color:var(--text3);font-family:var(--mono)">PHP 8.3 + Apache + MySQL</span></button>
+              <button class="btn accent" style="padding:10px 14px;text-align:left" onclick="teDeployFromForge()">⟁ DEPLOY FROM FORGE IDE<br><span style="font-size:9px;color:var(--text3);font-family:var(--mono)">Send current editor file to env</span></button>
+              <button class="btn" style="padding:10px 14px;text-align:left;color:var(--m);border-color:rgba(204,68,255,.3)" onclick="teRunAllTests()">◈ RUN ALL TESTS<br><span style="font-size:9px;color:var(--text3);font-family:var(--mono)">PHPUnit + integration + E2E</span></button>
+              <button class="btn" style="padding:10px 14px;text-align:left;color:var(--y);border-color:rgba(255,204,0,.3)" onclick="teOpenBrowserSim()">▦ BROWSER SIMULATION<br><span style="font-size:9px;color:var(--text3);font-family:var(--mono)">Headless · Guardian-ready</span></button>
+              <button class="btn" style="padding:10px 14px;text-align:left;color:var(--c);border-color:rgba(0,212,255,.3)" onclick="teSwitchTab('mysql',document.querySelector('[data-tetab=mysql]'))">⊛ MYSQL CONSOLE<br><span style="font-size:9px;color:var(--text3);font-family:var(--mono)">Query · Inspect · Migrate</span></button>
+              <button class="btn" style="padding:10px 14px;text-align:left;" onclick="teSwitchTab('network',document.querySelector('[data-tetab=network]'))">⟐ NETWORK MONITOR<br><span style="font-size:9px;color:var(--text3);font-family:var(--mono)">HTTP · WebSocket · API calls</span></button>
+            </div>
+            <div style="font-family:var(--display);font-size:11px;letter-spacing:.2em;color:var(--text3);margin-bottom:10px">// ENVIRONMENT STACK</div>
+            <div id="te-stack-vis" style="display:flex;flex-direction:column;gap:6px;max-width:600px;">
+              <div class="te-stack-layer" data-status="stopped" onclick="teToggleService('apache')">
+                <div class="te-sl-icon">🌐</div>
+                <div class="te-sl-info"><div class="te-sl-name">APACHE 2.4</div><div class="te-sl-desc">HTTP/HTTPS · VirtualHosts · mod_rewrite · SSL · Port 80/443</div></div>
+                <div class="te-sl-right"><div class="te-sl-status" id="te-sl-apache">STOPPED</div><div class="te-sl-port">:80/:443</div></div>
+              </div>
+              <div class="te-stack-layer" data-status="stopped" onclick="teToggleService('php')">
+                <div class="te-sl-icon">🐘</div>
+                <div class="te-sl-info"><div class="te-sl-name">PHP 8.3</div><div class="te-sl-desc">FastCGI · Composer · Extensions: pdo, curl, json, mbstring, gd, zip, redis, xdebug</div></div>
+                <div class="te-sl-right"><div class="te-sl-status" id="te-sl-php">STOPPED</div><div class="te-sl-port">FPM</div></div>
+              </div>
+              <div class="te-stack-layer" data-status="stopped" onclick="teToggleService('mysql')">
+                <div class="te-sl-icon">🗄</div>
+                <div class="te-sl-info"><div class="te-sl-name">MYSQL 8.0</div><div class="te-sl-desc">InnoDB · utf8mb4 · GTID replication · JSON columns · 3306</div></div>
+                <div class="te-sl-right"><div class="te-sl-status" id="te-sl-mysql">STOPPED</div><div class="te-sl-port">:3306</div></div>
+              </div>
+              <div class="te-stack-layer" data-status="stopped" onclick="teToggleService('redis')">
+                <div class="te-sl-icon">⚡</div>
+                <div class="te-sl-info"><div class="te-sl-name">REDIS 7</div><div class="te-sl-desc">In-memory cache · Session store · Pub/Sub · Port 6379</div></div>
+                <div class="te-sl-right"><div class="te-sl-status" id="te-sl-redis">STOPPED</div><div class="te-sl-port">:6379</div></div>
+              </div>
+              <div class="te-stack-layer" data-status="stopped" onclick="teToggleService('mailhog')">
+                <div class="te-sl-icon">📧</div>
+                <div class="te-sl-info"><div class="te-sl-name">MAILHOG</div><div class="te-sl-desc">SMTP trap · Web UI · Catch all outbound mail · Port 1025/8025</div></div>
+                <div class="te-sl-right"><div class="te-sl-status" id="te-sl-mailhog">STOPPED</div><div class="te-sl-port">:1025</div></div>
+              </div>
+              <div class="te-stack-layer" data-status="stopped" onclick="teToggleService('node')">
+                <div class="te-sl-icon">🟢</div>
+                <div class="te-sl-info"><div class="te-sl-name">NODE.JS 20 LTS</div><div class="te-sl-desc">npm/yarn/pnpm · Express · Fastify · NestJS · Port configurable</div></div>
+                <div class="te-sl-right"><div class="te-sl-status" id="te-sl-node">STOPPED</div><div class="te-sl-port">:3000</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- INSTANCES -->
+        <div class="te-sub" id="tes-instances" style="display:none;flex:1;min-height:0;flex-direction:column;overflow:hidden;">
+          <div style="flex-shrink:0;padding:8px 14px;background:var(--bg1);border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center;">
+            <span style="font-family:var(--display);font-size:11px;letter-spacing:.18em;color:var(--g)">SANDBOX INSTANCES</span>
+            <button class="btn ok" style="font-size:9px;margin-left:auto" onclick="teSpawnInstance()">⊕ NEW INSTANCE</button>
+            <button class="btn danger" style="font-size:9px" onclick="teKillAll()">✕ KILL ALL</button>
+          </div>
+          <div id="te-instance-list" style="flex:1;overflow-y:auto;padding:10px 14px;display:flex;flex-direction:column;gap:8px;">
+            <div style="font-size:11px;color:var(--text3);font-style:italic">No instances running. Click ⊕ NEW INSTANCE to spawn one.</div>
+          </div>
+        </div>
+
+        <!-- PHP PANEL -->
+        <div class="te-sub" id="tes-php" style="display:none;flex:1;min-height:0;flex-direction:column;overflow:hidden;">
+          <div style="flex:1;overflow:hidden;display:flex;">
+            <div style="width:240px;flex-shrink:0;border-right:1px solid var(--border);overflow-y:auto;padding:10px;background:var(--bg1);display:flex;flex-direction:column;gap:8px;">
+              <div style="font-family:var(--display);font-size:10px;letter-spacing:.18em;color:var(--text3)">PHP CONFIGURATION</div>
+              <div class="frow"><span class="flbl" style="flex:0 0 100px">Version</span><select class="finp" style="font-size:10px"><option>PHP 8.3</option><option>PHP 8.2</option><option>PHP 8.1</option><option>PHP 8.0</option><option>PHP 7.4</option></select></div>
+              <div class="frow"><span class="flbl" style="flex:0 0 100px">memory_limit</span><input class="finp" value="512M" style="font-size:10px"/></div>
+              <div class="frow"><span class="flbl" style="flex:0 0 100px">max_execution</span><input class="finp" value="300" style="font-size:10px"/></div>
+              <div class="frow"><span class="flbl" style="flex:0 0 100px">upload_max</span><input class="finp" value="64M" style="font-size:10px"/></div>
+              <div style="font-family:var(--display);font-size:10px;letter-spacing:.18em;color:var(--text3);margin-top:4px">EXTENSIONS</div>
+              <div style="display:flex;flex-wrap:wrap;gap:3px;">
+                <label class="chk on" onclick="this.classList.toggle('on')"><div class="chk-dot"></div>pdo_mysql</label>
+                <label class="chk on" onclick="this.classList.toggle('on')"><div class="chk-dot"></div>curl</label>
+                <label class="chk on" onclick="this.classList.toggle('on')"><div class="chk-dot"></div>json</label>
+                <label class="chk on" onclick="this.classList.toggle('on')"><div class="chk-dot"></div>mbstring</label>
+                <label class="chk on" onclick="this.classList.toggle('on')"><div class="chk-dot"></div>gd</label>
+                <label class="chk" onclick="this.classList.toggle('on')"><div class="chk-dot"></div>redis</label>
+                <label class="chk" onclick="this.classList.toggle('on')"><div class="chk-dot"></div>xdebug</label>
+                <label class="chk" onclick="this.classList.toggle('on')"><div class="chk-dot"></div>opcache</label>
+                <label class="chk" onclick="this.classList.toggle('on')"><div class="chk-dot"></div>imagick</label>
+                <label class="chk" onclick="this.classList.toggle('on')"><div class="chk-dot"></div>zip</label>
+                <label class="chk" onclick="this.classList.toggle('on')"><div class="chk-dot"></div>soap</label>
+                <label class="chk" onclick="this.classList.toggle('on')"><div class="chk-dot"></div>intl</label>
+                <label class="chk" onclick="this.classList.toggle('on')"><div class="chk-dot"></div>bcmath</label>
+                <label class="chk" onclick="this.classList.toggle('on')"><div class="chk-dot"></div>openssl</label>
+                <label class="chk" onclick="this.classList.toggle('on')"><div class="chk-dot"></div>pcntl</label>
+                <label class="chk" onclick="this.classList.toggle('on')"><div class="chk-dot"></div>sockets</label>
+              </div>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+              <div style="flex-shrink:0;padding:6px 12px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;">
+                <span style="font-size:10px;color:var(--text3)">PHP REPL / RUNNER</span>
+                <div style="margin-left:auto;display:flex;gap:4px;">
+                  <button class="btn ok" style="font-size:9px" onclick="teRunPhp()">▶ RUN PHP</button>
+                  <button class="btn accent" style="font-size:9px" onclick="teRunPhpUnit()">PHPUnit</button>
+                </div>
+              </div>
+              <textarea id="te-php-editor" class="finp" style="flex:1;resize:none;font-size:11px;padding:10px;line-height:1.7;font-family:var(--mono);background:var(--bg);color:var(--text)" placeholder="<?php&#10;&#10;// Write PHP 8.3 code here to test&#10;$data = ['hello' => 'world'];&#10;echo json_encode($data, JSON_PRETTY_PRINT);"></textarea>
+              <div id="te-php-output" style="height:160px;flex-shrink:0;border-top:1px solid var(--border);padding:8px 12px;font-family:var(--mono);font-size:10px;overflow-y:auto;color:var(--text2);background:var(--bg);">// PHP output…</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- APACHE PANEL -->
+        <div class="te-sub" id="tes-apache" style="display:none;flex:1;min-height:0;flex-direction:column;overflow:hidden;">
+          <div style="flex:1;overflow:hidden;display:flex;">
+            <div style="width:260px;flex-shrink:0;border-right:1px solid var(--border);overflow-y:auto;padding:10px;background:var(--bg1);display:flex;flex-direction:column;gap:8px;">
+              <div style="font-family:var(--display);font-size:10px;letter-spacing:.18em;color:var(--text3)">VIRTUAL HOSTS</div>
+              <div id="te-vhosts" style="display:flex;flex-direction:column;gap:4px;">
+                <div class="te-vhost-card"><div style="font-size:10px;color:var(--text)">localhost:8080</div><div style="font-size:9px;color:var(--text3)">/var/www/html — default</div></div>
+              </div>
+              <button class="btn ok" style="font-size:9px" onclick="teAddVhost()">⊕ ADD VHOST</button>
+              <div style="font-family:var(--display);font-size:10px;letter-spacing:.18em;color:var(--text3);margin-top:4px">MODULES</div>
+              <div style="display:flex;flex-wrap:wrap;gap:3px;">
+                <label class="chk on" onclick="this.classList.toggle('on')"><div class="chk-dot"></div>mod_rewrite</label>
+                <label class="chk on" onclick="this.classList.toggle('on')"><div class="chk-dot"></div>mod_ssl</label>
+                <label class="chk on" onclick="this.classList.toggle('on')"><div class="chk-dot"></div>mod_headers</label>
+                <label class="chk" onclick="this.classList.toggle('on')"><div class="chk-dot"></div>mod_deflate</label>
+                <label class="chk" onclick="this.classList.toggle('on')"><div class="chk-dot"></div>mod_expires</label>
+                <label class="chk" onclick="this.classList.toggle('on')"><div class="chk-dot"></div>mod_proxy</label>
+                <label class="chk" onclick="this.classList.toggle('on')"><div class="chk-dot"></div>mod_proxy_fcgi</label>
+                <label class="chk" onclick="this.classList.toggle('on')"><div class="chk-dot"></div>mod_status</label>
+                <label class="chk" onclick="this.classList.toggle('on')"><div class="chk-dot"></div>mod_auth_basic</label>
+                <label class="chk" onclick="this.classList.toggle('on')"><div class="chk-dot"></div>mod_security</label>
+              </div>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+              <div style="flex-shrink:0;padding:6px 12px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;">
+                <span style="font-size:10px;color:var(--text3)">APACHE CONFIGURATION</span>
+                <div style="margin-left:auto;display:flex;gap:4px;">
+                  <button class="btn ok" style="font-size:9px" onclick="teApacheApply()">▶ APPLY CONFIG</button>
+                  <button class="btn" style="font-size:9px" onclick="teApacheTest()">TEST CONFIG</button>
+                </div>
+              </div>
+              <textarea id="te-apache-conf" class="finp" style="flex:1;resize:none;font-size:11px;padding:10px;line-height:1.7;font-family:var(--mono);background:var(--bg);color:var(--text)"><VirtualHost *:8080>
+    ServerName localhost
+    DocumentRoot /var/www/html
+    DirectoryIndex index.php index.html
+
+    <Directory /var/www/html>
+        AllowOverride All
+        Require all granted
+    </Directory>
+
+    ErrorLog /var/log/apache2/error.log
+    CustomLog /var/log/apache2/access.log combined
+
+    <FilesMatch \.php$>
+        SetHandler "proxy:unix:/run/php/php8.3-fpm.sock|fcgi://localhost"
+    </FilesMatch>
+</VirtualHost></textarea>
+              <div id="te-apache-log" style="height:120px;flex-shrink:0;border-top:1px solid var(--border);padding:6px 10px;font-family:var(--mono);font-size:9px;overflow-y:auto;color:var(--text2);background:var(--bg);">// Apache output…</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- MYSQL PANEL -->
+        <div class="te-sub" id="tes-mysql" style="display:none;flex:1;min-height:0;flex-direction:column;overflow:hidden;">
+          <div style="flex:1;overflow:hidden;display:flex;">
+            <div style="width:220px;flex-shrink:0;border-right:1px solid var(--border);overflow-y:auto;padding:10px;background:var(--bg1);display:flex;flex-direction:column;gap:6px;">
+              <div style="font-family:var(--display);font-size:10px;letter-spacing:.18em;color:var(--text3)">DATABASES</div>
+              <div id="te-db-list" style="display:flex;flex-direction:column;gap:2px;">
+                <div class="te-db-item active" onclick="teSelectDb(this,'nexus_test')"><span style="font-size:10px;color:var(--c)">nexus_test</span><span style="font-size:8px;color:var(--text3);margin-left:auto">4 tables</span></div>
+                <div class="te-db-item" onclick="teSelectDb(this,'test')"><span style="font-size:10px;color:var(--text)">test</span><span style="font-size:8px;color:var(--text3);margin-left:auto">0 tables</span></div>
+              </div>
+              <button class="btn ok" style="font-size:9px" onclick="teCreateDb()">⊕ CREATE DB</button>
+              <div style="font-family:var(--display);font-size:10px;letter-spacing:.18em;color:var(--text3);margin-top:6px">TABLES</div>
+              <div id="te-table-list" style="display:flex;flex-direction:column;gap:2px;font-size:10px;color:var(--text2);">Select a database.</div>
+              <div style="font-family:var(--display);font-size:10px;letter-spacing:.18em;color:var(--text3);margin-top:6px">CONNECTION</div>
+              <div style="font-size:9px;color:var(--text3);line-height:1.8;">Host: localhost<br>Port: 3306<br>User: root<br>Pass: <span style="color:var(--r)">nexus_dev</span></div>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+              <div style="flex-shrink:0;padding:5px 10px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px;">
+                <span style="font-size:10px;color:var(--text3)">SQL CONSOLE</span>
+                <span id="te-db-active" style="font-size:9px;color:var(--c);font-family:var(--mono)">nexus_test</span>
+                <div style="margin-left:auto;display:flex;gap:4px;">
+                  <button class="btn ok" style="font-size:9px" onclick="teSqlRun()">▶ EXECUTE</button>
+                  <button class="btn" style="font-size:9px" onclick="teSqlExplain()">EXPLAIN</button>
+                  <button class="btn" style="font-size:9px" onclick="teSqlHistory()">HISTORY</button>
+                </div>
+              </div>
+              <textarea id="te-sql-editor" class="finp" style="height:160px;resize:none;font-size:11px;padding:10px;line-height:1.7;font-family:var(--mono);background:var(--bg);color:var(--text);flex-shrink:0;" placeholder="-- SQL query here&#10;SELECT * FROM users LIMIT 10;"></textarea>
+              <div style="flex-shrink:0;padding:3px 10px;background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border);display:flex;gap:6px;align-items:center;">
+                <span style="font-size:9px;color:var(--text3)">RESULT</span>
+                <span id="te-sql-rowcount" style="font-size:9px;color:var(--g)"></span>
+                <span id="te-sql-time" style="font-size:9px;color:var(--text3)"></span>
+                <button class="btn" style="font-size:8px;padding:1px 5px;margin-left:auto" onclick="teSqlExport()">⬇ CSV</button>
+              </div>
+              <div id="te-sql-results" style="flex:1;overflow:auto;padding:6px;background:var(--bg);">
+                <div style="font-size:10px;color:var(--text3);font-style:italic;padding:8px;">Run a query to see results.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TEST RUNNER -->
+        <div class="te-sub" id="tes-runner" style="display:none;flex:1;min-height:0;flex-direction:column;overflow:hidden;">
+          <div style="flex-shrink:0;padding:8px 14px;background:var(--bg1);border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <span style="font-family:var(--display);font-size:11px;letter-spacing:.18em;color:var(--m)">TEST RUNNER</span>
+            <select class="finp" id="te-runner-type" style="max-width:130px;font-size:10px">
+              <option value="phpunit">PHPUnit</option>
+              <option value="jest">Jest</option>
+              <option value="playwright">Playwright</option>
+              <option value="cypress">Cypress</option>
+              <option value="pytest">Pytest</option>
+              <option value="mocha">Mocha</option>
+              <option value="vitest">Vitest</option>
+              <option value="rspec">RSpec</option>
+              <option value="cargo">Cargo Test</option>
+              <option value="gotest">Go Test</option>
+            </select>
+            <label class="chk on" id="te-run-watch" onclick="this.classList.toggle('on')"><div class="chk-dot"></div>Watch</label>
+            <label class="chk" id="te-run-cover" onclick="this.classList.toggle('on')"><div class="chk-dot"></div>Coverage</label>
+            <label class="chk" id="te-run-bail" onclick="this.classList.toggle('on')"><div class="chk-dot"></div>Bail on fail</label>
+            <button class="btn ok" style="margin-left:auto;font-size:10px" onclick="teRunTests()">▶ RUN TESTS</button>
+            <button class="btn" style="font-size:10px" onclick="teGenTests()">⟡ GEN TESTS (AI)</button>
+          </div>
+          <div style="flex:1;min-height:0;display:flex;overflow:hidden;">
+            <div style="width:200px;flex-shrink:0;border-right:1px solid var(--border);overflow-y:auto;padding:6px;background:var(--bg1);">
+              <div style="font-size:9px;color:var(--text3);letter-spacing:.1em;padding:4px 6px;margin-bottom:4px">TEST SUITES</div>
+              <div id="te-suite-list" style="display:flex;flex-direction:column;gap:2px;"></div>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+              <div style="display:flex;gap:6px;padding:6px 10px;background:var(--bg2);border-bottom:1px solid var(--border);align-items:center;flex-shrink:0;">
+                <span class="mcard-title">PASSED</span><span class="mcard-val ok" style="font-size:14px" id="te-pass-ct">0</span>
+                <span class="mcard-title" style="margin-left:10px">FAILED</span><span class="mcard-val err" style="font-size:14px" id="te-fail-ct">0</span>
+                <span class="mcard-title" style="margin-left:10px">COVERAGE</span><span class="mcard-val neutral" style="font-size:14px" id="te-cov-pct">—%</span>
+                <div style="margin-left:auto;height:4px;width:120px;background:var(--border);border-radius:2px;overflow:hidden;"><div id="te-run-bar" style="height:100%;width:0%;background:var(--g);transition:width .3s;border-radius:2px;"></div></div>
+              </div>
+              <div id="te-runner-output" style="flex:1;overflow-y:auto;padding:8px 12px;font-family:var(--mono);font-size:10px;line-height:1.7;color:var(--text2);background:var(--bg);"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- BROWSER SIM -->
+        <div class="te-sub" id="tes-browser" style="display:none;flex:1;min-height:0;flex-direction:column;overflow:hidden;">
+          <div style="flex-shrink:0;display:flex;align-items:center;gap:6px;padding:5px 10px;background:var(--bg2);border-bottom:1px solid var(--border);">
+            <select class="finp" id="te-browser-type" style="max-width:100px;font-size:10px">
+              <option>Chrome</option><option>Firefox</option><option>Safari</option><option>Edge</option><option>Mobile</option>
+            </select>
+            <input class="finp" id="te-browser-url" value="http://localhost:8080" style="flex:1;font-size:10px" onkeydown="if(event.key==='Enter')teBrowserNav()"/>
+            <button class="btn ok" style="font-size:9px" onclick="teBrowserNav()">GO</button>
+            <button class="btn" style="font-size:9px" onclick="teBrowserRefresh()">↻</button>
+            <label class="chk" id="te-browser-mobile" onclick="this.classList.toggle('on')"><div class="chk-dot"></div>Mobile</label>
+            <label class="chk" id="te-browser-console" onclick="this.classList.toggle('on')"><div class="chk-dot"></div>Console</label>
+          </div>
+          <iframe id="te-browser-frame" style="flex:1;border:none;background:#fff;" src="about:blank"></iframe>
+        </div>
+
+        <!-- NETWORK -->
+        <div class="te-sub" id="tes-network" style="display:none;flex:1;min-height:0;flex-direction:column;overflow:hidden;">
+          <div style="flex-shrink:0;display:flex;align-items:center;gap:8px;padding:6px 12px;background:var(--bg1);border-bottom:1px solid var(--border);">
+            <span style="font-family:var(--display);font-size:11px;letter-spacing:.18em;color:var(--c)">NETWORK MONITOR</span>
+            <label class="chk on" onclick="this.classList.toggle('on')"><div class="chk-dot"></div>HTTP</label>
+            <label class="chk on" onclick="this.classList.toggle('on')"><div class="chk-dot"></div>WS</label>
+            <label class="chk" onclick="this.classList.toggle('on')"><div class="chk-dot"></div>gRPC</label>
+            <button class="btn danger" style="font-size:9px;margin-left:auto" onclick="teNetClear()">CLEAR</button>
+          </div>
+          <div style="flex-shrink:0;padding:3px 10px;background:var(--bg2);border-bottom:1px solid var(--border);">
+            <div style="display:grid;grid-template-columns:80px 50px 60px 1fr 80px 80px;gap:8px;font-size:9px;letter-spacing:.12em;color:var(--text3);text-transform:uppercase;padding:3px 0;">
+              <span>TIME</span><span>METHOD</span><span>STATUS</span><span>URL</span><span>TYPE</span><span>DURATION</span>
+            </div>
+          </div>
+          <div id="te-net-log" style="flex:1;overflow-y:auto;padding:0 10px 8px;"></div>
+        </div>
+
+        <!-- LOGS -->
+        <div class="te-sub" id="tes-logs" style="display:none;flex:1;min-height:0;flex-direction:column;overflow:hidden;">
+          <div style="flex-shrink:0;display:flex;align-items:center;gap:8px;padding:6px 12px;background:var(--bg1);border-bottom:1px solid var(--border);">
+            <select class="finp" id="te-log-source" style="max-width:140px;font-size:10px" onchange="teLogSwitch()">
+              <option value="apache">Apache Error</option>
+              <option value="apache-access">Apache Access</option>
+              <option value="php">PHP Error</option>
+              <option value="mysql">MySQL</option>
+              <option value="app">App Log</option>
+              <option value="xdebug">Xdebug</option>
+            </select>
+            <input class="finp" id="te-log-filter" placeholder="Filter…" style="max-width:200px;font-size:10px" oninput="teLogFilter()"/>
+            <label class="chk on" id="te-log-follow" onclick="this.classList.toggle('on')"><div class="chk-dot"></div>Follow</label>
+            <button class="btn danger" style="font-size:9px;margin-left:auto" onclick="teLogClear()">CLEAR</button>
+          </div>
+          <div id="te-log-body" style="flex:1;overflow-y:auto;padding:6px 12px;font-family:var(--mono);font-size:10px;line-height:1.7;color:var(--text2);background:var(--bg);">// Select a log source to view output…</div>
+        </div>
+
+        <!-- TESTS (in testenv subnav) -->
+        <div class="te-sub" id="tes-tests" style="display:none;flex:1;min-height:0;flex-direction:column;overflow:hidden;">
+          <div style="flex-shrink:0;padding:8px 14px;background:var(--bg1);border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <span style="font-family:var(--display);font-size:11px;letter-spacing:.18em;color:var(--g)">✓ JS TESTS</span>
+            <div class="pill pill-idle" id="te-pw-pill" style="font-size:8px"><div class="pill-dot"></div><span>IDLE</span></div>
+            <div style="margin-left:auto;display:flex;gap:6px;align-items:center;">
+              <span style="font-size:9px;color:var(--text3)">Pass <b id="te-pw-pass" style="color:var(--g)">0</b> / Fail <b id="te-pw-fail" style="color:var(--r)">0</b> / Total <b id="te-pw-total" style="color:var(--c)">0</b></span>
+              <button class="btn ok" style="font-size:10px" onclick="teRunPWTests()">▶ RUN ALL</button>
+              <button class="btn" style="font-size:10px" onclick="teRunPWSmokeTests()">⟁ SMOKE</button>
+              <button class="btn danger" style="font-size:9px" onclick="document.getElementById('te-pw-results').innerHTML='';document.getElementById('te-pw-pass').textContent='0';document.getElementById('te-pw-fail').textContent='0';document.getElementById('te-pw-total').textContent='0';">CLR</button>
+            </div>
+          </div>
+          <!-- Summary bar -->
+          <div style="flex-shrink:0;padding:6px 14px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;">
+            <div style="height:5px;flex:1;background:var(--border);border-radius:3px;overflow:hidden;"><div id="te-pw-bar" style="height:100%;width:0%;background:var(--g);transition:width .4s;border-radius:3px;"></div></div>
+            <span id="te-pw-pct" style="font-family:var(--mono);font-size:10px;color:var(--g);min-width:36px;text-align:right">0%</span>
+          </div>
+          <!-- Results area -->
+          <div id="te-pw-results" style="flex:1;overflow-y:auto;padding:8px 12px;font-family:var(--mono);font-size:10px;line-height:1.7;color:var(--text2);background:var(--bg);">// Click RUN ALL to execute the full suite…</div>
+        </div>
+
+      </div>
+    </section>
+
+
+    <!-- ══ TESTS ══ -->
+    <section class="tab-panel" id="tab-tests" style="flex-direction:column">
+      <div style="flex-shrink:0;display:flex;align-items:center;gap:8px;padding:8px 16px;background:var(--bg1);border-bottom:1px solid var(--border);flex-wrap:wrap">
+        <span style="font-family:var(--display);font-size:13px;letter-spacing:.2em;color:var(--c)">TEST SUITE</span>
+        <span style="font-size:9px;color:var(--text2)">Guardian DOM · Navigation · Storage · Forge · TestEnv · Console · Builder · AI · Error System</span>
+        <div style="margin-left:auto;display:flex;gap:6px">
+          <button class="btn accent" onclick="testsRunAll()">▶ RUN ALL TESTS</button>
+          <button class="btn" style="color:var(--m);border-color:rgba(204,68,255,.3)" onclick="pwRunSmoke()">SMOKE</button>
+          <button class="btn" onclick="testsReset()">RESET</button>
+          <button class="btn ok" onclick="testsExport()">⬇ EXPORT</button>
+          <button class="btn" style="color:var(--r);border-color:rgba(255,45,85,.3)" onclick="nxDiagToggle()">⬡ DIAG</button>
+        </div>
+      </div>
+      <!-- Score bar -->
+      <div style="flex-shrink:0;display:flex;align-items:center;gap:16px;padding:10px 16px;background:var(--bg2);border-bottom:1px solid var(--border)">
+        <div style="display:flex;gap:12px">
+          <div style="text-align:center"><div style="font-family:var(--display);font-size:22px;color:var(--g)" id="test-pass-count">0</div><div style="font-size:8px;color:var(--text3);letter-spacing:.1em">PASS</div></div>
+          <div style="text-align:center"><div style="font-family:var(--display);font-size:22px;color:var(--r)" id="test-fail-count">0</div><div style="font-size:8px;color:var(--text3);letter-spacing:.1em">FAIL</div></div>
+          <div style="text-align:center"><div style="font-family:var(--display);font-size:22px;color:var(--text3)" id="test-skip-count">0</div><div style="font-size:8px;color:var(--text3);letter-spacing:.1em">SKIP</div></div>
+          <div style="text-align:center"><div style="font-family:var(--display);font-size:22px;color:var(--y)" id="test-total-count">0</div><div style="font-size:8px;color:var(--text3);letter-spacing:.1em">TOTAL</div></div>
+        </div>
+        <div style="flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden;margin:0 8px">
+          <div id="test-progress-bar" style="height:100%;width:0%;background:var(--g);transition:width .4s;border-radius:3px"></div>
+        </div>
+        <div style="font-family:var(--display);font-size:16px;color:var(--c)" id="test-score-pct">—</div>
+        <div style="font-size:10px;color:var(--text3)" id="test-last-run">Never run</div>
+      </div>
+      <!-- Tabs for test categories -->
+      <div style="flex-shrink:0;display:flex;align-items:stretch;height:30px;background:var(--bg2);border-bottom:1px solid var(--border);padding:0 12px;gap:1px;overflow-x:auto">
+        <button class="pwt active" data-ttab="live" onclick="testSwitchTab(this,'live')">LIVE JS</button>
+        <button class="pwt" data-ttab="ui" onclick="testSwitchTab(this,'ui')">UI SMOKE</button>
+        <button class="pwt" data-ttab="checklist" onclick="testSwitchTab(this,'checklist')">CHECKLIST</button>
+        <button class="pwt" data-ttab="reference" onclick="testSwitchTab(this,'reference')">REFERENCE</button>
+      </div>
+      <!-- Live JS Tests -->
+      <div class="pwt-panel active" id="tt-live" style="flex:1;min-height:0;overflow-y:auto;padding:12px 16px">
+        <div id="live-test-results"></div>
+      </div>
+      <!-- UI Smoke Tests -->
+      <div class="pwt-panel" id="tt-ui" style="flex:1;min-height:0;overflow-y:auto;padding:12px 16px">
+        <div id="ui-test-results"></div>
+      </div>
+      <!-- Checklist -->
+      <div class="pwt-panel" id="tt-checklist" style="flex:1;min-height:0;overflow-y:auto;padding:12px 16px">
+        <div id="checklist-results"></div>
+      </div>
+      <!-- Reference -->
+      <div class="pwt-panel" id="tt-reference" style="flex:1;min-height:0;overflow-y:auto;padding:12px 16px">
+        <div id="reference-results"></div>
+      </div>
+    </section>
+
+
+    <!-- ══ DIAGNOSE ══ -->
+    <section class="tab-panel" id="tab-diagnose" style="flex-direction:column;overflow-y:auto;">
+      <!-- ═══════════════════════════════════════════════════
+           OPT SUB: DIAGNOSE — extended with jitter + fidelity
+           ═══════════════════════════════════════════════════ -->
+      <div style="flex:1;display:flex;flex-direction:column;" id="optsub-diagnose">
+        <div style="flex-shrink:0;padding:14px 18px;background:var(--bg1);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">
+          <span style="font-family:var(--display);font-size:12px;letter-spacing:.2em;color:var(--g)">⬡ DIAGNOSE</span>
+          <div class="alive-dot green"></div>
+          <span style="font-size:9px;color:var(--text3)">Jitter · Fidelity · URCK · Guardian · Bridge</span>
+          <button class="btn ok" style="font-size:9px;margin-left:auto" onclick="diagRunAll()">▶ RUN ALL CHECKS</button>
+        </div>
+        <div style="flex:1;min-height:0;overflow-y:auto;padding:14px 18px">
+
+          <!-- Live indicators strip -->
+          <div style="font-family:var(--display);font-size:9px;letter-spacing:.18em;color:var(--text3);margin-bottom:8px">// LIVE INDICATORS</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;padding:10px 12px;background:var(--bg2);border:1px solid var(--border2);border-radius:3px">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+              <div id="nxhd2-bridge" style="width:10px;height:10px;border-radius:50%;background:var(--text4);transition:all .3s;border:1px solid rgba(255,255,255,.1)"></div>
+              <span style="font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:.08em">BRIDGE</span>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+              <div id="nxhd2-ext" style="width:10px;height:10px;border-radius:50%;background:var(--text4);transition:all .3s;border:1px solid rgba(255,255,255,.1)"></div>
+              <span style="font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:.08em">PLUGIN</span>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+              <div id="nxhd2-guardian" style="width:10px;height:10px;border-radius:50%;background:var(--text4);transition:all .3s;border:1px solid rgba(255,255,255,.1)"></div>
+              <span style="font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:.08em">GUARDIAN</span>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+              <div id="nxhd2-urck" style="width:10px;height:10px;border-radius:50%;background:var(--text4);transition:all .3s;border:1px solid rgba(255,255,255,.1)"></div>
+              <span style="font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:.08em">URCK</span>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+              <div id="nxhd2-nexus" style="width:10px;height:10px;border-radius:50%;background:var(--text4);transition:all .3s;border:1px solid rgba(255,255,255,.1)"></div>
+              <span style="font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:.08em">NEXUS</span>
+            </div>
+            <div style="margin-left:auto;font-family:var(--mono);font-size:8px;color:var(--text3);display:flex;align-items:center;gap:6px">
+              <span id="diag-sync-source">—</span>
+              <button class="btn" style="font-size:8px;padding:1px 6px" onclick="window.NexusBridgeSync?.refresh()">↻</button>
+            </div>
+          </div>
+
+          <!-- Health grid -->
+          <div style="font-family:var(--display);font-size:9px;letter-spacing:.18em;color:var(--text3);margin-bottom:8px">// SYSTEM HEALTH</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:16px">
+            <div class="mcard rgb-alive"><div class="mcard-title">AI PROVIDER</div><div class="mcard-val" id="diag-ai-status">—</div></div>
+            <div class="mcard"><div class="mcard-title">BRIDGE</div><div class="mcard-val" id="diag-bridge-status">—</div></div>
+            <div class="mcard"><div class="mcard-title">PLUGIN</div><div class="mcard-val" id="diag-ext-status">—</div></div>
+            <div class="mcard"><div class="mcard-title">GUARDIAN</div><div class="mcard-val" id="diag-guardian-status">—</div></div>
+            <div class="mcard"><div class="mcard-title">URCK</div><div class="mcard-val" id="diag-urck-status">—</div></div>
+            <div class="mcard"><div class="mcard-title">AI LATENCY</div><div class="mcard-val" id="diag-latency">—</div></div>
+          </div>
+
+          <!-- ── JITTER & FIDELITY METRICS — NEW ── -->
+          <div style="font-family:var(--display);font-size:9px;letter-spacing:.18em;color:var(--text3);margin-bottom:8px">// BRIDGE QUALITY METRICS</div>
+          <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:3px;padding:12px;margin-bottom:12px">
+            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:10px">
+              <div class="mcard" style="padding:7px 8px"><div class="mcard-title" style="font-size:9px">RTT MEAN</div><div class="mcard-val" id="gdiag-rtt-mean">—</div></div>
+              <div class="mcard" style="padding:7px 8px"><div class="mcard-title" style="font-size:9px">JITTER</div><div class="mcard-val" id="gdiag-jitter">—</div></div>
+              <div class="mcard" style="padding:7px 8px"><div class="mcard-title" style="font-size:9px">PKT LOSS</div><div class="mcard-val" id="gdiag-loss">—</div></div>
+              <div class="mcard" style="padding:7px 8px"><div class="mcard-title" style="font-size:9px">RTT MIN</div><div class="mcard-val" id="gdiag-rtt-min">—</div></div>
+              <div class="mcard" style="padding:7px 8px"><div class="mcard-title" style="font-size:9px">RTT MAX</div><div class="mcard-val" id="gdiag-rtt-max">—</div></div>
+            </div>
+            <div style="display:flex;gap:8px;margin-bottom:8px">
+              <div class="mcard" style="padding:7px 8px;flex:1"><div class="mcard-title" style="font-size:9px">BUS FIDELITY</div><div class="mcard-val" id="gdiag-fidelity">—</div></div>
+              <div class="mcard" style="padding:7px 8px;flex:1"><div class="mcard-title" style="font-size:9px">FIDELITY SCORE</div><div class="mcard-val" id="gdiag-fidelity-score">—</div></div>
+            </div>
+            <!-- RTT sparkline -->
+            <div style="font-family:var(--mono);font-size:8px;color:var(--text4);margin-bottom:4px">RTT HISTORY (last 40 samples)</div>
+            <canvas id="gdiag-sparkline" width="400" height="36" style="width:100%;height:36px;display:block;background:rgba(0,0,0,.2);border-radius:2px"></canvas>
+            <div class="btn-row" style="margin-top:8px">
+              <button class="btn accent" style="font-size:9px" onclick="guardianDiagJitter()">⬡ RUN JITTER TEST</button>
+              <button class="btn" style="font-size:9px;color:var(--m);border-color:rgba(204,68,255,.3)" onclick="guardianDiagFidelity()">⬡ RUN FIDELITY TEST</button>
+            </div>
+          </div>
+
+          <!-- Guardian checks with RUN buttons -->
+          <div style="font-family:var(--display);font-size:9px;letter-spacing:.18em;color:var(--text3);margin-bottom:8px">// GUARDIAN CHECKS</div>
+          <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:3px;padding:12px;margin-bottom:12px">
+            <div class="diag-health-row"><span class="diag-health-label">Bridge reachable</span><div style="display:flex;align-items:center;gap:6px"><span class="diag-health-val" id="gtest-bridge">—</span><button class="hbtn" onclick="guardianRunTest('bridge')">RUN</button></div></div>
+            <div class="diag-health-row"><span class="diag-health-label">URCK kernel (bus stats)</span><div style="display:flex;align-items:center;gap:6px"><span class="diag-health-val" id="gtest-urck">—</span><button class="hbtn" onclick="guardianRunTest('urck')">RUN</button></div></div>
+            <div class="diag-health-row"><span class="diag-health-label">Callto pipeline</span><div style="display:flex;align-items:center;gap:6px"><span class="diag-health-val" id="gtest-callto">—</span><button class="hbtn" onclick="guardianRunTest('callto')">RUN</button></div></div>
+            <div class="diag-health-row"><span class="diag-health-label">Guardian extension (BC heartbeat)</span><div style="display:flex;align-items:center;gap:6px"><span class="diag-health-val" id="gtest-guardian">—</span><button class="hbtn" onclick="guardianRunTest('guardian')">RUN</button></div></div>
+            <div class="diag-health-row" style="border-bottom:none"><span class="diag-health-label">Bus emit endpoint (/bus/emit)</span><div style="display:flex;align-items:center;gap:6px"><span class="diag-health-val" id="gtest-bus">—</span><button class="hbtn" onclick="guardianRunTest('bus')">RUN</button></div></div>
+          </div>
+
+          <!-- System checks -->
+          <div style="font-family:var(--display);font-size:9px;letter-spacing:.18em;color:var(--text3);margin-bottom:8px">// SYSTEM CHECKS</div>
+          <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:3px;padding:12px;margin-bottom:12px">
+            <div class="diag-health-row"><span class="diag-health-label">AI provider configured</span><span class="diag-health-val" id="dchk-ai-cfg">—</span></div>
+            <div class="diag-health-row"><span class="diag-health-label">API key set</span><span class="diag-health-val" id="dchk-api-key">—</span></div>
+            <div class="diag-health-row"><span class="diag-health-label">Bridge reachable</span><span class="diag-health-val" id="dchk-bridge">—</span></div>
+            <div class="diag-health-row"><span class="diag-health-label">Plugin connected</span><span class="diag-health-val" id="dchk-plugin">—</span></div>
+            <div class="diag-health-row"><span class="diag-health-label">Guardian extension</span><span class="diag-health-val" id="dchk-guardian">—</span></div>
+            <div class="diag-health-row"><span class="diag-health-label">URCK kernel</span><span class="diag-health-val" id="dchk-urck">—</span></div>
+            <div class="diag-health-row"><span class="diag-health-label">Callto pipeline</span><span class="diag-health-val" id="dchk-callto">—</span></div>
+            <div class="diag-health-row"><span class="diag-health-label">BroadcastChannel</span><span class="diag-health-val" id="dchk-bc">—</span></div>
+            <div class="diag-health-row"><span class="diag-health-label">localStorage available</span><span class="diag-health-val" id="dchk-storage">—</span></div>
+            <div class="diag-health-row"><span class="diag-health-label">Tab system operational</span><span class="diag-health-val" id="dchk-tabs">—</span></div>
+            <div class="diag-health-row" style="border-bottom:none"><span class="diag-health-label">UUID registry initialized</span><span class="diag-health-val" id="dchk-uuid">—</span></div>
+          </div>
+
+          <!-- Combined diagnostic log -->
+          <div style="font-family:var(--display);font-size:9px;letter-spacing:.18em;color:var(--text3);margin-bottom:8px">// DIAGNOSTIC LOG</div>
+          <div id="guardian-adv-diag-log" style="background:var(--bg);border:1px solid var(--border2);border-radius:3px;padding:10px;font-family:var(--mono);font-size:9px;line-height:1.7;max-height:200px;overflow-y:auto;color:var(--text2)">Run checks to see diagnostic output…</div>
+          <!-- Legacy diag-log alias (for siso-fw.js compat) -->\n          <div id="diag-log" style="display:none"></div>
+          <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+            <button class="btn" style="font-size:9px" onclick="diagClearLog()">CLEAR LOG</button>
+            <button class="btn" style="font-size:9px;color:var(--m);border-color:rgba(204,68,255,.3)" onclick="diagRunAILatency()">TEST AI LATENCY</button>
+            <button class="btn" style="font-size:9px;color:var(--o);border-color:rgba(255,107,53,.3)" onclick="guardianRunTests()">▶ FULL GUARDIAN DIAG</button>
+            <button class="btn" style="font-size:9px;color:var(--y);border-color:rgba(255,204,0,.3)" onclick="diagExport()">⬇ EXPORT REPORT</button>
+          </div>
+          <!-- Performance Metrics -->
+          <div style="margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border)">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+              <span style="font:700 9px var(--mono);letter-spacing:.12em;color:var(--c)">◈ PERFORMANCE METRICS</span>
+              <div style="flex:1"></div>
+              <button class="btn" id="nx-metrics-btn" style="font-size:9px;color:var(--c)" onclick="nxLoadMetrics()">↻ REFRESH</button>
+              <label style="display:flex;align-items:center;gap:4px;font-size:9px;color:var(--text3);cursor:pointer">
+                <input type="checkbox" id="nx-metrics-auto" onchange="nxMetricsAutoToggle(this.checked)" style="cursor:pointer">AUTO
+              </label>
+            </div>
+            <!-- Metric rows -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;font:9px var(--mono)">
+              <div style="color:var(--text3)">Heap Used</div>
+              <div id="nx-m-heap" style="color:var(--g);text-align:right">—</div>
+              <div style="color:var(--text3)">Heap Total</div>
+              <div id="nx-m-heap-total" style="color:var(--text2);text-align:right">—</div>
+              <div style="color:var(--text3)">RSS</div>
+              <div id="nx-m-rss" style="color:var(--text2);text-align:right">—</div>
+              <div style="color:var(--text3)">Bridge Events</div>
+              <div id="nx-m-events" style="color:var(--text2);text-align:right">—</div>
+              <div style="color:var(--text3)">SSE Listeners</div>
+              <div id="nx-m-listeners" style="color:var(--text2);text-align:right">—</div>
+              <div style="color:var(--text3)">Bridge Uptime</div>
+              <div id="nx-m-uptime" style="color:var(--text2);text-align:right">—</div>
+            </div>
+            <!-- Heap sparkline -->
+            <canvas id="nx-m-sparkline" width="280" height="32"
+              style="display:block;margin-top:8px;width:100%;height:32px;border-radius:2px;background:var(--bg)"></canvas>
+          </div>
+
+          <!-- Full System Diagnostic + Crash Log -->
+          <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap">
+              <span style="font:700 9px var(--mono);letter-spacing:.12em;color:var(--r)">⚠ SYSTEM DIAGNOSTIC</span>
+              <span id="nx-diag-score" style="font:700 9px var(--mono);color:var(--text4)"></span>
+              <div style="flex:1"></div>
+              <button class="btn" id="nx-full-diag-btn" style="font-size:9px;color:var(--g);border-color:rgba(0,255,136,.4);background:rgba(0,255,136,.06)" onclick="nxRunFullDiag()">▶ RUN FULL DIAG</button>
+              <button class="btn" style="font-size:9px;color:var(--c)" onclick="nxLoadCrashLog()">↻ LOG</button>
+              <button class="btn" style="font-size:9px;color:var(--text3)" onclick="nxClearCrashLog()">CLEAR</button>
+            </div>
+            <div id="nx-diag-progress" style="display:none;height:2px;background:var(--g);border-radius:1px;margin-bottom:6px;transition:width .3s"></div>
+            <div style="font:8px var(--mono);color:var(--text4);margin-bottom:4px" id="nx-crash-log-file"></div>
+            <pre id="nx-crash-log-output" style="font:8px var(--mono);color:var(--text2);background:var(--bg);padding:8px;border-radius:2px;max-height:300px;overflow-y:auto;white-space:pre-wrap;word-break:break-all;margin:0">Press ▶ RUN FULL DIAG to run system checks.
+Tests: bridge endpoints, scripts, network, filesystem, guardian, crash log.
+Or press LOG to view recent error entries.</pre>
+          </div>
+
+          <!-- Agent exec tests -->
+          <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">
+            <div style="font:700 9px var(--mono);letter-spacing:.12em;color:var(--text3);margin-bottom:8px">⟁ AGENT EXEC TEST</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+              <select id="diag-agent-select" class="finp" style="font-size:9px;max-width:140px">
+                <option value="chatgpt">ChatGPT</option>
+                <option value="claude">Claude</option>
+                <option value="deepseek">DeepSeek</option>
+                <option value="gemini">Gemini</option>
+                <option value="ollama">Ollama</option>
+              </select>
+              <button class="btn" style="font-size:9px;color:var(--g);border-color:rgba(0,255,136,.3)" onclick="diagTestAgentExec()">▶ EXEC TEST</button>
+              <button class="btn" style="font-size:9px;color:var(--c);border-color:rgba(0,212,255,.3)" onclick="diagOpenAgentTab()">⬡ OPEN TAB</button>
+              <span id="diag-agent-result" style="font:9px var(--mono);color:var(--text3)"></span>
+            </div>
+          </div>
+
+
+    </section>
+  </div>
+</div>
+  <script src="src/ui/nexus-boot.js"></script>
+  <script src="src/ui/nexus-core.js"></script>
+  <script src="src/ui/nexus-uuid.js"></script>
+  <script src="src/ui/nexus-auth.js"></script>
+  <script src="src/ui/nexus-diag.js"></script>
+  <script src="src/ui/nexus-patches.js"></script>
+  <script src="src/ui/nexus-patch-modular.js"></script>
+  <script src="src/ui/nexus-phase1.js"></script>
+  <script src="src/ui/nexus-phase2.js"></script>
+  <script src="src/ui/nexus-phase3.js"></script>
+  <script src="src/ui/nexus-phase4.js"></script>
+  <script src="src/ui/nexus-phase5.js"></script>
+  <script src="src/ui/nexus-siso-fw.js"></script>
+  <script src="src/ui/nexus-siso-health.js"></script>
+  <script src="src/ui/nexus-guardian.js"></script>
+  <script src="src/ui/nexus-testenv.js"></script>
+  <script src="src/ui/nexus-tests-ui.js"></script>
+<script>
+(function(){
+  // ── minimal tab switcher ──────────────────────────────────────
+  function switchTab(id){
+    document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b=>b.removeAttribute('data-active'));
+    const panel=document.getElementById('tab-'+id);
+    const btn=document.querySelector('[data-tab="'+id+'"]');
+    if(panel) panel.classList.add('active');
+    if(btn)   btn.dataset.active='true';
+    window._activeTab=id;
+  }
+  window.switchTab=switchTab;
+  // activate first tab on load
+  window.addEventListener('DOMContentLoaded',function(){
+    const first=document.querySelector('.tab-btn');
+    if(first) switchTab(first.dataset.tab);
+  });
+})();
+</script>
+</body>
+</html>
