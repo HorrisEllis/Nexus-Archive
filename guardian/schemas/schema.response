@@ -25,12 +25,36 @@ payload:
       description: real, unique id for this response event
     compartmentUuid:
       type: string
-      required: true
-      description: the real, live compartment this response belongs to — dropped, not fabricated, when absent
+      required: false
+      description: >-
+        the real, live compartment this response belongs to — dropped, not fabricated, when absent.
+        §MCO16f 2026-09-14 — relaxed from required:true when jobId was added: a job-origin DOM
+        event genuinely has no compartment, and node-schemas.js's checkPayload() cannot express
+        "one of these two" (see NODE-TAXONOMY.md's own "Still mechanically open" note). The real
+        constraint is enforced in guardian/lib/response-nodes.js's writeResponseNode().
     queueId:
       type: string
       required: false
       description: the real RAID queue row this compartment is executing, when one exists
+    jobId:
+      type: string
+      required: false
+      description: >-
+        §MCO16f 2026-09-14 — the real guardian job this DOM event belongs to, when the event came
+        from a job rather than a compartment. Added because guardian/lib/response-nodes.js is a
+        real second writer with a real second origin (userscript startWatch, which has a jobId and
+        no compartment). See that module's own §HONEST SCHEMA NOTE for why the real "at least one
+        of compartmentUuid/jobId" rule is enforced in the writer and not here.
+    sequence:
+      type: number
+      required: false
+      description: >-
+        monotonic index of this event within one job/compartment — real ordering that survives
+        equal-millisecond timestamps, which a live MutationObserver genuinely produces
+    phase:
+      type: string
+      required: false
+      description: reserved — currently carried in domEventType; kept out of use until a real second axis exists
     domEventType:
       type: string
       required: true

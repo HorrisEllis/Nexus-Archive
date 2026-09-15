@@ -1346,6 +1346,35 @@ const _seamWatchdog = createSeamWatchdog({
 });
 _seamWatchdog.start();
 
+// §MCO16f 2026-09-14 — the job-level sibling of the seam watchdog above.
+// Different subject on purpose, not a duplicate: _seamWatchdog watches SEAM
+// queue compartments stuck in GENERATING; this watches JOBS whose `.response`
+// nodes stopped arriving. The gap it closes is real and was traced, not
+// assumed — guardian/userscript-chatgpt.js's startWatch() has no deadline at
+// all (checkStable() reschedules itself every 300ms forever, and its only
+// exits are a completed response or currentJobId changing), so a tab that
+// navigates away or gets throttled mid-generation leaves guardian holding a
+// 'delivered' job that will never complete and never error. That silence is
+// what eventually surfaces as copilot's "[NCP dispatch failed — no response]"
+// — a message about dispatch, for a failure that happened well after dispatch
+// succeeded.
+const { createResponseWatchdog } = require('./lib/response-watchdog.js');
+const _responseWatchdog = createResponseWatchdog({
+  // Only jobs guardian genuinely believes are in flight. 'complete'/'error'
+  // are already terminal and must never be swept — re-dispatching a finished
+  // job would be a real duplicate, not a recovery.
+  listWatchedJobs: () => Array.from(jobs.values())
+    .filter(j => j && (j.status === 'delivered' || j.status === 'responding')),
+  // The SAME lever every other caller uses. A private retry path here would
+  // bypass the dispatch pool, the ping gate, and selectDispatchTarget's
+  // single-tab resolution — i.e. it would reintroduce the exact fan-out race
+  // §MCO-NCP-FANOUT fixed the day before.
+  redispatch: (job) => dispatchJob(job),
+  ncpIsConnected: (provider) => ncp.isConnected(provider),
+  busEmit: (type, data) => bus.emit(type, data),
+});
+_responseWatchdog.start();
+
 // ══════════════════════════════════════════════════════════════════════════════
 //  SISO GATE REGISTRATIONS
 // ══════════════════════════════════════════════════════════════════════════════
@@ -1987,7 +2016,10 @@ function handleExtendedRoutes(req, res, url, method) {
   if (method==='POST' && url.pathname==='/dom/event') {
     (async () => {
       const body = await bodyJ(req);
-      const { compartmentUuid, queueId, type, agentId, dom, ts } = body || {};
+      // §MCO16f 2026-09-14 — jobId/sequence added. Both are real fields the
+      // live userscript observer has in scope and nothing could previously
+      // carry: a DOM mutation belonging to a job had no way to say so.
+      const { compartmentUuid, queueId, type, agentId, dom, ts, jobId, sequence } = body || {};
       const eventTs = ts || Date.now();
       cockpitBroadcast({ type: 'guardian.dom.event', compartmentUuid: compartmentUuid || null, queueId: queueId || null, domEventType: type || 'unknown', agentId: agentId || null, ts: eventTs });
       try {
@@ -2000,26 +2032,57 @@ function handleExtendedRoutes(req, res, url, method) {
       } catch (e) {
         console.warn(`[guardian] /dom/event: component-ledger write failed (non-fatal, already broadcast via SSE): ${e.message}`);
       }
-      let responseUuid = null;
-      if (compartmentUuid) {
-        // §1.2 — same rule lib/compartment-dom-ledger.js's own
-        // recordDomEvent() already enforces: no real compartmentUuid,
-        // no node — dropped and reported, not fabricated with a null key.
-        try {
-          const { randomUUID } = require('crypto');
-          responseUuid = randomUUID();
-          const { exportToFile } = require('../lib/node-export.js');
-          exportToFile('response', responseUuid, {
-            uuid: responseUuid, compartmentUuid, queueId: queueId || null,
-            domEventType: type || 'unknown', agentId: agentId || null,
-            payload: dom || null, ts: eventTs,
-          }, { system: 'guardian', tags: ['dom', 'compartment'] },
-          require('path').join(__dirname, 'data', 'nodes', 'response'));
-        } catch (e) {
-          console.warn(`[guardian] /dom/event: .response node write failed (non-fatal, already ledgered+broadcast): ${e.message}`);
-        }
+      // §MCO16f 2026-09-14 — the inline exportToFile() that used to be here
+      // moved to guardian/lib/response-nodes.js, unchanged in behavior for
+      // the compartment path it was written for. Two real reasons, neither
+      // cosmetic: (1) the live MutationObserver in guardian/userscript-*.js
+      // now posts here per mutation, carrying a jobId and no compartment —
+      // the old inline branch would have silently dropped every one of them
+      // on the `if (compartmentUuid)` gate; (2) response-watchdog.js has to
+      // READ these same nodes to decide on a retry, and a writer inlined in
+      // a route handler is not callable from anywhere else. One writer, one
+      // constraint, both testable standalone (§5.7).
+      const responseNodes = require('./lib/response-nodes.js');
+      const written = responseNodes.writeResponseNode({
+        compartmentUuid: compartmentUuid || null,
+        jobId: jobId || null,
+        queueId: queueId || null,
+        domEventType: type || 'unknown',
+        agentId: agentId || null,
+        sequence: typeof sequence === 'number' ? sequence : null,
+        payload: dom || null,
+        ts: eventTs,
+      });
+      const responseUuid = written.ok ? written.uuid : null;
+      if (!written.ok) {
+        // §1.2 — a dropped DOM event is itself a real event and gets a real
+        // `.event` node. Previously this was a console.warn and nothing
+        // else: the one place where the system was asked to record movement
+        // and failed left no tangible trace of having failed.
+        console.warn(`[guardian] /dom/event: no .response node — ${written.reason} (SSE+ledger still ran)`);
+        responseNodes.writeEventNode({
+          type: 'guardian.response.failed',
+          source: 'guardian/server.js POST /dom/event',
+          id: jobId || compartmentUuid || null,
+          payload: {
+            jobId: jobId || null, compartmentUuid: compartmentUuid || null,
+            stage: 'dom_event_ingest', domEventType: type || 'unknown',
+            reason: written.reason,
+          },
+        });
       } else {
-        console.warn('[guardian] /dom/event: no real compartmentUuid — SSE+ledger still ran, no .response node created (§1.2)');
+        bus.emit('guardian.dom.response', {
+          jobId: jobId || null, compartmentUuid: compartmentUuid || null,
+          domEventType: type || 'unknown', agentId: agentId || null,
+          sequence: typeof sequence === 'number' ? sequence : null,
+          responseUuid, ts: eventTs,
+        });
+        // A terminal DOM phase is the real signal that this job's response
+        // actually landed — the watchdog stops sweeping it here rather than
+        // waiting to time out a job that already finished.
+        if (jobId && responseNodes.TERMINAL_PHASES.includes(type)) {
+          try { _responseWatchdog.settle(jobId); } catch (_) {}
+        }
       }
       pRes(res, 200, { ok: true, responseUuid });
     })().catch((e) => {

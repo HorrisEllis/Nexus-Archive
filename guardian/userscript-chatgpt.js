@@ -583,17 +583,88 @@ function autoRetry(jobId, text, retryCount) {
 }
 
 // ── Watch ─────────────────────────────────────────────────────────────────────
+// §MCO16f 2026-09-14 — James: "we need to generate a .response from the dom
+// mutation live in real time to a .response node."
+//
+// This observer is the real, live DOM mutation source the whole `.response`
+// node type was built for, and until now it never sent guardian a single one.
+// Guardian's POST /dom/event (MCO16e, 2026-09-13) has been real and reachable
+// since the day before — grepped every .js and .html in the repo to check
+// before adding this: its ONLY callers were its own tests. GUARDIAN_CHUNK
+// already streams the text over NCP, but a chunk is a transient message on a
+// socket; it is not tangible, is not a node, and is gone the moment the
+// process it landed in restarts. This posts alongside it, and does not
+// replace it.
+//
+// Fire-and-forget on purpose. A node write is a recording of the response,
+// never a gate on it — if guardian is down or slow, the response must still
+// reach the user exactly as it does today. No await, no retry, no blocking.
+let _domSeq = 0;
+function _postDom(jobId, phase, dom) {
+  try {
+    _gmFetch(`${NCP_URL}/dom/event`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jobId, type: phase, agentId: PROVIDER,
+        sequence: _domSeq++, dom: dom || null,
+        chatUrl: location.href, ts: Date.now(),
+      }),
+      timeoutMs: 2000,
+    }).catch(() => {}); // guardian unreachable is not this tab's problem to solve
+  } catch (_) { /* never let recording break the thing being recorded */ }
+}
+
 function stopWatch() {
   if (_watchObs) { _watchObs.disconnect(); _watchObs = null; }
   if (_watchTimer) { clearTimeout(_watchTimer); _watchTimer = null; }
+  if (_watchDeadline) { clearTimeout(_watchDeadline); _watchDeadline = null; }
   currentJobId = null; jobActive = false;
   setJobBar(false);
 }
+
+// §MCO16f — the local half of the deadline. Guardian's response-watchdog is
+// authoritative and survives this tab dying entirely, but it can only infer
+// silence from outside. This tab knows something guardian cannot: whether the
+// page still thinks it is generating. Reporting that directly turns a guess
+// into evidence. HARD_DEADLINE_MS is deliberately well past guardian's own
+// thresholds so the two never race to retry the same job — guardian decides,
+// this reports.
+const HARD_DEADLINE_MS = 180_000;
+let _watchDeadline = null;
 
 function startWatch(jobId, prompt, retryCount = 0) {
   stopWatch();
   currentJobId = jobId; jobActive = true; _watchStart = Date.now();
   setJobBar(true, prompt, jobId);
+  _domSeq = 0;
+  _postDom(jobId, 'dom.open', { promptLen: (prompt || '').length, retryCount });
+
+  // §THE REAL BUG THIS CLOSES — checkStable() below reschedules itself every
+  // 300ms and has exactly two exits: 3 consecutive stable reads, or
+  // currentJobId changing. There has never been a third. A tab that navigates
+  // away, gets backgrounded into timer throttling, or has its generation die
+  // mid-stream simply loops forever: _onJobComplete never fires, no error is
+  // ever raised, and guardian is left holding a job that will never resolve.
+  // Confirmed by reading the loop, not inferred from a symptom.
+  _watchDeadline = setTimeout(() => {
+    if (currentJobId !== jobId) return; // already resolved — nothing to report
+    const el = findResponseEl();
+    const text = el ? (el.innerText || el.textContent || '').trim() : '';
+    _postDom(jobId, 'dom.error', {
+      reason: 'local watch deadline exceeded',
+      ms: Date.now() - _watchStart,
+      chars: text.length,
+      stillGenerating: _isGenerating(),
+      partial: text.slice(0, 2000),   // real partial output is better than none
+    });
+    _log('err', 'Watch deadline exceeded', `#${jobId.slice(0, 8)} · ${text.length}ch`);
+    // §1.2 — reported honestly, and any real partial text still goes through
+    // the normal completion path rather than being thrown away. A truncated
+    // answer the user can see beats a silence they cannot.
+    if (text.length) _onJobComplete(jobId, text, Date.now() - _watchStart, prompt, retryCount);
+    else stopWatch();
+  }, HARD_DEADLINE_MS);
 
   let lastText = '', stableCount = 0;
   let _lastChunkLen = 0;
@@ -605,6 +676,13 @@ function startWatch(jobId, prompt, retryCount = 0) {
     const text = (el.innerText || el.textContent || '').trim();
     if (text === lastText && !_isGenerating()) {
       stableCount++;
+      // §MCO16f — dom.stable on the FIRST stable read, not the third. The
+      // two extra reads are a debounce against a model that pauses
+      // mid-sentence; the first one is the real moment the DOM stopped, and
+      // it is what guardian's watchdog needs to know the stream ended rather
+      // than stalled. Recording it two reads late would make every genuine
+      // completion look ~600ms more silent than it was.
+      if (stableCount === 1) _postDom(jobId, 'dom.stable', { chars: text.length, ms: Date.now() - _watchStart });
       if (stableCount >= 3) {
         const ms = Date.now() - _watchStart;
         _onJobComplete(jobId, text, ms, prompt, retryCount);
@@ -616,6 +694,14 @@ function startWatch(jobId, prompt, retryCount = 0) {
         if (delta.length > 10 || /[.!?\n]/.test(delta)) {
           send({ type:'GUARDIAN_CHUNK', jobId, text:delta, full:text, provider:PROVIDER, chatUrl:location.href, ts:Date.now() });
           _streamToCortex(jobId, delta, text);
+          // §MCO16f — one real .response node per real observed delta, on the
+          // exact same gate GUARDIAN_CHUNK already uses. Deliberately NOT a
+          // node per raw MutationObserver callback: that fires per character
+          // on a streaming response and would be thousands of files for one
+          // answer. This threshold is already the codebase's own established
+          // answer to "when is a mutation worth reporting" — reused, not
+          // second-guessed with a new one.
+          _postDom(jobId, 'dom.mutation', { chars: text.length, deltaChars: delta.length, ms: Date.now() - _watchStart });
         }
       }
       lastText = text; stableCount = 0;
@@ -657,6 +743,14 @@ async function _onJobComplete(jobId, text, ms, prompt, retryCount) {
     }
     _toolCallCounts.delete(jobId);
   }
+
+  // §MCO16f — the terminal `.response` node, posted BEFORE stopWatch() so it
+  // still has the live timing in scope, and before any of the completion
+  // reporting below. This is the single node guardian's response-watchdog
+  // reads to decide a job is genuinely finished (response-nodes.TERMINAL_
+  // PHASES); everything after this line can fail without the job being
+  // mistaken for a timeout.
+  _postDom(jobId, 'dom.complete', { chars: text.length, ms, retryCount, chatUrl: location.href });
 
   stopWatch();
   send({ type:'GUARDIAN_LEDGER_WRITE', jobId, category:'UPGRADE',

@@ -161,6 +161,40 @@ class JaaStore {
     return rows;
   }
 
+  /**
+   * query(table, where?, opts?) — alias of all(), identical semantics.
+   *
+   * §MCO17 2026-09-14 — a real contract bug, found by a test rather than by
+   * reading. `all()` has always been this class's real read method, and
+   * cortex/memory/jaa-db.js's wrapper exposes the same thing under the name
+   * `query` — so `query` is the name used at essentially every real call site
+   * in this codebase, and `all` is the name on the class those call sites
+   * actually end up in.
+   *
+   * That divergence was harmless while the wrapper was the only way in. It
+   * stopped being harmless when lib/node-index.js was generalized (2026-09-12)
+   * to accept an injected store, with its own header instructing a per-system
+   * caller to pass exactly this:
+   *
+   *     new (require('../guardian/jaa-store').JaaStore)(
+   *       path.join(systemDir, 'data', 'node-index'))
+   *
+   * ...while node-index.js's own body calls `jaa.query(...)`. Following the
+   * documented instruction throws `jaa.query is not a function`. Nothing had
+   * ever followed it, so nothing had ever found out — §1.1, a path nobody has
+   * walked is not a path that works.
+   *
+   * Fixed here rather than at the caller (§5.3 — no monkey patches): adapting
+   * one consumer would leave the documented usage broken for the next one, and
+   * the root cause is that this class is missing the name its own ecosystem
+   * uses. An alias, not a rename: `all()` keeps working byte-for-byte, so every
+   * existing call site is untouched (§5.14 — the contract widens, nothing
+   * breaks).
+   */
+  query(table, where = {}, opts = {}) {
+    return this.all(table, where, typeof opts === 'number' ? { limit: opts } : opts);
+  }
+
   /** UPDATE rows matching where with values object. Returns changed count. */
   update(table, where, values) {
     const tbl = this._table(table);

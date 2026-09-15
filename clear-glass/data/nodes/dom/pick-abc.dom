@@ -1,0 +1,30 @@
+envelope: 1
+uuid: nexus-export-dom-pick-abc
+type: dom
+id: pick-abc
+context: clear-glass DOM pick "submit-button"
+intent: null
+summary: null
+system: clear-glass
+tags:
+  - dom
+  - pick
+  - agent:chatgpt
+exported_at: 1789452714638
+source: nexus.clear-glass.dom-nodes
+occurrences: 1
+firstSeenAt: 1789452714638
+lastSeenAt: 1789452714638
+fingerprint: null
+payload:
+  pickId: pick-abc
+  name: submit-button
+  agentId: chatgpt
+  nodeId: cg-42
+  selector: '#submit'
+  url: https://example.test/x
+  meta:
+    selector: '#submit'
+    url: https://example.test/x
+  pickedAt: 1789452714637
+  lastSeenAt: null

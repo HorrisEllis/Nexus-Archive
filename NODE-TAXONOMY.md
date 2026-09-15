@@ -1,4 +1,4 @@
-# Node Taxonomy — 36 slots (current)
+# Node Taxonomy — 42 slots (current)
 
 Reconciled from three disagreeing sources (the zip snapshot, the `node-export.js`
 you uploaded directly, and this thread's own running list) — see the
@@ -44,7 +44,52 @@ this session's fixes.
 | 33 | `note` | REAL, found on re-check | Doubly grounded: `intelligence/schemas.js`'s real `agent_notes` table and `lib/agent-tools/tools/coordination/agent-notes.js`'s real tool, same field set independently. Missed in the original 32 — surfaced only after being asked directly whether anything was missing. Possibly the real target of copilot's own `note` intent (→ cortex's push-recall), not fully confirmed as the identical shape. |
 | 34 | `hypothesis` | REAL | `copilot/lib/user-model.js`'s real `user_model_hypotheses` JAA table — added after the "33 slots" framing above was written; doc lag, not a functional gap (see `lib/node-schemas/schema.hypothesis`). |
 | 36 | `injection` | REAL, built 2026-09-13 | The follow-up to v0.39.122's "mountain" fix — James: "every time something gets prepended to a dispatch, there'd be a real node recording what and why." Grounded in exactly one real construction site: `copilot/tool-runtime.js`'s `makeNcpCallModel` inner `callModel` — the same function the mountain fix patched. `makeOllamaCallModel` checked and excluded: ollama-bridge's `/api/chat` takes a native `tools` param, never text-injects a guide. 8 fields, every one a real variable already in scope at that call site (`provider`/`primed`/`injectedSystemPrompt`/`injectedToolGuide`/`toolCount`/`promptLength`/`idleMsThreshold`/`msSinceLastPrimed`). Written live, every call, primed or full-context, to `copilot/data/nodes/injection/` — non-fatal on write failure, same discipline as this file's own `gapField.report()` calls. See `lib/node-schemas/schema.injection`. |
+| 37 | `response` | REAL, wired 2026-09-14 | Built by MCO16e (2026-09-13) as the 37th `KNOWN_TYPE` with a real `schema.response` and a real writer (`guardian/server.js` POST `/dom/event`) — and left half-connected in two ways that MCO16f found and closed, both by direct check rather than assumption. (1) **Nothing called the route.** Grepped every `.js`/`.html` in the repo: its only callers were its own tests. The real live `MutationObserver` — `guardian/userscript-*.js`'s `startWatch()`, the actual DOM mutation source the type exists for — streamed `GUARDIAN_CHUNK` over NCP and posted nothing. Zero `.response` nodes had ever been produced from a real mutation. (2) **The type was not in `guardian/lib/node-registry.js`'s `GUARDIAN_NODE_TYPES`**, so every file MCO16e wrote landed in a directory nothing watches — never scanned, never in `_ledger.jsonl`, never emitting a registry event. Tangible on disk and invisible to the system at the same time. Now written live per observed delta by the userscript, via `guardian/lib/response-nodes.js`, and read back by `guardian/lib/response-watchdog.js` as the retry gate. Schema changed additively: `jobId`/`sequence` added, `compartmentUuid` relaxed to optional — see the honest note below. |
+| 41 | `dom` | REAL, built 2026-09-14 | James: "maybe we can make a .dom node type for clearglass?" Re-checked the taxonomy's own prior claim rather than trusted it — this row previously read `.dom — checked, neither built... DOM queries are live and ephemeral, never persisted.` Half right: `clear-glass/src/dom/archaeology.js`'s `handleQuery()` selector/tree reads genuinely are transient and remain unpersisted. The other half conflated implementation with architecture — `handlePick()`'s records, which that file's own header calls "registered as named hooks," lived in an in-memory `this.picks` Map that died with the process. A named, addressable handle onto a live page that cannot survive a restart is a live §2.1/§2.2 axiom violation, not an inherent property of DOM data. Deliberately NOT merged into `.response`: different owner (clear-glass, not guardian), different subject (a durable address vs. one moment in a job's answer), different write authority (§10.1). Written by `clear-glass/lib/dom-nodes.js`; `archaeology.js` now rehydrates its `picks` Map from these at construction. See `docs/nexus-node-index.spec`, `lib/node-schemas/schema.dom`. |
+| 42 | `database` | REAL, built 2026-09-14 | James: "we need a database for each system... then each database can be a .node also to connect to the associative lattice." Deliberately tested against §0.5/§16.7 before being added — a node describing a database is exactly the shape an abstraction takes when it's decoration, and the test it had to pass was whether anything real consumes it. `intelligence/lattice/associative-lattice.js`'s own `updateEdge()` does: that module's honest `NOT BUILT YET` footer recorded step 8 ("event-triggered recompute") as unwired, "nothing calls updateEdge() yet." `lib/system-db.js`'s `linkLattice()` is that first real caller — a node written by one system that names another is a real, observed relationship, which is what a lattice edge is. Every field in the payload is read live off a real `JaaStore`, never declared. See `docs/nexus-node-index.spec`, `lib/node-schemas/schema.database`. |
 | 35 | `agent_tool` | OPEN | **Genuinely distinct from `.tool`, not a naming variant of it** — `lib/agent-tools/naming.js`'s real `agentToolName(provider, agentName, name)` builds `provider.agentName.name.agent.tool`, and its `parseName()` returns a different `kind` (`'agent_tool'` vs `'tool'`) for it, a different id shape than `.tool`'s `system.name.tool`. `schema.tool`'s own header used to claim the opposite ("is agent.tool a separate type? it isn't") — that claim is superseded, left visible with a correction note rather than deleted. Marked `OPEN`: the naming grammar is real and tested (`tests/modules/test-tool-naming-convention.js` TN-003/TN-009), but zero real `.agent.tool` instances have been built or registered anywhere yet — `lib/agent-tools/index.js` only references the convention in a comment. Promote to `REAL` once one actually exists. |
+
+*Row numbers are non-sequential in places (35 sits after 42) — inherited from
+the original document's own append order, where each row is stamped with the
+slot number it was assigned WHEN WRITTEN, not resorted afterward. Preserved
+rather than renumbered: renumbering existing rows to look tidy would rewrite
+history §0.3 exists to protect, for a purely cosmetic gain.*
+
+
+## `.event` — the folder that existed with no writer (closed 2026-09-14)
+
+Row 29 has said `REAL, wired` since `event` was added to `KNOWN_TYPES`, and
+`guardian/lib/node-registry.js` has created `guardian/data/nodes/event/` for
+just as long. Checked directly this pass: **no code anywhere had ever called
+`exportToFile('event', ...)`.** The folder had always been empty. The type was
+importable and validatable and had no producer.
+
+`guardian/lib/response-nodes.js`'s `writeEventNode()` is the first real writer
+it has ever had. Five governed names now produce one `.event` node per
+occurrence, all registered in `guardian/event-taxonomy.js`:
+`guardian.dom.response`, `guardian.response.timeout`, `guardian.response.retry`,
+`guardian.response.failed`, `guardian.response.abandoned`.
+
+Worth being precise about what that changes: these are the first events in this
+system whose record does not depend on a process staying alive. A bus emit is
+gone on restart; a `.event` file is not. That is the whole reason the retry gate
+reads nodes instead of the in-memory job Map — the Map is exactly the state that
+was already lost in the failure this work came out of.
+
+## `.response` — one honest schema compromise, recorded where it's enforced
+
+`schema.response`'s `compartmentUuid` was `required: true`, correct for MCO16e's
+single compartment-origin writer and wrong for MCO16f's second, job-origin one:
+a job DOM event genuinely has no compartment. Rather than fabricate one — which
+MCO16e's own route explicitly refuses to do — `compartmentUuid` became optional,
+`jobId` was added, and the real rule (**at least one of the two**) is enforced in
+`writeResponseNode()`.
+
+That is a deliberate compromise, not an oversight, and it is the same limitation
+already recorded under *Still mechanically open* below: `node-schemas.js`'s
+`checkPayload()` checks presence and `typeof` only, so "one of these two" cannot
+be expressed in a schema file at all. The constraint is documented at the line
+that actually checks it instead of being pretended at in a file that can't.
 
 ## Explicitly not in this taxonomy: MCP tools
 
@@ -65,7 +110,8 @@ node files), never agent-facing, never registered in any tool loop.
 - **`failure_mode`, `intent`, `system`** — stay `OPEN`. Real proposals, no backing construction site yet.
 - **`job` vs `guardian_job`** — strong evidence they're the same shape, not unified. Needs a call on RAID compartment scope first.
 - **`capability.events`** — field exists, `required: false`. No real capability in `registry-components.js` declares an event today; forcing this to `required` means inventing what that list even looks like. Needs a real `events:` opt on `_c()` first, mirroring how `hooks.in[].intent` already works.
-- **`.jaa`, `.dom`** — checked, neither built. JAA is the storage substrate under other node types, not a node itself. DOM queries (`clear-glass/dom-archaeology.js`) are live and ephemeral, never persisted.
+- **`.jaa`** — checked, not built, and not proposed to be: JAA is the storage substrate under other node types, not a node itself.
+- **`.dom`** — §CORRECTED 2026-09-14, see row 41 above. Was "checked, neither built... DOM queries are live and ephemeral, never persisted" — right about `handleQuery()`'s transient reads, wrong about `handlePick()`'s named hooks, which were ephemeral only because nothing persisted them. Now `REAL, built`.
 
 ## Still mechanically open regardless
 

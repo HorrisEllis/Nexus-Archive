@@ -1,0 +1,58 @@
+envelope: 1
+uuid: nexus-export-schema-database
+type: schema
+id: database
+context: >-
+  lib/node-schemas — shared canonical registry. Grounded in lib/node-index.js's real describe()
+  output, which is itself derived from a real JaaStore instance's real tables.
+intent: null
+summary: null
+system: null
+tags: []
+exported_at: 0
+source: nexus.lib.node-export
+payload:
+  status: REAL
+  source: >-
+    lib/node-index.js's real describe() — every field below is read from a live JaaStore, not
+    declared. §MCO17 2026-09-14 — James: "each database can be a .node also to connect to the
+    associative lattice." §0.5/§16.7 were applied to this before building it, because a node
+    describing a database is exactly the kind of abstraction that can be decoration: the test it
+    had to pass was whether anything real consumes it. It does — intelligence/lattice/
+    associative-lattice.js's updateEdge(from, to, ...) needs NAMED NODES to draw edges between,
+    and by that module's own honest NOT BUILT YET footer, step 8 (event-triggered recompute) was
+    unwired with "nothing calls updateEdge() yet" as of this build. A `.database` per system is
+    the first real set of lattice endpoints this repo has produced. Without a consumer it would
+    have been a decoration and would not have been built.
+  fields:
+    system:
+      type: string
+      required: true
+      description: the real sovereign system that owns this database — its single write authority (§10.1, §17.1)
+    dir:
+      type: string
+      required: true
+      description: real on-disk directory of the JaaStore backing it
+    tablePrefix:
+      type: string
+      required: false
+      description: real JaaStore tablePrefix isolating this system's tables when a directory is shared
+    tables:
+      type: array
+      required: true
+      description: >-
+        real list of {type, table, rows, firstSeenAt, lastSeenAt} — one entry per node type this
+        system has actually written. A type with no writes does not appear: this describes what
+        the system HAS done, never what it is permitted to do
+    nodeTypes:
+      type: array
+      required: false
+      description: real list of node type names indexed here — the same set as tables[].type, flattened for cheap filtering
+    totalRows:
+      type: number
+      required: false
+      description: real sum of rows across every table
+    ts:
+      type: number
+      required: true
+      description: real timestamp this description was taken — a description is a snapshot, never a live view

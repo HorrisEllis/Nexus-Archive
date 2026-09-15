@@ -76,6 +76,39 @@ module.exports = Object.freeze({
     severity: 'failure',
   },
 
+  // ── DOM response lifecycle — §MCO16f 2026-09-14 — guardian/lib/
+  //    response-nodes.js + response-watchdog.js. These are the first
+  //    events in this taxonomy that get a real `.event` NODE written per
+  //    occurrence, not just a bus emit — guardian/data/nodes/event/ has
+  //    existed (node-registry creates it) with zero writers since it was
+  //    made. Every one of the four below fires from exactly one real call
+  //    site; none are aspirational.
+  GUARDIAN_DOM_RESPONSE: {
+    description: 'One real live DOM mutation was recorded as a real .response node. Emitted per mutation by POST /dom/event, not batched.',
+    payloadShape: ['jobId', 'compartmentUuid', 'domEventType', 'agentId', 'sequence', 'responseUuid', 'ts'],
+    severity: 'info',
+  },
+  GUARDIAN_RESPONSE_TIMEOUT: {
+    description: "A real in-flight job's .response nodes went silent past the applicable threshold — firstTokenMs when no mutation has ever landed, streamSilenceMs when the DOM moved and then stopped. Two thresholds, because a long wait before the first token is normal and a mid-stream stall is not.",
+    payloadShape: ['jobId', 'provider', 'verdict', 'reason', 'attempt', 'maxRetries', 'evidence'],
+    severity: 'warning',
+  },
+  GUARDIAN_RESPONSE_RETRY: {
+    description: 'The response watchdog forced a real redispatch of a job whose response never arrived. Distinct from the userscripts\u2019 own autoRetry(), which re-prompts a response that DID arrive but failed detectResponseErrors() — this one is about delivery, that one about quality.',
+    payloadShape: ['jobId', 'provider', 'attempt', 'maxRetries', 'triggeredBy', 'reason'],
+    severity: 'notable',
+  },
+  GUARDIAN_RESPONSE_FAILED: {
+    description: 'A real response failure with evidence — the provider disconnected mid-flight, or a watchdog redispatch itself threw.',
+    payloadShape: ['jobId', 'provider', 'stage', 'error', 'verdict', 'reason', 'attempt'],
+    severity: 'failure',
+  },
+  GUARDIAN_RESPONSE_ABANDONED: {
+    description: 'The watchdog stopped retrying a job after exhausting maxRetries. The last real record written for that job, and deliberately its own event rather than a silent stop — a job that quietly leaves the sweep is exactly the invisible failure this whole path exists to end.',
+    payloadShape: ['jobId', 'provider', 'reason', 'finalVerdict', 'evidence'],
+    severity: 'failure',
+  },
+
   // ── §HONEST GAP — gate.checked / gate.failed, named in ET2's own
   //    phasemap entry for ET6's sigma work, deliberately not included.
   //    Confirmed directly (grepped guardian/server.js for both strings):
