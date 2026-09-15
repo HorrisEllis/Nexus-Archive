@@ -20,18 +20,12 @@ const { randomUUID: uuidv4 } = require('crypto'); // §BUGFIX 2026-08-23 — the
 // — never a blocked or crashed DOM stream.
 //
 // activeCompartmentUuid below is deliberately simple, in-memory, per-
-// process state.
-//
-// §MCO16 2026-09-13 CLOSED — the gap this comment used to name ("ClearGlass
-// is not yet a real RAID contract destination") is closed: cortex/core/raid/
-// contract-intake.js's processNext() now calls main/index.js's real
-// POST /compartment/set-active for any contract with executionSurface ===
-// 'browser', BEFORE dispatching it, via setActiveCompartment() below — the
-// exact real hook this comment previously described as unwired. A DOM event
-// with no active compartment (executionSurface !== 'browser', or the
-// set-active call itself never landed) is still reported honestly (see
-// _bindIpc below) rather than tagged with a fabricated uuid — that part of
-// the original design is unchanged.
+// process state — NOT wired to any real RAID dispatch yet, because
+// ClearGlass is not yet a real RAID contract destination (that's a
+// separate, unbuilt piece of work). setActiveCompartment() is the real,
+// explicit hook for whenever that wiring exists; until then a DOM event
+// with no active compartment is reported honestly (see _bindIpc below)
+// rather than tagged with a fabricated uuid.
 let activeCompartmentUuid = null;
 let activeQueueId         = null;
 
@@ -223,20 +217,6 @@ class DomArchaeology {
   constructor({ sse }) {
     this.sse   = sse;
     this.picks = new Map(); // name → pick metadata
-    // §MCO17 2026-09-14 — rehydrate from durable `.dom` nodes. Until now this
-    // Map started empty every process and every named pick the user or an
-    // agent had registered was silently gone after a restart — a §2.1/§2.2
-    // violation that read as a design property ("DOM queries are live and
-    // ephemeral") in NODE-TAXONOMY.md rather than as the bug it was. Loading
-    // is best-effort: a failed load starts empty, exactly as before, so this
-    // can never make boot worse than it already was.
-    try {
-      const domNodes = require('../../lib/dom-nodes.js');
-      for (const p of domNodes.loadPicks()) this.picks.set(p.name, p);
-      if (this.picks.size) console.log(`[DOM] rehydrated ${this.picks.size} durable pick(s) from .dom nodes`);
-    } catch (err) {
-      console.warn('[DOM] pick rehydrate skipped (non-fatal, starts empty as before):', err.message);
-    }
     this._bindIpc();
   }
 
@@ -269,14 +249,16 @@ class DomArchaeology {
       _reportCompartmentDomEvent(data); // §MCO10 — additive, never blocks the existing SSE path above
     });
 
-    // §MCO16 2026-09-13 — real caller now exists: main/index.js's wire-server
-    // route POST /compartment/set-active (RAID → ClearGlass, cross-process
-    // HTTP, RAID has no ipcRenderer to invoke this handler with). Both real
-    // entry points — this renderer-side IPC handle AND that HTTP route —
-    // now go through the ONE real setActiveCompartment() method below
-    // (§10.3 one write authority for this state, not two competing setters).
-    ipcMain.handle('compartment:set-active', (event, { compartmentUuid, queueId } = {}) =>
-      this.setActiveCompartment(compartmentUuid, queueId));
+    // §MCO10 2026-09-13 — real, explicit hook for associating the live DOM
+    // stream with a real RAID compartment/contract, once something (future
+    // work — ClearGlass is not yet a RAID dispatch destination) actually
+    // calls it. Until then activeCompartmentUuid stays null and DOM events
+    // are never ledgered — an honest gap, not a fabricated association.
+    ipcMain.handle('compartment:set-active', (event, { compartmentUuid, queueId } = {}) => {
+      activeCompartmentUuid = compartmentUuid || null;
+      activeQueueId         = queueId || null;
+      return { ok: true, compartmentUuid: activeCompartmentUuid, queueId: activeQueueId };
+    });
 
     ipcMain.on('dom:pick-result', (event, data) => {
       const pick = {
@@ -285,28 +267,7 @@ class DomArchaeology {
         registeredAt: Date.now(),
       };
       this.sse.emit('dom.picked', pick);
-      // §MCO17 2026-09-14 — a renderer-initiated pick is as real as a
-      // handlePick() one and gets the same durable record. Only named picks
-      // are persisted: an unnamed pick has no handle to address it by later,
-      // which is the entire purpose of the type, so persisting one would be
-      // storing something nothing can ever ask for.
-      if (pick.name) this._persistPick(pick);
     });
-  }
-
-  // §MCO16 2026-09-13 — the one real setter for activeCompartmentUuid/
-  // activeQueueId, extracted out of the ipcMain.handle above so a SECOND
-  // real caller (main/index.js's new HTTP route, called from RAID —
-  // outside Electron, no ipcRenderer available to it) can reach the exact
-  // same state instead of a parallel one. Same honest contract as before:
-  // no validation of compartmentUuid's shape here (RAID owns that; a bad
-  // value just tags subsequent DOM events with a bad key, visible in the
-  // ledger, not silently rejected — §1.2, loud not silent).
-  setActiveCompartment(compartmentUuid, queueId) {
-    activeCompartmentUuid = compartmentUuid || null;
-    activeQueueId         = queueId || null;
-    this.sse.emit('compartment.active.changed', { compartmentUuid: activeCompartmentUuid, queueId: activeQueueId, ts: Date.now() });
-    return { ok: true, compartmentUuid: activeCompartmentUuid, queueId: activeQueueId };
   }
 
   // ── Query ─────────────────────────────────────────────────────────────
@@ -358,25 +319,7 @@ class DomArchaeology {
     };
     this.picks.set(pick.name, pick);
     this.sse.emit('dom.pick.registered', pick);
-    // §MCO17 2026-09-14 — the durable half. This Map is per-process and dies
-    // with it; the `.dom` node is what makes a "named hook" (this file's own
-    // header's words) survive a restart. Additive and non-blocking — the SSE
-    // emit above and the return below are unchanged, so every existing caller
-    // behaves identically whether or not the write succeeds.
-    this._persistPick(pick);
     return pick;
-  }
-
-  /** §1.2 — one place where a pick becomes durable, loud on failure, never
-   *  fatal. A pick the user can see highlighted on the page must not fail
-   *  because a node file could not be written. */
-  _persistPick(pick) {
-    try {
-      const r = require('../../lib/dom-nodes.js').writePick(pick);
-      if (!r.ok) console.warn(`[DOM] pick "${pick.name}" not persisted: ${r.reason}`);
-    } catch (err) {
-      console.warn('[DOM] pick persist failed (non-fatal):', err.message);
-    }
   }
 
   // ── Highlight ─────────────────────────────────────────────────────────
@@ -455,4 +398,18 @@ class DomArchaeology {
   listPicks() { return [...this.picks.values()]; }
 }
 
+// §MCO19 2026-09-13 — real, direct (same-process) way for another file in
+// this same ClearGlass main process (bridge.js, for a new HTTP route) to
+// set the same real activeCompartmentUuid/activeQueueId this file's own
+// ipcMain.handle('compartment:set-active', ...) already sets — same
+// module-level state, two real entry points (one for the renderer via
+// IPC, one for an external HTTP caller like RAID via a new bridge.js
+// route), not two competing copies of the state.
+function setActiveCompartment(compartmentUuid, queueId) {
+  activeCompartmentUuid = compartmentUuid || null;
+  activeQueueId         = queueId || null;
+  return { ok: true, compartmentUuid: activeCompartmentUuid, queueId: activeQueueId };
+}
+
 module.exports = DomArchaeology;
+module.exports.setActiveCompartment = setActiveCompartment;

@@ -142,22 +142,5 @@ check('contracts persisted to disk, disk-first, survives a fresh instance', () =
   assert.ok(Object.keys(all).length >= 8, `expected at least 8 contracts on disk, got ${Object.keys(all).length}`);
 });
 
-// §MCO17 2026-09-13 — real, standalone .handoff node creation.
-check('recordHandoff also writes a real, standalone .handoff node (lib/node-export.js), scoped to this test\'s own isolated dataDir', () => {
-  const opened = contracts.openContract({ component_id: 'nexus.renderer', compartmentId: 'cos-handoff-1' });
-  contracts.recordHandoff(opened.id, { system: 'cortex', note: 'real test handoff', meta: { real: true } });
-  const nodeDir = path.join(dataDir, 'nodes', 'handoff');
-  assert.ok(fs.existsSync(nodeDir), `expected ${nodeDir} to exist`);
-  const files = fs.readdirSync(nodeDir).filter(f => f.endsWith('.handoff'));
-  assert.ok(files.length >= 1, 'expected at least one real .handoff node file');
-  const { importFromFile } = require('../../lib/node-export.js');
-  const doc = importFromFile(path.join(nodeDir, files[0]));
-  assert.strictEqual(doc.type, 'handoff');
-  const match = files.map(f => importFromFile(path.join(nodeDir, f)).payload)
-    .find(p => p.contractId === opened.id && p.system === 'cortex');
-  assert.ok(match, 'the specific handoff just recorded must be findable as a real node');
-  assert.strictEqual(match.note, 'real test handoff');
-});
-
 console.log(`\n${pass} passed, ${fail} failed\n`);
 if (fail > 0) process.exit(1);

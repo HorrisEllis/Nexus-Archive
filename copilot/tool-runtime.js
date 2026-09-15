@@ -367,21 +367,8 @@ function makeNcpCallModel(dispatchToAgent, opts = {}) {
       } catch (e) {
         console.warn(`[copilot/tool-runtime] gap report for NCP no-response failed (non-fatal): ${e.message}`);
       }
-      // §FIX 2026-09-15 — James, live: "supposed to be events to make it
-      // more explicit in the backend." Half of that gap was the missing
-      // guardian-side wiring (see guardian/server.js's new
-      // bus.on('guardian.response.abandoned', ...)); this is the other
-      // half. result.error already carries the real, specific reason
-      // (guardian/ask.js's own timeout message, or — once a job is
-      // actually flipped to 'error' by the fix above — the watchdog's
-      // real diagnosis, e.g. "DOM moved 3x then went silent for 25s").
-      // Before this, that string was captured in the gap's own meta
-      // (line above) but never shown here — the person only ever saw
-      // the generic sentinel, with the actual reason buried behind a
-      // gap lookup they'd have to go find separately.
-      const detail = (result && result.error) ? ` — ${result.error}` : '';
       return {
-        text: (result && result.text) || `[NCP dispatch failed — no response${detail}${gapUuid ? ` — gap ${gapUuid}` : ''}]`,
+        text: (result && result.text) || `[NCP dispatch failed — no response${gapUuid ? ` — gap ${gapUuid}` : ''}]`,
         toolCalls: null,
         gapUuid,
       };

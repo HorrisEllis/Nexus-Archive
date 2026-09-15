@@ -555,38 +555,6 @@ class ProviderHost {
     }
   }
 
-  /**
-   * mutateDom(providerId, {cgId, selector, mutation}) — real counterpart to
-   * queryDom() above, same real reasoning: window.__cgDomMesh already
-   * exposes .mutate(cgId, mutation) (confirmed directly in
-   * clear-glass/src/dom/archaeology.js's DOM_OBSERVER_SCRIPT, the exact
-   * page-side object queryDom() already reaches) — this file never called
-   * it. Selector resolution mirrors archaeology.js's own handleMutate():
-   * if no cgId but a selector is given, resolves it to a cgId via
-   * __cgDomMesh.queryOne() first, rather than assuming the caller always
-   * has a cgId in hand.
-   */
-  async mutateDom(providerId, { cgId, selector, mutation } = {}) {
-    const win = this.windows.get(providerId);
-    if (!win || win.isDestroyed()) return { ok: false, reason: `no live window for ${providerId}` };
-    try {
-      let realCgId = cgId || null;
-      if (!realCgId && selector) {
-        const found = await win.webContents.executeJavaScript(
-          `window.__cgDomMesh?.queryOne(${JSON.stringify(selector)}) ?? null`
-        );
-        if (!found) return { ok: false, reason: `no real element matched selector: ${selector}` };
-        realCgId = found.id;
-      }
-      if (!realCgId) return { ok: false, reason: 'cgId or selector required' };
-      const script = `window.__cgDomMesh?.mutate(${JSON.stringify(realCgId)}, ${JSON.stringify(mutation || {})}) ?? { ok: false, reason: 'DOM Archaeology mesh not loaded on this page' }`;
-      const result = await win.webContents.executeJavaScript(script);
-      return result || { ok: false, reason: 'page returned nothing' };
-    } catch (e) {
-      return { ok: false, reason: e.message };
-    }
-  }
-
   // ── Control ──────────────────────────────────────────────────────────────
   show(providerId) {
     const win = this.windows.get(providerId);

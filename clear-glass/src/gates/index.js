@@ -149,7 +149,20 @@ const meshSendGate = (mesh) => gate('mesh.send', (event, stream) => {
 
 const meshRouteGate = (mesh) => gate('mesh.route', (event, stream) => {
   mesh.route(event.data)
-    .then(r  => stream.emit(new Event('mesh.task.complete', r)))
+    .then(r  => {
+      stream.emit(new Event('mesh.task.complete', r));
+      // §MCO20 2026-09-13 — smallest real closure of MCO19's stated gap:
+      // report completion to RAID's real /api/event so a real contract
+      // (requestId === queueId, set by _dispatchToClearGlass) can advance
+      // past PROCESSING instead of nothing ever consuming this result.
+      try {
+        const http = require('http');
+        const body = JSON.stringify({ type: 'raid.contract.dispatched.clearglass.result', payload: { queueId: event.data.requestId, result: r } });
+        const req = http.request({ hostname: '127.0.0.1', port: 3748, path: '/api/event', method: 'POST', timeout: 2000, headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } }, res => res.resume());
+        req.on('error', () => {}); req.on('timeout', () => req.destroy());
+        req.write(body); req.end();
+      } catch (_) {}
+    })
     .catch(err => stream.emit(new Event('mesh.error', { op: 'route', error: err.message })));
 });
 

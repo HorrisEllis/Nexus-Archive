@@ -135,18 +135,7 @@ function createNCPMessageHandler(deps) {
             chatId:  msg.chatId  ?? null,
           });
         }
-        // §MCO-NCP-CONSISTENCY 2026-09-13 — James: "make guardian and ncp
-        // as consistent everywhere." This is a reply to THE SPECIFIC tab
-        // that just registered — real tabId already known here — not a
-        // broadcast to every tab sharing this provider (the same fan-out
-        // shape the dispatcher.js fix closed). pushTab when a real tabId
-        // is known; push() only as an honest fallback for the (should
-        // not happen) case where a REGISTER arrived with no tabId.
-        if (tabId && typeof ncp.pushTab === 'function') {
-          ncp.pushTab(provider, tabId, { type: 'GUARDIAN_READY', provider, ts: Date.now() });
-        } else {
-          ncp.push(provider, { type: 'GUARDIAN_READY', provider, ts: Date.now() });
-        }
+        ncp.push(provider, { type: 'GUARDIAN_READY', provider, ts: Date.now() });
         bus.emit('guardian.provider.registered', { provider, tabId });
         break;
       }
@@ -469,13 +458,7 @@ function createNCPMessageHandler(deps) {
             content: safeContent.slice(0, 4000), lang: lang || 'text',
             hash, ts: Date.now(), chatUrl,
           });
-          // §MCO-NCP-CONSISTENCY 2026-09-13 — same real fix: reply to the
-          // specific tab that sent the artifact, not every tab on this provider.
-          if (tabId && typeof ncp.pushTab === 'function') {
-            ncp.pushTab(provider, tabId, { type: 'GUARDIAN_ARTIFACT_SAVED', jobId, artifactId: artId, ts: Date.now() });
-          } else {
-            ncp.push(provider, { type: 'GUARDIAN_ARTIFACT_SAVED', jobId, artifactId: artId, ts: Date.now() });
-          }
+          ncp.push(provider, { type: 'GUARDIAN_ARTIFACT_SAVED', jobId, artifactId: artId, ts: Date.now() });
           bus.emit('guardian.artifact', { jobId, artifactId: artId, provider });
           // Write to cortex artifacts table
           _toCortex('guardian.artifact', {
@@ -672,25 +655,12 @@ function createNCPMessageHandler(deps) {
               seam_queue_id, seam_chunk_idx, seam_total, provider: provider || 'unknown',
               interruptedAt, resumedAt: Date.now(),
             });
-            // §MCO-NCP-CONSISTENCY 2026-09-13 — same real fix: this ACK
-            // answers the specific tab that sent GUARDIAN_SEAM_RESUME_NEEDED
-            // (tabId already known in this scope), not every tab sharing
-            // the provider.
-            if (tabId && typeof ncp.pushTab === 'function') {
-              ncp.pushTab(provider, tabId, {
-                type: 'GUARDIAN_SEAM_RESUME_ACK',
-                seam_queue_id, seam_chunk_idx,
-                status: 'retrying',
-                ts: Date.now(),
-              });
-            } else {
-              ncp.push(provider, {
-                type: 'GUARDIAN_SEAM_RESUME_ACK',
-                seam_queue_id, seam_chunk_idx,
-                status: 'retrying',
-                ts: Date.now(),
-              });
-            }
+            ncp.push(provider, {
+              type: 'GUARDIAN_SEAM_RESUME_ACK',
+              seam_queue_id, seam_chunk_idx,
+              status: 'retrying',
+              ts: Date.now(),
+            });
           } else {
             // Queue gone — server restarted. Surface as orphaned gap.
             console.log(`[guardian §70.2] orphan resume: queue ${seam_queue_id.slice(0,8)} not in memory — logging gap`);
@@ -702,23 +672,13 @@ function createNCPMessageHandler(deps) {
               description: 'SEAM queue lost on server restart. Manual re-spec needed.',
               source: 'guardian-resume',
             });
-            if (tabId && typeof ncp.pushTab === 'function') {
-              ncp.pushTab(provider, tabId, {
-                type: 'GUARDIAN_SEAM_RESUME_ACK',
-                seam_queue_id, seam_chunk_idx,
-                status: 'orphaned',
-                message: 'Server restarted — queue lost. Re-submit the spec.',
-                ts: Date.now(),
-              });
-            } else {
-              ncp.push(provider, {
-                type: 'GUARDIAN_SEAM_RESUME_ACK',
-                seam_queue_id, seam_chunk_idx,
-                status: 'orphaned',
-                message: 'Server restarted — queue lost. Re-submit the spec.',
-                ts: Date.now(),
-              });
-            }
+            ncp.push(provider, {
+              type: 'GUARDIAN_SEAM_RESUME_ACK',
+              seam_queue_id, seam_chunk_idx,
+              status: 'orphaned',
+              message: 'Server restarted — queue lost. Re-submit the spec.',
+              ts: Date.now(),
+            });
           }
         }
         break;

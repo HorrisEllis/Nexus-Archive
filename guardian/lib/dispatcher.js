@@ -81,22 +81,12 @@ function createDispatcher(deps) {
    * as injectText() honestly failing inside handleJob(). A ping cannot
    * prove the DOM element it hasn't looked at yet is there.
    */
-  function _pingProvider(provider, tabId, timeoutMs = pingTimeoutMs || 3000) {
+  function _pingProvider(provider, timeoutMs = pingTimeoutMs || 3000) {
     return new Promise((resolve) => {
       const pingId = randomUUID();
       let settled = false;
       const onPong = (ev) => {
         if (ev?.data?.provider !== provider || ev?.data?.pingId !== pingId) return;
-        // §MCO-NCP-FANOUT 2026-09-13 — when a specific tabId was resolved
-        // (see _doDispatch below), the pong must come from THAT tab, not
-        // just any tab for this provider. Without this check, a pong from
-        // a DIFFERENT connected tab than the one about to receive the
-        // real job would falsely clear the gate for a tab that never
-        // actually answered the ping — the exact class of false evidence
-        // this gate was built to prevent. No tabId given (real,
-        // backward-compatible fallback — see below) keeps the original,
-        // provider-only match.
-        if (tabId && ev?.data?.tabId !== tabId) return;
         if (settled) return;
         settled = true;
         clearTimeout(timer);
@@ -110,17 +100,7 @@ function createDispatcher(deps) {
         resolve({ ok: false, reason: 'ping timeout' });
       }, timeoutMs);
       bus.on('guardian.ncp.pong', onPong);
-      // §MCO-NCP-FANOUT 2026-09-13 — real single-tab ping when a target
-      // was resolved AND ncp exposes pushTab (real production ncp.js
-      // does; an older/fake ncp without it falls back to the original
-      // broadcast — never a hard requirement, so no existing caller
-      // breaks). Broadcasting GUARDIAN_PING to every tab and clearing on
-      // the first pong from ANY of them proved nothing about whether the
-      // SPECIFIC tab about to receive the real job is the one that's
-      // actually alive.
-      const sent = (tabId && typeof ncp.pushTab === 'function')
-        ? (ncp.pushTab(provider, tabId, { type: 'GUARDIAN_PING', pingId }) ? 1 : 0)
-        : ncp.push(provider, { type: 'GUARDIAN_PING', pingId });
+      const sent = ncp.push(provider, { type: 'GUARDIAN_PING', pingId });
       if (sent === 0) {
         // Real evidence up front — no client actually received the
         // write, no reason to wait out the full timeout for nothing.
@@ -272,45 +252,6 @@ function createDispatcher(deps) {
     // a fresh tab requested — instead of being falsely marked delivered
     // with nothing left to ever retry it.
 
-    // §MCO-NCP-FANOUT 2026-09-13 — real bug, real fix, traced from a live
-    // log: "dispatched → chatgpt via NCP (3 clients)" followed by 3 real
-    // job.dispatched acks and then "[NCP dispatch failed — no response]".
-    // ncp.push() below (and _pingProvider's own ping, already fixed above)
-    // broadcasts to EVERY connected client for a provider — with 3 real
-    // tabs open, all 3 got the SAME job and independently raced to answer
-    // it. Resolved to exactly ONE real target here, BEFORE the ping gate,
-    // so both the ping and the real job content go to the same single
-    // tab. Real, backward-compatible fallback: an ncp without
-    // listClientsForProvider (an older/fake dependency — every existing
-    // test's fake ncp) leaves targetTabId null, and every line below
-    // behaves byte-for-byte as it did before this fix (broadcast ping,
-    // broadcast dispatch) — nothing is a hard new requirement.
-    let targetTabId = null;
-    if (typeof ncp.listClientsForProvider === 'function') {
-      const { selectDispatchTarget } = require('./ncp-dispatch-target.js');
-      const clients = ncp.listClientsForProvider(job.provider);
-      const selection = selectDispatchTarget(clients);
-      if (selection.ok) {
-        targetTabId = selection.tabId;
-        if (selection.ambiguous) {
-          // §1.2 — a real conflict (multiple claimed, or multiple
-          // unclaimed tabs for one provider) is loud, not resolved
-          // silently as if it were the normal single-tab case.
-          console.warn(`[guardian] ${job.id} → ${job.provider}: ${selection.reason}`);
-          bus.emit('guardian.dispatch.target.ambiguous', {
-            jobId: job.id, provider: job.provider, tabId: targetTabId,
-            ambiguous: selection.ambiguous, candidateCount: selection.candidateCount,
-          });
-        }
-      } else {
-        // No real clients per listClientsForProvider — the isConnected()
-        // gate above should already have caught this; logged, not fatal,
-        // and dispatch falls through to the broadcast fallback (which
-        // will itself report 0 clients honestly if this is somehow real).
-        console.warn(`[guardian] ${job.id} → ${job.provider}: listClientsForProvider found no real target (${selection.reason})`);
-      }
-    }
-
     // §BUILT 2026-09-13 — James: "each .job created has to wait until
     // the gate clears. the event gate sends the ping command, doesn't
     // dispatch until ping is returned, then dispatch the job." Real
@@ -325,7 +266,7 @@ function createDispatcher(deps) {
     // both say the same thing — two independent signals agreeing is
     // real evidence; one uncertain signal alone is not.
     updateJob(job.id, { status: 'pinging', pingedAt: Date.now() });
-    const ping = await _pingProvider(job.provider, targetTabId);
+    const ping = await _pingProvider(job.provider);
     if (!ping.ok && !ncp.isConnected(job.provider)) {
       if (!pendingQueue.has(job.provider)) pendingQueue.set(job.provider, []);
       pendingQueue.get(job.provider).push(job);
@@ -339,23 +280,12 @@ function createDispatcher(deps) {
       console.warn(`[guardian] ${job.id} → ${job.provider}: ping gate did not clear (${ping.reason}) but heartbeat is still healthy — dispatching anyway (uncertain evidence, not refusing on it alone)`);
     }
 
-    const jobPayload = {
+    const sent = ncp.push(job.provider, {
       type: 'GUARDIAN_JOB', jobId: job.id, command: job.command,
       provider: job.provider, prompt: job.prompt, content: job.content,
       tools: job.tools || null,
       hat: job.hat || null,
-      // §PHASE2 2026-09-15 (phasemap Bug 3) — guardian/lib/jobs.js's
-      // createJob() computes this once per job (see its own comment for
-      // the real command-list rule); handleJob() in guardian/userscript-
-      // chatgpt.js already reads msg.freshChat and navigates to a blank
-      // chat before injecting when it's true. This was the missing wire
-      // between the two — createJob() computed the flag but nothing
-      // forwarded it onto the wire the tab actually receives.
-      freshChat: job.freshChat !== false,
-    };
-    const sent = (targetTabId && typeof ncp.pushTab === 'function')
-      ? (ncp.pushTab(job.provider, targetTabId, jobPayload) ? 1 : 0)
-      : ncp.push(job.provider, jobPayload);
+    });
     if (sent === 0) {
       if (!pendingQueue.has(job.provider)) pendingQueue.set(job.provider, []);
       pendingQueue.get(job.provider).push(job);
@@ -365,10 +295,8 @@ function createDispatcher(deps) {
       bus.emit('guardian.job.queued', { jobId: job.id, provider: job.provider, reason: 'stale_socket' });
       return false;
     }
-    updateJob(job.id, { status: 'delivered', deliveredAt: Date.now(), dispatchedTabId: targetTabId || null });
-    console.log(targetTabId
-      ? `[guardian] dispatched ${job.id} → ${job.provider}:${targetTabId} via NCP (1 real target, not broadcast)`
-      : `[guardian] dispatched ${job.id} → ${job.provider} via NCP (${sent} client${sent === 1 ? '' : 's'})`);
+    updateJob(job.id, { status: 'delivered', deliveredAt: Date.now() });
+    console.log(`[guardian] dispatched ${job.id} → ${job.provider} via NCP (${sent} client${sent === 1 ? '' : 's'})`);
     try {
       const alk = require('../../intelligence/alk');
       alk.record({

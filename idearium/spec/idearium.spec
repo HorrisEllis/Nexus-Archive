@@ -1,7 +1,11 @@
 spec:
   meta:
     name:        idearium
-    version:     3.2.0
+    version:     4.1.0   # §5.4 drift fix 2026-09-13 — was 3.2.0, out of sync with
+                         # idearium/package.json's 4.1.0 since at least the
+                         # 2026-09-03 "idearium 3.3.0" session. package.json is
+                         # the one actually bumped per-release; this field had
+                         # simply stopped being updated alongside it.
     foundation:  nexus-system-foundation@1.0.0
     port:        4800
     uuid:        nexus-idearium-v3-0000-2026-0615-jamesbrooks-001

@@ -2055,99 +2055,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-// §MCO18 2026-09-13 — real CLI-mode command table for the floating panel.
-// Deliberately small and named honestly: only commands with a real,
-// already-built, CORS-enabled endpoint from this session are included —
-// no aspirational commands that would silently no-op. Every command's
-// handler returns a real result object or throws a real Error; asSend's
-// caller renders either.
-const CLI_COMMANDS = {
-  help: {
-    usage: '/help',
-    desc: 'List every real command this panel can run directly.',
-    run: async () => Object.entries(CLI_COMMANDS).map(([name, c]) => `/${name} ${c.usage.replace('/'+name,'').trim()} — ${c.desc}`).join('\n'),
-  },
-  tools: {
-    usage: '/tools',
-    desc: "List copilot's real, live agent-tool catalog (GET /api/tools).",
-    run: async () => {
-      const copilotPort = (window.NEXUS_PORTS && window.NEXUS_PORTS.copilot) || 3750;
-      const r = await fetch(`http://127.0.0.1:${copilotPort}/api/tools`).then(x=>x.json());
-      if (!r.ok) throw new Error(r.error || 'copilot unreachable');
-      return `${r.count} real tools:\n` + r.tools.map(t => `  ${t.name} — ${t.description.slice(0,90)}`).join('\n');
-    },
-  },
-  raid: {
-    usage: '/raid submit <text> [--surface browser] [--agent claude]',
-    desc: 'Submit a real RAID contract (POST /api/raid/submit).',
-    run: async (args) => {
-      if (args[0] !== 'submit') throw new Error('usage: /raid submit <text> [--surface browser] [--agent claude]');
-      const rest = args.slice(1);
-      const flags = {};
-      const words = [];
-      for (let i = 0; i < rest.length; i++) {
-        if (rest[i] === '--surface') { flags.executionSurface = rest[++i]; }
-        else if (rest[i] === '--agent') { flags.forAgent = rest[++i]; }
-        else words.push(rest[i]);
-      }
-      const content = words.join(' ');
-      if (!content.trim()) throw new Error('a real, non-empty contract body is required');
-      const r = await fetch(`${B.cx}/api/raid/submit`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content, source: 'tv-shell-cli', ...flags }),
-      }).then(x=>x.json());
-      if (!r.ok) throw new Error(r.error || 'RAID refused the contract');
-      return `queued: ${r.queueId}${r.boundary ? ` (boundary: ${r.boundary.key || r.boundary})` : ''}`;
-    },
-  },
-  ncp: {
-    usage: '/ncp <provider>',
-    desc: 'Real, non-lossy NCP client list for one provider + who dispatch would pick (GET /ncp/clients).',
-    run: async (args) => {
-      if (!args[0]) throw new Error('usage: /ncp <provider>');
-      const r = await fetch(`${B.gd}/ncp/clients?provider=${encodeURIComponent(args[0])}`).then(x=>x.json());
-      if (!r.ok) throw new Error(r.error || 'guardian unreachable');
-      if (!r.clients.length) return `${args[0]}: no real connected clients`;
-      const lines = r.clients.map(c => `  tabId=${c.tabId} claimed=${c.claimed} lastHeartbeat=${new Date(c.lastHeartbeat||0).toLocaleTimeString()}`);
-      return `${args[0]}: ${r.clients.length} real client(s)\n${lines.join('\n')}\nwould dispatch to: ${r.wouldDispatchTo.tabId || '(none)'}${r.wouldDispatchTo.ambiguous ? ` [${r.wouldDispatchTo.ambiguous}]` : ''}`;
-    },
-  },
-  responses: {
-    usage: '/responses [compartmentUuid]',
-    desc: 'Real, live .response nodes from the DOM mutation stream (GET /api/responses).',
-    run: async (args) => {
-      const qs = args[0] ? `?compartmentUuid=${encodeURIComponent(args[0])}&n=10` : '?n=10';
-      const r = await fetch(`${B.gd}/api/responses${qs}`).then(x=>x.json());
-      if (!r.ok) throw new Error(r.error || 'guardian unreachable');
-      if (!r.responses.length) return 'no real .response nodes yet';
-      return r.responses.map(x => `  [${new Date(x.ts).toLocaleTimeString()}] ${x.domEventType} — compartment ${x.compartmentUuid}`).join('\n');
-    },
-  },
-};
-
-async function asRunCliCommand(cmdText, out) {
-  const parts = cmdText.split(/\s+/).filter(Boolean);
-  const name = (parts[0] || '').toLowerCase();
-  const cmd = CLI_COMMANDS[name];
-  out.style.color = 'rgba(0,229,255,.92)';
-  out.style.fontFamily = 'monospace';
-  out.style.whiteSpace = 'pre-wrap';
-  if (!cmd) {
-    out.style.color = 'rgba(255,100,100,.8)';
-    out.textContent = `Unknown command: /${name}\nAvailable: ${Object.keys(CLI_COMMANDS).map(n=>'/'+n).join(', ')}`;
-    return;
-  }
-  try {
-    const result = await cmd.run(parts.slice(1));
-    out.textContent = result;
-    _logToData('ui.copilot.cli', { command: name, ok: true });
-  } catch (e) {
-    out.style.color = 'rgba(255,100,100,.8)';
-    out.textContent = `/${name}: ${e.message}`;
-    _logToData('ui.copilot.cli', { command: name, ok: false, error: e.message });
-  }
-}
-
 async function asSend(){
   const inp = document.getElementById('assistant-in');
   const q   = inp.value.trim(); if(!q) return;
@@ -2160,21 +2067,6 @@ async function asSend(){
 
   // clear is the only client-side command — everything else routes based on mode
   if(q.toLowerCase()==='clear'){ out.style.display='none'; return; }
-
-  // §MCO18 2026-09-13 — James: "floating menu button cli." Real command-
-  // line input mode inside this SAME floating panel, not a separate
-  // terminal — a leading '/' is the real, unambiguous signal this is a
-  // command, not a natural-language prompt (same convention chat UIs
-  // already use), so it never collides with an ordinary question that
-  // happens to start with a slash-free word. Every command below hits a
-  // real, already-built endpoint from this session directly — no LLM
-  // round trip, no copilot dispatch — so it answers instantly and never
-  // costs a token. Unknown commands get a real, specific error naming
-  // what IS available, never a silent no-op.
-  if (q.startsWith('/')) {
-    await asRunCliCommand(q.slice(1).trim(), out);
-    return;
-  }
 
   // Show thinking indicator
   const thinking = document.createElement('span');

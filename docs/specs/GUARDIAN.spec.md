@@ -49,16 +49,6 @@ GET  /response/:jobId
 GET  /stream/:jobId     — SSE token stream
 GET  /jobs
 GET  /providers
-GET  /ncp/clients?provider=<name>   — §MCO-NCP-FANOUT 2026-09-13: real, non-lossy per-client list
-                                       (tabId, claimed, lastHeartbeat) for one provider, plus which
-                                       tab dispatcher.js's real selectDispatchTarget() would pick —
-                                       /providers alone collapses multiple real tabs sharing a
-                                       provider into one entry and cannot show this.
-POST /dom/event         — §MCO16e 2026-09-13: real DOM-mutation-stream ingest (ClearGlass →
-                           guardian). Broadcasts via cockpitBroadcast SSE, writes a component-ledger
-                           entry, and creates a real, standalone .response node
-                           (guardian/data/nodes/response/) when a real compartmentUuid is present.
-GET  /api/responses[?compartmentUuid=<uuid>][&n=<limit>] — query side of the .response nodes above.
 GET  /health            — { ok, uptime, jobs, providers, queued }
 GET  /artifacts
 GET  /gaps
@@ -202,32 +192,6 @@ ledger             — guardian ledger entries
 
 Self-signed cert. Visit `https://127.0.0.1:7821/` once in browser to accept.
 `guardian-cert.pem` + `guardian-key.pem` must be present before boot.
-
----
-
-## Recent changes
-
-**§MCO-NCP-FANOUT / §MCO16e (2026-09-13)** — guardian/lib/ncp.js's push()
-broadcasts a message to EVERY connected client for a provider; with
-multiple real tabs open for the same provider, a real job dispatched
-this way raced across all of them (root cause of a live "3 clients, 3
-acks, then no response" failure). Fixed: guardian/lib/dispatcher.js now
-resolves exactly one real target (guardian/lib/ncp-dispatch-target.js's
-selectDispatchTarget() — claimed tab wins; multiple claimed/unclaimed
-picks the freshest heartbeat and flags it ambiguous, logged not silent)
-and dispatches via the new ncp.pushTab(). Every other real ncp.push()
-call site that was replying to one specific tab (GUARDIAN_READY, both
-GUARDIAN_SEAM_RESUME_ACK sends, GUARDIAN_ARTIFACT_SAVED) was audited and
-fixed the same way. Fully backward-compatible — an older/fake ncp
-without listClientsForProvider/pushTab falls back to the original
-broadcast behavior unchanged.
-
-**§MCO16e (2026-09-13)** — POST /dom/event and GET /api/responses (see
-routes above) are new. `.response` is a new, real node type
-(lib/node-schemas/schema.response, guardian's own sovereign copy) —
-genuinely distinct from `.output` (a captured, terminal per-request
-answer): a `.response` is one of many live, per-event records with no
-terminal state, keyed by an open compartmentUuid.
 
 ---
 

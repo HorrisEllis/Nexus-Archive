@@ -44,15 +44,8 @@ import fs from 'fs';
 import path from 'path';
 import { randomUUID } from 'crypto';
 import { fileURLToPath } from 'url';
-import { createRequire } from 'module';
 import { loadTable, syncTable, migrateOnce } from '../lib/db.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-// §MCO22 2026-09-13 — this file is real ESM ("type":"module" in
-// idearium/package.json); lib/repo-manifest.js is a real, shared
-// CommonJS module (root lib/, not idearium's own local lib/) — this is
-// the standard, real Node interop for that combination, not a new
-// mechanism.
-const require = createRequire(import.meta.url);
 
 const COMPONENT_ID = 'nexus-id';   // idearium, in the UID registry
 const REPOS_FILE_NAME = 'idearium-repos.json';  // legacy flat file — read once as a migration source, then left alone (§7.4)
@@ -259,25 +252,6 @@ export class RepoLayer {
     // thing; the physical projection is additive.
     const matResult = this.materialize(repoUuid);
     if (matResult.error) console.warn(`[idearium/repo] initial materialize for ${repoUuid} failed, repo still created: ${matResult.error}`);
-
-    // §MCO22 2026-09-13 — James: "a manifest file... something that
-    // stores all the compartment metadata." Real, additive: when this
-    // ingest carried a real compartmentId (§SBP1's own field, above),
-    // record it into that repo's real, append-only compartment-history
-    // manifest (lib/repo-manifest.js) too — the SBP1 field only ever
-    // held the ONE compartment from creation; this is the real ongoing
-    // history a repo worked on across many later autonomous runs
-    // (§MCO21) accumulates. A manifest-write failure is non-fatal — the
-    // repo record above is already the real, authoritative thing.
-    if (compartmentId) {
-      try {
-        const { recordCompartmentForRepo } = require('../../lib/repo-manifest.js');
-        recordCompartmentForRepo(repoUuid, { compartmentUuid: compartmentId }, { specUuid: manifest.uuid });
-      } catch (e) {
-        console.warn(`[idearium/repo] compartment-manifest record for ${repoUuid} failed (non-fatal): ${e.message}`);
-      }
-    }
-
     return { repo, ideaUuid, specUuid: manifest.uuid };
   }
 

@@ -353,20 +353,7 @@ const ALL_KERNELS = [
     // default 10%, so it's the first thing refused under pressure, not the
     // same as everything else.
     haltPctOverride: 0.15,
-    // §PHASE0 2026-09-15 (phasemap Bug 2) — clear-glass/src/main/index.js
-    // defaults CG_AUTOBOOT_PROVIDERS to 'chatgpt' when unset, which
-    // pre-warms a HIDDEN chatgpt.com tab on every boot. That tab is a
-    // never-human-driven, always-`claimed` competitor in the dispatch-
-    // target race (Bug 1) and the most likely one to be sitting on a
-    // stale thread. Lazy-boot-on-first-dispatch already works
-    // (guardian.tab.needed -> POST /providers/:id/start, wired
-    // §CHANGED 2026-09-12), so turning this off loses no real
-    // capability. This env: block — not clear-glass/src/main/index.js,
-    // not a shell/.env var — is the correct fix location: it's the
-    // actual launcher (autopilot spawns `electron.cmd .` inside
-    // clear-glass/), it persists across every `npm run start:all` boot,
-    // and no .env file exists in the repo for a shell var to survive in.
-    env: { GUARDIAN_DIR: path.join(ROOT, 'guardian'), CG_AUTOBOOT_PROVIDERS: 'none' },
+    env: { GUARDIAN_DIR: path.join(ROOT, 'guardian') },
     // §CRITICAL fix 2026-06-30 — root cause of a real 6-crash circuit-
     // breaker trip, traced from a live boot log: requestSingleInstanceLock()
     // was failing on every restart because Windows hadn't finished

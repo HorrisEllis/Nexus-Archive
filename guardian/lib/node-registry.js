@@ -7,15 +7,7 @@ const nodeIndex   = require('../../lib/node-index.js');
 
 const DEFAULT_NODES_DIR = path.join(__dirname, '..', 'data', 'nodes');
 let NODES_DIR = DEFAULT_NODES_DIR;
-// §MCO16f 2026-09-14 — 'response' added. Not a new type: MCO16e made
-// `.response` a real KNOWN_TYPE with a real schema and a real writer
-// (server.js's POST /dom/event) the day before, but never added it here —
-// so every `.response` file it wrote landed in guardian/data/nodes/response/,
-// a directory this registry does not watch. Confirmed by direct read: no
-// scan, no _ledger.jsonl append, no bus event, ever, for any of them. The
-// files were tangible and simultaneously invisible. This is the one-line
-// wiring that was missing, not a new capability.
-const GUARDIAN_NODE_TYPES = Object.freeze(['tool', 'agent', 'command', 'event', 'intent', 'response']);
+const GUARDIAN_NODE_TYPES = Object.freeze(['tool', 'agent', 'command', 'event', 'intent']);
 const LEDGER_FILE = '_ledger.jsonl';
 
 let _bus = null;

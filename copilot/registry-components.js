@@ -18,12 +18,6 @@ const components=[
   }),
   _c('stream.query','GET','/api/stream','Query the continuous event stream',{grammar:['stream','cs']}),
   _c('stream.ingest','POST','/api/stream/ingest','Push events into co-pilot stream'),
-  // §MCO16f 2026-09-13 — James: "copilot's tools and capabilities in the
-  // server.js and his tools... pointed to loom, the dynamic map
-  // registry." New, real, source-derived (lib/agent-tools/index.js's
-  // live TOOLS map, not a hand-maintained count) — loom's capability-map
-  // scanner can now verify this route is genuinely served, not a claim.
-  _c('tools.list','GET','/api/tools','Live catalog of every real agent-tool copilot can call — name + description, sourced from lib/agent-tools',{grammar:['copilot tools','list tools']}),
   _c('sessions','GET','/api/sessions','Active co-pilot sessions'),
   _c('axioms.list','GET','/api/axioms','List all axioms',{grammar:['axioms','list axioms']}),
   _c('axioms.add','POST','/api/axioms/add','Add a runtime axiom',{grammar:['add axiom']}),

@@ -108,6 +108,7 @@ module.exports = Object.freeze({
     CONTRACT_PASS:         'raid.contract.pass',
     CONTRACT_FAIL:         'raid.contract.fail',
     CONTRACT_COMPLETE:     'raid.contract.complete',
+    CONTRACT_DISPATCHED_CLEARGLASS: 'raid.contract.dispatched.clearglass',
     // §MCO4 2026-09-13 — the 5 real stage-transition events
     // contract-intake.js's new _advanceTo*() functions actually emit,
     // wiring STAGE's remaining dead values. Same raid.contract.* namespace

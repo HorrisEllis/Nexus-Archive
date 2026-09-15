@@ -171,40 +171,7 @@ fix_map            — gap→fix knowledge base
 cortex_memory      — raw agent responses
 conditioning_log   — feedback conditioning
 feedback_scores    — feedback weights
-raid_contract_queue — RAID's own contract queue (cortex/core/raid/contract-intake.js) — see below
 ```
-
----
-
-## RAID — write surface (cortex/core/raid/contract-intake.js, exposed on cortex/boot.js)
-
-```
-GET  /api/raid/queue                 — recent raid_contract_queue rows
-POST /api/raid/submit                — §MCO16b 2026-09-13: the real write side /api/raid/queue never
-                                        had. Calls the same submitContract() every real submitter
-                                        (officiator.js, idearium, self-heal, architect) already uses.
-                                        Body: { content, source?, forAgent?, intention?, dir?, system?,
-                                        dependsOn?, executionSurface?, domSteps? }.
-GET  /api/raid/decide                — fidelity-based agent selection (cortex/core/raid/index.js)
-GET  /api/raid/health
-```
-
-**executionSurface** (§MCO16 2026-09-13) — a contract declares `"internal"` (default, unchanged
-behavior) or `"browser"`: BROWSER routes through ClearGlass (_clearGlassExecutor in contract-intake.js)
-instead of the default agent executor, real-tagging the compartment via ClearGlass's
-POST /compartment/set-active BEFORE dispatch — the fix that gives lib/compartment-dom-ledger.js's
-compartment_dom_ledger its first real, non-empty rows. A ClearGlass-unreachable failure is a real
-thrown error (never a silent internal fallback) — the contract's own onFail (retry/fallbackAgent/halt)
-decides what happens next, same as any other execution failure.
-
-**domSteps** (§MCO16c 2026-09-13) — for a `browser` contract, an ordered array of
-`{action:"query"|"mutate", providerId?, selector?, query?, cgId?, mutation?}` run against ClearGlass's
-real /dom/query and (new) /dom/mutate, in sequence — real page interaction instead of a chat prompt.
-The first real step-level failure aborts the sequence immediately (never continues mutating on top of
-a step that didn't really happen).
-
-Full details, gates, and verification history: docs/2026-09-13-axiom-5-2-raid-routing-phasemap.spec
-(MCO16/16b/16c entries).
 
 ---
 

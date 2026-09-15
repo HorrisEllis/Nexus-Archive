@@ -92,33 +92,20 @@ function _buildPrompt(goalText, workingMemory, constraintFrame) {
 // can't accidentally stand up a second, desynced copy of any of them.
 function _makeExecutor({ goalText, provider, timeoutMs, jobs, createJob, dispatchJob, ncp }) {
   const { askSync } = require('../ask.js');
-  // §MCO21 2026-09-13 — James: "copilot's autonomous mode... get this
-  // system building projects of any size... highest leverage, find it."
-  // Real, confirmed gap found before building: this executor sent ONE
-  // prompt and returned the raw text — no way for the agent to ever call
-  // a real tool (create_work_surface, get_work_surface_chunk, or any of
-  // the other 99 real lib/agent-tools) mid-run. A workSurface could be
-  // attached to a massive file's projectSeed entry (§MCO20) and this
-  // executor still had no mechanism to ever fetch its chunks. This is
-  // the actual "building projects of any size" gap, not the seed-
-  // truncation one closed already.
-  //
-  // §SOVEREIGN, PER THIS FILE'S OWN CONTRACT ABOVE — the real dispatch
-  // mechanism stays askSync (dispatchToAgent below wraps it, unchanged
-  // deps shape); only the shared, protocol-level tool-loop wrapper
-  // (lib/agent-tools.runToolLoop — sovereign, no copilot coupling — and
-  // copilot/tool-runtime.js's makeNcpCallModel, which is exported
-  // specifically to be reused by any real dispatchToAgent, not just
-  // copilot's own) is reused, not duplicated. No new agent-dispatch
-  // mechanism is introduced.
-  const dispatchToAgent = async (prompt, opts = {}) => {
-    return askSync(prompt, {
-      provider: opts.provider || provider || 'auto',
+  return async function executor(workingMemory, constraintFrame) {
+    const prompt = _buildPrompt(goalText, workingMemory, constraintFrame);
+    const result = await askSync(prompt, {
+      provider: provider || 'auto',
       timeoutMs: timeoutMs || DEFAULT_STEP_TIMEOUT_MS,
       command: 'ask',
     }, {
-      createJob, dispatchJob, getJob: (id) => jobs.get(id),
+      createJob,
+      dispatchJob,
+      getJob: (id) => jobs.get(id),
       isProviderConnected: (p) => { try { return ncp.isConnected(p); } catch (_) { return false; } },
+      // Same RAID-then-reserve fallback POST /api/copilot/prompt already
+      // uses — asks cortex over its real API, never requires across the
+      // system boundary. LAW_III unconditional reserve on failure.
       resolveProvider: async (p) => {
         try {
           const nx = require('../../lib/nexus-client');
@@ -130,35 +117,8 @@ function _makeExecutor({ goalText, provider, timeoutMs, jobs, createJob, dispatc
         }
       },
     });
-  };
-
-  return async function executor(workingMemory, constraintFrame) {
-    const userPrompt = _buildPrompt(goalText, workingMemory, constraintFrame);
-    try {
-      const { makeNcpCallModel } = require('../../copilot/tool-runtime.js');
-      const agentTools = require('../../lib/agent-tools/index.js');
-      const callModel = makeNcpCallModel(dispatchToAgent, { provider: provider || 'auto' });
-      const systemPrompt = [
-        'You are guardian\'s autonomous build executor. You have real tools; use them to read files, ' +
-        'inspect and mutate the DOM, submit RAID contracts, and work through large files chunk by chunk.',
-        'For a file too large to read in one pass: call create_work_surface first to get its real line ' +
-        'count and chunk plan, then call get_work_surface_chunk once per chunk in order — never guess ' +
-        'at content you have not actually fetched.',
-      ].join(' ');
-      const loopResult = await agentTools.runToolLoop(callModel, systemPrompt, userPrompt, { maxIterations: 10 });
-      if (!loopResult.text) throw new Error('executor: tool loop produced no final text');
-      return { text: loopResult.text, iterations: loopResult.iterations, toolCallLog: loopResult.toolCallLog };
-    } catch (e) {
-      // §HONEST DEGRADE — a real failure anywhere in the tool-loop wiring
-      // (a require failing, runToolLoop itself throwing) falls back to
-      // the original single-shot askSync path rather than the whole
-      // autonomous run failing outright — same real behavior this route
-      // had before this fix, not a new failure mode.
-      console.warn(`[autonomous-loop-route] tool-calling executor failed (${e.message}) — falling back to single-shot askSync`);
-      const result = await dispatchToAgent(userPrompt, { provider });
-      if (!result.ok) throw new Error(result.error || 'executor: askSync failed with no error message');
-      return { text: result.text, provider: result.provider, jobId: result.jobId };
-    }
+    if (!result.ok) throw new Error(result.error || 'executor: askSync failed with no error message');
+    return { text: result.text, provider: result.provider, jobId: result.jobId };
   };
 }
 

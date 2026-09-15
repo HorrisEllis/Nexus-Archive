@@ -450,33 +450,6 @@ function createNCPServer({ onMessage, onConnect, onDisconnect, busEmit } = {}) {
   function clientCount() { return _clients.size; }
 
   /**
-   * listClientsForProvider(provider) — §MCO-NCP-FANOUT 2026-09-13. Real,
-   * non-lossy accessor: getProviders() above keys its result BY provider
-   * name, so when N>1 real clients share a provider (exactly the
-   * multi-tab case this closes), only the last one iterated survives in
-   * that object — real information silently dropped, not this function's
-   * problem to inherit. Returns every real, non-stale client for the
-   * provider — dispatcher.js's real selectDispatchTarget() (guardian/lib/
-   * ncp-dispatch-target.js) needs the full real set to choose from, not
-   * one already-collapsed guess.
-   */
-  function listClientsForProvider(provider) {
-    const out = [];
-    for (const [key, client] of _clients) {
-      if (client.provider !== provider) continue;
-      if (_isStale(client)) continue; // same real staleness check isConnected() already applies
-      out.push({
-        tabId: client.tabId,
-        claimed: client.claimed || false,
-        lastHeartbeat: client.lastHeartbeat,
-        connectedAt: client.connectedAt,
-        chatId: client.chatId || null,
-      });
-    }
-    return out;
-  }
-
-  /**
    * updateClient(provider, tabId, fields) — merge fields into a live client entry.
    * Used by server.js to propagate GUARDIAN_REGISTER payload (claimed, chatId, etc.)
    * into the NCP client map without waiting for the first heartbeat (8 s delay).
@@ -505,7 +478,6 @@ function createNCPServer({ onMessage, onConnect, onDisconnect, busEmit } = {}) {
     // State
     isConnected,
     getProviders,
-    listClientsForProvider,
     clientCount,
     updateClient,
   };

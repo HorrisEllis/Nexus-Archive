@@ -858,7 +858,7 @@ function connect() {
       });
     }
     if (_hb) clearInterval(_hb);
-    _hb = setInterval(() => ncpPost(NCP_HB, { type:'GUARDIAN_HEARTBEAT', provider:PROVIDER, tabId:MY_TAB, ts:Date.now(), usage:detectUsageLimit(), chatId:chatId(), claimed:amIClaimed() }), HB_MS); // §PHASE1 2026-09-15 (phasemap Bug 1) — real claim evidence per heartbeat, not the hardcoded isClaimed=true left over from the 2026-06-20 passive-mode removal
+    _hb = setInterval(() => ncpPost(NCP_HB, { type:'GUARDIAN_HEARTBEAT', provider:PROVIDER, tabId:MY_TAB, ts:Date.now(), usage:detectUsageLimit(), chatId:chatId(), claimed:isClaimed }), HB_MS);
     autoClaimIfFree();
     replayPending();
   };

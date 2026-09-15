@@ -536,57 +536,6 @@ function submit() {
   if (input) input.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',keyCode:13,which:13,bubbles:true,cancelable:true}));
 }
 
-// ── Fresh-chat navigation — phasemap Bug 3 / Phase 2 ───────────────────────────
-// §PHASE2 2026-09-15: handleJob() used to inject into whatever thread the tab
-// happened to have open (confirmed live: job 320c51cf-... landed in an old
-// thread, "Nexus Hello Response", instead of a fresh chat). msg.freshChat —
-// set server-side by lib/jobs.js's createJob(), true for every command except
-// a first 'tools' dispatch — tells this tab to start a blank chat before
-// injecting. This clicks ChatGPT's own "New chat" control for real SPA
-// navigation — deliberately NOT location.href/location.assign, which would
-// tear down this script's live NCP connection mid-dispatch. Tool-call
-// follow-ups (_onJobComplete's own injectText(followUp) call) never go
-// through handleJob() again at all, so they're unaffected by any of this.
-// §HONEST-SCOPE: same caveat as detectUsageLimit() elsewhere in this file —
-// the selectors below are a layered, drift-tolerant scan of chatgpt.com's
-// current markup, not pinned to a verified-current string. If none match,
-// this logs a warning and handleJob() falls back to injecting into whatever
-// thread is currently open, rather than failing the job outright.
-function _findByAccessibleName(re) {
-  for (const el of document.querySelectorAll('a, button, [role="button"]')) {
-    if (el.offsetParent === null) continue; // skip hidden/collapsed controls
-    const label = (el.getAttribute('aria-label') || el.getAttribute('title') || el.textContent || '').trim();
-    if (label && re.test(label)) return el;
-  }
-  return null;
-}
-function _findNewChatControl() {
-  return document.querySelector('[data-testid="create-new-chat-button"]') ||
-         document.querySelector('a[href="/"]') ||
-         _findByAccessibleName(/^new chat$/i);
-}
-function _hasComposer() {
-  return !!(document.querySelector('[contenteditable="true"]') ||
-            document.querySelector('textarea#prompt-textarea') ||
-            document.querySelector('textarea'));
-}
-async function goToNewChat(timeoutMs = 8000) {
-  if (chatId() === 'home') return true; // already on a blank chat
-  const btn = _findNewChatControl();
-  if (!btn) {
-    _log('warn', 'freshChat requested', 'no "New chat" control found — injecting into current thread');
-    return false;
-  }
-  btn.click();
-  const start = Date.now();
-  while (Date.now() - start < timeoutMs) {
-    if (chatId() === 'home' && _hasComposer()) return true;
-    await new Promise(r => setTimeout(r, 150));
-  }
-  _log('warn', 'freshChat requested', 'new-chat navigation timed out — injecting into current thread');
-  return false;
-}
-
 // ── Scan DOM for spatial / DOM map signal ─────────────────────────────────────
 function sendDOMMap() {
   if (!connState === 'ready') return;
@@ -634,100 +583,17 @@ function autoRetry(jobId, text, retryCount) {
 }
 
 // ── Watch ─────────────────────────────────────────────────────────────────────
-// §MCO16f 2026-09-14 — James: "we need to generate a .response from the dom
-// mutation live in real time to a .response node."
-//
-// This observer is the real, live DOM mutation source the whole `.response`
-// node type was built for, and until now it never sent guardian a single one.
-// Guardian's POST /dom/event (MCO16e, 2026-09-13) has been real and reachable
-// since the day before — grepped every .js and .html in the repo to check
-// before adding this: its ONLY callers were its own tests. GUARDIAN_CHUNK
-// already streams the text over NCP, but a chunk is a transient message on a
-// socket; it is not tangible, is not a node, and is gone the moment the
-// process it landed in restarts. This posts alongside it, and does not
-// replace it.
-//
-// Fire-and-forget on purpose. A node write is a recording of the response,
-// never a gate on it — if guardian is down or slow, the response must still
-// reach the user exactly as it does today. No await, no retry, no blocking.
-let _domSeq = 0;
-// §PHASE4 2026-09-15 (phasemap Bug 5) — the server side (guardian/server.js's
-// POST /dom/event) already reads and persists a `command` field, but nothing
-// on this side ever sent one, so it was always null in practice. handleJob()
-// has `command` in scope but _postDom() is called from startWatch()/
-// checkStable()/_onJobComplete(), none of which do — threading it through
-// every one of those signatures would touch code far from this bug for no
-// real benefit. A jobId-keyed map is the minimal change: set once when a job
-// starts, read by every _postDom() call for that job, cleared when the job
-// is genuinely done (not on a tool-call follow-up, which reuses the same
-// jobId and still needs its command remembered).
-const _jobCommands = new Map(); // jobId -> command
-function _postDom(jobId, phase, dom) {
-  try {
-    _gmFetch(`${NCP_URL}/dom/event`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        jobId, type: phase, agentId: PROVIDER,
-        sequence: _domSeq++, dom: dom || null,
-        command: _jobCommands.get(jobId) || null,
-        chatUrl: location.href, ts: Date.now(),
-      }),
-      timeoutMs: 2000,
-    }).catch(() => {}); // guardian unreachable is not this tab's problem to solve
-  } catch (_) { /* never let recording break the thing being recorded */ }
-}
-
 function stopWatch() {
   if (_watchObs) { _watchObs.disconnect(); _watchObs = null; }
   if (_watchTimer) { clearTimeout(_watchTimer); _watchTimer = null; }
-  if (_watchDeadline) { clearTimeout(_watchDeadline); _watchDeadline = null; }
   currentJobId = null; jobActive = false;
   setJobBar(false);
 }
-
-// §MCO16f — the local half of the deadline. Guardian's response-watchdog is
-// authoritative and survives this tab dying entirely, but it can only infer
-// silence from outside. This tab knows something guardian cannot: whether the
-// page still thinks it is generating. Reporting that directly turns a guess
-// into evidence. HARD_DEADLINE_MS is deliberately well past guardian's own
-// thresholds so the two never race to retry the same job — guardian decides,
-// this reports.
-const HARD_DEADLINE_MS = 180_000;
-let _watchDeadline = null;
 
 function startWatch(jobId, prompt, retryCount = 0) {
   stopWatch();
   currentJobId = jobId; jobActive = true; _watchStart = Date.now();
   setJobBar(true, prompt, jobId);
-  _domSeq = 0;
-  _postDom(jobId, 'dom.open', { promptLen: (prompt || '').length, retryCount });
-
-  // §THE REAL BUG THIS CLOSES — checkStable() below reschedules itself every
-  // 300ms and has exactly two exits: 3 consecutive stable reads, or
-  // currentJobId changing. There has never been a third. A tab that navigates
-  // away, gets backgrounded into timer throttling, or has its generation die
-  // mid-stream simply loops forever: _onJobComplete never fires, no error is
-  // ever raised, and guardian is left holding a job that will never resolve.
-  // Confirmed by reading the loop, not inferred from a symptom.
-  _watchDeadline = setTimeout(() => {
-    if (currentJobId !== jobId) return; // already resolved — nothing to report
-    const el = findResponseEl();
-    const text = el ? (el.innerText || el.textContent || '').trim() : '';
-    _postDom(jobId, 'dom.error', {
-      reason: 'local watch deadline exceeded',
-      ms: Date.now() - _watchStart,
-      chars: text.length,
-      stillGenerating: _isGenerating(),
-      partial: text.slice(0, 2000),   // real partial output is better than none
-    });
-    _log('err', 'Watch deadline exceeded', `#${jobId.slice(0, 8)} · ${text.length}ch`);
-    // §1.2 — reported honestly, and any real partial text still goes through
-    // the normal completion path rather than being thrown away. A truncated
-    // answer the user can see beats a silence they cannot.
-    if (text.length) _onJobComplete(jobId, text, Date.now() - _watchStart, prompt, retryCount);
-    else stopWatch();
-  }, HARD_DEADLINE_MS);
 
   let lastText = '', stableCount = 0;
   let _lastChunkLen = 0;
@@ -739,13 +605,6 @@ function startWatch(jobId, prompt, retryCount = 0) {
     const text = (el.innerText || el.textContent || '').trim();
     if (text === lastText && !_isGenerating()) {
       stableCount++;
-      // §MCO16f — dom.stable on the FIRST stable read, not the third. The
-      // two extra reads are a debounce against a model that pauses
-      // mid-sentence; the first one is the real moment the DOM stopped, and
-      // it is what guardian's watchdog needs to know the stream ended rather
-      // than stalled. Recording it two reads late would make every genuine
-      // completion look ~600ms more silent than it was.
-      if (stableCount === 1) _postDom(jobId, 'dom.stable', { chars: text.length, ms: Date.now() - _watchStart, partial: text.slice(0, 2000) });
       if (stableCount >= 3) {
         const ms = Date.now() - _watchStart;
         _onJobComplete(jobId, text, ms, prompt, retryCount);
@@ -757,14 +616,6 @@ function startWatch(jobId, prompt, retryCount = 0) {
         if (delta.length > 10 || /[.!?\n]/.test(delta)) {
           send({ type:'GUARDIAN_CHUNK', jobId, text:delta, full:text, provider:PROVIDER, chatUrl:location.href, ts:Date.now() });
           _streamToCortex(jobId, delta, text);
-          // §MCO16f — one real .response node per real observed delta, on the
-          // exact same gate GUARDIAN_CHUNK already uses. Deliberately NOT a
-          // node per raw MutationObserver callback: that fires per character
-          // on a streaming response and would be thousands of files for one
-          // answer. This threshold is already the codebase's own established
-          // answer to "when is a mutation worth reporting" — reused, not
-          // second-guessed with a new one.
-          _postDom(jobId, 'dom.mutation', { chars: text.length, deltaChars: delta.length, ms: Date.now() - _watchStart, partial: text.slice(0, 2000) });
         }
       }
       lastText = text; stableCount = 0;
@@ -806,14 +657,6 @@ async function _onJobComplete(jobId, text, ms, prompt, retryCount) {
     }
     _toolCallCounts.delete(jobId);
   }
-
-  // §MCO16f — the terminal `.response` node, posted BEFORE stopWatch() so it
-  // still has the live timing in scope, and before any of the completion
-  // reporting below. This is the single node guardian's response-watchdog
-  // reads to decide a job is genuinely finished (response-nodes.TERMINAL_
-  // PHASES); everything after this line can fail without the job being
-  // mistaken for a timeout.
-  _postDom(jobId, 'dom.complete', { chars: text.length, ms, retryCount, chatUrl: location.href, partial: text.slice(0, 2000) });
 
   stopWatch();
   send({ type:'GUARDIAN_LEDGER_WRITE', jobId, category:'UPGRADE',
@@ -949,14 +792,6 @@ async function handleJob(msg) {
   const { jobId, prompt='', content='', command='', tools=null, hat=null, seam_chunk_idx, seam_total, seam_title, seam_queue_id } = msg;
   const text = content ? (prompt ? `${prompt}\n\n${content}` : content) : prompt;
   if (!text.trim()) { _log('err','Empty job','skipping'); return; }
-  // §PHASE4 — remembered for every _postDom() this job produces. Not
-  // deleted on completion: autoRetry() and the tool-call follow-up path
-  // above both re-enter startWatch() with the SAME jobId after this
-  // function returns, and still need their command remembered when they
-  // do. Bounded instead (oldest-first) so a long-running tab's map can't
-  // grow without limit — same fire-and-forget spirit as _postDom itself.
-  if (_jobCommands.size > 200) _jobCommands.delete(_jobCommands.keys().next().value);
-  _jobCommands.set(jobId, command);
   if (seam_queue_id != null) {
     _log('job', `SEAM chunk ${seam_chunk_idx+1}/${seam_total}: ${seam_title}`, `queue #${seam_queue_id.slice(0,8)}`);
     toast(`SEAM ${seam_chunk_idx+1}/${seam_total}: ${seam_title}`, 'job', 3500);
@@ -1001,8 +836,6 @@ async function handleJob(msg) {
     const scopedTools = _scopedTools(tools, hat);
     if (Array.isArray(scopedTools) && scopedTools.length) _toolCallCounts.set(jobId, 0);
     const toolsHdr = _buildToolsHeader(scopedTools);
-
-    if (msg.freshChat) await goToNewChat();
 
     const finalText = toolsHdr + (hatHdr || intelHdr || legacyCtx) + text;
     if (!injectText(finalText)) throw new Error('Input not found — no contenteditable');
@@ -1242,7 +1075,7 @@ function connect() {
       });
     }
     if (_hb) clearInterval(_hb);
-    _hb = setInterval(() => ncpPost(NCP_HB, { type:'GUARDIAN_HEARTBEAT', provider:PROVIDER, tabId:MY_TAB, ts:Date.now(), usage:detectUsageLimit(), chatId:chatId(), claimed:amIClaimed() }), HB_MS);
+    _hb = setInterval(() => ncpPost(NCP_HB, { type:'GUARDIAN_HEARTBEAT', provider:PROVIDER, tabId:MY_TAB, ts:Date.now(), usage:detectUsageLimit(), chatId:chatId(), claimed:isClaimed }), HB_MS);
     autoClaimIfFree();
     replayPending();
     setTimeout(() => sendDOMMap(), 2000);

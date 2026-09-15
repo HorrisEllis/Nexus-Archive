@@ -53,19 +53,6 @@ spec:
   routes:
     - method: GET path: /contract
       returns: "Full clear-glass component registry — 67 real components as of 2026-09-01"
-    # §MCO16 2026-09-13 — RAID is now a real dispatch caller of ClearGlass
-    # (cortex/core/raid/contract-intake.js's _clearGlassExecutor, for any
-    # contract declaring executionSurface:"browser"). The two
-    # 'handles' events above were the aspirational contract; these are
-    # the real, verified routes that actually made it true.
-    - method: POST path: /compartment/set-active
-      returns: "tags the live DOM stream with a real compartmentUuid/queueId, calling straight into DomArchaeology.setActiveCompartment() — RAID's own boundary into this process (no ipcRenderer available to it)"
-    - method: POST path: /agent-mesh/route
-      returns: "dispatches a real prompt via AgentMesh.route() — used by RAID for a browser contract with no domSteps"
-    - method: POST path: /dom/query
-      returns: "real window.__cgDomMesh query/tree read on a live provider tab"
-    - method: POST path: /dom/mutate
-      returns: "§MCO16c 2026-09-13 — real counterpart to /dom/query; the write side a RAID domSteps 'mutate' step calls"
 
   handshake:
     components_count: 67

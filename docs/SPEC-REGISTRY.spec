@@ -1548,34 +1548,3 @@ spec:
     version history — worth its own archive-or-keep decision, not rushed
     here). Full rationale per file:
     `_archive/superseded-docs-2026-09-10/README.md`.
-
-    ---
-    ## §REGISTERED 2026-09-14 (§6.3) — node-index spec
-
-    | spec | version | status | governs |
-    |---|---|---|---|
-    | `docs/nexus-node-index.spec` | 0.1.0 | specified, build steps 1-6 landed same session | Per-system node databases (`lib/system-db.js` wrapping the real, pre-existing `lib/node-index.js`), two new node types (`.dom`, `.database`), and the `query_nodes` agent tool. Written and entered the SAME session it was built, closing the gap this exact rule exists to catch — MCO16f (2026-09-14, the response-node/watchdog work earlier this session) shipped without ever being written up here, which is precisely the drift §6.3 is for. |
-
-    §MCO16f WAS NEVER REGISTERED — found while entering this one, not
-    separately audited for. That work (`guardian/lib/response-nodes.js`,
-    `guardian/lib/response-watchdog.js`) has no governing `.spec` file at
-    all — it was built directly from an axioms/taxonomy read, not from a
-    written spec, so there is nothing to register. Named here rather than
-    silently left: a body of real, tested, shipped code with no spec is
-    itself the drift §3.3 (map before build) and §6.3 exist to prevent, even
-    when nothing in it is wrong. Not retro-specified in this pass — flagged
-    as real, accounted-for debt instead of fabricating a spec after the fact
-    to make the registry look complete.
-
-    Build-order accounting against `docs/nexus-node-index.spec`'s own
-    `build_order`, since "specified" alone doesn't say how much of it is
-    real: steps 1-6 (`schema.dom`+`schema.database`, `lib/system-db.js`,
-    `exportToFile` indexing, `.dom` persistence for clear-glass picks, the
-    `.database` node + first real `associative-lattice.updateEdge()` caller,
-    `query_nodes`) are built and pass 20/20 in
-    `tests/modules/mco17-system-db-and-dom-nodes.test.js`. Step 7 (a CLI
-    surface, per §3.4's raw-code → library → tool → CLI order) is NOT
-    built — the tool is the outermost layer landed this pass, not the CLI.
-    `not_built_yet` (cross-system federation, index compaction, retro-
-    indexing of pre-existing node files) is unchanged from the spec's own
-    accounting and is not claimed done here.

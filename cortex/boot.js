@@ -542,54 +542,6 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // §MCO16 2026-09-13 — the write counterpart /api/raid/queue never had.
-  // Real, honest gap found while wiring executionSurface:'browser'
-  // (contract-intake.js's own new field): every existing real submitter
-  // (officiator.js, idearium/api/index.js, self-heal, architect/service.js)
-  // calls submitContract() as an in-process require() — there was no real
-  // HTTP path for anything OUTSIDE this process (a human, a CLI, a future
-  // automation) to submit a contract at all, executionSurface or
-  // otherwise. §3.4 (raw execution before interfaces) — this is that next
-  // real interface layer, not a second contract-submission mechanism:
-  // it calls the exact same real submitContract(), nothing reimplemented.
-  if (p === '/api/raid/submit' && method === 'POST') {
-    const body = await readBody(req);
-    try {
-      const { submitContract } = require('./core/raid/contract-intake.js');
-      const result = submitContract(
-        {
-          content: body.content, file: body.file || null, title: body.title || null, forAgent: body.forAgent || null,
-          // §MCO16c 2026-09-13 — domSteps lives on the CONTRACT object
-          // (queued.contract.domSteps), read directly by contract-
-          // intake.js's _clearGlassExecutor — not an opts field. Missed
-          // in this route's first pass (only executionSurface was wired
-          // through); found while building the raid_submit_contract
-          // copilot tool, which needs this to actually reach a browser-
-          // destined contract's real domSteps.
-          domSteps: Array.isArray(body.domSteps) ? body.domSteps : undefined,
-        },
-        {
-          source: body.source || 'api',
-          intention: body.intention || null,
-          dir: body.dir || null,
-          language: body.language || null,
-          system: body.system || null,
-          forAgent: body.forAgent || null,
-          dependsOn: Array.isArray(body.dependsOn) ? body.dependsOn : [],
-          onFail: body.onFail || undefined,
-          executionSurface: body.executionSurface || undefined,
-        }
-      );
-      json(res, 200, { ok: true, ...result });
-    } catch (e) {
-      // §1.2 — a bad submission (no real content, an unrecognized
-      // executionSurface — see submitContract's own real validation) is
-      // reported with the real reason, not a generic 500.
-      json(res, 400, { ok: false, error: e.message });
-    }
-    return;
-  }
-
   // ── Friction ─────────────────────────────────────────────────────────────
   if (p === '/api/friction') {
     json(res, 200, { ok: true, friction: _field.friction, regime: _field.regime });
@@ -1672,6 +1624,18 @@ server.listen(PORT, '127.0.0.1', () => {
   // nexus-bus is a plain EventEmitter, no wildcard matching — the real
   // DOM event's own subtype (dom.snapshot / dom.mutation / etc, clear-
   // glass's own vocabulary) travels inside the payload, not the bus name.
+  // §MCO20 2026-09-13 — closes MCO19's stated gap: a real ClearGlass
+  // dispatch result now advances the real contract past PROCESSING,
+  // reusing _advanceToOutputFolder as-is (no new mechanism).
+  bus.on('raid.contract.dispatched.clearglass.result', (payload) => {
+    if (!payload || !payload.queueId) return;
+    try {
+      const intake = require('./core/raid/contract-intake.js');
+      const row = intake.listQueue().find(r => r.uuid === payload.queueId);
+      if (row) intake._advanceToOutputFolder(row.uuid, row, { queueId: row.uuid, status: 'PASS', result: payload.result });
+    } catch (e) { console.warn(`[cortex] clearglass result handling failed: ${e.message}`); }
+  });
+
   bus.on('compartment.dom.event', (payload) => {
     const { recordDomEvent } = require('../lib/compartment-dom-ledger.js');
     const result = recordDomEvent(jaaDB, payload, uid);
