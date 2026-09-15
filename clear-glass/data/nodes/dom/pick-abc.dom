@@ -10,11 +10,11 @@ tags:
   - dom
   - pick
   - agent:chatgpt
-exported_at: 1789452714638
+exported_at: 1789453052561
 source: nexus.clear-glass.dom-nodes
 occurrences: 1
-firstSeenAt: 1789452714638
-lastSeenAt: 1789452714638
+firstSeenAt: 1789453052561
+lastSeenAt: 1789453052561
 fingerprint: null
 payload:
   pickId: pick-abc
@@ -26,5 +26,5 @@ payload:
   meta:
     selector: '#submit'
     url: https://example.test/x
-  pickedAt: 1789452714637
+  pickedAt: 1789453052561
   lastSeenAt: null

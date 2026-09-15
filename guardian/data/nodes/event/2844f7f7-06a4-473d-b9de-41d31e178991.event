@@ -1,0 +1,39 @@
+envelope: 1
+uuid: nexus-export-event-2844f7f7-06a4-473d-b9de-41d31e178991
+type: event
+id: 2844f7f7-06a4-473d-b9de-41d31e178991
+context: guardian runtime event -> .event node (guardian.response.abandoned)
+intent: null
+summary: null
+system: guardian
+tags:
+  - event
+  - job
+exported_at: 1789453052505
+source: guardian/response-nodes
+occurrences: 1
+firstSeenAt: 1789453052505
+lastSeenAt: 1789453052505
+fingerprint: null
+payload:
+  uuid: 2844f7f7-06a4-473d-b9de-41d31e178991
+  id: test-job-absent-cap
+  type: guardian.response.abandoned
+  source: guardian/lib/response-watchdog.js
+  ts: 1789453052505
+  payload:
+    jobId: test-job-absent-cap
+    provider: chatgpt
+    reason: >-
+      no .response node at all after 200s (first-token threshold 90s) — 2/2 watchdog retries already
+      used
+    finalVerdict: timeout
+    evidence:
+      count: 0
+      terminal: false
+      terminalPhase: null
+      lastTs: null
+      silentMs: null
+      chars: null
+      phases: []
+      waitedMs: 200000
