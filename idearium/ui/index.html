@@ -130,6 +130,8 @@ body{display:flex;flex-direction:column;position:relative}
 
 .toolbar{height:36px;border-bottom:1px solid var(--b0);display:flex;align-items:center;padding:0 10px;gap:6px;flex-shrink:0}
 .mode-btn{font-family:var(--mono);font-size:9px;padding:3px 8px;border-radius:3px;border:1px solid var(--b1);background:none;color:var(--text3);cursor:pointer;transition:all .15s;white-space:nowrap}
+.up-chip{font-family:var(--mono);font-size:10px;padding:4px 10px;border-radius:99px;border:1px solid var(--b1);background:none;color:var(--text3);cursor:pointer;transition:all .15s}
+.up-chip:hover{border-color:var(--sky);color:var(--text)}
 .mode-btn:hover{color:var(--text2);border-color:var(--b1)}
 .mode-btn.active{border-color:rgba(56,189,248,.35);color:var(--sky);background:rgba(56,189,248,.06)}
 .search-input{flex:1;background:none;border:none;outline:none;font-family:var(--mono);font-size:11px;color:var(--text);caret-color:var(--sky)}
@@ -559,6 +561,7 @@ body{display:flex;flex-direction:column;position:relative}
           <div class="spec-toolbar">
             <input class="search-input" id="spec-search" placeholder="search specs..." oninput="renderSpecList()">
             <button class="mode-btn" onclick="newSpecPrompt()">+ new spec</button>
+            <button class="mode-btn" onclick="openUploadProjectModal()">+ upload project</button>
           </div>
           <div class="spec-list" id="spec-list"></div>
         </div>
@@ -1557,6 +1560,52 @@ async function saveToIdearium(){
       <button class="modal-btn" onclick="closeNewSpecModal()">cancel</button>
       <button class="modal-btn confirm" id="ns-map-btn" style="display:none" onclick="submitNewSpec(true)">create + map to repo now</button>
       <button class="modal-btn confirm" onclick="submitNewSpec(false)">create spec</button>
+    </div>
+  </div>
+</div>
+
+<!-- Upload Project — name/goal prompt (declares the temp compartment's
+     end-state) -> dropzone -> "Import Repository", generates manifest.json/
+     project.json/.git via lib/project-container.js, then opens the repo
+     view scoped to the new repo. Opened from the Spec Library, next to
+     "+ new spec" — a project is a real repo compartment from the start,
+     same as a spec-first repo, just seeded from an existing zip instead
+     of built chunk-by-chunk. -->
+<div class="modal-overlay" id="upload-project-modal">
+  <div class="modal">
+    <div class="modal-title">Upload Project</div>
+
+    <div id="up-step-prompt">
+      <div class="field-group">
+        <div class="field-label">name <span class="req">*</span></div>
+        <input class="field-input" id="up-name" placeholder="e.g. checkout-service">
+      </div>
+      <div class="field-group">
+        <div class="field-label">goal <span class="req">*</span></div>
+        <textarea class="field-textarea" id="up-goal" rows="2" placeholder="what should be true once this is imported and worked on?"></textarea>
+        <div class="field-hint" style="font-size:10px;color:var(--text3);margin-top:4px">becomes the compartment's declared end-state — evaluated against the real repo, manifest, and commit once import finishes</div>
+      </div>
+      <div class="field-group">
+        <div class="field-label">example goals — click to use</div>
+        <div id="up-chips" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+      </div>
+      <div class="modal-actions">
+        <button class="modal-btn" onclick="closeUploadProjectModal()">cancel</button>
+        <button class="modal-btn confirm" onclick="submitUploadProjectStart()">continue →</button>
+      </div>
+    </div>
+
+    <div id="up-step-drop" style="display:none">
+      <div class="field-hint" id="up-container-note" style="font-size:10px;color:var(--text3);margin-bottom:8px"></div>
+      <div class="project-drop" id="up-drop" onclick="document.getElementById('up-file-input').click()">
+        <span class="pd-big">⬇</span>
+        <span id="up-drop-text">drop a .zip archive, or click to choose one</span>
+      </div>
+      <input type="file" id="up-file-input" accept=".zip" style="display:none" onchange="stageUploadProjectFile(this.files[0])">
+      <div class="modal-actions">
+        <button class="modal-btn" onclick="cancelUploadProject()">cancel</button>
+        <button class="modal-btn confirm" id="up-import-btn" disabled onclick="submitUploadProjectImport()">import repository</button>
+      </div>
     </div>
   </div>
 </div>

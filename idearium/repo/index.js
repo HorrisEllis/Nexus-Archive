@@ -80,12 +80,25 @@ export class RepoLayer {
   // content becomes real, physical, inspectable-by-anything-not-just-
   // idearium files on disk, kept honestly in sync rather than a second
   // place that could quietly drift.
+  // §PROJECT-IMPORT-DIR 2026-09-15 — James: "i want it to create the
+  // compartment in idearium's repo folder" — i.e. physically inside
+  // idearium/repo/ (this module's own directory, via lib/project-
+  // import.config.js's REPO_STORAGE.dir = idearium/repo/repos/), not
+  // idearium/data/projects/ (RepoLayer's existing default, still used by
+  // every OTHER ingest path — drop/promote/fork — unchanged). Scoped
+  // per-repo, not a global default change: `r.materializeDir`, set once
+  // at ingest() time (below) for callers that pass materializeBaseDir,
+  // persisted on the repo record, and honored here on every future
+  // materialize() call (including the quiet ones _materializeQuiet fires
+  // after a later writeFile/deleteFile) — so an imported project keeps
+  // landing in the same real directory for its whole lifetime, not just
+  // its first materialize.
   materialize(repoUuid) {
     const r = this.repos.repos.find(x => x.uuid === repoUuid);
     if (!r) return { error: 'repo not found' };
     if (!this.se) return { error: 'repo layer has no spec-engine — cannot read content to materialize' };
 
-    const outDir = path.join(this.dataDir, 'projects', repoUuid);
+    const outDir = r.materializeDir || path.join(this.dataDir, 'projects', repoUuid);
     try {
       fs.mkdirSync(outDir, { recursive: true });
       // Real, existing files removed first — a chunk that was deleted
@@ -161,7 +174,13 @@ export class RepoLayer {
   // Either way, the repo record never holds file content or byte counts of
   // its own — only a pointer (specUuid) and a content identity (rootHash).
   // Returns { repo, ideaUuid, specUuid }.
-  ingest({ name, specUuid = null, files = [], source = 'drop', parent = null, promotedFromSpec = null, compartmentId = null } = {}) {
+  // materializeBaseDir — §PROJECT-IMPORT-DIR 2026-09-15 (see materialize()'s
+  // own header above). When given, the new repo's physical directory is
+  // path.join(materializeBaseDir, repoUuid) instead of RepoLayer's default
+  // idearium/data/projects/<repoUuid> — persisted on the repo record so
+  // every later materialize() (including quiet ones after an edit) keeps
+  // using it. null for every existing caller — purely additive.
+  ingest({ name, specUuid = null, files = [], source = 'drop', parent = null, promotedFromSpec = null, compartmentId = null, materializeBaseDir = null } = {}) {
     if (!name) return { error: 'repo name required' };
     if (!this.se) return { error: 'repo layer has no spec-engine — cannot store content' };
 
@@ -248,6 +267,10 @@ export class RepoLayer {
       createdAt: Date.now(),
       updatedAt: Date.now(),
       status:    'active',
+      // null for every path except project-import's finalize call — see
+      // materialize()'s own header for why this field, once set, is
+      // honored for the repo's whole lifetime rather than just this call.
+      materializeDir: materializeBaseDir ? path.join(materializeBaseDir, repoUuid) : null,
     };
     this.repos.repos.push(repo);
 

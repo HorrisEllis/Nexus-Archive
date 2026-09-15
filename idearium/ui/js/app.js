@@ -1011,6 +1011,133 @@ async function openNewSpecModal({ name = '', description = '', ideaUuid = null }
 }
 function closeNewSpecModal() { document.getElementById('new-spec-modal').classList.remove('open'); }
 
+// ════════════════════════════════════════════════════
+// UPLOAD PROJECT — prompt (name/goal, declares the temp compartment's
+// end-state) -> spawn temp compartment -> dropzone -> "import repository"
+// -> POST /api/project-import/:uuid/finalize (writes manifest.json/
+// project.json/.git server-side, resolves the compartment) -> opens the
+// repo view. Backed by lib/project-container.js + lib/project-import.config.js
+// on the server; nothing about bounds or example goals is hardcoded here —
+// UP_INTENT_EXAMPLES is fetched from GET /api/project-import/config.
+// ════════════════════════════════════════════════════
+let UP_CONTAINER_UUID = null;
+let UP_STAGED_FILE = null;
+
+async function openUploadProjectModal() {
+  if (!CONNECTED) { toast('not connected to nexus', 'err'); return; }
+  document.getElementById('up-name').value = '';
+  document.getElementById('up-goal').value = '';
+  document.getElementById('up-step-prompt').style.display = '';
+  document.getElementById('up-step-drop').style.display = 'none';
+  document.getElementById('upload-project-modal').classList.add('open');
+
+  const chips = document.getElementById('up-chips');
+  chips.innerHTML = '<span style="font-size:10px;color:var(--text3)">loading…</span>';
+  try {
+    const cfg = await api('/api/project-import/config');
+    chips.innerHTML = '';
+    (cfg.intentExamples || []).forEach(text => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'up-chip';
+      b.textContent = text;
+      b.onclick = () => { document.getElementById('up-goal').value = text; };
+      chips.appendChild(b);
+    });
+  } catch (e) { chips.innerHTML = ''; }
+}
+
+function closeUploadProjectModal() {
+  document.getElementById('upload-project-modal').classList.remove('open');
+}
+
+async function cancelUploadProject() {
+  if (UP_CONTAINER_UUID) {
+    try { await api(`/api/project-import/${UP_CONTAINER_UUID}/cancel`, { method: 'POST', body: '{}' }); }
+    catch (e) { console.warn('[upload-project] cancel failed:', e.message); }
+  }
+  UP_CONTAINER_UUID = null; UP_STAGED_FILE = null;
+  closeUploadProjectModal();
+}
+
+async function submitUploadProjectStart() {
+  const name = document.getElementById('up-name').value.trim();
+  const goal = document.getElementById('up-goal').value.trim();
+  if (!name) return toast('project name is required', 'err');
+  if (!goal) return toast('a goal is required — it becomes the end-state', 'err');
+
+  try {
+    const res = await api('/api/project-import/start', { method: 'POST', body: JSON.stringify({ name, goal }) });
+    UP_CONTAINER_UUID = res.containerUuid;
+    document.getElementById('up-container-note').textContent =
+      `compartment ${res.compartmentId ? res.compartmentId.slice(0, 8) : '—'} open · intent: ${res.intent?.domain || '?'}.${res.intent?.verb || '?'}`;
+    document.getElementById('up-step-prompt').style.display = 'none';
+    document.getElementById('up-step-drop').style.display = '';
+  } catch (e) { toast(`could not start: ${e.message}`, 'err'); }
+}
+
+function stageUploadProjectFile(file) {
+  if (!file) return;
+  if (!/\.zip$/i.test(file.name)) { toast(`not a .zip: ${file.name}`, 'err'); return; }
+  UP_STAGED_FILE = file;
+  document.getElementById('up-drop-text').textContent = `${file.name} (${formatBytes(file.size)}) — ready`;
+  document.getElementById('up-import-btn').disabled = false;
+}
+
+async function submitUploadProjectImport() {
+  if (!UP_STAGED_FILE || !UP_CONTAINER_UUID) return;
+  const btn = document.getElementById('up-import-btn');
+  const zone = document.getElementById('up-drop');
+  btn.disabled = true;
+  document.getElementById('up-drop-text').textContent = 'uploading…';
+  if (zone) zone.classList.add('drag');
+
+  let contentBase64;
+  try {
+    contentBase64 = await new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result.split(',')[1] || '');
+      r.onerror = reject;
+      r.readAsDataURL(UP_STAGED_FILE);
+    });
+  } catch (e) {
+    toast(`file read failed: ${e.message}`, 'err');
+    btn.disabled = false; if (zone) zone.classList.remove('drag');
+    return;
+  }
+
+  document.getElementById('up-drop-text').textContent = 'generating manifest, project.json, and .git…';
+  let res;
+  try {
+    res = await api(`/api/project-import/${UP_CONTAINER_UUID}/finalize`, {
+      method: 'POST', body: JSON.stringify({ filename: UP_STAGED_FILE.name, contentBase64 }),
+    }, 30000);
+  } catch (e) {
+    toast(`import did not reach the declared end-state: ${e.message}`, 'err');
+    btn.disabled = false; if (zone) zone.classList.remove('drag');
+    document.getElementById('up-drop-text').textContent = `${UP_STAGED_FILE.name} — ready`;
+    return;
+  }
+
+  if (zone) zone.classList.remove('drag');
+  toast(res.deduped
+    ? 'content already exists as an existing repo — reusing it'
+    : `imported "${res.repo?.name || ''}" — ${res.fileCount} file(s), ${res.git?.committed ? 'committed' : 'git not committed'}`,
+    'ok');
+
+  closeUploadProjectModal();
+  const repo = res.repo;
+  UP_CONTAINER_UUID = null; UP_STAGED_FILE = null;
+  document.getElementById('up-file-input').value = '';
+
+  // The new repo was created after this session's last API_REPOS load —
+  // refresh before routing to the repo view, or openRepoFor's match
+  // against the in-memory list will miss it.
+  await loadApiRepos();
+  if (repo) openRepoFor(repo.ideaUuid, repo.specUuid, repo.name);
+}
+
+
 function selectedTemplateIds() {
   return [...document.querySelectorAll('.ns-tpl-check:checked')].map(c => c.value);
 }
@@ -1514,7 +1641,7 @@ function toast(msg, type='ok') {
   setTimeout(()=>div.remove(), 2800);
 }
 document.addEventListener('keydown', e => {
-  if (e.key==='Escape') { closeModal(); closeNewSpecModal(); }
+  if (e.key==='Escape') { closeModal(); closeNewSpecModal(); closeUploadProjectModal(); }
   if ((e.metaKey||e.ctrlKey) && e.key==='n') { e.preventDefault(); setView('ideas'); openModal(); }
 });
 

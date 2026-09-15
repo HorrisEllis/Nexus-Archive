@@ -1491,6 +1491,7 @@ async function handle(req, res, route, query, body) {
       const repoName = (body.name || filename.replace(/\.zip$/i, '')).slice(0, 200);
       const ingestResult = getRepoLayer().ingest({
         name: repoName, files: included, source: 'import-project', compartmentId: body.compartmentId || null,
+        materializeBaseDir: cfg.REPO_STORAGE.dir, // idearium/repo/repos/<uuid> — see config's own header
       });
       if (ingestResult.error) return err(res, 400, ingestResult.error);
 
