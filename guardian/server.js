@@ -1375,6 +1375,42 @@ const _responseWatchdog = createResponseWatchdog({
 });
 _responseWatchdog.start();
 
+// §FIX 2026-09-15 — James, live: "something is broken in the pipeline...
+// supposed to be events to make it more explicit in the backend." Traced:
+// _responseWatchdog's terminal 'guardian.response.abandoned' event (fired
+// once retries are exhausted — see response-watchdog.js's _trip()) was
+// busEmit-only. Nothing anywhere ever consumed that specific event name, so
+// an abandoned job never got the real 3-step terminal-failure treatment
+// every OTHER failure path in this file already gets (see guardian/lib/
+// ncp-handler.js's GUARDIAN_ERROR/NCP_ERROR case, the pattern mirrored
+// here): updateJob(...,{status:'error'}) + bus.emit('guardian.job.error')
+// + cockpitBroadcast. Concretely, without this:
+//   - job.status stayed 'delivered' forever, in memory AND in the
+//     persisted jaa jobs row — wrong, permanently.
+//   - 'guardian.job.error' never fired, so _feedRaid() (line ~1490 below)
+//     never got the failure signal — RAID's routing weights stayed blind
+//     to every job the watchdog ever gave up on.
+//   - any GET /stream/:jobId SSE listener (below) waiting on
+//     'guardian.job.error' never heard anything and just hung.
+//   - copilot's synchronous askSync() (guardian/ask.js) polls THIS job's
+//     .status field, not the bus — with status never changing, askSync
+//     had nothing to see and could only ever time out on its own,
+//     separate 90s clock, with a generic "timed out — may still
+//     complete" message that discards the watchdog's actual, specific
+//     diagnosis (DOM-silence duration, retry count, disconnected
+//     provider, etc.) recorded in its .event node and busEmit payload.
+// This is the missing link: the watchdog already computes the real
+// reason — this just makes it reach the job record and the two real
+// consumers (RAID feedback, SSE listeners) the same way every other
+// terminal failure does.
+bus.on('guardian.response.abandoned', (data) => {
+  if (!data || !data.jobId) return;
+  const reason = data.reason || `no response after ${data.attempt || 0} watchdog retries`;
+  updateJob(data.jobId, { status: 'error', error: reason, errorAt: Date.now() });
+  bus.emit('guardian.job.error', { jobId: data.jobId, error: reason, provider: data.provider });
+  cockpitBroadcast({ type: 'job.error', jobId: data.jobId, error: reason, ts: Date.now() });
+});
+
 // ══════════════════════════════════════════════════════════════════════════════
 //  SISO GATE REGISTRATIONS
 // ══════════════════════════════════════════════════════════════════════════════
