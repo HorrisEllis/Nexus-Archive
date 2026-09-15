@@ -33,7 +33,7 @@ const fs   = require('fs');
 const { randomUUID } = require('crypto');
 
 const { Gate }              = require('../../siso/Gate.js');
-const { Event }             = require("../../siso/index.js");
+const { Event }             = require('../../siso/Event.js');
 const { makeCompartment }   = require('../../foundation/types.js');
 const { isValidTransition } = require('../../foundation/types.js');
 const { enforce }           = require('../../foundation/axioms.js');

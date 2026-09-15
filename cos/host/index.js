@@ -28,7 +28,7 @@
 const { StateStore }     = require('./state-store.js');
 const { createEventBus } = require('./event-bus.js');
 const { SystemMap }      = require('./system-map.js');
-const { Event }          = require("../siso/index.js");
+const { Event }          = require('../siso/Event.js');
 const { HOST, COMP }     = require('../foundation/event-contracts.js');
 const { COS_VERSION }    = require('../foundation/constants.js');
 
@@ -44,6 +44,51 @@ const {
   ProcessKillGate,
   ProcessStdinGate,
 } = require('./gates/process.js');
+
+// §BUGFIX 2026-09-06: these five gate files (archetype, blueprint,
+// playgrounds, plugin, vault) were fully implemented — each with a header
+// comment describing exactly which host:* events it handles — but never
+// imported or registered here. Their corresponding CLI commands emitted
+// events into the bus that had no listener at all: not an error, just
+// silent no-ops (assignArchetype()'s `unsubAssigned()` would fire having
+// received nothing, then `result` stayed null, then `result.archetypeName`
+// threw — the same failure shape as the missing-constant bugs elsewhere,
+// just one layer further from where it surfaced).
+const {
+  ArchetypeAssignGate,
+  ArchetypeImportGate,
+  ArchetypeDetectGate,
+} = require('./gates/archetype.js');
+
+const {
+  BlueprintCreateGate,
+  BlueprintImportGate,
+  BlueprintDestroyGate,
+} = require('./gates/blueprint.js');
+
+const {
+  PlaygroundCreateGate,
+  PlaygroundDestroyGate,
+  PlaygroundPromoteGate,
+  PlaygroundStatusGate,
+} = require('./gates/playgrounds.js');
+
+const {
+  PluginInstallGate,
+  PluginEnableGate,
+  PluginDisableGate,
+  PluginRemoveGate,
+} = require('./gates/plugin.js');
+
+const {
+  VaultSetGate,
+  VaultGetGate,
+  VaultDeleteGate,
+  VaultGrantGate,
+  VaultRevokeGate,
+  VaultExportGate,
+  VaultImportGate,
+} = require('./gates/vault.js');
 
 // ─── createHost ───────────────────────────────────────────────────────────────
 
@@ -77,6 +122,37 @@ function createHost(opts = {}) {
   bus.register(new ProcessSpawnGate());
   bus.register(new ProcessKillGate());
   bus.register(new ProcessStdinGate());
+
+  //    Archetype
+  bus.register(new ArchetypeAssignGate());
+  bus.register(new ArchetypeImportGate());
+  bus.register(new ArchetypeDetectGate());
+
+  //    Blueprint
+  bus.register(new BlueprintCreateGate());
+  bus.register(new BlueprintImportGate());
+  bus.register(new BlueprintDestroyGate());
+
+  //    Playgrounds
+  bus.register(new PlaygroundCreateGate());
+  bus.register(new PlaygroundDestroyGate());
+  bus.register(new PlaygroundPromoteGate());
+  bus.register(new PlaygroundStatusGate());
+
+  //    Plugin
+  bus.register(new PluginInstallGate());
+  bus.register(new PluginEnableGate());
+  bus.register(new PluginDisableGate());
+  bus.register(new PluginRemoveGate());
+
+  //    Vault
+  bus.register(new VaultSetGate());
+  bus.register(new VaultGetGate());
+  bus.register(new VaultDeleteGate());
+  bus.register(new VaultGrantGate());
+  bus.register(new VaultRevokeGate());
+  bus.register(new VaultExportGate());
+  bus.register(new VaultImportGate());
 
   //    When a compartment transitions to 'running', check if it has an entryFile.
   //    If so, emit the spawn command into the gate pipeline.

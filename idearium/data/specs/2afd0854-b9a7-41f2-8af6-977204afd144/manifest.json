@@ -17,18 +17,18 @@
   "buildEngine": "auto",
   "ideaUuid": null,
   "totalChunks": 10,
-  "doneChunks": 6,
+  "doneChunks": 8,
   "failedChunks": 0,
-  "progress": 60,
+  "progress": 80,
   "createdAt": 1789270390333,
-  "updatedAt": 1789319841113,
+  "updatedAt": 1789501741548,
   "completedAt": null,
   "archivePath": null,
   "templateId": null,
   "templateIds": [],
   "templateSeeded": [],
   "duplicateOf": null,
-  "rootHash": "abbf6318ffe997328bbcf83b0ab94c1ae9ec7b08e81edf48f8a8f03114919281",
+  "rootHash": "47209f79abe121adfb7181bb40645cd0a4a8f61f82a00672165ac7f7b506d1b7",
   "warpPrimitives": [],
   "chunks": [
     {
@@ -227,24 +227,26 @@
       "comp_id": "idearium.spec-engine",
       "seam_id": "idearium.spec-engine:v1:chunk:2afd0854:integration",
       "contract_id": "spec-contract:2afd0854:integration:b8a22a1c",
-      "filePath": "/home/claude/nexus/merged/idearium/data/specs/2afd0854-b9a7-41f2-8af6-977204afd144/b8a22a1c-58aa-4a5b-a932-6748fcbe6558.md",
+      "filePath": "D:\\Backups\\Downloads\\nexus-v0_39_139-idearium-repo-delete\\nexus\\idearium\\data\\specs\\2afd0854-b9a7-41f2-8af6-977204afd144\\06-integration-b8a22a1c.md",
       "fileName": "06-integration.md",
-      "status": "pending",
+      "status": "complete",
       "dependsOn": [],
       "agent": "gemini",
       "agentModel": null,
       "attempts": 0,
       "failureMode": null,
-      "content": null,
-      "byteSize": 0,
+      "content": "## Integration Points\nreal content 1789303597529",
+      "byteSize": 433,
       "createdAt": 1789270390333,
-      "updatedAt": 1789270390333,
-      "completedAt": null,
+      "updatedAt": 1789501712165,
+      "completedAt": 1789501712165,
       "tags": [
         "integration",
         "component",
         "phase-sync-standalone-1789270390328"
-      ]
+      ],
+      "jobId": null,
+      "dispatchDir": null
     },
     {
       "uuid": "35ef2290-a0f3-467f-8bd5-e6a69842c50d",
@@ -256,24 +258,26 @@
       "comp_id": "idearium.spec-engine",
       "seam_id": "idearium.spec-engine:v1:chunk:2afd0854:failure_modes",
       "contract_id": "spec-contract:2afd0854:failure_modes:35ef2290",
-      "filePath": "/home/claude/nexus/merged/idearium/data/specs/2afd0854-b9a7-41f2-8af6-977204afd144/35ef2290-a0f3-467f-8bd5-e6a69842c50d.md",
+      "filePath": "D:\\Backups\\Downloads\\nexus-v0_39_139-idearium-repo-delete\\nexus\\idearium\\data\\specs\\2afd0854-b9a7-41f2-8af6-977204afd144\\07-failure_modes-35ef2290.md",
       "fileName": "07-failure_modes.md",
-      "status": "pending",
+      "status": "complete",
       "dependsOn": [],
       "agent": "claude",
       "agentModel": null,
       "attempts": 0,
       "failureMode": null,
-      "content": null,
-      "byteSize": 0,
+      "content": "## Failure Modes\nreal content 1789303597554",
+      "byteSize": 429,
       "createdAt": 1789270390333,
-      "updatedAt": 1789270390333,
-      "completedAt": null,
+      "updatedAt": 1789501727326,
+      "completedAt": 1789501727326,
       "tags": [
         "failure_modes",
         "component",
         "phase-sync-standalone-1789270390328"
-      ]
+      ],
+      "jobId": null,
+      "dispatchDir": null
     },
     {
       "uuid": "f619567c-b6ca-4fc1-a23f-5d3aeea4434e",
@@ -333,5 +337,7 @@
         "phase-sync-standalone-1789270390328"
       ]
     }
-  ]
+  ],
+  "deleted": true,
+  "deletedAt": 1789501741548
 }

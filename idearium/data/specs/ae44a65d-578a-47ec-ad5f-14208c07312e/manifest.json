@@ -17,18 +17,18 @@
   "buildEngine": "auto",
   "ideaUuid": null,
   "totalChunks": 10,
-  "doneChunks": 6,
+  "doneChunks": 9,
   "failedChunks": 0,
-  "progress": 60,
+  "progress": 90,
   "createdAt": 1789302024104,
-  "updatedAt": 1789319841057,
+  "updatedAt": 1789501756730,
   "completedAt": null,
   "archivePath": null,
   "templateId": null,
   "templateIds": [],
   "templateSeeded": [],
   "duplicateOf": null,
-  "rootHash": "f72c94b7ffed72534f9dca583a551b9cc20cf3cd958b8c9fedf7f34064e42c65",
+  "rootHash": "173363814090f0473d41ffcdce82eefe19aa70a90937896a3bbe847167e76a50",
   "warpPrimitives": [],
   "chunks": [
     {
@@ -227,24 +227,26 @@
       "comp_id": "idearium.spec-engine",
       "seam_id": "idearium.spec-engine:v1:chunk:ae44a65d:integration",
       "contract_id": "spec-contract:ae44a65d:integration:3a6ed005",
-      "filePath": "/home/claude/work/nexus/idearium/data/specs/ae44a65d-578a-47ec-ad5f-14208c07312e/3a6ed005-bb90-4a09-9ec9-ff89d1c043ab.md",
+      "filePath": "D:\\Backups\\Downloads\\nexus-v0_39_139-idearium-repo-delete\\nexus\\idearium\\data\\specs\\ae44a65d-578a-47ec-ad5f-14208c07312e\\06-integration-3a6ed005.md",
       "fileName": "06-integration.md",
-      "status": "pending",
+      "status": "complete",
       "dependsOn": [],
       "agent": "gemini",
       "agentModel": null,
       "attempts": 0,
       "failureMode": null,
-      "content": null,
-      "byteSize": 0,
+      "content": "## Integration Points\nreal content 1789303597529",
+      "byteSize": 433,
       "createdAt": 1789302024104,
-      "updatedAt": 1789302024104,
-      "completedAt": null,
+      "updatedAt": 1789501712214,
+      "completedAt": 1789501712214,
       "tags": [
         "integration",
         "component",
         "phase-sync-standalone-1789302024100"
-      ]
+      ],
+      "jobId": null,
+      "dispatchDir": null
     },
     {
       "uuid": "a962b94a-f782-4765-807c-20a96c8f72c7",
@@ -256,24 +258,26 @@
       "comp_id": "idearium.spec-engine",
       "seam_id": "idearium.spec-engine:v1:chunk:ae44a65d:failure_modes",
       "contract_id": "spec-contract:ae44a65d:failure_modes:a962b94a",
-      "filePath": "/home/claude/work/nexus/idearium/data/specs/ae44a65d-578a-47ec-ad5f-14208c07312e/a962b94a-f782-4765-807c-20a96c8f72c7.md",
+      "filePath": "D:\\Backups\\Downloads\\nexus-v0_39_139-idearium-repo-delete\\nexus\\idearium\\data\\specs\\ae44a65d-578a-47ec-ad5f-14208c07312e\\07-failure_modes-a962b94a.md",
       "fileName": "07-failure_modes.md",
-      "status": "pending",
+      "status": "complete",
       "dependsOn": [],
       "agent": "claude",
       "agentModel": null,
       "attempts": 0,
       "failureMode": null,
-      "content": null,
-      "byteSize": 0,
+      "content": "## Failure Modes\nreal content 1789303597554",
+      "byteSize": 429,
       "createdAt": 1789302024104,
-      "updatedAt": 1789302024104,
-      "completedAt": null,
+      "updatedAt": 1789501727247,
+      "completedAt": 1789501727247,
       "tags": [
         "failure_modes",
         "component",
         "phase-sync-standalone-1789302024100"
-      ]
+      ],
+      "jobId": null,
+      "dispatchDir": null
     },
     {
       "uuid": "cf262403-f967-43fc-b9ea-3bd436d82ce8",
@@ -285,24 +289,26 @@
       "comp_id": "idearium.spec-engine",
       "seam_id": "idearium.spec-engine:v1:chunk:ae44a65d:build_order",
       "contract_id": "spec-contract:ae44a65d:build_order:cf262403",
-      "filePath": "/home/claude/work/nexus/idearium/data/specs/ae44a65d-578a-47ec-ad5f-14208c07312e/cf262403-f967-43fc-b9ea-3bd436d82ce8.md",
+      "filePath": "D:\\Backups\\Downloads\\nexus-v0_39_139-idearium-repo-delete\\nexus\\idearium\\data\\specs\\ae44a65d-578a-47ec-ad5f-14208c07312e\\08-build_order-cf262403.md",
       "fileName": "08-build_order.md",
-      "status": "pending",
+      "status": "complete",
       "dependsOn": [],
       "agent": "ollama",
       "agentModel": null,
       "attempts": 0,
       "failureMode": null,
-      "content": null,
-      "byteSize": 0,
+      "content": "## Build Order\nreal content 1789303597578",
+      "byteSize": 419,
       "createdAt": 1789302024104,
-      "updatedAt": 1789302024104,
-      "completedAt": null,
+      "updatedAt": 1789501742176,
+      "completedAt": 1789501742176,
       "tags": [
         "build_order",
         "component",
         "phase-sync-standalone-1789302024100"
-      ]
+      ],
+      "jobId": null,
+      "dispatchDir": null
     },
     {
       "uuid": "898e9e61-bf01-47b6-a52b-d06a2cf4d49f",
@@ -333,5 +339,7 @@
         "phase-sync-standalone-1789302024100"
       ]
     }
-  ]
+  ],
+  "deleted": true,
+  "deletedAt": 1789501756730
 }

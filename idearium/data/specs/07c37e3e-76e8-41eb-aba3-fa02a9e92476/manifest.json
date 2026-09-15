@@ -21,7 +21,7 @@
   "failedChunks": 9,
   "progress": 10,
   "createdAt": 1788861381654,
-  "updatedAt": 1789169957721,
+  "updatedAt": 1789501745671,
   "completedAt": null,
   "archivePath": null,
   "templateId": null,
@@ -331,5 +331,7 @@
       "jobId": null,
       "dispatchDir": null
     }
-  ]
+  ],
+  "deleted": true,
+  "deletedAt": 1789501745671
 }

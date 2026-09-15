@@ -32,6 +32,7 @@ export type ThreatLevel = "none" | "low" | "medium" | "high" | "critical";
 export type ThreatType =
   | "cloudflare-challenge"
   | "cloudflare-turnstile"
+  | "cloudflare-fronted"
   | "recaptcha"
   | "hcaptcha"
   | "custom-captcha"
@@ -84,6 +85,7 @@ const THREAT_PATTERNS: Array<{
       /challenge\.cloudflare\.com/.test(url ?? "") ||
       /cf-browser-verification/i.test(html ?? "") ||
       /checking your browser/i.test(title ?? "") ||
+      /just a moment/i.test(title ?? "") ||
       /cloudflare.*challenge/i.test(html ?? ""),
   },
 
@@ -102,8 +104,9 @@ const THREAT_PATTERNS: Array<{
     type:  "recaptcha",
     level: "medium",
     score: 55,
-    match: ({ html, scripts }) =>
+    match: ({ html, scripts, bodySnippet }) =>
       /recaptcha\.net|google\.com\/recaptcha/i.test(html ?? "") ||
+      /recaptcha/i.test(bodySnippet ?? "") ||
       (scripts ?? []).some((s) => /recaptcha/i.test(s)),
   },
 
@@ -165,15 +168,40 @@ const THREAT_PATTERNS: Array<{
         html ?? ""
       ),
   },
+
+  // Cloudflare-fronted (edge proxy present, NOT necessarily hostile).
+  // §NEW — cert-level signal from CDP's Network.responseReceived
+  // securityDetails, previously read but discarded (only .status was
+  // used). Deliberately low score and a distinct type from
+  // cloudflare-challenge/turnstile: a huge share of the ordinary web
+  // sits behind Cloudflare with no bot-wall active. Issuer name alone
+  // is a soft signal (Cloudflare rotates issuing CAs across customers,
+  // e.g. Google Trust Services / Let's Encrypt as well as its own
+  // "Cloudflare Inc ECC CA-3"); a large shared-cert SAN list (Universal
+  // SSL bundles many unrelated customer domains onto one cert) is the
+  // more reliable of the two and survives CA rotation. Either alone is
+  // enough to flag "fronted", but this never escalates on its own —
+  // it's context for the routing/behavior layer, not a bot-wall alert.
+  {
+    type:  "cloudflare-fronted",
+    level: "low",
+    score: 10,
+    match: ({ tlsIssuer, tlsSanCount }) =>
+      /cloudflare/i.test(tlsIssuer ?? "") ||
+      (tlsSanCount ?? 0) >= 20,
+  },
 ];
 
 interface ThreatInput {
   url?:          string;
   title?:        string;
   html?:         string;
+  bodySnippet?:  string;
   scripts?:      string[];
   statusCode?:   number;
   redirectCount?: number;
+  tlsIssuer?:    string;   // response.securityDetails.issuer, from CDP Network domain
+  tlsSanCount?:  number;   // response.securityDetails.sanList.length
 }
 
 // ─── HostileDetection ─────────────────────────────────────────
@@ -289,6 +317,14 @@ export class HostileDetection extends EventEmitter<HostileDetectionEvents> {
       return state;
     }
 
+    // §FIX — evaluate() previously only registered a tab in `this.states`
+    // when a signal matched, so a clean/unrecognized tab was invisible to
+    // allStates() even though it had genuinely been evaluated. getState()
+    // masked this by synthesizing a default, which hid the gap. Any tab
+    // that's actually been evaluated is now tracked, even at score 0.
+    if (!this.states.has(tabId)) {
+      this.states.set(tabId, this.emptyState(tabId));
+    }
     return this.getState(tabId);
   }
 
@@ -321,12 +357,22 @@ export class HostileDetection extends EventEmitter<HostileDetectionEvents> {
         }
       }
 
-      // HTTP response status codes
+      // HTTP response status codes + TLS certificate details
       if (event.method === "Network.responseReceived") {
-        const resp = event.params.response as { status?: number; url?: string } | undefined;
-        if (resp?.status === 429) {
-          const tabId = this.sessionToTab(event.sessionId);
-          if (tabId) this.evaluate(tabId, { statusCode: 429, url: resp.url });
+        const resp = event.params.response as {
+          status?: number;
+          url?: string;
+          securityDetails?: { issuer?: string; sanList?: string[] };
+        } | undefined;
+        const tabId = this.sessionToTab(event.sessionId);
+        if (tabId && resp) {
+          const input: ThreatInput = {};
+          if (resp.status === 429) { input.statusCode = 429; input.url = resp.url; }
+          if (resp.securityDetails) {
+            input.tlsIssuer   = resp.securityDetails.issuer;
+            input.tlsSanCount = resp.securityDetails.sanList?.length;
+          }
+          if (Object.keys(input).length > 0) this.evaluate(tabId, input);
         }
       }
     });

@@ -18,7 +18,7 @@
 
 const readline = require('readline');
 
-const { Event }       = require("../../siso/index.js");
+const { Event }       = require('../../siso/Event.js');
 const { HOST }        = require('../../foundation/event-contracts.js');
 const { RUNTIME_IDS } = require('../../foundation/runtime-enum.js');
 const { toSlug }      = require('../../host/gates/compartment.js');

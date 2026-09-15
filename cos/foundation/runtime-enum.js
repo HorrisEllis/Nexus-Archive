@@ -24,6 +24,20 @@ const RUNTIMES = Object.freeze([
   { id: 'dotnet',   displayName: '.NET',       minVersion: '7.0.0',   entryPattern: ['*.csproj', 'Program.cs']                    },
   { id: 'shell',    displayName: 'Shell',      minVersion: null,      entryPattern: ['run.sh', 'start.sh', 'Makefile']            },
   { id: 'wasm',     displayName: 'WASM',       minVersion: null,      entryPattern: ['*.wasm']                                    },
+  // §BUGFIX 2026-09-06: archetype/registry.js's built-in 'exe-runner' and
+  // 'max-isolation' archetypes have declared runtimeId: 'exe' since before
+  // this checkout, but 'exe' was never added here — a require()-time crash
+  // in archetype/registry.js's own schema validation, same failure class as
+  // the isKnownRuntimeId bugfix above. 'exe' = native Windows executable
+  // (.exe), matching archetype/registry.js's own description for the id.
+  { id: 'exe',      displayName: 'Native Executable (.exe)', minVersion: null, entryPattern: ['*.exe'] },
+  // §ADDED 2026-09-06 — compartment/qemu-runtime.js. A real isolated Windows
+  // (or any guest OS) environment, cross-platform, backed by QEMU/KVM
+  // hardware virtualization instead of a host process. entryPattern here
+  // isn't a launcher script (see runtime-enum's other rows) — it's either a
+  // vm.json config or the qcow2 disk itself; qemu-runtime.js's
+  // resolveVmConfig() reads whichever is passed as entryFile.
+  { id: 'qemu-windows', displayName: 'Isolated Windows (QEMU/KVM)', minVersion: null, entryPattern: ['vm.json', '*.qcow2'] },
 ]);
 
 const RUNTIME_MAP = new Map(RUNTIMES.map(r => [r.id, r]));

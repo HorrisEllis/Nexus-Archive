@@ -17,18 +17,18 @@
   "buildEngine": "auto",
   "ideaUuid": null,
   "totalChunks": 10,
-  "doneChunks": 5,
+  "doneChunks": 7,
   "failedChunks": 0,
-  "progress": 50,
+  "progress": 70,
   "createdAt": 1789270127219,
-  "updatedAt": 1789319841147,
+  "updatedAt": 1789501739857,
   "completedAt": null,
   "archivePath": null,
   "templateId": null,
   "templateIds": [],
   "templateSeeded": [],
   "duplicateOf": null,
-  "rootHash": "a1a1563c749af581ebd988c56c7b78cd4833e30baf1142aadecca22e2e96ea36",
+  "rootHash": "abb40dc53b1eefd59b40be46598355874c3de84f540e9cdbead7309e8079cc37",
   "warpPrimitives": [],
   "chunks": [
     {
@@ -196,24 +196,26 @@
       "comp_id": "idearium.spec-engine",
       "seam_id": "idearium.spec-engine:v1:chunk:b91469e2:events",
       "contract_id": "spec-contract:b91469e2:events:7afa75bf",
-      "filePath": "/home/claude/nexus/merged/idearium/data/specs/b91469e2-e515-4e69-9d0c-7913d883ae3b/7afa75bf-f1d0-4cf3-a593-c0a337f04539.md",
+      "filePath": "D:\\Backups\\Downloads\\nexus-v0_39_139-idearium-repo-delete\\nexus\\idearium\\data\\specs\\b91469e2-e515-4e69-9d0c-7913d883ae3b\\05-events-7afa75bf.md",
       "fileName": "05-events.md",
-      "status": "pending",
+      "status": "complete",
       "dependsOn": [],
       "agent": "ollama",
       "agentModel": null,
       "attempts": 0,
       "failureMode": null,
-      "content": null,
-      "byteSize": 0,
+      "content": "## Events & Bus\nreal content 1789303597510",
+      "byteSize": 406,
       "createdAt": 1789270127219,
-      "updatedAt": 1789270127219,
-      "completedAt": null,
+      "updatedAt": 1789501712132,
+      "completedAt": 1789501712132,
       "tags": [
         "events",
         "component",
         "phase-sync-standalone-1789270127215"
-      ]
+      ],
+      "jobId": null,
+      "dispatchDir": null
     },
     {
       "uuid": "bb9bc3ee-ec82-40d7-98e9-aa30823ea369",
@@ -225,24 +227,26 @@
       "comp_id": "idearium.spec-engine",
       "seam_id": "idearium.spec-engine:v1:chunk:b91469e2:integration",
       "contract_id": "spec-contract:b91469e2:integration:bb9bc3ee",
-      "filePath": "/home/claude/nexus/merged/idearium/data/specs/b91469e2-e515-4e69-9d0c-7913d883ae3b/bb9bc3ee-ec82-40d7-98e9-aa30823ea369.md",
+      "filePath": "D:\\Backups\\Downloads\\nexus-v0_39_139-idearium-repo-delete\\nexus\\idearium\\data\\specs\\b91469e2-e515-4e69-9d0c-7913d883ae3b\\06-integration-bb9bc3ee.md",
       "fileName": "06-integration.md",
-      "status": "pending",
+      "status": "complete",
       "dependsOn": [],
       "agent": "gemini",
       "agentModel": null,
       "attempts": 0,
       "failureMode": null,
-      "content": null,
-      "byteSize": 0,
+      "content": "## Integration Points\nreal content 1789303597529",
+      "byteSize": 433,
       "createdAt": 1789270127219,
-      "updatedAt": 1789270127219,
-      "completedAt": null,
+      "updatedAt": 1789501727367,
+      "completedAt": 1789501727367,
       "tags": [
         "integration",
         "component",
         "phase-sync-standalone-1789270127215"
-      ]
+      ],
+      "jobId": null,
+      "dispatchDir": null
     },
     {
       "uuid": "3cc2c8b1-bae7-4624-ab24-e4ce8c337607",
@@ -331,5 +335,7 @@
         "phase-sync-standalone-1789270127215"
       ]
     }
-  ]
+  ],
+  "deleted": true,
+  "deletedAt": 1789501739857
 }

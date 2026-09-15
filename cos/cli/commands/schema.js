@@ -16,6 +16,7 @@
 
 const { validateHook, HookSchemaError } = require('../../foundation/hook-schema.js');
 const { HOST }                          = require('../../foundation/event-contracts.js');
+const { loadNodes }                     = require('../../nodes/index.js');
 
 /**
  * Validate all registered hooks against the hook schema.
@@ -77,4 +78,48 @@ function validateSchema(host, flags = {}, out = {}) {
   return result;
 }
 
-module.exports = { validateSchema };
+/**
+ * Validate all command nodes in cos/nodes/ against foundation/command-schema.js.
+ * @param {object} flags
+ * @param {object} out
+ * @returns {{ total: number, valid: number, invalid: number, errors: object[] }}
+ */
+function validateCommandNodes(flags = {}, out = {}) {
+  const log   = out.log   || ((...a) => console.log(...a));
+  const error = out.error || ((...a) => console.error(...a));
+
+  const { nodes, errors } = loadNodes();
+
+  const result = {
+    total:   nodes.size + errors.length,
+    valid:   nodes.size,
+    invalid: errors.length,
+    errors,
+  };
+
+  if (flags.json) {
+    log(JSON.stringify(result, null, 2));
+    return result;
+  }
+
+  if (result.total === 0) {
+    log('\n  No command nodes found in cos/nodes/.\n');
+    return result;
+  }
+
+  if (errors.length === 0) {
+    log(`\n  ✓  ${nodes.size} command node${nodes.size !== 1 ? 's' : ''} valid\n`);
+  } else {
+    log(`\n  ${nodes.size} valid  ·  ${errors.length} invalid\n`);
+    for (const e of errors) {
+      log(`  ✖  ${e.file}`);
+      log(`     ${e.message}`);
+    }
+    log('');
+    error(`  Command schema validation failed: ${errors.length} error${errors.length !== 1 ? 's' : ''}`);
+  }
+
+  return result;
+}
+
+module.exports = { validateSchema, validateCommandNodes };

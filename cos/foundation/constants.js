@@ -44,6 +44,18 @@ const COS_LOG_DIR       = path.join(COS_STATE_DIR,  'logs');
 const COS_SNAPSHOT_DIR  = path.join(COS_STATE_DIR,  'snapshots');
 const COS_COMP_DIR      = path.join(COS_DATA_ROOT,  'compartments');
 
+// §BUGFIX 2026-09-06: vault/crypto.js, vault/store.js, vault/audit-log.js,
+// and vaultd/config.js have required COS_VAULT_DIR / COS_VAULT_STORE_FILE /
+// COS_VAULT_KEY_FILE from this file since before this checkout — none of
+// the three were ever defined here, only implied in comments. That's a
+// require()-time crash in vaultd/config.js and a dead-on-arrival vault/
+// subsystem (same failure class as the isKnownRuntimeId bugfix in
+// runtime-enum.js). Paths follow the exact convention already used above
+// (COS_LOG_DIR, COS_SNAPSHOT_DIR — a named subdir of COS_STATE_DIR).
+const COS_VAULT_DIR        = path.join(COS_STATE_DIR, 'vault');
+const COS_VAULT_STORE_FILE = path.join(COS_VAULT_DIR, 'store.json');
+const COS_VAULT_KEY_FILE   = path.join(COS_VAULT_DIR, 'master.key');
+
 // ─── Per-Compartment Paths ────────────────────────────────────────────────────
 
 /**
@@ -101,6 +113,9 @@ module.exports = Object.freeze({
   COS_LOG_DIR,
   COS_SNAPSHOT_DIR,
   COS_COMP_DIR,
+  COS_VAULT_DIR,
+  COS_VAULT_STORE_FILE,
+  COS_VAULT_KEY_FILE,
   compartmentPaths,
 
   // Kernel

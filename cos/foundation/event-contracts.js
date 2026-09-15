@@ -213,6 +213,106 @@ const PLAYGROUND = Object.freeze({
   COMPARE_DONE:         'comp:compare:done',
 });
 
+// ─── Archetype Events ─────────────────────────────────────────────────────────
+// §BUGFIX 2026-09-06: cli/commands/archetype.js and host/gates/archetype.js
+// have destructured ARCHETYPE from this file since before this checkout —
+// same "referenced, never defined" failure class as VAULT/PLUGIN/VAULTD.
+
+const ARCHETYPE = Object.freeze({
+  LISTED:    'archetype:listed',
+  SHOWN:     'archetype:shown',
+  ASSIGNED:  'archetype:assigned',
+  DETECTED:  'archetype:detected',
+  CREATED:   'archetype:created',
+  ERROR:     'archetype:error',
+});
+
+// ─── Blueprint Events ─────────────────────────────────────────────────────────
+// §BUGFIX 2026-09-06: same failure class — cli/commands/blueprint.js and
+// host/gates/blueprint.js both need BLUEPRINT.
+
+const BLUEPRINT = Object.freeze({
+  LISTED:     'blueprint:listed',
+  SHOWN:      'blueprint:shown',
+  STATUS:     'blueprint:status',
+  CREATED:    'blueprint:created',
+  IMPORTED:   'blueprint:imported',
+  DESTROYED:  'blueprint:destroyed',
+  ERROR:      'blueprint:error',
+});
+
+// ─── Playgrounds Events ───────────────────────────────────────────────────────
+// §BUGFIX 2026-09-06: same failure class. Named PLAYGROUNDS (plural) —
+// deliberately distinct from the existing PLAYGROUND (singular) namespace
+// above, which covers branch/compare sandbox execution (comp:sandbox:*).
+// This is the disposable-environment CLI feature (create/list/status/
+// destroy/promote), a different subsystem that happens to share a name.
+
+const PLAYGROUNDS = Object.freeze({
+  LISTED:     'playgrounds:listed',
+  SHOWN:      'playgrounds:shown',
+  CREATED:    'playgrounds:created',
+  PROMOTED:   'playgrounds:promoted',
+  DESTROYED:  'playgrounds:destroyed',
+  ERROR:      'playgrounds:error',
+});
+
+// ─── Vault Events ─────────────────────────────────────────────────────────────
+// §BUGFIX 2026-09-06: cli/commands/vault.js has destructured VAULT from this
+// file since before this checkout — no VAULT namespace was ever defined
+// here, so every host.bus.emit(VAULT.SET, ...) etc. threw on `undefined.SET`.
+// Same failure class as the runtime-enum.js / constants.js bugfixes: vault.js
+// itself already names every member it needs (grep -n "VAULT\." for the
+// full list) — this just supplies the namespace object that was missing.
+
+const VAULT = Object.freeze({
+  SET:            'vault:secret:set',
+  DELETED:        'vault:secret:deleted',
+  REVEALED:       'vault:secret:revealed',
+  ACCESSED:       'vault:secret:accessed',
+  ACCESS_DENIED:  'vault:access:denied',
+  LISTED:         'vault:secrets:listed',
+  GRANT_ADDED:    'vault:grant:added',
+  GRANT_REVOKED:  'vault:grant:revoked',
+  AUDIT_SHOWN:    'vault:audit:shown',
+  EXPORTED:       'vault:secrets:exported',
+  IMPORTED:       'vault:secrets:imported',
+  ERROR:          'vault:secret:error',
+});
+
+// ─── Plugin Events ────────────────────────────────────────────────────────────
+// §BUGFIX 2026-09-06: cli/commands/plugin.js has destructured PLUGIN from
+// this file since before this checkout, same failure class as VAULT above.
+// Named 'plugin:*' (singular) deliberately, distinct from the existing
+// HOST.PLUGINS_LISTED / HOST.PLUGIN_ADDED ('host:plugin(s):*') — those are
+// host-level map/system events, these are plugin.js's own command-result
+// events. Two-segment form to match the existing SERVICE namespace's style.
+
+const PLUGIN = Object.freeze({
+  LISTED:     'plugin:listed',
+  SHOWN:      'plugin:shown',
+  INSTALLED:  'plugin:installed',
+  ENABLED:    'plugin:enabled',
+  DISABLED:   'plugin:disabled',
+  REMOVED:    'plugin:removed',
+  ERROR:      'plugin:error',
+});
+
+// ─── Vault Daemon Events ──────────────────────────────────────────────────────
+// §BUGFIX 2026-09-06: cli/commands/vaultd.js has destructured VAULTD from
+// this file since before this checkout, same failure class as VAULT/PLUGIN
+// above. Two-segment form to match SERVICE (vaultd.js manages the vault
+// daemon process — same shape of concern as SERVICE's install/start/stop).
+
+const VAULTD = Object.freeze({
+  STARTED:    'vaultd:started',
+  STOPPED:    'vaultd:stopped',
+  STATUS:     'vaultd:status',
+  BACKED_UP:  'vaultd:backed-up',
+  RESTORED:   'vaultd:restored',
+  ERROR:      'vaultd:error',
+});
+
 // ─── All Events (flat set for validation) ────────────────────────────────────
 
 const ALL_EVENT_TYPES = Object.freeze(new Set([
@@ -229,6 +329,12 @@ const ALL_EVENT_TYPES = Object.freeze(new Set([
   ...Object.values(CLI),
   ...Object.values(SERVICE),
   ...Object.values(PLAYGROUND),
+  ...Object.values(VAULT),
+  ...Object.values(PLUGIN),
+  ...Object.values(VAULTD),
+  ...Object.values(ARCHETYPE),
+  ...Object.values(BLUEPRINT),
+  ...Object.values(PLAYGROUNDS),
 ]));
 
 /**
@@ -242,7 +348,8 @@ function isKnownEvent(eventType) {
 
 module.exports = {
   HOST, COMP, WATCHDOG, REPLAY, PIPE, GIT, SSH, VERSION,
-  NEXUS, NETWORK, CLI, SERVICE, PLAYGROUND,
+  NEXUS, NETWORK, CLI, SERVICE, PLAYGROUND, VAULT, PLUGIN, VAULTD,
+  ARCHETYPE, BLUEPRINT, PLAYGROUNDS,
   ALL_EVENT_TYPES,
   isKnownEvent,
 };

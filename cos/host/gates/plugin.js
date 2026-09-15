@@ -15,7 +15,7 @@
 'use strict';
 
 const { Gate }  = require('../../siso/Gate.js');
-const { Event } = require("../../siso/index.js");
+const { Event } = require('../../siso/Event.js');
 const { PLUGIN } = require('../../foundation/event-contracts.js');
 const { enforce } = require('../../foundation/axioms.js');
 

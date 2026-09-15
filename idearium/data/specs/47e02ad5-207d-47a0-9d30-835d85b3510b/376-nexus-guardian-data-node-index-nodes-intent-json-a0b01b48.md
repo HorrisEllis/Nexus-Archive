@@ -1,0 +1,15 @@
+---
+chunk_uuid: a0b01b48-80dc-4f12-a34d-9d06394c4a7d
+spec_uuid: 47e02ad5-207d-47a0-9d30-835d85b3510b
+section: nexus-guardian-data-node-index-nodes-intent-json
+title: nexus/guardian/data/node-index/nodes_intent.json
+comp_id: idearium.spec-engine
+seam_id: idearium.spec-engine:v1:chunk:47e02ad5:nexus-guardian-data-node-index-nodes-intent-json
+contract_id: spec-contract:47e02ad5:nexus-guardian-data-node-index-nodes-intent-json:a0b01b48
+agent: ingest
+model: ingest:drop
+status: complete
+completed_at: 2026-09-15T20:07:29.346Z
+---
+
+[{"id":"ask","uuid":"nexus-export-intent-ask","type":"intent","filePath":"/tmp/node-index-nodes-vWVFtU/intent/ask.intent","context":null,"intent":null,"summary":null,"system":null,"tags":[],"payload":{"name":"ask","command":"ask","description":"general Q&A","system":"guardian"},"exportedAt":1789452714760,"updatedAt":1789452714768,"_deleted":false},{"id":"ask-2","uuid":"nexus-export-intent-ask-2","type":"intent","filePath":"/tmp/node-index-nodes-8Qhjul/intent/ask-2.intent","context":null,"intent":null,"summary":null,"system":null,"tags":[],"payload":{"name":"ask","command":"ask","description":"v2 — edited","system":"guardian"},"exportedAt":1789452714775,"updatedAt":1789452714776,"_deleted":false},{"id":"temp","uuid":"nexus-export-intent-temp","type":"intent","filePath":"/tmp/node-index-nodes-LrDs49/intent/temp.intent","context":null,"intent":null,"summary":null,"system":null,"tags":[],"payload":{"name":"temp","command":"temp","description":"x","system":"guardian"},"exportedAt":1789452714777,"updatedAt":1789452714777,"_deleted":false}]

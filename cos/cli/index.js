@@ -6,19 +6,10 @@
  * Author: James Brooks (Erosmancer)
  * Status: pre-release
  *
- * Usage:
- *   cos create [name]
- *   cos list [--json]
- *   cos map [--json] [--watch]
- *   cos start <name>
- *   cos stop <name>
- *   cos destroy <name> [--force] [--wipe]
- *   cos status <name> [--json]
- *   cos hooks <list|show|fire> [args]
- *   cos events <stream|tail> [--n <count>] [--json]
- *   cos schema validate [--json]
- *   cos version
- *   cos help
+ * Dispatch is dynamic: every subcommand except `version`/`help` (which
+ * don't need a host) is loaded from cos/nodes/ by the command listener
+ * (nodes/index.js) and validated against foundation/command-schema.js.
+ * To add a command, drop a file in cos/nodes/ — see nodes/index.js.
  *
  * All commands boot the host shell (state-store + event-bus + system-map).
  * COS-2:  CLI first — if it can't be done in CLI it doesn't exist yet.
@@ -27,28 +18,20 @@
 
 'use strict';
 
-const { createHost }         = require('../host/index.js');
-const { runCreateWizard }    = require('./commands/create.js');
-const { listCompartments }   = require('./commands/list.js');
-const { renderMap }          = require('./commands/map.js');
-const { startCompartment }   = require('./commands/start.js');
-const { stopCompartment }    = require('./commands/stop.js');
-const { runDestroyWizard }   = require('./commands/destroy.js');
-const { showStatus }         = require('./commands/status.js');
-const { runHooksCommand }    = require('./commands/hooks.js');
-const { runEventsCommand }   = require('./commands/events.js');
-const { validateSchema }     = require('./commands/schema.js');
-const { runCommand, attachCompartment } = require('./commands/run.js');
+const { createHost }                = require('../host/index.js');
+const { loadNodes }                 = require('../nodes/index.js');
 const { COS_VERSION, SPEC_VERSION } = require('../foundation/constants.js');
 
 // ─── Parse raw argv ───────────────────────────────────────────────────────────
 
 function parseArgs(argv) {
-  const args  = argv.slice(2);  // strip node + script
+  const raw   = argv.slice(2);  // strip node + script
   const flags = {};
   const positional = [];
+  let commandTokenIndex = -1;   // index into `raw` of the command token itself
 
-  for (const a of args) {
+  for (let i = 0; i < raw.length; i++) {
+    const a = raw[i];
     if (a === '--json')  { flags.json  = true; continue; }
     if (a === '--watch') { flags.watch = true; continue; }
     if (a === '--force') { flags.force = true; continue; }
@@ -58,65 +41,65 @@ function parseArgs(argv) {
       flags[k] = v !== undefined ? v : true;
       continue;
     }
+    if (positional.length === 0) commandTokenIndex = i;
     positional.push(a);
   }
 
-  return { command: positional[0] || null, args: positional.slice(1), flags };
+  // Everything after the command token, completely unparsed — for nodes
+  // (branch, compare) that do their own --flag parsing and need to see
+  // flags interspersed with positional args, not pre-split.
+  const rawArgs = commandTokenIndex === -1 ? [] : raw.slice(commandTokenIndex + 1);
+
+  return { command: positional[0] || null, args: positional.slice(1), flags, rawArgs };
 }
 
-// ─── Help ─────────────────────────────────────────────────────────────────────
+// ─── Help (generated from loaded nodes) ────────────────────────────────────────
 
-function printHelp() {
-  console.log(`
-  COMPARTMENT OS  v${COS_VERSION}
+function printHelp(nodes) {
+  const lines = [
+    '',
+    `  COMPARTMENT OS  v${COS_VERSION}`,
+    '',
+    '  Usage: cos <command> [options]',
+    '',
+    '  Commands:',
+  ];
 
-  Usage: cos <command> [options]
+  for (const n of [...nodes.values()].sort((a, b) => a.name.localeCompare(b.name))) {
+    lines.push(`    ${n.name.padEnd(28)} ${n.summary}`);
+  }
+  lines.push(
+    `    ${'version'.padEnd(28)} Show version info`,
+    `    ${'help'.padEnd(28)} Show this help`,
+    '',
+    '  Flags:',
+    '    --json                      Output as JSON',
+    '    --watch                     Live-updating output (map)',
+    '    --force                     Skip confirmation prompts',
+    '    --wipe                      Wipe filesystem on destroy',
+    '    --n=<count>                 Number of events for tail (default: 20)',
+    '',
+    '  Run `cos nodes list` to see full usage strings for every command.',
+    ''
+  );
 
-  Commands:
-    create [name]               Create a new compartment
-    list                        List all compartments
-    status <name>               Show full compartment status
-    run <name> <cmd>            Send command to running compartment stdin
-    attach <name>               Attach to running compartment (stream output)
-    start <name>                Start compartment (state transition)
-    stop <name>                 Stop compartment (state transition)
-    destroy <name>              Destroy compartment [--force] [--wipe]
-    map                         Print the system map
-    hooks <list|show|fire>      Manage registered hooks
-    events <stream|tail>        Event bus stream / tail
-    schema validate             Validate all hooks against schema
-    version                     Show version info
-    help                        Show this help
-
-  Flags:
-    --json                      Output as JSON
-    --watch                     Live-updating output (map)
-    --force                     Skip confirmation prompts
-    --wipe                      Wipe filesystem on destroy
-    --n=<count>                 Number of events for tail (default: 20)
-
-  Examples:
-    cos create my-service
-    cos list
-    cos start my-service
-    cos stop my-service
-    cos status my-service
-    cos destroy my-service --force
-    cos map --watch
-    cos hooks list
-    cos events tail --n=50
-    cos events stream
-    cos schema validate
-`);
+  console.log(lines.join('\n'));
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 async function main(argv = process.argv) {
-  const { command, args, flags } = parseArgs(argv);
+  const { command, args, flags, rawArgs } = parseArgs(argv);
+
+  // Load + validate command nodes up front. A broken node is reported,
+  // not fatal — the rest of the CLI keeps working (see nodes/index.js).
+  const { nodes, errors } = loadNodes();
 
   if (!command || command === 'help' || flags.help) {
-    printHelp();
+    printHelp(nodes);
+    if (errors.length > 0) {
+      console.error(`\n  Warning: ${errors.length} command node(s) failed to load — run "cos nodes list" for details.\n`);
+    }
     return 0;
   }
 
@@ -125,112 +108,31 @@ async function main(argv = process.argv) {
     return 0;
   }
 
-  // All other commands need the host
-  let host;
-  try {
-    host = createHost();
-  } catch (err) {
-    console.error(`  Error: failed to boot host — ${err.message}`);
+  const node = nodes.get(command);
+  if (!node) {
+    const failed = errors.find(e => e.file.replace(/\.js$/, '') === command);
+    if (failed) {
+      console.error(`  Error: command "${command}" failed schema validation — ${failed.message}`);
+    } else {
+      console.error(`  Unknown command: "${command}"\n  Run: cos help`);
+    }
     return 1;
   }
 
-  try {
-    switch (command) {
+  // Node-only commands (introspection) don't need a live host.
+  const ctx = { args, flags, rawArgs, log: (...a) => console.log(...a), error: (...a) => console.error(...a) };
 
-      case 'create': {
-        const nameArg = args[0] || null;
-        const result  = await runCreateWizard(host, nameArg);
-        host.store.flushSync();
-        return result ? 0 : 1;
-      }
-
-      case 'list': {
-        listCompartments(host, flags);
-        return 0;
-      }
-
-      case 'map': {
-        renderMap(host, flags);
-        return flags.watch ? undefined : 0;
-      }
-
-      case 'start': {
-        const name = args[0];
-        if (!name) { console.error('  Usage: cos start <name>'); return 1; }
-        try {
-          startCompartment(host, name);
-          return 0;
-        } catch { return 1; }
-      }
-
-      case 'stop': {
-        const name = args[0];
-        if (!name) { console.error('  Usage: cos stop <name>'); return 1; }
-        try {
-          stopCompartment(host, name);
-          return 0;
-        } catch { return 1; }
-      }
-
-      case 'destroy': {
-        const name = args[0];
-        const ok = await runDestroyWizard(host, name, flags);
-        return ok ? 0 : 1;
-      }
-
-      case 'run': {
-        const compName = args[0];
-        const cmd = args.slice(1).join(' ');
-        if (!compName) { console.error('  Usage: cos run <name> <command>'); return 1; }
-        if (!cmd) {
-          attachCompartment(host, compName);
-          return undefined;
-        }
-        return runCommand(host, compName, cmd) ? 0 : 1;
-      }
-
-      case 'attach': {
-        const compName = args[0];
-        if (!compName) { console.error('  Usage: cos attach <name>'); return 1; }
-        attachCompartment(host, compName);
-        return undefined;
-      }
-
-      case 'status': {
-        const name = args[0];
-        const result = showStatus(host, name, flags);
-        return result ? 0 : 1;
-      }
-
-      case 'hooks': {
-        const sub = args[0];
-        const rest = args.slice(1);
-        runHooksCommand(host, sub, rest, flags);
-        return 0;
-      }
-
-      case 'events': {
-        const sub = args[0];
-        const rest = args.slice(1);
-        runEventsCommand(host, sub, rest, flags);
-        return flags.watch || sub === 'stream' ? undefined : 0;
-      }
-
-      case 'schema': {
-        const sub = args[0];
-        if (sub !== 'validate') {
-          console.error('  Usage: cos schema validate');
-          return 1;
-        }
-        const result = validateSchema(host, flags);
-        return result.invalid === 0 ? 0 : 1;
-      }
-
-      default: {
-        console.error(`  Unknown command: "${command}"\n  Run: cos help`);
-        return 1;
-      }
+  if (node.name !== 'nodes') {
+    try {
+      ctx.host = createHost();
+    } catch (err) {
+      console.error(`  Error: failed to boot host — ${err.message}`);
+      return 1;
     }
+  }
+
+  try {
+    return await node.run(ctx);
   } catch (err) {
     console.error(`  Error: ${err.message}`);
     if (process.env.COS_DEBUG) console.error(err.stack);

@@ -120,6 +120,21 @@ const DEFAULT_SYSTEM_MAP = Object.freeze({
   plugins:      [],
   variables:    [],
   pipes:        [],
+  // §BUGFIX 2026-09-06: archetypes/blueprintDefs/blueprintInstances/
+  // playgrounds/vaultKeys/vaultdState are all read via
+  // host.sysmap.get().<field> by archetype/index.js, blueprint/index.js,
+  // plugin/host-api.js, playgrounds/index.js, vault/index.js, and
+  // cli/commands/vaultd.js — none were ever added to this default shape,
+  // so every one of those reads threw on `undefined.filter`/`.find`.
+  // Added following the exact same array-field convention as `plugins`
+  // above (vaultdState is a single object|null, not an array — COS-42:
+  // "vaultd state is visible in SystemMap whether running or not").
+  archetypes:         [],
+  blueprintDefs:      [],
+  blueprintInstances: [],
+  playgrounds:        [],
+  vaultKeys:          [],
+  vaultdState:        null,
 });
 
 const DEFAULT_PIPE = Object.freeze({
@@ -195,6 +210,12 @@ function makeSystemMap(overrides = {}) {
     plugins:      [...(overrides.plugins      ?? [])],
     variables:    [...(overrides.variables    ?? [])],
     pipes:        [...(overrides.pipes        ?? [])],
+    archetypes:         [...(overrides.archetypes         ?? [])],
+    blueprintDefs:      [...(overrides.blueprintDefs      ?? [])],
+    blueprintInstances: [...(overrides.blueprintInstances ?? [])],
+    playgrounds:        [...(overrides.playgrounds        ?? [])],
+    vaultKeys:          [...(overrides.vaultKeys          ?? [])],
+    vaultdState:        overrides.vaultdState ?? null,
   });
 }
 

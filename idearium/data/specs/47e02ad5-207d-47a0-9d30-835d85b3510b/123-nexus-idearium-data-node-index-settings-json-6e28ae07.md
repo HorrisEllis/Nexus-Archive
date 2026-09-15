@@ -1,0 +1,15 @@
+---
+chunk_uuid: 6e28ae07-edfa-4ff9-a19e-eef3e6d76a01
+spec_uuid: 47e02ad5-207d-47a0-9d30-835d85b3510b
+section: nexus-idearium-data-node-index-settings-json
+title: nexus/idearium/data/node-index/settings.json
+comp_id: idearium.spec-engine
+seam_id: idearium.spec-engine:v1:chunk:47e02ad5:nexus-idearium-data-node-index-settings-json
+contract_id: spec-contract:47e02ad5:nexus-idearium-data-node-index-settings-json:6e28ae07
+agent: ingest
+model: ingest:drop
+status: complete
+completed_at: 2026-09-15T20:05:37.965Z
+---
+
+[{"id":"29ba56b1-51aa-43e8-ac1c-fb10ba22236b","key":"session_greeting_enabled","value":"true","updated_ts":1789253181848},{"id":"b25ae328-c649-4b8f-bee9-80e4d5152242","key":"session_greeting_text","value":"Guardian session initialising. Please ask me: \"What are we calling this session?\" — then wait for my answer before we begin.","updated_ts":1789253181848},{"id":"a65c57e3-d14c-43ca-baf5-7b671f3dd66c","key":"scan_debounce_ms","value":"1500","updated_ts":1789253181848},{"id":"783ea5d8-32b0-41ec-94c8-134a845042c4","key":"artifact_max","value":"500","updated_ts":1789253181848},{"id":"6041b299-afab-4952-85ee-ec8439305a1f","key":"gap_min_score","value":"0.25","updated_ts":1789253181848},{"id":"a946f09f-56c1-4bc4-ada8-f2c34c3d9c5c","key":"gap_taxonomy_version","value":"3.0.0","updated_ts":1789253181848},{"id":"afa39412-8eaa-4d98-9837-f531a34ea7a3","key":"pa_enabled","value":"true","updated_ts":1789253181848},{"id":"47863b7a-84a5-4b55-8dec-031a4d21be45","key":"memory_auto_push","value":"true","updated_ts":1789253181848},{"id":"5cbd7835-5e06-401c-80e5-11478880531e","key":"dropzone_auto_upload","value":"true","updated_ts":1789253181848},{"id":"a97b8452-8350-4fbe-9ed3-87040c47c1da","key":"stream_log_level","value":"EVENTS","updated_ts":1789253181848},{"id":"95e0f02d-830a-4f9f-9d02-84dc6d9dbfb7","key":"lan_host","value":"0.0.0.0","updated_ts":1789253181848},{"id":"6b4e592e-9013-40a1-a32a-4be3a1110ed3","key":"greeting_delay_ms","value":"1200","updated_ts":1789253181848},{"id":"b0853336-ab9a-461c-8445-98306be79e17","key":"poll_interval_ms","value":"500","updated_ts":1789253181848},{"id":"fcd4e069-a700-4470-afa5-96d5d2e6de49","key":"stable_count_threshold","value":"5","updated_ts":1789253181848}]

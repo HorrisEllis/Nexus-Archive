@@ -474,6 +474,99 @@ const ARCHETYPES_RAW = [
     builtIn: true, pluginId: null,
   },
 
+  // arch-windows-sandbox-0017
+  {
+    id: 'e3c1a5f4-7a2b-4b8e-9c1d-2f6a8b0d4e17',
+    name: 'windows-sandbox',
+    version: '1.0.0',
+    displayName: 'Windows Sandbox',
+    description: 'Disposable, isolated Windows VM — Sandboxie-style. Every run starts clean, nothing survives.',
+    icon: '🧊',
+    runtimeId: 'qemu-windows',
+    runtimeOptions: ['qemu-windows'],
+    resources: {
+      cpuLimitPercent: 100, cpuPriority: 'normal',
+      ramLimitMB: 4096, ramReservedMB: 512,
+      governorPolicy: 'reserved', ioThrottle: 'none',
+    },
+    watchdogPreset: {
+      enabled: true,
+      memoryLimitMB: 4096, cpuLimitPct: 100,
+      stallTimeoutMs: 0, crashLoopLimit: 1, crashLoopWindowMs: 0,
+      fsPolicy: 'block', netPolicy: 'block',
+      onAnomaly: 'snapshot+stop',
+      httpHealthCheck: null,
+      customRules: [], alertWebhook: null,
+    },
+    // Hardware-virtualized isolation is stronger than networkPreset can
+    // describe (a whole guest kernel, not a host process) — level 0 /
+    // isolated:true still communicates "no network by default" correctly,
+    // and qemu-runtime.js's vmConfig.network defaults to 'none' to match.
+    networkPreset: { isolated: true, level: 0, proxyPort: null, allowedHosts: [], deniedHosts: [], dnsOverride: {}, logAllTraffic: true },
+    pipeSignature: {
+      exposes: ['vm:started', 'vm:stopped', 'vm:crashed', 'vm:reset'],
+      consumes: ['vm:launch', 'vm:powerdown', 'vm:reset', 'vm:snapshot'],
+    },
+    fsTemplate: [
+      { path: 'vm.json', content: JSON.stringify({
+          disk: 'overlay.qcow2',
+          baseImage: '{{baseImage}}',
+          ramMB: 4096,
+          cpus: 2,
+          ephemeral: true,
+          network: 'none',
+          headless: true,
+        }, null, 2), binary: false },
+    ],
+    detectionHints: ['sandboxie', 'isolated windows', 'disposable vm', 'throwaway windows'],
+    tags: ['security', 'windows', 'vm', 'qemu', 'sandbox', 'sandboxie', 'ephemeral'],
+    builtIn: true, pluginId: null,
+  },
+
+  // arch-windows-vm-0018
+  {
+    id: 'a9d2e6c8-3f15-4a0b-8d7e-1c5b9f2a6d38',
+    name: 'windows-vm',
+    version: '1.0.0',
+    displayName: 'Windows VM',
+    description: 'Persistent isolated Windows environment — hardware-virtualized, cross-platform (QEMU/KVM).',
+    icon: '🪟',
+    runtimeId: 'qemu-windows',
+    runtimeOptions: ['qemu-windows'],
+    resources: {
+      cpuLimitPercent: 100, cpuPriority: 'normal',
+      ramLimitMB: 8192, ramReservedMB: 1024,
+      governorPolicy: 'reserved', ioThrottle: 'none',
+    },
+    watchdogPreset: {
+      enabled: true,
+      memoryLimitMB: 8192, cpuLimitPct: 100,
+      stallTimeoutMs: 0, crashLoopLimit: 2, crashLoopWindowMs: 300000,
+      fsPolicy: 'log', netPolicy: 'log',
+      onAnomaly: 'snapshot',
+      httpHealthCheck: null,
+      customRules: [], alertWebhook: null,
+    },
+    networkPreset: { isolated: false, level: 2, proxyPort: null, allowedHosts: [], deniedHosts: [], dnsOverride: {}, logAllTraffic: true },
+    pipeSignature: {
+      exposes: ['vm:started', 'vm:stopped', 'vm:crashed', 'vm:snapshot:saved'],
+      consumes: ['vm:launch', 'vm:powerdown', 'vm:snapshot:save', 'vm:snapshot:restore'],
+    },
+    fsTemplate: [
+      { path: 'vm.json', content: JSON.stringify({
+          disk: 'windows.qcow2',
+          ramMB: 8192,
+          cpus: 4,
+          ephemeral: false,
+          network: 'nat',
+          headless: true,
+        }, null, 2), binary: false },
+    ],
+    detectionHints: ['windows vm', 'persistent windows', 'windows guest'],
+    tags: ['windows', 'vm', 'qemu', 'persistent'],
+    builtIn: true, pluginId: null,
+  },
+
   // arch-ai-agent-0013
   {
     id: '59389abf-253d-4ce6-af4e-0854b1076a89',

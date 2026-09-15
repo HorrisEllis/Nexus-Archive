@@ -21,6 +21,15 @@
  * Phase 4 scope: Node.js runtime only.
  * Python, Deno, Bun, Go, Rust, Shell — Phase 6 (runtime plugins).
  *
+ * §ADDED — 'qemu-windows' runtime (compartment/qemu-runtime.js): a VM-backed
+ * runtime doesn't fit resolveRuntime()'s "[bin, ...args, entryFile]" shape
+ * (QEMU's argv is built from disk/ram/network/QMP config, not one entry
+ * file) and doesn't fit killProcess()'s SIGTERM/SIGKILL shape either (a
+ * guest OS deserves an ACPI powerdown, not a signal). CUSTOM_SPAWN_RESOLVERS
+ * and CUSTOM_KILL_HANDLERS below are the two narrow escape hatches that let
+ * a runtime override just those two things — every other runtime here is
+ * completely untouched by this addition.
+ *
  * COS-1: Nothing silently fails — every failure is an event.
  * COS-4: Compartments never share memory — only events.
  */
@@ -29,8 +38,35 @@
 
 const { spawn }   = require('child_process');
 const path        = require('path');
-const { Event }   = require("../siso/index.js");
+const { Event }   = require('../siso/Event.js');
 const { COMP, WATCHDOG } = require('../foundation/event-contracts.js');
+
+// ─── Custom runtime hooks ──────────────────────────────────────────────────────
+// Runtimes whose spawn/kill shape doesn't fit the generic child_process
+// model register here instead of in RUNTIME_BINS/RUNTIME_ARGS. Additive only
+// — resolveRuntime() and the default kill path below are unchanged for
+// every runtime that doesn't opt in.
+
+let _qemuRuntime = null;
+function _lazyQemuRuntime() {
+  // Lazy require: process-runner.js has no reason to load QEMU-specific code
+  // (or fail if it's somehow broken) unless a qemu-windows compartment is
+  // actually spawned.
+  if (!_qemuRuntime) _qemuRuntime = require('./qemu-runtime.js');
+  return _qemuRuntime;
+}
+
+const CUSTOM_SPAWN_RESOLVERS = Object.freeze({
+  'qemu-windows': (opts) => _lazyQemuRuntime().resolveSpawnSpec(opts),
+});
+
+const CUSTOM_KILL_HANDLERS = Object.freeze({
+  'qemu-windows': (record, options) => _lazyQemuRuntime().gracefulShutdown(record, options),
+});
+
+const CUSTOM_EXIT_HANDLERS = Object.freeze({
+  'qemu-windows': (record) => _lazyQemuRuntime().onExit(record),
+});
 
 // ─── Runtime → binary resolver ────────────────────────────────────────────────
 
@@ -88,6 +124,17 @@ function killProcess(compartmentId) {
   const rec = _registry.get(compartmentId);
   if (!rec) return false;
   rec.killRequested = true;
+
+  const customKiller = CUSTOM_KILL_HANDLERS[rec.runtimeId];
+  if (customKiller) {
+    // Async and graceful (e.g. QMP system_powerdown for a VM guest) — the
+    // handler owns its own fallback-to-forceful-kill timeout internally.
+    Promise.resolve(customKiller(rec)).catch(() => {
+      try { rec.process.kill('SIGKILL'); } catch (_) {}
+    });
+    return true;
+  }
+
   try {
     rec.process.kill('SIGTERM');
     // Grace period then SIGKILL
@@ -148,8 +195,26 @@ function spawnProcess(opts) {
     return;
   }
 
-  const { bin, args } = resolveRuntime(runtimeId, entryFile);
-  const fullArgs      = [...args, ...entryArgs];
+  let bin, args, extra = null;
+  const customResolver = CUSTOM_SPAWN_RESOLVERS[runtimeId];
+  if (customResolver) {
+    try {
+      ({ bin, args, extra } = customResolver({ compartmentId, name, entryFile, entryArgs, cwd: cwd || process.cwd(), env }));
+    } catch (e) {
+      bus.emit(COMP.SPAWN_FAILED, {
+        compartmentId,
+        name,
+        runtimeId,
+        reason: e.message,
+        detail: e.detail || null,
+      });
+      _transitionState(compartmentId, 'error', store, sysmap, bus);
+      return;
+    }
+  } else {
+    ({ bin, args } = resolveRuntime(runtimeId, entryFile));
+  }
+  const fullArgs = [...args, ...entryArgs];
 
   const proc = spawn(bin, fullArgs, {
     cwd:   cwd || process.cwd(),
@@ -166,6 +231,7 @@ function spawnProcess(opts) {
     compartmentId,
     name,
     runtimeId,
+    extra, // runtime-specific metadata (e.g. qemu-windows: { vmConfig, qmp, vncDisplayNum })
   };
 
   _registry.set(compartmentId, record);
@@ -231,6 +297,11 @@ function spawnProcess(opts) {
     }
 
     _registry.delete(compartmentId);
+
+    const customExitHandler = CUSTOM_EXIT_HANDLERS[runtimeId];
+    if (customExitHandler) {
+      try { customExitHandler(record); } catch (_) {}
+    }
 
     const clean     = code === 0 || record.killRequested;
     const eventType = clean ? COMP.PROCESS_EXITED : COMP.PROCESS_CRASHED;

@@ -1,8 +1,8 @@
 {
   "format": "NEX-BLUEPRINT-INDEX/1.0",
-  "uuid": "bpi_ce55a577",
+  "uuid": "bpi_e35b59d3",
   "version": "1.0.0",
-  "builtAt": 1789179437058,
+  "builtAt": 1789505732979,
   "builtBy": "blueprint-index",
   "systemCount": 11,
   "totalComponents": 178,
@@ -18555,5 +18555,5 @@
       "error": "registry not found: bridge/registry-components.js"
     }
   ],
-  "buildMs": 32
+  "buildMs": 21
 }

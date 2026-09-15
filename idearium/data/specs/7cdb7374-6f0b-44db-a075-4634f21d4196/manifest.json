@@ -21,7 +21,7 @@
   "failedChunks": 0,
   "progress": 100,
   "createdAt": 1789315491223,
-  "updatedAt": 1789315491260,
+  "updatedAt": 1789501751793,
   "completedAt": 1789315491235,
   "archivePath": null,
   "templateId": null,
@@ -63,5 +63,7 @@
       "dispatchDir": null
     }
   ],
-  "specPath": "/home/claude/nexus_new/nexus/idearium/data/specs/7cdb7374-6f0b-44db-a075-4634f21d4196/7cdb7374-6f0b-44db-a075-4634f21d4196.spec"
+  "specPath": "/home/claude/nexus_new/nexus/idearium/data/specs/7cdb7374-6f0b-44db-a075-4634f21d4196/7cdb7374-6f0b-44db-a075-4634f21d4196.spec",
+  "deleted": true,
+  "deletedAt": 1789501751793
 }
