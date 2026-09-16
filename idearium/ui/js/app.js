@@ -125,6 +125,14 @@ function refreshOnEvent(ev) {
   // every branch below and never refreshed anything, same class of bug as
   // the 2026-07-11 fix above this function.
   if (t.startsWith('spec.') || t.startsWith('spec-engine.')) { loadSpecs(); }
+  // §FIX 2026-09-15 — James: "idearium needs to fail when chunks aren't
+  // being generated." The backend now emits a real 'idearium.error' (and
+  // 'idearium.spec-engine.build.stalled') when a spec's chunks are stuck
+  // FAILED/ESCALATED with nothing left to dispatch — appendEventLog above
+  // already logs it, but the log panel is easy to miss mid-session; a
+  // stalled build deserves the same loud, impossible-to-miss toast() any
+  // user-initiated failure already gets, not just a quiet log line.
+  if (t === 'error' || t.startsWith('spec-engine.build.stalled')) { toast(ev.payload?.reason || 'a spec build stalled — see event log', 'err'); }
   if (t==='push.complete')     { loadSnapshots(); }
   if (t==='snr.update')        { loadStats(); }
   if (t.startsWith('repo.')) {

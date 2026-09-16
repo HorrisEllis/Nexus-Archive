@@ -1956,7 +1956,33 @@ async function handle(req, res, route, query, body) {
       try {
         const manifest = se.loadSpec(params.uuid);
         const chunk = se.nextPendingChunk(params.uuid);
-        if (!chunk) return ok(res, { done: true, message: 'all chunks complete or building' });
+        if (!chunk) {
+          // §FIX 2026-09-15 — James: "idearium needs to fail when chunks
+          // aren't being generated." Real gap: nextPendingChunk() only
+          // ever matches PENDING (spec-engine/index.js) — a chunk that
+          // failed verification sits at FAILED/ESCALATED forever with no
+          // automatic retry path, so this branch used to report the
+          // exact same `{ done: true, message: 'all chunks complete or
+          // building' }` for a spec that's actually stuck as it does for
+          // one that's genuinely finished — a silent lie the build-queue
+          // poller (_startBuildQueuePoller below) repeated every 15s,
+          // forever, with nothing anywhere ever surfacing the failure.
+          // Distinguish the two honestly: only chunks in flight
+          // (BUILDING) are still legitimately "in progress"; any
+          // FAILED/ESCALATED chunk means the spec did NOT complete, and
+          // this must say so loudly — a real error response plus a real
+          // bus event — not a quiet success.
+          const stuck = manifest.chunks.filter(c => c.status === se.CHUNK_STATES.FAILED || c.status === se.CHUNK_STATES.ESCALATED);
+          if (stuck.length) {
+            const reason = `${stuck.length} chunk(s) stalled: ${stuck.map(c => `${c.sectionId} (${c.status}: ${c.failureMode || 'no reason recorded'})`).join('; ')}`;
+            os.emit('idearium.spec-engine.build.stalled', {
+              specUuid: params.uuid, stalledChunks: stuck.map(c => ({ uuid: c.uuid, sectionId: c.sectionId, status: c.status, reason: c.failureMode || null })),
+            });
+            os.emit('idearium.error', { op: 'spec-engine.build', specUuid: params.uuid, reason });
+            return err(res, 422, reason);
+          }
+          return ok(res, { done: true, message: 'all chunks complete or building' });
+        }
 
         // §PHASE 6 2026-07-10 — cross-spec chunk reuse, before spending a token.
         // The WARP exact cache only hits when the whole PROMPT matches, and the
@@ -2345,8 +2371,23 @@ function _startBuildQueuePoller(port) {
         headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
         timeout: 10000,
       }, (res) => {
-        res.on('data', () => {});
-        res.on('end', () => { _buildingSpecs.delete(s.uuid); }); // real completion (or a real, honest "done:true") frees this spec for the next tick to check again
+        // §FIX 2026-09-15 — James: "idearium needs to fail when chunks
+        // aren't being generated." This handler used to ignore the
+        // response body entirely — a spec stalled on FAILED/ESCALATED
+        // chunks (see speceng.build's own fix, same date) would get a
+        // real 422 back every 15s and this poller would silently throw
+        // it away, no different from a real success. Surface it loud in
+        // the one place a person watching this process would see it.
+        let respBody = '';
+        res.on('data', (d) => { respBody += d; });
+        res.on('end', () => {
+          _buildingSpecs.delete(s.uuid);
+          if (res.statusCode >= 400) {
+            let msg = respBody;
+            try { msg = JSON.parse(respBody).error || respBody; } catch (_) { /* not JSON — use raw body */ }
+            console.error(`[idearium/build-queue] spec ${s.uuid} did NOT complete — ${msg}`);
+          }
+        });
       });
       // §1.2 — a failed self-request must never crash the poller or
       // silently wedge this spec out of future ticks forever.

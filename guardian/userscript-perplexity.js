@@ -27,7 +27,6 @@ const NCP_RESULT  = `${NCP_URL}/result`;
 const NCP_HB      = `${NCP_URL}/heartbeat`;
 const CORTEX_URL  = 'http://127.0.0.1:3748';
 const ORCH_URL    = 'http://127.0.0.1:9000';
-const BRIDGE_URL  = 'http://127.0.0.1:9999';
 const PROVIDER    = 'perplexity';
 const VERSION     = '10.0.0';
 // §P113: exponential backoff 3s→30s — eliminates SSE flood on disconnect
@@ -282,7 +281,7 @@ function _toCortex(type, payload = {}) {
     body: JSON.stringify({ type, payload: { ...payload, _account:getAccount(), _chatUrl:location.href },
       source:'userscript-perplexity', causedBy:currentJobId||null, ts:Date.now() }) }).catch(()=>{});
 }
-function _toBridge(type, payload = {}) {
+function _toNCP(type, payload = {}) {
   _gmFetch(`${NCP_URL}/result`, { method:'POST', headers:{'Content-Type':'application/json'}, keepalive:true,
     body: JSON.stringify({ type, ...payload, ts:Date.now() }) }).catch(()=>{});
 }
@@ -547,7 +546,7 @@ async function _onJobComplete(jobId, text, responseEl, ms, prompt, retryCount, m
 
   send({ type:'GUARDIAN_COMPLETE', jobId, text, citations, mode, chatUrl:location.href, account:getAccount(), requestId:jobId });
   _toCortex('guardian.job.complete', { jobId, chars:text.length, ms, usage, citationCount:citations.length, mode });
-  _toBridge('guardian.job.complete', { jobId, chars:text.length, ms, provider:PROVIDER });
+  _toNCP('guardian.job.complete', { jobId, chars:text.length, ms, provider:PROVIDER });
   sendLedger('UPGRADE', `Job complete · #${jobId.slice(0,8)}`, { jobId, chars:text.length, ms, citations:citations.length });
 }
 
@@ -633,7 +632,7 @@ async function handleJob(msg) {
   _log('job', `Job: ${command}`, `${text.length}ch · #${jobId.slice(0,8)}`);
   toast(`⚡ ${command} · #${jobId.slice(0,8)}`, 'job', 3000);
   _toCortex('agent.call.start', { jobId, provider:PROVIDER, command, promptLen:text.length, mode: detectSearchMode() });
-  _toBridge('guardian.job.dispatched', { jobId, command, provider:PROVIDER });
+  _toNCP('guardian.job.dispatched', { jobId, command, provider:PROVIDER });
 
   // §ACK-INJECTION-FIX — moved inside gate(), keyed off scopedTools.
 

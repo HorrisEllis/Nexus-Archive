@@ -25,7 +25,6 @@ const NCP_RESULT  = `${NCP_URL}/result`;
 const NCP_HB      = `${NCP_URL}/heartbeat`;
 const CORTEX_URL  = 'http://127.0.0.1:3748';
 const ORCH_URL    = 'http://127.0.0.1:9000';
-const BRIDGE_URL  = 'http://127.0.0.1:9999';
 const PROVIDER    = 'chatgpt';
 const VERSION    = '10.0.0';
 // §P113: exponential backoff 3s→30s — eliminates SSE flood on disconnect
@@ -170,7 +169,7 @@ async function getSessionId() {
 
 // ── Replay — §US-03 ───────────────────────────────────────────────────────────
 // On connect: replay any pending requests from IDB to guardian.
-// Bridge does NOT replay for the userscript. We do.
+// NCP does NOT replay for the userscript. We do.
 async function replayPending() {
   const pending = await dbGetAll('requests', 'status', 'pending');
   if (!pending.length) return;
@@ -306,7 +305,7 @@ function _toCortexPush(content, tags = [], tier = 'session') {
   _gmFetch(`${CORTEX_URL}/api/push`, { method:'POST', headers:{'Content-Type':'application/json'}, keepalive:true,
     body: JSON.stringify({ content: body, tags, tier }) }).catch(()=>{});
 }
-function _toBridge(type, payload = {}) {
+function _toNCP(type, payload = {}) {
   _gmFetch(`${NCP_URL}/result`, { method:'POST', headers:{'Content-Type':'application/json'}, keepalive:true,
     body: JSON.stringify({ type, ...payload, ts:Date.now() }) }).catch(()=>{});
 }
@@ -695,7 +694,7 @@ async function _onJobComplete(jobId, text, ms, prompt, retryCount) {
   send({ type:'GUARDIAN_COMPLETE', jobId, text, chatUrl:location.href, account:getAccount(), requestId:jobId });
   _toCortex('guardian.job.complete', { jobId, chars:text.length, ms, usage });
   _toCortexPush(text, ['conversation', 'chatgpt', `job:${jobId}`], 'session');
-  _toBridge('guardian.job.complete', { jobId, chars:text.length, ms, provider:PROVIDER });
+  _toNCP('guardian.job.complete', { jobId, chars:text.length, ms, provider:PROVIDER });
   sendLedger('UPGRADE', `Job complete · #${jobId.slice(0,8)}`, { jobId, chars:text.length, ms });
 
   // Post-response cortex command parser
@@ -810,7 +809,7 @@ async function handleJob(msg) {
   _log('job', `Job: ${command}`, `${text.length}ch · #${jobId.slice(0,8)}`);
   toast(`⚡ ${command} · #${jobId.slice(0,8)}`, 'job', 3000);
   _toCortex('agent.call.start', { jobId, provider:PROVIDER, command, promptLen:text.length });
-  _toBridge('guardian.job.dispatched', { jobId, command, provider:PROVIDER });
+  _toNCP('guardian.job.dispatched', { jobId, command, provider:PROVIDER });
 
   // §ACK-INJECTION-FIX 2026-09-02 — moved inside gate() below, keyed off
   // scopedTools (the hat-filtered list) rather than the raw incoming
@@ -1647,7 +1646,7 @@ async function renderIntel() {
 function renderSys() {
   const a = document.getElementById('__g10sys__'); if (!a) return;
   const systems = [
-    { id:'orchestrator', port:9000 }, { id:'bridge', port:9999 },
+    { id:'orchestrator', port:9000 },
     { id:'cortex', port:3748 },       { id:'guardian', port:7820 },
     { id:'idearium', port:4800 },     { id:'emerge', port:4242 },
   ];

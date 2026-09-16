@@ -12,7 +12,8 @@
     "cos",
     "emerge",
     "idearium",
-    "siso"
+    "siso",
+    "erosmancer/erosmancer-os"
   ],
   "scripts": {
     "test": "node tests/brutal.test.js",

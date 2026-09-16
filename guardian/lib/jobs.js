@@ -141,7 +141,16 @@ function createJobStore() {
     };
     jobs.set(id, job);
     _persistJob(job);
-    console.log(`[guardian] job created: ${id} → ${provider} /${command}${hat ? ` [hat: ${hat.name}]` : ''}`);
+    // §FIX 2026-09-15 — James: "i also love how [the wake relay] shows
+    // the content of the wake word. i want the jobs to do that also."
+    // Real gap: wake-relay.js's handleWake() logs a preview of the
+    // actual request text (`d.request?.slice(0,80)`) so you can see
+    // what's flowing through it; this line only ever logged the job's
+    // id/provider/command/hat, never what the job actually says. Same
+    // truncation convention as wake-relay for consistency — a preview,
+    // not the full text, so long prompts don't flood the log.
+    const preview = (prompt || content || '').toString().replace(/\s+/g, ' ').trim().slice(0, 80);
+    console.log(`[guardian] job created: ${id} → ${provider} /${command}${hat ? ` [hat: ${hat.name}]` : ''}${preview ? `: ${preview}` : ''}`);
     return job;
   }
 

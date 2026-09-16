@@ -91,8 +91,8 @@
 
   const HINT = 'NEXUS is running alongside this chat and can be queried for real system ' +
                'state — open gaps, component registry, test results, ledger history. ' +
-               'To ask it, emit a line starting with "hey nexus," and the operator\'s ' +
-               'bridge will answer with live data. Prefer asking over guessing at ' +
+               'To ask it, emit a line starting with "hey nexus," and NEXUS will ' +
+               'answer with live data. Prefer asking over guessing at ' +
                'system state you cannot see.';
 
   const HINT_MODE_DEFAULTS = {

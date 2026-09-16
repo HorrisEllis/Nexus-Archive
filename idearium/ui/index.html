@@ -103,7 +103,13 @@ body{display:flex;flex-direction:column;position:relative}
 .welcome-mark{font-family:var(--mono);font-size:11px;letter-spacing:.3em;color:var(--text3);margin-bottom:14px}
 .welcome-title{font-family:var(--mono);font-size:34px;font-weight:600;letter-spacing:.12em;color:var(--sky);text-shadow:0 0 30px rgba(56,189,248,.25);margin-bottom:8px}
 .welcome-title span{color:var(--text)}
-.welcome-sub{font-size:13px;color:var(--text2);max-width:520px;text-align:center;line-height:1.7;margin-bottom:36px}
+.welcome-sub{font-size:13px;color:var(--text2);max-width:520px;text-align:center;line-height:1.7;margin-bottom:24px}
+.welcome-actions{display:flex;gap:12px;margin-bottom:36px}
+.welcome-action-btn{font-family:var(--mono);font-size:12px;letter-spacing:.04em;padding:10px 22px;border-radius:6px;cursor:pointer;transition:all .15s;background:none}
+.welcome-action-btn.primary{border:1px solid var(--sky);color:var(--sky);background:rgba(56,189,248,.08)}
+.welcome-action-btn.primary:hover{background:rgba(56,189,248,.16)}
+.welcome-action-btn.secondary{border:1px solid var(--b1);color:var(--text2)}
+.welcome-action-btn.secondary:hover{border-color:var(--sky);color:var(--sky)}
 .pillars{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;max-width:920px;width:100%}
 .pillar{background:rgba(13,18,25,.7);border:1px solid var(--b0);border-radius:10px;padding:18px;cursor:pointer;transition:all .2s;text-align:left;position:relative;overflow:hidden}
 .pillar:hover{border-color:var(--b2);background:rgba(56,189,248,.04);transform:translateY(-2px)}
@@ -456,6 +462,10 @@ body{display:flex;flex-direction:column;position:relative}
         <div class="welcome-mark">NEXUS · IDEA OS · LAYER 9</div>
         <div class="welcome-title">IDEA<span>RIUM</span></div>
         <div class="welcome-sub">Log ideas, brainstorm, visit repository or idea, spec and library builder, then architect.</div>
+        <div class="welcome-actions">
+          <button class="welcome-action-btn secondary" onclick="openUploadProjectModal()">Import project</button>
+          <button class="welcome-action-btn primary" onclick="newSpecPrompt()">Start new project</button>
+        </div>
         <div class="pillars">
           <div class="pillar flow" onclick="setView('brainstorm')">
             <div class="pillar-step">01 · CAPTURE</div>
