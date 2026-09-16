@@ -1,0 +1,137 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "UpdateProtocol",
+  "description": "Shared schema for the server-push update system. Drop into any project — server and client both validate messages against this.",
+  "definitions": {
+
+    "uuid": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+
+    "version": {
+      "type": "object",
+      "required": ["major", "minor", "patch", "revision"],
+      "properties": {
+        "major": { "type": "integer", "minimum": 0 },
+        "minor": { "type": "integer", "minimum": 0 },
+        "patch": { "type": "integer", "minimum": 0 },
+        "revision": { "type": "integer", "minimum": 0, "description": "Monotonic counter, increments on every push regardless of semver bump. This is what diffing is keyed on, not semver." },
+        "channel": { "type": "string", "enum": ["stable", "beta", "canary", "dev"], "default": "stable" }
+      }
+    },
+
+    "manifest": {
+      "type": "object",
+      "description": "Describes one pushable unit of change.",
+      "required": ["id", "projectId", "version", "createdAt", "payload"],
+      "properties": {
+        "id": { "$ref": "#/definitions/uuid" },
+        "projectId": { "type": "string", "description": "Which of your projects this belongs to, e.g. 'nexus-bridge', 'mastermind'." },
+        "version": { "$ref": "#/definitions/version" },
+        "parentRevision": { "type": ["integer", "null"], "description": "Revision this diffs against. Null = full snapshot." },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "summary": { "type": "string" },
+        "payload": {
+          "type": "object",
+          "required": ["kind", "encoding"],
+          "properties": {
+            "kind": { "type": "string", "enum": ["full", "diff"] },
+            "encoding": { "type": "string", "enum": ["json", "base64", "binary-patch"] },
+            "checksum": { "type": "string", "description": "sha256 of the decoded payload, for integrity check on the client." },
+            "sizeBytes": { "type": "integer" },
+            "data": {}
+          },
+          "required": ["kind", "encoding", "checksum", "data"]
+        },
+        "rollbackOf": { "type": ["string", "null"], "description": "If this manifest is itself a rollback, the manifest id it reverts to." }
+      }
+    },
+
+    "pushMessage": {
+      "type": "object",
+      "description": "Server -> client. One outbound update.",
+      "required": ["type", "manifest"],
+      "properties": {
+        "type": { "const": "push" },
+        "manifest": { "$ref": "#/definitions/manifest" },
+        "requireAck": { "type": "boolean", "default": true },
+        "expiresAt": { "type": ["string", "null"], "format": "date-time" }
+      }
+    },
+
+    "ackMessage": {
+      "type": "object",
+      "description": "Client -> server. Confirms apply succeeded/failed and reports current version.",
+      "required": ["type", "manifestId", "clientId", "status", "currentRevision"],
+      "properties": {
+        "type": { "const": "ack" },
+        "manifestId": { "$ref": "#/definitions/uuid" },
+        "clientId": { "$ref": "#/definitions/uuid" },
+        "status": { "type": "string", "enum": ["applied", "failed", "rejected-checksum", "rejected-stale"] },
+        "currentRevision": { "type": "integer" },
+        "error": { "type": ["string", "null"] },
+        "appliedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+
+    "clientState": {
+      "type": "object",
+      "description": "What the server tracks per connected client.",
+      "required": ["clientId", "projectId", "currentRevision", "lastSeen", "connectionStatus"],
+      "properties": {
+        "clientId": { "$ref": "#/definitions/uuid" },
+        "projectId": { "type": "string" },
+        "currentRevision": { "type": "integer" },
+        "channel": { "type": "string", "enum": ["stable", "beta", "canary", "dev"] },
+        "lastSeen": { "type": "string", "format": "date-time" },
+        "connectionStatus": { "type": "string", "enum": ["connected", "disconnected", "syncing", "stale"] },
+        "pendingManifestId": { "type": ["string", "null"] }
+      }
+    },
+
+    "heartbeat": {
+      "type": "object",
+      "required": ["type", "clientId", "currentRevision"],
+      "properties": {
+        "type": { "const": "heartbeat" },
+        "clientId": { "$ref": "#/definitions/uuid" },
+        "currentRevision": { "type": "integer" }
+      }
+    },
+
+    "handshakeLocation": {
+      "type": "string",
+      "pattern": "^hs://[a-zA-Z0-9_-]+/[a-zA-Z0-9_-]+/[0-9a-f-]+$",
+      "description": "hs://{projectId}/{connectionId}/{uuid}. Anchors every event on a connection to the handshake that established it."
+    },
+
+    "eventEnvelope": {
+      "type": "object",
+      "description": "Every event on the wire is wrapped in this. requestId is unique per request; hash is sha256 of payload, doubling as an idempotency key.",
+      "required": ["location", "requestId", "hash", "event", "payload", "timestamp"],
+      "properties": {
+        "location": { "$ref": "#/definitions/handshakeLocation" },
+        "requestId": { "$ref": "#/definitions/uuid" },
+        "hash": { "type": "string", "description": "sha256 hex digest of payload." },
+        "event": { "type": "string", "description": "e.g. 'file:changed', 'update:push', 'ping:response'." },
+        "payload": {},
+        "correlationId": { "type": ["string", "null"], "description": "Set on responses; equals the requestId being answered." },
+        "timestamp": { "type": "string", "format": "date-time" }
+      }
+    },
+
+    "handshakeRecord": {
+      "type": "object",
+      "required": ["location", "connectionId", "status", "openedAt"],
+      "properties": {
+        "location": { "$ref": "#/definitions/handshakeLocation" },
+        "connectionId": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "complete", "expired", "revoked"] },
+        "openedAt": { "type": "integer", "description": "epoch ms" },
+        "completedAt": { "type": ["integer", "null"] },
+        "meta": { "type": "object" }
+      }
+    }
+  }
+}

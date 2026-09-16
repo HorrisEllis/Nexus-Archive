@@ -1,0 +1,16 @@
+{
+  "name": "update-system",
+  "version": "1.0.0",
+  "description": "Server-push update system over encrypted WebRTC data channels, with handshake-gated event contract (location + requestId + hash per message).",
+  "main": "server/update-service.js",
+  "license": "GPL-3.0",
+  "files": [
+    "schema",
+    "transport",
+    "server",
+    "client",
+    "contract",
+    "README.md"
+  ],
+  "keywords": ["webrtc", "p2p", "update", "push", "handshake", "event-contract"]
+}
