@@ -21,6 +21,7 @@ import { spawnSync, spawn as spawnProc } from 'child_process';
 // §WIRED — real, distinct config, not inline constants. See
 // idearium/config.js's own header. Matches the established pattern.
 import config from '../config.js';
+import { getConfig as getIdeariumConfig, setConfig as setIdeariumConfig } from '../lib/config.js';
 const _require = createRequire(import.meta.url);
 
 // §AX-010 2026-07-10 — idearium hardcoded 127.0.0.1:9000 in four places
@@ -518,6 +519,8 @@ const ROUTE_CAP = {
   'queue.progress':   CAPS.WRITE_IDEAS,
   'speceng.setWarpPrimitives': CAPS.WRITE_IDEAS,
   'cli.exec':         CAPS.ADMIN,
+  'config.get':       CAPS.READ_IDEAS,
+  'config.set':       CAPS.WRITE_IDEAS,
 };
 
 // Key-based auth removed — Idearium is internal-only, reached solely
@@ -535,6 +538,11 @@ function matchRoute(method, url) {
     ['GET',    ['health'],                 'health'],     // alias: GET /health → same as GET /
     ['GET',    ['api','contract'],        'contract.get'],
     ['GET',    ['api','contract','live'], 'contract.live'],
+    // §MCO-F 2026-09-15 — idearium.config.get/.set (chunk_cap et al),
+    // idearium/lib/config.js. GET has no body; POST takes {key, value,
+    // actor?} — actor defaults to 'user' inside config.js itself.
+    ['GET',    ['api','config'],          'config.get'],
+    ['POST',   ['api','config'],          'config.set'],
     ['GET',    ['api','stats'],           'stats.get'],
     ['GET',    ['api','snr'],             'snr.current'],
     ['GET',    ['api','snr','history'],   'snr.history'],
@@ -756,6 +764,27 @@ async function handle(req, res, route, query, body) {
           endpoints: routes.sort((a, b) => a.path.localeCompare(b.path)),
         });
       } catch (e) { return err(res, 500, `contract projection failed: ${e.message}`); }
+    }
+
+    // §MCO-F 2026-09-15 — James: "limit 500 for chunks needs to change.
+    // have that as an option in the configuration file in idearium."
+    // GET returns the whole live idearium.config (chunk_cap, zoom_levels,
+    // snapshot_mode, auto_phasemap, cicd.*). POST sets one key; a human
+    // caller (default actor:'user') can write anything, a copilot/agent
+    // actor is rejected on non-copilot_writable keys (ssh_key_path) by
+    // config.js itself — same validation either way, only the event's
+    // actor field differs.
+    case 'config.get':
+      try { return ok(res, { config: getIdeariumConfig() }); }
+      catch (e) { return err(res, 500, e.message); }
+
+    case 'config.set': {
+      const { key, value, actor } = body || {};
+      if (!key) return err(res, 400, 'key required');
+      try {
+        const event = setIdeariumConfig(key, value, { actor: actor || 'user' });
+        return ok(res, { event, config: getIdeariumConfig() });
+      } catch (e) { return err(res, 400, e.message); }
     }
 
     case 'stats.get':

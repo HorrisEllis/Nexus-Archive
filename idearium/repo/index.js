@@ -400,7 +400,13 @@ export class RepoLayer {
     // it just isn't destroyed on disk.
     const files = manifest
       ? manifest.chunks.filter(c => c.status !== 'removed').slice().sort((a,b)=>a.chunkIdx-b.chunkIdx).map(c => ({
-          path: c.fileName || `${String(c.chunkIdx).padStart(2,'0')}-${c.sectionId}.md`,
+          // §REALPATH 2026-09-15 — dropped files carry their real
+          // original path (ingestFilesAsSpec) so materialize() writes
+          // them to disk under it, not the chunk store's own numbered
+          // "01-section-id.md" naming. Authored .spec sections have no
+          // realPath (null) and keep the existing fileName behavior —
+          // there's no "real file" to preserve for those.
+          path: c.realPath || c.fileName || `${String(c.chunkIdx).padStart(2,'0')}-${c.sectionId}.md`,
           bytes: c.byteSize || 0,
           comp_id: c.comp_id || null,
           seam_id: c.seam_id || null,
@@ -446,7 +452,7 @@ export class RepoLayer {
     const manifest = this.se.loadSpec(r.specUuid);
     const clean = (relPath || '').replace(/^\/+/, '');
     const chunk = manifest.chunks.find(c =>
-      c.status !== 'removed' && (c.fileName === clean || c.sectionId === clean));
+      c.status !== 'removed' && (c.realPath === clean || c.fileName === clean || c.sectionId === clean));
     return { repo: r, manifest, chunk, clean };
   }
 
@@ -454,7 +460,7 @@ export class RepoLayer {
     try {
       const { chunk, clean } = this._resolveChunk(repoUuid, relPath);
       if (!chunk) return { error: `file not found in repo: ${relPath}` };
-      return { path: chunk.fileName || clean, content: chunk.content || '', bytes: chunk.byteSize || 0 };
+      return { path: chunk.realPath || chunk.fileName || clean, content: chunk.content || '', bytes: chunk.byteSize || 0 };
     } catch (e) { return { error: e.message }; }
   }
 
@@ -467,16 +473,17 @@ export class RepoLayer {
         // other content write goes through (disk-verified, rootHash recomputed)
         this.se.completeChunk(manifest.uuid, chunk.uuid, content);
         this._materializeQuiet(repoUuid); // §BUILT 2026-09-06 — keep the real, physical projection honestly in sync, never stale
-        return { ok: true, path: chunk.fileName, created: false };
+        return { ok: true, path: chunk.realPath || chunk.fileName, created: false };
       }
       // new file — no chunk for this path yet. sectionId must be a slug;
       // reuse the path itself (minus extension noise) so fileName stays
-      // human-readable in the repo's file list.
+      // human-readable in the repo's file list. realPath preserves the
+      // real relative path/extension for materialize() (§REALPATH).
       const sectionId = clean.replace(/\.[a-zA-Z0-9]+$/, '').replace(/[^a-zA-Z0-9_-]/g, '-').toLowerCase() || `file-${Date.now()}`;
-      const fresh = this.se.addChunk(manifest.uuid, { sectionId, title: clean, content });
+      const fresh = this.se.addChunk(manifest.uuid, { sectionId, title: clean, content, realPath: clean });
       const newChunk = fresh.chunks.find(c => c.sectionId === sectionId);
       this._materializeQuiet(repoUuid);
-      return { ok: true, path: newChunk?.fileName || clean, created: true };
+      return { ok: true, path: newChunk?.realPath || newChunk?.fileName || clean, created: true };
     } catch (e) { return { error: e.message }; }
   }
 
@@ -486,7 +493,7 @@ export class RepoLayer {
       if (!chunk) return { error: `file not found in repo: ${relPath}` };
       this.se.removeChunk(manifest.uuid, chunk.uuid);
       this._materializeQuiet(repoUuid); // real, physical file must actually disappear too, not just the manifest's record of it
-      return { ok: true, path: chunk.fileName };
+      return { ok: true, path: chunk.realPath || chunk.fileName };
     } catch (e) { return { error: e.message }; }
   }
 

@@ -33,6 +33,7 @@ import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
 import { getTemplate, listTemplates, readSeed } from './templates.js';
 import { loadTable, syncTable, migrateOnce } from '../lib/db.js';
+import { getValue as getConfigValue } from '../lib/config.js';
 // §BUILT 2026-09-03 — js-yaml is already a real root-workspace dependency
 // (package.json's workspaces include 'idearium'; compiler-bridge.js in
 // this same module already imports it, dynamically). Static import here —
@@ -1164,7 +1165,7 @@ export function findByRootHash(rootHash) {
 // content store of its own to add a file TO except through spec-engine.
 // Same disk-write/rootHash-recompute path as every other chunk — this is
 // not a second mechanism, just a chunk list that can grow after creation.
-export function addChunk(specUuid, { sectionId, title = null, content = '' } = {}) {
+export function addChunk(specUuid, { sectionId, title = null, content = '', realPath = null } = {}) {
   if (!sectionId) throw new Error('addChunk: sectionId required');
   const manifest = loadSpec(specUuid);
   if (manifest.chunks.some(c => c.sectionId === sectionId)) {
@@ -1181,6 +1182,12 @@ export function addChunk(specUuid, { sectionId, title = null, content = '' } = {
     contract_id: `spec-contract:${specUuid.slice(0,8)}:${sectionId}:${chunkUuid.slice(0,8)}`,
     filePath: path.join(specDir, `${chunkUuid}.md`),
     fileName: `${String(chunkIdx).padStart(2,'0')}-${sectionId}.md`,
+    // §REALPATH 2026-09-15 — a file added through the repo editor (repo/
+    // index.js's writeFile "new file" branch) passes its real relative
+    // path here so materialize() writes it under that path, same as a
+    // dropped file — not the numbered fileName. null for every other
+    // addChunk caller (none currently pass it), unaffected.
+    realPath,
     status: CHUNK_STATES.PENDING, agent: 'user', agentModel: null,
     attempts: 0, failureMode: null, content: null, byteSize: 0,
     createdAt: now, updatedAt: now, completedAt: null,
@@ -1219,6 +1226,16 @@ export function removeChunk(specUuid, chunkUuid) {
 
 export function ingestFilesAsSpec({ name, files = [], author = 'ingest' }) {
   if (!files.length) throw new Error('ingestFilesAsSpec: at least one file required');
+  // §MCO-F 2026-09-15 — the drop path's own real chunk cap (distinct from
+  // lib/project-import.config.js's ZIP.maxFiles, which only bounds the
+  // "Upload Project" zip flow). Every dropped file becomes exactly one
+  // chunk here, so idearium.config.chunk_cap is the real, live bound on
+  // how many a single ingest can create — same config, same source of
+  // truth, checked live on every call rather than baked in at boot.
+  const cap = getConfigValue('chunk_cap');
+  if (files.length > cap) {
+    throw new Error(`ingestFilesAsSpec: ${files.length} files exceeds chunk_cap (${cap}) — raise idearium.config.chunk_cap or split the drop`);
+  }
   const seenIds = new Map();
   const sections = files.map((f, idx) => {
     let id = _slug((f.path || `file-${idx}`).replace(/\//g, '-'));
@@ -1235,7 +1252,28 @@ export function ingestFilesAsSpec({ name, files = [], author = 'ingest' }) {
     completeChunk(manifest.uuid, chunk.uuid, content);
     const fresh = loadSpec(manifest.uuid);
     const fc = fresh.chunks.find(c => c.uuid === chunk.uuid);
-    if (fc) { fc.agent = 'ingest'; fc.agentModel = 'ingest:drop'; }
+    if (fc) {
+      fc.agent = 'ingest'; fc.agentModel = 'ingest:drop';
+      // §REALPATH 2026-09-15 — James: "idearium needs to import the files
+      // to the repo, not just chunk." A dropped file's real relative path
+      // (f.path — "lib/foo.js") is already captured as this chunk's
+      // sectionTitle, but repo/index.js's file listing was reading
+      // c.fileName (the chunk-store's own "01-lib-foo-js.md" naming)
+      // for EVERY chunk regardless of origin — so materialize() wrote
+      // dropped files to disk as numbered .md blobs instead of their
+      // real paths/extensions. realPath is additive and drop-only
+      // (null for authored .spec sections, where fileName's chunk
+      // naming is correct and there is no "real path" to preserve) —
+      // repo/index.js now prefers it when present. Sanitized: no
+      // leading '/', no '..' segment, so a crafted f.path can't escape
+      // the materialize outDir.
+      const clean = String(f.path || '')
+        .replace(/^\/+/, '')
+        .split('/')
+        .filter((seg) => seg && seg !== '.' && seg !== '..')
+        .join('/');
+      fc.realPath = clean || null;
+    }
     saveSpec(fresh);
   });
   return loadSpec(manifest.uuid);
