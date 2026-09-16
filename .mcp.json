@@ -1,0 +1,10 @@
+{
+  "_comment": "Claude Code MCP config — place in your project root as .mcp.json",
+  "_setup": "NEXUS must be running (npm start) before Claude Code connects",
+  "mcpServers": {
+    "nexus": {
+      "command": "node",
+      "args": ["orchestrator/lib/mcp-stdio.js"]
+    }
+  }
+}
