@@ -1,11 +1,7 @@
 spec:
   meta:
     name:        idearium
-    version:     4.1.0   # §5.4 drift fix 2026-09-13 — was 3.2.0, out of sync with
-                         # idearium/package.json's 4.1.0 since at least the
-                         # 2026-09-03 "idearium 3.3.0" session. package.json is
-                         # the one actually bumped per-release; this field had
-                         # simply stopped being updated alongside it.
+    version:     3.0.0
     foundation:  nexus-system-foundation@1.0.0
     port:        4800
     uuid:        nexus-idearium-v3-0000-2026-0615-jamesbrooks-001
@@ -73,11 +69,6 @@ spec:
       description: >
         Watches for .spec files. On detect: validates, queues,
         dispatches to spec-compiler via Guardian.
-
-  command_index:
-    status: DONE       # verified 2026-09-03 -- GET /api/contract/live, 72 real endpoints, 72=72 against fresh grep
-    spec: "docs/command-index-per-system.spec"
-    note: "idearium's existing routes array (72 entries) maps directly -- cheapest phase, exposure not extraction."
 
   routes:
     external:

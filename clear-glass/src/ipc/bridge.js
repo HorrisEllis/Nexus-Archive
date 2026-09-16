@@ -162,21 +162,6 @@ class IpcBridge {
     this.app.get('/agents',   (req, res) => res.json({ agents: this.mesh?.listAgents() || [] }));
     this.app.get('/url-listeners',(req, res) => res.json({ listeners: this.urlListener?.list() || [] }));
 
-    // §BUILT 2026-09-16 — James: RAID→ClearGlass wiring. archaeology.js's
-    // setActiveCompartment() (activates DOM-event ledgering for a
-    // compartment) has been callable since 2026-09-13 but only from
-    // inside this same Electron process — nothing outside it (RAID runs
-    // in the orchestrator's own separate Node process) had a way in.
-    // Real fix, minimal surface: one HTTP route, same require() pattern
-    // main/index.js:1424 already uses for this exact function.
-    this.app.post('/compartment/active', (req, res) => {
-      const { compartmentUuid, queueId } = req.body || {};
-      if (!compartmentUuid) return res.status(400).json({ ok: false, error: 'compartmentUuid required' });
-      const { setActiveCompartment } = require('../dom/archaeology');
-      setActiveCompartment(compartmentUuid, queueId || null);
-      res.json({ ok: true });
-    });
-
     // §SBP12 2026-08-28 — James: "finish it off." Real, requested
     // aggregation: TX16's listener registry, the 4 provider userscripts'
     // real state, hat-forge's real hats, and options.listAccounts() have

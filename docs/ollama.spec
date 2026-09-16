@@ -1,16 +1,6 @@
 spec:
   meta:
-    # §FIX 2026-09-01 (LM1): name was 'ollama'. lib/version.js's real code-
-    # version key for this system is 'ollama-bridge' (port 3749, sovereign
-    # HTTP wrapper) — orchestrator/lib/spec-drift.js's live check reported
-    # this spec as MISSING every run, not because its content was wrong
-    # (it wasn't — meta/core/events/routes/handshake/modules/tests/
-    # resilience were all already real and correct) but purely because its
-    # own name-matching (system, system.replace(/-/g,'_'),
-    # system.replace(/_/g,'-')) does not bridge 'ollama-bridge' <-> 'ollama'
-    # in either direction. Versions already agreed (1.0.0 == 1.0.0) before
-    # this fix — this is a naming correction, not a content rewrite.
-    name:        ollama-bridge
+    name:        ollama
     version:     1.0.0
     foundation:  nexus-system-foundation@1.0.0
     port:        3749
@@ -84,13 +74,6 @@ spec:
       - 'raid.dispatch.ollama'      # RAID tells Ollama to run a job
       - 'guardian.job.cancel'       # cancel a queued job
       - 'orchestrator.shutdown'     # graceful drain and stop
-
-  command_index:
-    status: DONE   # verified 2026-09-03 — GET /commands live, 17 real commands, matches docs/command-index-per-system.spec build_order phase 2's own exit criteria (independently re-derived and confirmed equal, tests/modules/ollama-command-index.test.js)
-    spec: "docs/command-index-per-system.spec"
-    served_at: "GET /commands"
-    file: "ollama/lib/command-index.js"
-    note: "each routes/*.js module self-declares a commands export -- aggregated at boot into the real index."
 
   routes:
     - method: GET  path: /health
@@ -232,35 +215,3 @@ spec:
     problem:  "Guardian bottleneck. If guardian blocks, ollama blocks. No isolation."
     fix:      "Sovereign system on :3749. RAID routes to it directly. Guardian dispatches via event bus."
     cfr:      "Every job carries contractId, componentId, hookId, requestId — CFR tracks the full wire"
-
-  history:
-    - date: 2026-06-27
-      summary: >
-        Original build — sovereign Ollama bridge, isolated from guardian's
-        own request path, so a slow/stalled Ollama call cannot block
-        guardian and a guardian outage cannot stop local dispatch.
-    - date: 2026-07-04
-      summary: >
-        Registered in lib/version.js's services map for the first time
-        (per that file's own 0.9.10 changelog entry — five real, already-
-        running sovereign systems, including this one, had never been
-        added despite the file calling itself the single source of
-        truth).
-    - date: 2026-09-01
-      summary: >
-        meta.name corrected from 'ollama' to 'ollama-bridge' to match
-        lib/version.js's real code-version key — closes one of the 11
-        real gaps orchestrator/lib/spec-drift.js's live check reported
-        (§LM1, docs/2026-09-01-living-model-and-autonomous-pipeline-
-        phasemap.spec). Content unchanged; this was a naming fix, not a
-        rewrite — the spec was already accurate and complete.
-
-  gaps:
-    as_of: 2026-09-01
-    entries: []   # richest, most complete system-local spec found this pass — no open gap identified
-
-  version_history:
-    - version: 1.0.0
-      date: 2026-06-27
-      summary: "Original build, matches live code@1.0.0 — no drift found this pass."
-      versioniumCommitId: null

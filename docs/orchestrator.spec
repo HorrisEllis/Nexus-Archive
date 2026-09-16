@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        orchestrator
-    version:     2.2.0
+    version:     2.0.0
     foundation:  nexus-system-foundation@1.0.0
     port:        9000
     uuid:        nexus-orchestrator-v2-0000-2026-0615-jamesbrooks-001
@@ -39,11 +39,6 @@ spec:
       - "registry.grammar.rebuilt"
     handles:
       - "All events from all systems via bridge relay"
-
-  command_index:
-    status: specced   # §1.1 -- not built yet. See docs/command-index-per-system.spec, build_order phase 4.
-    spec: "docs/command-index-per-system.spec"
-    note: "bridge shares guardian's dispatch shape (raw inline method checks) -- same source-extraction mechanism, phase 4."
 
   routes:
     external:

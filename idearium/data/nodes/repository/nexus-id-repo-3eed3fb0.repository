@@ -1,0 +1,40 @@
+envelope: 1
+uuid: nexus-export-repository-nexus-id-repo-3eed3fb0
+type: repository
+id: nexus-id-repo-3eed3fb0
+context: idearium repo Nexus_v0_39_139-integrated
+intent: null
+summary: 502 files, 502 chunks, READY
+system: idearium
+tags:
+  - spec:09d1b526-4d03-4556-99e0-a4cd83abc4ae
+  - state:READY
+  - verification:passed
+exported_at: 1789595060485
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1789595060485
+lastSeenAt: 1789595060485
+fingerprint: null
+payload:
+  uuid: nexus-id-repo-3eed3fb0
+  name: Nexus_v0_39_139-integrated
+  specUuid: 09d1b526-4d03-4556-99e0-a4cd83abc4ae
+  rootHash: 583f2d5e2b6d31c0827c73fdcd6c8150ef04fada9dacfc0b7f189b1a6a41be9c
+  parent: null
+  state: READY
+  fileCount: 502
+  byLanguage:
+    markdown: 500
+    json: 2
+  failedCount: 0
+  chunkCount: 502
+  symbolCount: 0
+  verificationStatus: passed
+  verificationLevel: L3
+  paths:
+    atlas: repo/repos/nexus-id-repo-3eed3fb0/atlas.json
+    chunks: repo/repos/nexus-id-repo-3eed3fb0/chunks
+    indexes: repo/repos/nexus-id-repo-3eed3fb0/indexes
+    verification: repo/repos/nexus-id-repo-3eed3fb0/verification.json
+  generatedAt: 1789595060485

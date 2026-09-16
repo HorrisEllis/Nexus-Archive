@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        emerge
-    version:     1.1.0
+    version:     1.0.0
     foundation:  nexus-system-foundation@1.0.0
     port:        :4242
     uuid:        nexus-emerge-v1-0000-2026-0615-jamesbrooks-001

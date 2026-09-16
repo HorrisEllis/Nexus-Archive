@@ -46,6 +46,7 @@
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
+import { writeRepositoryNode } from './repo-node.js';
 
 const MODULE_ID = 'idearium/repo/import-pipeline';
 
@@ -362,7 +363,7 @@ export function runImportPipeline(repo, repoDir) {
   const critical = verification.tiers.filter(t => ['L0', 'L1'].includes(t.level) && !t.passed);
   result.state = critical.length ? 'FAULT' : 'READY';
 
-  return {
+  const finalResult = {
     ...result,
     finishedAt: Date.now(),
     parse: summarizeParse(parsed),
@@ -371,6 +372,19 @@ export function runImportPipeline(repo, repoDir) {
     verification,
     indexes: { fileCount: indexes.files.length, symbolCount: indexes.symbols.length, chunkCount: indexes.chunks.length },
   };
+
+  // §3 "A repository is a first-class node" — one canonical, addressable
+  // node per repo, written here (not by each of runImportPipeline()'s 3
+  // callers separately) so it's never possible for a caller to forget
+  // it and leave the repo's identity node stale. Reaches this point on
+  // both READY and FAULT (a fault from a critical L0/L1 failure still
+  // deserves a queryable node saying so — REPO-024, no failure silently
+  // swallowed) — only the 4 early-throw paths above (parse/atlas/chunk/
+  // index each literally throwing, not just verifying imperfectly) skip
+  // it, since there isn't a real result shape yet to write honestly.
+  writeRepositoryNode(repo, finalResult, repoDir);
+
+  return finalResult;
 }
 
 export { MODULE_ID };

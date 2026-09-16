@@ -54,32 +54,6 @@ function _reportCompartmentDomEvent(data) {
   req.end();
 }
 
-// §ARTIFACTS-LISTENER 2026-09-16 — James: "logs dom mutator in realtime to
-// a ledger for each agent and chat url." The stream above was already
-// real-time (this.sse.emit in _bindIpc below) but never durable — nothing
-// wrote it anywhere that outlives an SSE listener being connected at that
-// exact moment, unlike download-capture.js's real provenance (providerId +
-// chatUrl) for actual file downloads. This is the same real ledger every
-// other real ClearGlass event already goes through — src/main/index.js's
-// own _postEvent()/_registerWithNexus() POST :9000/api/ledger, kept local
-// here rather than imported for the same reason _reportCompartmentDomEvent
-// above is local: honest-degrade, fire-and-forget, never blocks the IPC
-// handler that owns it, matching that function's own stated precedent
-// (clear-glass/src/mesh/agent-mesh.js's _raidDecide()).
-function _ledgerWrite(system, type, payload) {
-  const http = require('http');
-  const body = JSON.stringify({ system, type, payload });
-  const req = http.request({
-    hostname: '127.0.0.1', port: parseInt(process.env.ORCHESTRATOR_PORT || '9000', 10),
-    path: '/api/ledger', method: 'POST', timeout: 2000,
-    headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
-  }, (res) => { res.on('data', () => {}); });
-  req.on('error',   () => {});
-  req.on('timeout', () => req.destroy());
-  req.write(body);
-  req.end();
-}
-
 
 // Injected into every page — the DOM mesh observer
 const DOM_OBSERVER_SCRIPT = `
@@ -252,17 +226,10 @@ class DomArchaeology {
       // Inject DOM mesh observer
       await wc.executeJavaScript(DOM_OBSERVER_SCRIPT, true);
 
-      // Bridge DOM events to SSE via ipc. window.__cgAgentId set here —
-      // same convention src/userscripts/manager.js's _buildInjectable()
-      // already established for the same real need (a page-side script
-      // knowing which agent it's running in) — reused, not reinvented,
-      // so every dom:event carries real provenance for the ledger write
-      // in _bindIpc below, the same way download-capture.js's providerId
-      // does for actual file downloads.
+      // Bridge DOM events to SSE via ipc
       await wc.executeJavaScript(`
-        window.__cgAgentId = ${JSON.stringify(agentId || null)};
         window.__cgEmitDom = (data) => {
-          if (window.__cgIpc) window.__cgIpc.send('dom:event', { ...data, agentId: window.__cgAgentId });
+          if (window.__cgIpc) window.__cgIpc.send('dom:event', data);
         };
         window.__cgSendPick = (data) => {
           if (window.__cgIpc) window.__cgIpc.send('dom:pick-result', data);
@@ -280,20 +247,6 @@ class DomArchaeology {
     ipcMain.on('dom:event', (event, data) => {
       this.sse.emit(data.type || 'dom.event', { ...data, ts: data.ts || Date.now() });
       _reportCompartmentDomEvent(data); // §MCO10 — additive, never blocks the existing SSE path above
-
-      // §ARTIFACTS-LISTENER — chatUrl read fresh from the actual sender at
-      // the moment this event arrived, not captured once at inject() time
-      // — matches download-capture.js's own reasoning: webContents can
-      // navigate to a new chat while the page that produced this event is
-      // still the one that matters. Real, durable, per-agent-per-chatUrl
-      // record of every real mutation — no sampling, no invented shape.
-      let chatUrl = null;
-      try { chatUrl = event.sender && typeof event.sender.getURL === 'function' ? event.sender.getURL() : null; } catch (_) {}
-      _ledgerWrite('clear-glass', `dom.${data.type || 'event'}`, {
-        agentId: data.agentId || null,
-        chatUrl,
-        dom: data,
-      });
     });
 
     // §MCO10 2026-09-13 — real, explicit hook for associating the live DOM

@@ -824,9 +824,9 @@ export function markChunkBuilding(specUuid, chunkUuid, { agent, model } = {}) {
 // ── Complete a chunk — write content to disk, verify, update contract ─────────
 // §1.1 — artifact must exist on disk before chunk is marked complete
 // §2.1 — file written before manifest updated
-export function completeChunk(specUuid, chunkUuid, content, { preserveWhitespace = false } = {}) {
+export function completeChunk(specUuid, chunkUuid, content, { preserveWhitespace = false, repoUuid = null } = {}) {
   if (!content || !content.trim()) {
-    return failChunk(specUuid, chunkUuid, 'agent returned empty content');
+    return failChunk(specUuid, chunkUuid, 'agent returned empty content', { repoUuid });
   }
 
   const manifest = loadSpec(specUuid);
@@ -869,7 +869,7 @@ export function completeChunk(specUuid, chunkUuid, content, { preserveWhitespace
 
   // §1.1 — verify artifact exists on disk before marking complete
   if (!fs.existsSync(filePath)) {
-    return failChunk(specUuid, chunkUuid, 'file write verification failed — artifact not found after write');
+    return failChunk(specUuid, chunkUuid, 'file write verification failed — artifact not found after write', { repoUuid });
   }
 
   chunk.status      = CHUNK_STATES.COMPLETE;
@@ -904,13 +904,13 @@ export function completeChunk(specUuid, chunkUuid, content, { preserveWhitespace
   // §CHUNK-NODE — written after saveSpec, never before: the node is a
   // record OF a real, persisted state, so writing it first would let a
   // failed save leave a node claiming a completion that never happened.
-  chunkNodes.writeChunkNode(chunk, specUuid, { specName: manifest.name });
+  chunkNodes.writeChunkNode(chunk, specUuid, { specName: manifest.name, repoUuid });
   console.log(`[${MODULE_ID}] ✓ chunk ${chunk.sectionId} complete · ${chunk.byteSize}b · ${manifest.progress}% done`);
   return chunk;
 }
 
 // ── Fail a chunk ──────────────────────────────────────────────────────────────
-export function failChunk(specUuid, chunkUuid, reason) {
+export function failChunk(specUuid, chunkUuid, reason, { repoUuid = null } = {}) {
   const manifest = loadSpec(specUuid);
   const chunk    = manifest.chunks.find(c => c.uuid === chunkUuid);
   if (!chunk) throw new Error(`chunk ${chunkUuid} not found`);
@@ -933,7 +933,7 @@ export function failChunk(specUuid, chunkUuid, reason) {
   // recorded successes would make "how many chunks are stuck" an
   // unanswerable question from the node layer, which is exactly the
   // question it is most useful for.
-  chunkNodes.writeChunkNode(chunk, specUuid, { specName: manifest.name });
+  chunkNodes.writeChunkNode(chunk, specUuid, { specName: manifest.name, repoUuid });
   console.warn(`[${MODULE_ID}] §1.2 chunk ${chunk.sectionId} ${chunk.status}: ${reason}`);
   return chunk;
 }
@@ -1182,7 +1182,7 @@ export function findByRootHash(rootHash) {
 // content store of its own to add a file TO except through spec-engine.
 // Same disk-write/rootHash-recompute path as every other chunk — this is
 // not a second mechanism, just a chunk list that can grow after creation.
-export function addChunk(specUuid, { sectionId, title = null, content = '', realPath = null } = {}) {
+export function addChunk(specUuid, { sectionId, title = null, content = '', realPath = null, repoUuid = null } = {}) {
   if (!sectionId) throw new Error('addChunk: sectionId required');
   const manifest = loadSpec(specUuid);
   if (manifest.chunks.some(c => c.sectionId === sectionId)) {
@@ -1218,7 +1218,7 @@ export function addChunk(specUuid, { sectionId, title = null, content = '', real
   // callers (repo/index.js's writeFile) doing `fresh.chunks.find(...)` on
   // an object with no .chunks property at all — reliable crash on every
   // "add a new file with content" call. Always return the fresh manifest.
-  if (content && content.trim()) completeChunk(specUuid, chunkUuid, content);
+  if (content && content.trim()) completeChunk(specUuid, chunkUuid, content, { repoUuid });
   return loadSpec(specUuid);
 }
 
@@ -1245,7 +1245,7 @@ export function removeChunk(specUuid, chunkUuid) {
   return loadSpec(specUuid);
 }
 
-export function ingestFilesAsSpec({ name, files = [], author = 'ingest' }) {
+export function ingestFilesAsSpec({ name, files = [], author = 'ingest', repoUuid = null } = {}) {
   if (!files.length) throw new Error('ingestFilesAsSpec: at least one file required');
   // §MCO-F 2026-09-15 — the drop path's own real chunk cap (distinct from
   // lib/project-import.config.js's ZIP.maxFiles, which only bounds the
@@ -1283,7 +1283,7 @@ export function ingestFilesAsSpec({ name, files = [], author = 'ingest' }) {
     const chunk = manifest.chunks[i];
     const content = (f.content && f.content.trim()) ? f.content : `<!-- ${f.path}: no text content captured -->`;
     markChunkBuilding(manifest.uuid, chunk.uuid, { agent: 'ingest', model: 'ingest:drop' });
-    completeChunk(manifest.uuid, chunk.uuid, content);
+    completeChunk(manifest.uuid, chunk.uuid, content, { repoUuid });
     const fresh = loadSpec(manifest.uuid);
     const fc = fresh.chunks.find(c => c.uuid === chunk.uuid);
     if (fc) {
@@ -1317,7 +1317,7 @@ export function ingestFilesAsSpec({ name, files = [], author = 'ingest' }) {
   // pre-realPath state anyway. This pass writes the final, correct
   // shape (realPath included) over them.
   const finalManifest = loadSpec(manifest.uuid);
-  chunkNodes.writeManifestChunkNodes(finalManifest);
+  chunkNodes.writeManifestChunkNodes(finalManifest, { repoUuid });
   return finalManifest;
 }
 

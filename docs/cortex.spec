@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        cortex
-    version:     3.5.0
+    version:     3.2.0
     foundation:  nexus-system-foundation@1.0.0
     port:        3748
     uuid:        nexus-cortex-v3-0000-2026-0615-jamesbrooks-001
@@ -258,34 +258,90 @@ spec:
       - "Health endpoint returns ok:true"
       - "Contract endpoint returns valid contract shape"
 
-  # ── ADDENDUM 2026-07-20 (v3.3.0) — organ completion, spec catching up to code ──
-  addendum_2026_07_20:
-    summary: >
-      All six organs now exist as real, bus-wired SISO gates, built bottom-up
-      across Phases 0-6 (see docs_out/cortex-phase-map.md for the full audit
-      trail including every bug found and fixed along the way).
-    organs_built:
-      - "self-heal/escalation — friction ledger. Subscribes anomaly.detected, HEAL_REQUESTED, nexus.resource.pressure. Emits escalation.friction.increased (exact name liminal-space listens for, payload field newFric) + escalation.failure_mode."
-      - "self-heal — 5-level ladder. Level from fault_taxonomy count. L0 forge_patches/fix_map replay, L1 the 8 safe patterns, L2 propose-only (never auto-applies), L3 12-engine deep scan, L4 failure_modes + human action item. SEMANTIC_GAP_TYPES excluded (§7.2)."
-      - "gap-finder — anomaly.detected (high/critical) + sigma.event.halt_risk → deduped cortex.gap.found ({gap: row} shape)."
-      - "orion — pure classifier (§14.2): anomaly/sigma → cortex.orion.classified, shaped to RAID _decide()'s real contract."
-      - "raid — bus-wired: cortex.orion.classified → same _decide() → cortex.raid.decided. KNOWN GAP (§10.3): boot.js's /api/raid/decide route still calls its own lighter _raidDecide, not this engine — two truth layers, tracked, not fixed."
-    event_name_corrections: >
-      Spec previously said cortex.escalation.friction_increased; deployed
-      listener contract is escalation.friction.increased with payload field
-      newFric. Code conformed to the deployed contract; spec now records it.
-    foundation_fixes: >
-      Three sibling bugs fixed at the source in guardian/jaa-store.js _matches():
-      predicate-function where clauses silently matched ALL rows; string where
-      clauses silently matched NONE. Plus jaa-db.js bare-number limit fix and
-      the JaaDB class (JSONL journal, tier decay, queryWeighted) built against
-      its pre-existing 52-test pinned contract. tc.drift.signal renamed +
-      payload-remapped in liminal-space. _checkCrystallisation §14.4 loop guard.
-      intelligence _patternScanCursor accumulation + monotonic crystallised
-      latch (root cause of the infinite re-announce spam).
-    pressure_reflex: >
-      nexus.resource.pressure (resource-monitor, transitions only) now relayed
-      orchestrator→cortex /api/event and consumed by escalation as the
-      memory_pressure fault class: pressure→L1 (+0.20), critical→L3 (+0.50),
-      ok→recordSuccess decay. Built from the 2026-07-20 live 0xC0000409
-      double-crash log, where the event fired with zero consumers.
+  # ══════════════════════════════════════════════════════════════════════════
+  # ADDENDUM M1 — decay is MEASURED, not ticked          (2026-08-10, v0.36.1)
+  # ══════════════════════════════════════════════════════════════════════════
+  addendum_M1_relevance_decay:
+    status: BUILT (instrument) / OPEN (enforcement)
+
+    premise_this_spec_had_wrong: >
+      MEMORY_TIERS has declared working/short/long since v3.2.0, and
+      cortex/memory/decay.js implements it correctly — halflife, evictAfterMs,
+      tombstone-not-delete (§7.4). What neither states is that the whole model
+      rests on a BACKGROUND TICKER, and a ticker is a liveness dependency.
+
+    measured_2026_08_10:
+      - "decay_log holds 32 cycles, ALL dated 2026-07-16, ALL { evicted: {}, totalEvicted: 0 }. The ticker has not run in 24 days."
+      - "boot.js:1261 starts it inside a try/catch that only console.warn()s. A start failure boots clean and memory silently stops ageing."
+      - "event_log: 11,393 rows, oldest 713h. Tier `short`, evictAfterMs 24h. 100% of the table is past its deadline."
+      - "gaps: 99 rows, tier `short`. Enforced, that deletes the open-gap list DAILY."
+      - "9 of 16 tier-managed tables are empty, including working_memory — the tier built for 'this session, right now' has never held anything."
+      - "memory_unified — the corpus push-recall actually searches, 163 rows — is NOT in TABLE_TIERS. tierFor() returns null. The memory that gets USED is governed by nothing."
+
+    M1a_read_time_expiry:   # BUILT
+      premise: >
+        James: "every memory is supposed to be stored with a timestamp, by date
+        and exact time, so that the case still works without the ticker."
+        Verified: ts coverage is 100% on every populated tier-managed table.
+        Only settings and components lack one, and both are never-decay infra.
+      built: >
+        cortex/memory/decay.js gains isExpired / liveRows / expiryReport. Pure,
+        no clock of its own, no state. A row with NO timestamp is UNDATABLE and
+        never expires — deleting on a guessed age is worse than keeping it.
+      not_enforced: >
+        Against the live store the predicate hides 11,492 rows — 100% of the
+        short tier including all 99 gaps. That is not memory ageing correctly,
+        it is the TIER MAPPING being wrong and never once exercised. Enforcing
+        it converts a finding into an outage (§17.10). RX-8 fails if anyone
+        wires it into jaa-db before the mapping is corrected.
+
+    M1b_relevance_over_age:   # BUILT (instrument)
+      premise: >
+        James: "could use sigmas or deltas to measure the distance as a more
+        quantifiable and measurable method for decay." Right. RELEVANCE IS NOT
+        AGE — a 30-day-old event that is the ROOT of a live causal chain matters
+        more than a one-hour-old heartbeat with no edges. Clock decay evicts the
+        root and keeps the noise.
+      built: >
+        cortex/memory/relevance.js — four measured terms: causal (descendants,
+        chain-root), sigma (anomaly), recurrence (crystallised pattern), rarity
+        (reconstructability). Age is a TIEBREAKER at 0.10 weight, never the
+        criterion. score() reports its terms and its reasons; pressure() ranks
+        what a capacity-bounded eviction would drop and compares that against
+        what clock decay would drop. It cannot evict — RV-8 pins that.
+      the_shape_already_existed: >
+        meta/rfr2/kernel evicts by CAPACITY, not clock, and prunes edges on
+        eviction (H-1) so the graph stays bounded and coherent. What it does not
+        do is choose WHICH event leaves — it takes the oldest. This gives that
+        choice a measurement.
+
+    M1c_BLOCKER_causedby_is_not_causal:   # OPEN — gates M1b entirely
+      finding: >
+        event_log holds 11,393 events. 753 carry `causedBy`, and those point at
+        exactly THREE distinct values: "liminal" (564), "guardian" (188),
+        "intelligence" (1). SYSTEM NAMES, not event ids. Not one resolves.
+      consequence: >
+        meta/cfr/graph.js turns each into a `causal` edge and
+        meta/cfr/kernel-surface.js asserts each as EDGE_CAUSAL_EXPLICIT. 753
+        declared causal edges refer to something that is not an event. The field
+        is holding provenance-of-source where the graph reads causation.
+      why_it_gates_everything: >
+        relevance.js measures 0 resolvable edges. With the causal term — 40% of
+        the weight — dead, nothing scores above 0.28 and clock decay and measured
+        relevance "agree", TRIVIALLY, because relevance has nothing to measure.
+        The mechanism is right and cannot work until the measurement is real.
+        relevance.js counts these as unresolvableRefs and refuses to score them
+        as descendants: centrality on system-name edges would make a chatty
+        system's heartbeats look like causal hubs, and those are exactly what a
+        relevance-based decay would then protect.
+      does: "Find every writer putting a source name in causedBy. Either it writes a real event id, or the provenance moves to a `source` field and causedBy is left for causation."
+      gate: "pressure('event_log').causal.resolvableEdges > 0, and its warning field absent."
+
+    M1d_tier_mapping:   # OPEN
+      does: >
+        gaps must not be short/24h — an OPEN gap should never expire; a resolved
+        one may. event_log is the causal record: either long, or compacted the
+        way sigma_rollups already is (that table is `long` precisely because it
+        is 'compressed, not destroyed'). memory_unified must be in TABLE_TIERS
+        or explicitly declared exempt.
+      gate: "expiryReport() shows a live count that is not zero for every short-tier table, and read-time expiry can then be switched on with its cost known in advance."

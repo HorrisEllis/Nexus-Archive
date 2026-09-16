@@ -1,0 +1,39 @@
+envelope: 1
+uuid: nexus-export-chunk-test-repo-uuid-thread.77569faf-e0cd-48b8-8f22-58c72c1d5507.e80d9fb6-869d-474d-8c1a-679a45e71633
+type: chunk
+id: test-repo-uuid-thread.77569faf-e0cd-48b8-8f22-58c72c1d5507.e80d9fb6-869d-474d-8c1a-679a45e71633
+context: idearium spec-engine chunk of spec 77569faf-e0cd-48b8-8f22-58c72c1d5507
+intent: null
+summary: hello (complete)
+system: idearium
+tags:
+  - spec:77569faf-e0cd-48b8-8f22-58c72c1d5507
+  - status:complete
+  - section:hello
+  - specName:__test_repo_uuid_thread__
+  - agent:ingest
+exported_at: 1789599870468
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1789599870468
+lastSeenAt: 1789599870468
+fingerprint: null
+payload:
+  uuid: e80d9fb6-869d-474d-8c1a-679a45e71633
+  specUuid: 77569faf-e0cd-48b8-8f22-58c72c1d5507
+  sectionId: hello
+  sectionTitle: hello.js
+  chunkIdx: 0
+  status: complete
+  realPath: hello.js
+  fileName: 00-hello.md
+  filePath: /home/claude/nexus_extract/main/idearium/data/specs/77569faf-e0cd-48b8-8f22-58c72c1d5507/00-hello-e80d9fb6.md
+  agent: ingest
+  agentModel: ingest:drop
+  attempts: 1
+  failureMode: null
+  byteSize: 391
+  contentHash: 885d2f1c8eca2cd84597190e1d398188f5186379ad6034b37df554c445fe122e
+  createdAt: 1789599868747
+  updatedAt: 1789599869393
+  completedAt: 1789599869393

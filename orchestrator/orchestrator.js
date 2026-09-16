@@ -381,16 +381,7 @@ try {
 } catch(e) { console.warn('[orchestrator] cfr ledger init failed:', e.message); }
 
 // In-memory ring (fast reads)
-// §FIX 2026-09-16 — 'clear-glass' added. Real, pre-existing gap: this dict
-// gates POST /api/ledger's system field (`system in LEDGER ? system :
-// 'orchestrator'` below) — clear-glass/src/main/index.js's own
-// _postEvent()/_registerWithNexus() have posted `system: 'clear-glass'`
-// here since before this checkout, and every one of those writes was
-// silently rebucketed under 'orchestrator' instead, losing which system
-// actually emitted it. Same gate now also carries the new real DOM-
-// mutation and artifact-download ledger traffic (clear-glass/src/dom/
-// archaeology.js, clear-glass/src/providers/download-capture.js).
-const LEDGER = { orchestrator:[], cortex:[], guardian:[], idearium:[], emerge:[], 'clear-glass':[] };
+const LEDGER = { orchestrator:[], cortex:[], guardian:[], idearium:[], emerge:[] };
 
 // Ensure ledger dir exists
 try { fs.mkdirSync(LEDGER_DIR, { recursive: true }); } catch(_) {}

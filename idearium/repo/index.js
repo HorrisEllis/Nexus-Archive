@@ -280,12 +280,24 @@ export class RepoLayer {
     if (!name) return { error: 'repo name required' };
     if (!this.se) return { error: 'repo layer has no spec-engine — cannot store content' };
 
+    // §STRUCTURAL 2026-09-16 — generated here, before ingestFilesAsSpec(),
+    // not after the dedup check below (where it used to live) — the whole
+    // point of threading a real repoUuid into chunk-node writes is that
+    // it has to exist BEFORE the first chunk-node write happens, and that
+    // write happens inside ingestFilesAsSpec() itself. Cheap to generate
+    // and harmless if unused: if the dedup check below finds this is a
+    // byte-identical duplicate of an existing repo, this repoUuid is
+    // simply discarded along with the rest of this ingest — it was never
+    // persisted to this.repos, only baked into that one call's chunk-node
+    // filenames as an honest (if ultimately unused) record of the attempt.
+    const repoUuid = `${COMPONENT_ID}-repo-${randomUUID().slice(0, 8)}`;
+
     let manifest;
     try {
       if (specUuid) {
         manifest = this.se.loadSpec(specUuid);
       } else if (files.length) {
-        manifest = this.se.ingestFilesAsSpec({ name, files, author: source || 'drop' });
+        manifest = this.se.ingestFilesAsSpec({ name, files, author: source || 'drop', repoUuid });
       } else {
         return { error: 'ingest requires either specUuid (existing manifest) or files (to create one)' };
       }
@@ -318,7 +330,7 @@ export class RepoLayer {
       return { repo: existing, ideaUuid: existing.ideaUuid, specUuid: existing.specUuid, deduped: true };
     }
 
-    const repoUuid = `${COMPONENT_ID}-repo-${randomUUID().slice(0, 8)}`;
+    // repoUuid already generated above, before ingestFilesAsSpec() ran
 
     // idea lifecycle tracking — unchanged, still owned by IdeaOS, not content
     let ideaUuid = null;
@@ -559,7 +571,7 @@ export class RepoLayer {
       if (chunk) {
         // existing file — edit in place via the same completeChunk every
         // other content write goes through (disk-verified, rootHash recomputed)
-        this.se.completeChunk(manifest.uuid, chunk.uuid, content);
+        this.se.completeChunk(manifest.uuid, chunk.uuid, content, { repoUuid });
         this._materializeQuiet(repoUuid); // §BUILT 2026-09-06 — keep the real, physical projection honestly in sync, never stale
         return { ok: true, path: chunk.realPath || chunk.fileName, created: false };
       }
@@ -568,7 +580,7 @@ export class RepoLayer {
       // human-readable in the repo's file list. realPath preserves the
       // real relative path/extension for materialize() (§REALPATH).
       const sectionId = clean.replace(/\.[a-zA-Z0-9]+$/, '').replace(/[^a-zA-Z0-9_-]/g, '-').toLowerCase() || `file-${Date.now()}`;
-      const fresh = this.se.addChunk(manifest.uuid, { sectionId, title: clean, content, realPath: clean });
+      const fresh = this.se.addChunk(manifest.uuid, { sectionId, title: clean, content, realPath: clean, repoUuid });
       const newChunk = fresh.chunks.find(c => c.sectionId === sectionId);
       this._materializeQuiet(repoUuid);
       return { ok: true, path: newChunk?.realPath || newChunk?.fileName || clean, created: true };

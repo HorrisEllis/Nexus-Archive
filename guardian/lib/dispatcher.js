@@ -45,7 +45,7 @@ const { randomUUID } = require('crypto');
  * cockpitBroadcast(data), dispatchToMistral(job) → Promise).
  */
 function createDispatcher(deps) {
-  const { updateJob, bus, ncp, pendingQueue, cockpitBroadcast, dispatchToMistral, dispatchToDeepseek, pingTimeoutMs, completionTimeoutMs } = deps;
+  const { updateJob, bus, ncp, pendingQueue, cockpitBroadcast, dispatchToMistral, dispatchToDeepseek, pingTimeoutMs } = deps;
   for (const [name, fn] of Object.entries({ updateJob, bus, ncp, cockpitBroadcast, dispatchToMistral, dispatchToDeepseek })) {
     if (!fn) throw new Error(`[dispatcher] missing required dependency: ${name}`);
   }
@@ -54,55 +54,6 @@ function createDispatcher(deps) {
   }
 
   const { pool: _dispatchPool } = require('./dispatch-pool'); // §P11: per-provider semaphore
-
-  // §BUILT 2026-09-16 — James: "negative space... events to trigger from
-  // the lack." Real, confirmed gap traced before building this, not
-  // assumed: gap-finder (cortex/gap-finder) only ever reacts to events
-  // something ELSE actively emitted (anomaly.detected, sigma.*) — it has
-  // no mechanism of its own for noticing an expected event that never
-  // arrived. And dispatchJob below has a PRE-dispatch ping timeout, but
-  // nothing watched what happens AFTER a job is marked 'delivered' — if
-  // completion never comes (dead tab, dropped SSE frame, crashed
-  // renderer — every real failure mode this whole session traced back
-  // to), the job just sits silently until a human notices the console
-  // still says "no response." This map + the two blocks below are that
-  // missing watch: jobId → timer. The event fired on expiry is the real
-  // shadow/negative-space event — it exists BECAUSE something expected
-  // did not happen, not because anything positively went wrong.
-  const _completionWatch = new Map();
-  const _COMPLETION_TIMEOUT_MS = completionTimeoutMs || 90000;
-  const _MAX_TIMEOUT_RETRIES = 2; // §1.2 — bounded, not an infinite requeue loop
-
-  function _armCompletionWatch(job) {
-    _clearCompletionWatch(job.id);
-    _completionWatch.set(job.id, setTimeout(() => {
-      _completionWatch.delete(job.id);
-      const retries = (job._timeoutRetries || 0) + 1;
-      job._timeoutRetries = retries;
-      bus.emit('guardian.job.timeout', {
-        jobId: job.id, provider: job.provider, waitedMs: _COMPLETION_TIMEOUT_MS, retry: retries,
-      });
-      if (retries > _MAX_TIMEOUT_RETRIES) {
-        updateJob(job.id, { status: 'failed', failedAt: Date.now(), failReason: `no completion within ${_COMPLETION_TIMEOUT_MS}ms after ${retries - 1} retr${retries - 1 === 1 ? 'y' : 'ies'} — giving up, not requeuing forever` });
-        console.warn(`[guardian] ${job.id} → ${job.provider}: no completion within ${_COMPLETION_TIMEOUT_MS}ms, retries exhausted — marked failed`);
-        return;
-      }
-      updateJob(job.id, { status: 'queued', queuedAt: Date.now(), queueReason: `no completion within ${_COMPLETION_TIMEOUT_MS}ms — real absence, not a guess, requeued (attempt ${retries})` });
-      console.warn(`[guardian] ${job.id} → ${job.provider}: no completion within ${_COMPLETION_TIMEOUT_MS}ms — requeuing (attempt ${retries})`);
-      if (!pendingQueue.has(job.provider)) pendingQueue.set(job.provider, []);
-      pendingQueue.get(job.provider).push(job);
-    }, _COMPLETION_TIMEOUT_MS));
-  }
-
-  function _clearCompletionWatch(jobId) {
-    const t = _completionWatch.get(jobId);
-    if (t) { clearTimeout(t); _completionWatch.delete(jobId); }
-  }
-
-  // Real completion, from anywhere (NCP GUARDIAN_COMPLETE, GUARDIAN_REPLAY's
-  // non-replay branch, dispatch-pool-bridge) all emit this same bus event —
-  // see this file's own header comment on why that's the one correct place.
-  bus.on('guardian.job.complete', ({ jobId }) => _clearCompletionWatch(jobId));
 
   function dispatchJob(job) {
     // §P11: route through dispatch pool — per-provider semaphore, job stealing.
@@ -354,7 +305,6 @@ function createDispatcher(deps) {
       return false;
     }
     updateJob(job.id, { status: 'delivered', deliveredAt: Date.now() });
-    _armCompletionWatch(job);
     // §FIXED 2026-09-15 — pushActive() only ever returns 0 or 1 now (single-
     // target, not a broadcast count), so the old "(N clients)" phrasing was
     // stale — always printed "(1 client)" and implied a fan-out that no

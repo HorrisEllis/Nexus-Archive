@@ -65,34 +65,23 @@ function _slug(s) {
 }
 
 /**
- * chunkNodeId(chunk, specName, specUuid) -> "projectname.specUuid.uuid"
+ * chunkNodeId(chunk, specName, specUuid, repoUuid) -> "projectname.<repoUuid|specUuid>.uuid"
  * — the id exportToFile() turns into "<id>.chunk".
  *
- * §2026-09-16 — James: "projectname.repoid.uuid.chunk." The real
- * repoUuid (idearium/repo/index.js's own id, distinct from specUuid —
- * see that module's header) isn't reachable from here yet: spec-engine,
- * where every writeChunkNode() call site actually lives, has no
- * knowledge of repoUuid at all today — it's never threaded through
- * completeChunk()/markChunkBuilding()/ingestFilesAsSpec(). Wiring that
- * through is the real, structural version of this change (repo/index.js
- * -> spec-engine -> here, three call sites) and is deliberately NOT done
- * in this pass. This is the quick version: specUuid — already in scope
- * at every call site, no new plumbing — stands in for repoid for now.
- * Swap it for a real repoUuid param later without changing this
- * function's shape.
- *
- * Also switched away from the filename slug and the truncated uuid8:
- * a slugged filename is lossy (README.md and README.MD collide; the
- * §2026-09-16 extension-fix commit already found one real double-slug
- * bug living in this same neighborhood) and doesn't disambiguate two
- * chunks of the same file across edits the way the full chunk uuid
- * does. Full uuid, not uuid8, also removes removeChunkNode()'s old
- * "find by 8-char suffix" scan — it can match the id's own full uuid
- * segment directly now.
+ * §2026-09-16 STRUCTURAL — James: "projectname.repoid.uuid.chunk." The
+ * quick version (specUuid standing in for repoid) is now the FALLBACK,
+ * not the whole story: repoUuid is real, threaded down from
+ * idearium/repo/index.js's own id through completeChunk()/failChunk()/
+ * addChunk()/ingestFilesAsSpec() (all now take it as an optional param)
+ * into writeChunkNode() here. Falls back to specUuid — not to a made-up
+ * placeholder — when a chunk genuinely has no repo: cortex/core/raid's
+ * contract-intake and lib/zip-ingest both call ingestFilesAsSpec() with
+ * no repo layer involved at all, and that's a real, honest state (no
+ * repo exists yet, or never will), not a gap to paper over.
  */
-function chunkNodeId(chunk, specName, specUuid) {
+function chunkNodeId(chunk, specName, specUuid, repoUuid) {
   const project = _slug(specName || specUuid);
-  return `${project}.${specUuid}.${chunk.uuid}`;
+  return `${project}.${repoUuid || specUuid}.${chunk.uuid}`;
 }
 
 /** Live config read — same three layers as everything else. */
@@ -161,7 +150,7 @@ export function toNodePayload(chunk, specUuid) {
  * ledger table (nodes_chunk_ledger) records every real change, which is
  * the mechanism built for exactly this.
  */
-export function writeChunkNode(chunk, specUuid, { specName = null, force = false } = {}) {
+export function writeChunkNode(chunk, specUuid, { specName = null, force = false, repoUuid = null } = {}) {
   if (!chunk || !chunk.uuid || !specUuid) return null;
 
   const cfg = _cfg();
@@ -170,7 +159,7 @@ export function writeChunkNode(chunk, specUuid, { specName = null, force = false
   try {
     const dir = _nodesDir(cfg);
     const payload = toNodePayload(chunk, specUuid);
-    const id = chunkNodeId(chunk, specName, specUuid);
+    const id = chunkNodeId(chunk, specName, specUuid, repoUuid);
     const filePath = nodeExport.exportToFile(
       'chunk',
       id,
@@ -183,12 +172,16 @@ export function writeChunkNode(chunk, specUuid, { specName = null, force = false
         // its section — the three things anyone actually filters chunks
         // by. specName is included when the caller has it, because
         // filtering by a uuid alone is not something a human does.
+        // repo: added alongside spec: (not instead of) — a chunk still
+        // belongs to its spec regardless of which repo, if any, wraps
+        // it; only present when a real repoUuid was actually passed.
         tags: [
           `spec:${specUuid}`,
           `status:${chunk.status}`,
           `section:${chunk.sectionId}`,
           ...(specName ? [`specName:${String(specName).toLowerCase().replace(/\s+/g, '-')}`] : []),
           ...(chunk.agent ? [`agent:${chunk.agent}`] : []),
+          ...(repoUuid ? [`repo:${repoUuid}`] : []),
         ],
       },
       dir
@@ -208,12 +201,14 @@ export function writeChunkNode(chunk, specUuid, { specName = null, force = false
 }
 
 /**
- * writeManifestChunkNodes(manifest) -> { written, skipped, failed }.
+ * writeManifestChunkNodes(manifest, { force, repoUuid }) -> { written, skipped, failed }.
  * Every chunk of one spec in a single pass — used at ingest, where
  * writing per-chunk through the normal path would mean re-reading config
- * once per file.
+ * once per file. repoUuid (optional) is forwarded to every chunk in the
+ * pass unchanged — one manifest belongs to at most one repo at a time,
+ * so there is no per-chunk repoUuid to vary here.
  */
-export function writeManifestChunkNodes(manifest, { force = false } = {}) {
+export function writeManifestChunkNodes(manifest, { force = false, repoUuid = null } = {}) {
   if (!manifest || !Array.isArray(manifest.chunks)) return { written: 0, skipped: 0, failed: 0 };
   const cfg = _cfg();
   if (!force && !cfg.chunking.write_chunk_nodes) {
@@ -222,7 +217,7 @@ export function writeManifestChunkNodes(manifest, { force = false } = {}) {
   let written = 0, failed = 0;
   for (const chunk of manifest.chunks) {
     if (chunk.status === 'removed') continue; // §7.4 — soft-deleted, not part of the live node set
-    const p = writeChunkNode(chunk, manifest.uuid, { specName: manifest.name, force: true });
+    const p = writeChunkNode(chunk, manifest.uuid, { specName: manifest.name, force: true, repoUuid });
     if (p) written++; else failed++;
   }
   if (written) console.log(`[${MODULE_ID}] wrote ${written} .chunk node(s) for spec ${String(manifest.uuid).slice(0, 8)}${failed ? ` (${failed} failed)` : ''}`);
