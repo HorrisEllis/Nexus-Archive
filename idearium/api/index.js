@@ -674,6 +674,16 @@ function matchRoute(method, url) {
     // content, resolved through spec-engine chunks (v2 has no content
     // store of its own — see repo/index.js's file CRUD methods).
     ['GET',    ['api','repos',    ':uuid','file'],         'repo.file.read'],
+    // §BUILT 2026-09-16 — nexus://repo/{repoUuid}/chunk/{chunkUuid}
+    // (lib/nexus-uri.js's 'repo-chunk' route) needs to resolve a bare
+    // chunkUuid to real content, and no existing route did that — the
+    // only chunk-scoped routes were spec-engine's own complete/fail/
+    // setAgent under specs/:uuid/chunk/:chunkUuid, and repo.file.read
+    // needs a path, not a uuid. This is real, minimal glue: repo ->
+    // specUuid -> spec-engine's loadSpec -> the one matching chunk ->
+    // its real path -> repo.file.read's own readFile(), reusing every
+    // piece rather than duplicating the lookup.
+    ['GET',    ['api','repos',    ':uuid','chunk',':chunkUuid'], 'repo.chunk.show'],
     ['POST',   ['api','repos',    ':uuid','file'],         'repo.file.write'],
     ['DELETE', ['api','repos',    ':uuid','file'],         'repo.file.delete'],
     ['GET',    ['api','repos',    ':uuid','export'],       'repo.export'],
@@ -1461,11 +1471,15 @@ async function handle(req, res, route, query, body) {
 
       const cfg = _require('../../lib/project-import.config.js');
       const { extractZipToFiles } = _require('../../lib/zip-ingest.js');
-      // §REAL-FILES 2026-09-15 — every bound now comes from the one
-      // idearium config (see lib/project-import.config.js's §REWIRED
-      // note), and the extraction returns two layers: `included` (the
-      // chunking input, unchanged) and `realFiles` (the verbatim bytes,
-      // binaries included). Both are passed on; neither is the other.
+      // §REAL-FILES 2026-09-15, RESTORED 2026-09-17 — every bound comes
+      // from the one idearium config (lib/project-import.config.js's
+      // §REWIRED note), and extraction returns two layers: `included`
+      // (the chunking input) and `realFiles` (verbatim bytes, binaries
+      // included). This handler had regressed to text-only extraction
+      // with no realFiles/writeSources/materialize call at all — found
+      // while merging forward against the newer .repository-node and
+      // COS-container work, restored here rather than left silently
+      // dropped.
       const extraction = extractZipToFiles({
         buf,
         maxFiles:         cfg.ZIP.maxFiles,
@@ -1481,10 +1495,9 @@ async function handle(req, res, route, query, body) {
       if (!extraction.ok) return err(res, 400, extraction.error);
       const { included, realFiles, omitted, stats } = extraction;
 
-      // §HONEST EMPTY CHECK — "no text files" is no longer the same as
-      // "nothing to import". A zip of nothing but binaries is a real,
-      // importable project with zero chunks; only a zip that yielded
-      // neither layer is genuinely empty.
+      // §HONEST EMPTY CHECK — a zip of nothing but binaries is a real,
+      // importable project with zero chunks; only a zip yielding neither
+      // layer is genuinely empty.
       if (!included.length && !realFiles.length) {
         return err(res, 400, 'nothing to import — no file passed the bounds (see omitted reasons for what was skipped)');
       }
@@ -1559,8 +1572,10 @@ async function handle(req, res, route, query, body) {
 
       const cfg = _require('../../lib/project-import.config.js');
       const { extractZipToFiles } = _require('../../lib/zip-ingest.js');
-      // §REAL-FILES 2026-09-15 — see repo.import-archive above; same two
-      // layers, same reasoning, same config source.
+      // §REAL-FILES 2026-09-15, RESTORED 2026-09-17 — see repo.import-archive's
+      // matching note; this handler had regressed to the same text-only
+      // extraction with no realFiles/writeSources call, found while
+      // merging forward.
       const extraction = extractZipToFiles({
         buf,
         maxFiles:         cfg.ZIP.maxFiles,
@@ -1580,6 +1595,19 @@ async function handle(req, res, route, query, body) {
       }
 
       const pc = _require('../../lib/project-container.js');
+
+      // §COS 2026-09-16 — James: "needs to import files, unzip into
+      // container, then chunk." The real COS compartment (created back
+      // in project-import.start) gets the extracted files FIRST — before
+      // RepoLayer.ingest()/materialize() below builds the actual repo
+      // inside idearium's own repo/ folder. Two real writes, two real
+      // jobs (see lib/project-container.js's own §COS header for the
+      // full reasoning) — fails loud like every other real step in this
+      // handler, not swallowed, since a container the files never
+      // actually reached isn't a container that "always has backend."
+      const ingested = pc.ingestFilesIntoContainer(params.uuid, included);
+      if (!ingested.ok) return err(res, 400, `container ingest failed: ${ingested.error}`);
+
       // Repo name mirrors repo.import-archive's own fallback: an explicit
       // name always wins, else derive one from the zip's own filename —
       // the container's own `name` (from the start-prompt) is used for
@@ -1588,26 +1616,38 @@ async function handle(req, res, route, query, body) {
       // what the end-state goal was written against).
       const repoName = (body.name || filename.replace(/\.zip$/i, '')).slice(0, 200);
       const ingestResult = getRepoLayer().ingest({
-        name: repoName, files: included, source: 'import-project', compartmentId: body.compartmentId || null,
+        // §COS 2026-09-16 — real compartmentId, from the container's own
+        // real COS compartment (ingestFilesIntoContainer already looked
+        // it up above), not a value the frontend has to remember to
+        // resend — "we need repos per repository/container/project" means
+        // this link has to actually be real, not merely possible.
+        name: repoName, files: included, source: 'import-project', compartmentId: ingested.compartmentId || null,
         materializeBaseDir: cfg.REPO_STORAGE.dir, // idearium/repo/repos/<uuid> — see config's own header
       });
       if (ingestResult.error) return err(res, 400, ingestResult.error);
 
       const repoUuid = ingestResult.repo.uuid;
 
-      // §ORDER — ingest() -> writeSources() -> materialize(). The source
-      // manifest must exist before the first materialize() or that call
-      // sweeps the directory with no knowledge of which files are
-      // source-owned. See RepoLayer.writeSources()'s own note.
+      // §RESTORED 2026-09-17 — ingest() -> writeSources() -> materialize(),
+      // in that order: the source manifest has to exist before the first
+      // materialize() call or that call sweeps the directory with no
+      // knowledge of which files are source-owned. See RepoLayer.
+      // writeSources()'s own §ORDER MATTERS note. This is distinct from
+      // the COS-container ingest above: that puts the uploaded files in
+      // COS's own compartment directory as the sovereign audit copy;
+      // this puts real, verbatim files (binaries included) into
+      // idearium's own materialized repo tree, which the .repository/
+      // .chunk node layers and the UI actually read from. Two real jobs,
+      // not a duplicate of each other (see lib/project-container.js's
+      // own §COS header, and idearium/repo/source-files.js's header, for
+      // why each exists).
       let sources = null;
       if (realFiles.length) {
         sources = getRepoLayer().writeSources(repoUuid, realFiles);
         if (!sources.ok) {
-          // §1.2 — loud and fatal to the IMPORT, not swallowed. Unlike a
+          // §1.2 — loud and fatal to the import, not swallowed. Unlike a
           // chunk (regenerable from the manifest), a source file that
           // failed to land is gone: the zip that held it is not kept.
-          // Finishing "successfully" with missing real files would be
-          // the exact silent loss this whole layer exists to end.
           return err(res, 500, `source-file write failed — import aborted rather than completing with missing real files: ${sources.error}`);
         }
       }
@@ -1629,27 +1669,26 @@ async function handle(req, res, route, query, body) {
         console.error(`[api] project-import pipeline FAULT for ${repoUuid}: ${pipeline.error || 'see verification tiers'}`);
       }
 
-      // §FILECOUNT IS REAL FILES NOW — the 'files-imported' end-state
-      // condition asks whether source files actually landed in the repo.
-      // Answering it with included.length (the CHUNK count) was right
-      // only while chunks were the repo's content; now that real files
-      // are, a binary-only project would have reported 0 files imported
-      // and failed its own end-state despite a complete, correct import.
-      // Falls back to the chunk count when the source layer is off
-      // (import.real_files = false), which is the one case where chunks
-      // genuinely are the content.
+      // §RESTORED 2026-09-17 — 'files-imported' end-state condition asks
+      // whether source files actually landed in the repo. Chunk count
+      // answers that only while chunks are the repo's content; now that
+      // real files are (when import.real_files is on), a binary-only
+      // project would report 0 files despite a complete, correct import.
+      // Falls back to chunk count when the source layer produced nothing
+      // (import.real_files off), the one case where chunks are the
+      // content.
       const realFileCount = sources ? sources.written : included.length;
 
       const result = await pc.finalizeContainer({
-        containerUuid: params.uuid, repoUuid, repoDir: mat.dir,
-        fileCount: realFileCount, chunkCount: included.length,
+        containerUuid: params.uuid, repoUuid, repoDir: mat.dir, fileCount: realFileCount,
       });
       return ok(res, {
         ...result, repo: ingestResult.repo, deduped: !!ingestResult.deduped,
         fileCount: realFileCount, chunkCount: included.length,
         sourceFailed: sources ? sources.failed : [],
         omittedCount: omitted.length, omitted: omitted.slice(0, 50),
-        stats, materialize: mat, pipeline,
+        containerFileCount: ingested.fileCount, containerRoot: ingested.root,
+        stats, pipeline,
       });
     }
 
@@ -1683,6 +1722,22 @@ async function handle(req, res, route, query, body) {
         return err(res, status, result.error);
       }
       return ok(res, result);
+    }
+
+    case 'repo.chunk.show': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo || !repo.specUuid) return err(res, 404, `repo not found: ${params.uuid}`);
+      const manifest = getRepoLayer().se.loadSpec(repo.specUuid);
+      if (!manifest) return err(res, 404, `repo's spec no longer exists: ${repo.specUuid}`);
+      const chunk = (manifest.chunks || []).find(c => c.uuid === params.chunkUuid);
+      if (!chunk) return err(res, 404, `chunk not found in repo: ${params.chunkUuid}`);
+      // realPath is the real, on-disk path (see idearium/lib/config.js's
+      // import.real_files); an authored (non-ingested) chunk has none,
+      // so fall back to the chunk-store fileName the same way
+      // repo/index.js's own readFile() already does elsewhere.
+      const filePath = chunk.realPath || chunk.fileName;
+      const result = filePath ? getRepoLayer().readFile(params.uuid, filePath) : { error: 'chunk has neither realPath nor fileName — nothing to read' };
+      return ok(res, { chunk, filePath, content: result.error ? null : result.content, readError: result.error || null });
     }
 
     case 'repo.file.write': {

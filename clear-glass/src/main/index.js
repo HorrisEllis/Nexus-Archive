@@ -37,7 +37,7 @@
  * It does not depend on nexus-wired or ErosmancerOS to boot.
  */
 
-const { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage, session } = require('electron');
+const { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage, session, shell } = require('electron');
 const path   = require('path');
 const http   = require('http');
 const { randomUUID } = require('crypto');
@@ -306,11 +306,119 @@ async function acquireSingleInstanceLockOrExit() {
 
 acquireSingleInstanceLockOrExit().then(acquired => {
   if (!acquired) return; // already exited inside acquireSingleInstanceLockOrExit
-  app.on('second-instance', () => { const w = windows.values().next().value; if (w) { w.show(); w.focus(); } });
-  app.whenReady().then(bootstrap);
+  app.on('second-instance', (_event, commandLine) => {
+    const w = windows.values().next().value;
+    if (w) { w.show(); w.focus(); }
+    // §NEXUS-URI 2026-09-16 — on Windows/Linux a second launch via a
+    // registered nexus:// link arrives here as a plain argv entry, not
+    // through 'open-url' (that event is macOS-only). Same dispatch as
+    // the 'open-url' handler below — one real path, two OS entry points.
+    const uri = commandLine.find(a => a.startsWith('nexus://'));
+    if (uri) dispatchNexusUri(uri);
+  });
+  app.whenReady().then(bootstrap).then(() => {
+    registerNexusUriActions();
+    // §FPF BUILD NOTE — nexus-uri-clearglass-mesh-integration.spec's
+    // fpf_build_registration_note: for the abuse-safety build channel,
+    // a distinctively-named registered URI scheme is itself a forensic
+    // artifact (evidence, to someone inspecting the device, that this
+    // person sought this kind of help). This build has no real
+    // "build channel" concept yet to gate on automatically — that is a
+    // real decision for whoever configures an FPF-channel build, not
+    // one this code can safely infer on its own — so the escape hatch
+    // is an explicit env var rather than silent default-on registration.
+    if (process.env.NEXUS_URI_SCHEME_DISABLED === '1') {
+      console.log('[nexus-uri] scheme registration skipped — NEXUS_URI_SCHEME_DISABLED=1');
+    } else if (!app.isDefaultProtocolClient('nexus')) {
+      app.setAsDefaultProtocolClient('nexus');
+    }
+    // First launch via a nexus:// link on Windows/Linux — process.argv
+    // carries it directly rather than through second-instance.
+    const argvUri = process.argv.find(a => a.startsWith('nexus://'));
+    if (argvUri) dispatchNexusUri(argvUri);
+  });
   app.on('window-all-closed', e => e.preventDefault()); // tray-first — never quit on last window close
   app.on('before-quit', shutdown);
+  // macOS delivers a registered-scheme launch here, at any point in the
+  // app's life, not only at startup.
+  app.on('open-url', (event, uri) => { event.preventDefault(); dispatchNexusUri(uri); });
 });
+
+// ── nexus:// URI dispatch — Clear Glass's half of lib/nexus-uri.js ────────
+// §BUILT 2026-09-16, from nexus-uri-clearglass-mesh-integration.spec
+// thread_2 (phase C). This is ONE of the three call sites the spec's
+// implementation_note requires ("COS, idearium, and ClearGlass each wire
+// their own action functions into the same allowlist/validation code") —
+// registerAction() calls below are ClearGlass's; idearium's own actions
+// run in idearium's own process (see idearium/ui/js/app.js's
+// handleNexusDeepLink for that half), and COS's compartment action runs
+// here because COS has no process or UI of its own to host it in.
+const nexusUri = require('../../../lib/nexus-uri.js');
+
+function dispatchNexusUri(uri) {
+  nexusUri.resolve(uri).then(result => {
+    if (!result.ok) console.warn(`[nexus-uri] rejected: ${result.error}`);
+    else console.log(`[nexus-uri] resolved '${result.routeId}' ${JSON.stringify(result.params)}`);
+  }).catch(e => console.error(`[nexus-uri] resolve threw (should never happen — resolve() itself catches action errors): ${e.message}`));
+}
+
+function registerNexusUriActions() {
+  // 'repo' / 'repo-chunk' — idearium owns the UI; the real, minimal thing
+  // ClearGlass's action does is get a window open on idearium's own real
+  // deep-link URL (wired idearium-side in idearium/ui/js/app.js's
+  // handleNexusDeepLink — this does not duplicate that logic, just
+  // reaches it). Existence of the repoUuid is validated by idearium's own
+  // page load (API_REPOS lookup), not re-validated here — one real check,
+  // not two that could disagree.
+  const openIdeariumUrl = (query) => {
+    const url = `http://127.0.0.1:4800/?${query}`;
+    const w = windows.get('default');
+    if (w) { w.loadURL(url); w.show(); w.focus(); }
+    else { const nw = new BrowserWindow({ width: 1280, height: 860 }); nw.loadURL(url); windows.set('idearium-deeplink', nw); }
+  };
+  nexusUri.registerAction('repo', ({ repoUuid }) => openIdeariumUrl(`repo=${repoUuid}`));
+  nexusUri.registerAction('repo-chunk', ({ repoUuid, chunkUuid }) => openIdeariumUrl(`repo=${repoUuid}&chunk=${chunkUuid}`));
+
+  // 'compartment' — COS has no window/UI of its own (checked: cos/ is a
+  // Node host + CLI, nothing browser-facing). The one real, meaningful
+  // "open" available is revealing the compartment's actual directory —
+  // real files a person can inspect — rather than inventing a dashboard
+  // that doesn't exist. Same process, so cos-bridge is required directly
+  // rather than over a network hop idearium's actions need. cos-bridge
+  // itself now creates a fresh host per call (§REVISED 2026-09-17, see
+  // its own header) — same real pattern as project-container.js's own
+  // COS integration, not a second philosophy.
+  nexusUri.registerAction('compartment', ({ compartmentId }) => {
+    const cos = require('../../../lib/cos-bridge.js');
+    const comp = cos.getCompartment(compartmentId);
+    if (!comp) throw new Error(`no COS compartment found for '${compartmentId}'`);
+    if (comp.fs && comp.fs.root) shell.showItemInFolder(comp.fs.root);
+    return { compartmentId: comp.id, name: comp.name, root: comp.fs && comp.fs.root };
+  });
+
+  // 'remote-desktop' — sessionId ONLY, per lib/nexus-uri.js's own header:
+  // never a token. viewer.html's real query param is `session` (checked
+  // directly against remote-desktop/viewer.html), and `token` is left for
+  // the person to enter by hand from wherever the host actually shared it
+  // — a nexus:// link is never sufficient by itself to join a session.
+  nexusUri.registerAction('remote-desktop', ({ sessionId }) => {
+    const path = require('path');
+    const viewerPath = path.join(__dirname, '..', '..', '..', 'remote-desktop', 'viewer.html');
+    const w = new BrowserWindow({ width: 1024, height: 768 });
+    w.loadFile(viewerPath, { search: `session=${sessionId}` });
+    windows.set(`remote-desktop-${sessionId}`, w);
+    return { sessionId };
+  });
+
+  // 'clearglass-session' — deliberately NOT registered. No real
+  // resumable capture-session module exists in this codebase today (the
+  // only `sessionId` usage found is copilot/bridge.js's per-dispatch
+  // correlation id, a different concept entirely — checked before
+  // writing this comment). Registering a fabricated action here would be
+  // exactly the silent-lie pattern this whole build has been fixing
+  // elsewhere; resolve() already reports "matched but no action
+  // registered" honestly for this route until a real one exists.
+}
 
 // ── NEXUS HTTP helper — matches nexus-connect._req exactly ────────────────
 // Returns { ok, data, error, ms } — never throws

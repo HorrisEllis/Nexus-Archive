@@ -1758,11 +1758,47 @@ async function deleteProject(uuid, name) {
 })();
 
 // ════════════════════════════════════════════════════
+// NEXUS URI DEEP LINK — the idearium-side half of lib/nexus-uri.js's
+// 'repo' and 'repo-chunk' routes. Electron's main process resolves the
+// nexus:// URI and validates the uuid shape (see that file's header);
+// this page's job is only the second half — turning a validated
+// ?repo=/&chunk= query param into the same real navigation a user
+// clicking "open repository →" already produces. Built on the existing
+// functions exactly as they are: openRepoFor(ideaUuid, specUuid, label)
+// and openApiRepoFile(repoUuid, filePath) — no new UI concept invented.
+// §HONEST — if the repo isn't in this session's already-loaded
+// API_REPOS (a real repo that was deleted, or a uuid for a repo that
+// never existed), this warns and does nothing further; it does not
+// fabricate a repo-shaped placeholder to open.
+const NEXUS_URI_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+async function handleNexusDeepLink() {
+  const p = new URLSearchParams(location.search);
+  const repoUuid = p.get('repo');
+  if (!repoUuid || !NEXUS_URI_UUID_RE.test(repoUuid)) return;
+
+  await loadApiRepos();
+  const repo = API_REPOS.find(r => r.uuid === repoUuid);
+  if (!repo) { console.warn(`[idearium] nexus:// deep link: repo not found in this session: ${repoUuid}`); return; }
+  openRepoFor(repo.ideaUuid, repo.specUuid, repo.name);
+
+  const chunkUuid = p.get('chunk');
+  if (!chunkUuid || !NEXUS_URI_UUID_RE.test(chunkUuid)) return;
+  try {
+    const r = await api(`/api/repos/${repoUuid}/chunk/${chunkUuid}`);
+    if (r.filePath) await openApiRepoFile(repoUuid, r.filePath);
+    else console.warn(`[idearium] nexus:// deep link: chunk ${chunkUuid} has no readable file (${r.readError || 'unknown'})`);
+  } catch (e) {
+    console.warn(`[idearium] nexus:// deep link: chunk lookup failed: ${e.message}`);
+  }
+}
+
+// ════════════════════════════════════════════════════
 // INIT — no seed data. Connect to real nexus, render empty states until then.
 // ════════════════════════════════════════════════════
 window.addEventListener('load', () => {
   renderIdeaList(); renderSpecList(); renderVersionium(); renderArchitect(); renderBrainstorms();
   updateStats();
   nexusConnect();
+  handleNexusDeepLink();
   setInterval(() => { if (CONNECTED) loadStats(); else nexusConnect(); }, 15000);
 });

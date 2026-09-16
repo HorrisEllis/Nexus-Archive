@@ -821,6 +821,37 @@ async function processNext(executor) {
   // own end-state — read by the qaqcLayer extension above, nowhere else.
   compartment._contract = queued.contract;
 
+  // §BUILT 2026-09-16 — James: "all compartment is meant to be COS."
+  // `compartment` above is RAID's own governance sandbox (constraint
+  // frame, trace log, JAA `compartments` table) — a real, different
+  // thing from COS's real per-compartment file/process/event state
+  // (cos/host/index.js's store, SnapshotEngine, .nex.gz). DOM-event
+  // ledgering must key off COS's, not RAID's, so ClearGlass's real
+  // state lives in the one place already designed to hold it. Reuse-
+  // by-name (queueId) means a retried contract activates the SAME COS
+  // compartment rather than spawning a new one every attempt. Fire-
+  // and-forget, resolves not throws — a compartment-less or ClearGlass-
+  // less run degrades to exactly today's behavior (DOM events not
+  // ledgered), never a blocked or failed contract over this.
+  try {
+    const { createHost } = require('../../../cos/host/index.js');
+    const { createCompartment } = require('../../../cos/cli/commands/create.js');
+    const host = createHost();
+    const cosName = `raid-${queued.id}`;
+    const cosComp = host.store.getCompartmentByName(cosName)
+      || createCompartment(host, { name: cosName, purpose: `RAID contract ${queued.id}`, networkIsolated: true });
+    const body = JSON.stringify({ compartmentUuid: cosComp.id, queueId: queued.id });
+    const req = require('http').request({
+      hostname: '127.0.0.1', port: parseInt(process.env.CLEARGL_IPC_PORT || '7702', 10),
+      path: '/compartment/active', method: 'POST', timeout: 1200,
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+    }, (res) => { res.on('data', () => {}); });
+    req.on('error', () => {}); // §1.2 — ClearGlass unreachable is a real, logged-elsewhere degrade, not this contract's problem
+    req.write(body); req.end();
+  } catch (e) {
+    console.warn(`[raid] compartment.active → clear-glass skipped for ${queued.id}: ${e.message}`);
+  }
+
   try { jaaDB.update(TABLE, queued.uuid, { status: STATUS.RUNNING, compartmentId: compartment.id, updatedAt: Date.now() }); } catch (_) {}
   _advanceToProcessing(queued.uuid);
 

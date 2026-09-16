@@ -34,6 +34,33 @@ const GUARDIAN_HOST = process.env.GUARDIAN_HOST || '127.0.0.1';
 const GUARDIAN_PORT = parseInt(process.env.GUARDIAN_HTTP_PORT || '7820', 10);
 const VERSION = '1.0.0';
 
+// §ARTIFACTS-LISTENER 2026-09-16 — James: "clearglass downloads manager
+// used as a artifacts listener for agents." This file already IS a real
+// artifacts listener — Electron's `will-download` fires for exactly the
+// case that matters (an agent's chat producing a real, downloadable file:
+// a code export, an artifact's "Download" button, a generated document),
+// and it already carries real provenance no folder-watcher has (see this
+// file's own §WHY HERE header). What it never did: write anywhere durable
+// — only Guardian's /api/intake (a staging queue, consumed and gone) and,
+// on failure, nothing at all. Same real, durable ledger src/dom/
+// archaeology.js's DOM mutation stream now writes to (same date, same
+// reasoning) — POST :9000/api/ledger, src/main/index.js's own established
+// endpoint — so a downloaded artifact and an inline (never-downloaded)
+// artifact both leave a real, permanent, per-agent-per-chatUrl record,
+// not just a transient Guardian intake row.
+function _ledgerWrite(system, type, payload) {
+  const body = JSON.stringify({ system, type, payload });
+  const req = http.request({
+    hostname: '127.0.0.1', port: parseInt(process.env.ORCHESTRATOR_PORT || '9000', 10),
+    path: '/api/ledger', method: 'POST', timeout: 2000,
+    headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+  }, (res) => { res.on('data', () => {}); });
+  req.on('error',   () => {});
+  req.on('timeout', () => req.destroy());
+  req.write(body);
+  req.end();
+}
+
 function _announce(payload, log) {
   const body = Buffer.from(JSON.stringify(payload));
   const req = http.request({
@@ -88,7 +115,7 @@ function attach({ session, providerId, log = console.log } = {}) {
         return;
       }
       const savePath = item.getSavePath();
-      _announce({
+      const payload = {
         source:   savePath,
         provider: providerId,
         chatUrl,
@@ -99,7 +126,16 @@ function attach({ session, providerId, log = console.log } = {}) {
         startedAt,
         downloadedAt: Date.now(),
         capturedBy:   `clear-glass.download-capture@${VERSION}`,
-      }, log);
+      };
+      _announce(payload, log);
+      // §ARTIFACTS-LISTENER — durable regardless of whether Guardian's
+      // staging queue is even up; a ledger write and an /api/intake
+      // announce are two different real jobs (permanent record vs.
+      // "something to act on now"), so this doesn't wait on or depend
+      // on _announce's own result.
+      _ledgerWrite('clear-glass', 'artifact.downloaded', {
+        agentId: providerId, chatUrl, ...payload,
+      });
     });
   };
 

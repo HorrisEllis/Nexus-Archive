@@ -1,0 +1,28 @@
+{
+  "version": "1.0.0",
+  "writtenAt": 1789601127942,
+  "totalFiles": 3,
+  "totalBytes": 53,
+  "files": [
+    {
+      "path": "a.js",
+      "bytes": 15,
+      "sha256": "3879a5d930ae1999b278a3a498f7de3fd83ba8dae59330fcfa2db31c103ac21d",
+      "binary": false
+    },
+    {
+      "path": "logo.png",
+      "bytes": 34,
+      "sha256": "08a2322248eddaf7cf3a75f6f07fb6dad0a35b30e618c34856235dd7e066dd82",
+      "binary": false
+    },
+    {
+      "path": "LICENSE",
+      "bytes": 4,
+      "sha256": "adc37366f403835c1470ab2df93d3837d4719372fc1ef8593d922e06f033f8b2",
+      "binary": false
+    }
+  ],
+  "failed": [],
+  "skipped": []
+}
