@@ -1259,11 +1259,24 @@ export function ingestFilesAsSpec({ name, files = [], author = 'ingest' }) {
   }
   const seenIds = new Map();
   const sections = files.map((f, idx) => {
-    let id = _slug((f.path || `file-${idx}`).replace(/\//g, '-'));
+    const rawPath = f.path || `file-${idx}`;
+    // §FIX 2026-09-16 — strip the file's own extension before slugging.
+    // _slug() turns every '.' into '-', so a dotted name (README.md,
+    // config.json) folded its extension straight into the sectionId
+    // ("docs-readme-md"), and _buildManifest's fileName template then
+    // re-appended a real ".md" on top of that — "docs/README.md" became
+    // fileName "00-docs-readme-md.md", i.e. the extension effectively
+    // doubled. Nothing is lost by dropping it here: the real extension
+    // survives intact on realPath (set right after this, below), which
+    // is what materialize() actually writes to disk — this id is only
+    // ever the internal chunk-store slug. `noExt || rawPath` guards the
+    // dotfile case (".gitignore" has no separate stem to fall back to).
+    const noExt = rawPath.replace(/\.[a-z0-9]+$/i, '');
+    let id = _slug((noExt || rawPath).replace(/\//g, '-'));
     const n = (seenIds.get(id) || 0) + 1;
     seenIds.set(id, n);
     if (n > 1) id = `${id}-${n}`;
-    return { id, title: f.path || `file-${idx}`, desc: `ingested file: ${f.path || idx}` };
+    return { id, title: rawPath, desc: `ingested file: ${rawPath}` };
   });
   const manifest = _buildManifest({ name, type: 'codebase', description: 'ingested from dropped files', author, sections });
   files.forEach((f, i) => {

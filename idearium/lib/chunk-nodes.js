@@ -65,17 +65,34 @@ function _slug(s) {
 }
 
 /**
- * chunkNodeId(chunk, specName, specUuid) -> "projectname.filename.uuid8"
- * — the id exportToFile() turns into "<id>.chunk". Real project/file
- * names, human-readable at a glance, disambiguated by the chunk's own
- * short uuid (same slice(0,8) convention completeChunk()'s own file
- * naming already uses) because two different specs can share a name and
- * a file path.
+ * chunkNodeId(chunk, specName, specUuid) -> "projectname.specUuid.uuid"
+ * — the id exportToFile() turns into "<id>.chunk".
+ *
+ * §2026-09-16 — James: "projectname.repoid.uuid.chunk." The real
+ * repoUuid (idearium/repo/index.js's own id, distinct from specUuid —
+ * see that module's header) isn't reachable from here yet: spec-engine,
+ * where every writeChunkNode() call site actually lives, has no
+ * knowledge of repoUuid at all today — it's never threaded through
+ * completeChunk()/markChunkBuilding()/ingestFilesAsSpec(). Wiring that
+ * through is the real, structural version of this change (repo/index.js
+ * -> spec-engine -> here, three call sites) and is deliberately NOT done
+ * in this pass. This is the quick version: specUuid — already in scope
+ * at every call site, no new plumbing — stands in for repoid for now.
+ * Swap it for a real repoUuid param later without changing this
+ * function's shape.
+ *
+ * Also switched away from the filename slug and the truncated uuid8:
+ * a slugged filename is lossy (README.md and README.MD collide; the
+ * §2026-09-16 extension-fix commit already found one real double-slug
+ * bug living in this same neighborhood) and doesn't disambiguate two
+ * chunks of the same file across edits the way the full chunk uuid
+ * does. Full uuid, not uuid8, also removes removeChunkNode()'s old
+ * "find by 8-char suffix" scan — it can match the id's own full uuid
+ * segment directly now.
  */
 function chunkNodeId(chunk, specName, specUuid) {
   const project = _slug(specName || specUuid);
-  const file = _slug(chunk.realPath || chunk.sectionId || 'section');
-  return `${project}.${file}.${String(chunk.uuid).slice(0, 8)}`;
+  return `${project}.${specUuid}.${chunk.uuid}`;
 }
 
 /** Live config read — same three layers as everything else. */
@@ -223,13 +240,12 @@ export function removeChunkNode(chunkUuid) {
   try {
     const dir = _nodesDir(_cfg());
     if (!fs.existsSync(dir)) return false;
-    // The filename is now projectname.filename.uuid8.chunk, not
-    // <uuid>.chunk — this caller only ever has the full chunkUuid (see
-    // removeChunk()'s call site), so the real, stable identifier to
-    // search on is the uuid8 segment shared with writeChunkNode()'s own
-    // id, not a reconstructed name.
-    const uuid8 = String(chunkUuid).slice(0, 8);
-    const match = fs.readdirSync(dir).find(f => f.endsWith(`.${uuid8}.chunk`));
+    // The filename is projectname.specUuid.uuid.chunk, not <uuid>.chunk
+    // — this caller only ever has the full chunkUuid (see removeChunk()'s
+    // call site), and chunkNodeId() now always puts that same full uuid
+    // as the id's own trailing segment, so matching the real, whole
+    // value (not a truncated 8-char guess) finds the exact node.
+    const match = fs.readdirSync(dir).find(f => f.endsWith(`.${chunkUuid}.chunk`));
     if (!match) return false;
     fs.unlinkSync(path.join(dir, match));
     return true;
