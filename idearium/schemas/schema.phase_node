@@ -1,0 +1,58 @@
+envelope: 1
+uuid: nexus-export-schema-phase_node
+type: schema
+id: phase_node
+context: >-
+  idearium/schemas — registered 2026-09-15 per MCO-A
+  (idearium-repository-overhaul-phasemap.spec). Typed .phase file, read by
+  idearium.roadmap.get (MCO-E) and reusing loom.phasemap.capability for
+  the underlying scan.
+intent: null
+summary: null
+system: idearium
+tags: []
+exported_at: 1789564800000
+source: idearium-repository-overhaul-phasemap.spec:MCO-A
+payload:
+  status: OPEN
+  source: >-
+    Registered this pass. No real writer exists yet — will be written by
+    idearium.roadmap.phase.update once MCO-E lands (this spec's own gate:
+    MET when both schemas are indexed AND one real round-trip row passes
+    each; the round-trip below proves the shape, not a production writer
+    — see tests/modules/test-mco-a-schemas.js MCOA-001). Marked OPEN, not
+    REAL, per §1.1 (nothing exists until proven) — matches this
+    codebase's actual status vocabulary (REAL/OPEN), not the draft's own
+    invented PROPOSED (docs/2026-09-15-versionium-cortex-snapshot-
+    migration-decision.md, D7).
+  fields:
+    uuid:
+      type: string
+      required: true
+      description: real phase node id
+    project_id:
+      type: string
+      required: true
+      description: "references the owning idearium idea/project uuid"
+    order:
+      type: number
+      required: true
+      description: render order within the project's roadmap
+    title:
+      type: string
+      required: true
+      description: real phase title
+    status:
+      type: string
+      required: true
+      enum: [planned, active, blocked, complete]
+      description: real phase status
+    depends_on:
+      type: array
+      required: false
+      description: array of other phase_node uuids this phase depends on
+      items: string
+    module_path:
+      type: string
+      required: false
+      description: "which zoom-level module (MCO-D) this phase belongs to, once that lands"

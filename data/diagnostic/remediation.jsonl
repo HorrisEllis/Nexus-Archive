@@ -1,0 +1,9 @@
+{"action":"system_recovered","system":"loom","downMs":90035,"ts":1789517779181}
+{"action":"gap_escalated","type":"system_offline","system":"idearium","port":4800,"severity":"high","offlineMs":30010,"fix":"Start idearium: node idearium/boot.js or node service/idearium-service.js","body":"idearium offline for 30s — :4800 not responding","gapUuid":"e06169d4-a548-4858-8495-ca52f006d0d4","ts":1789517899282}
+{"action":"system_recovered","system":"idearium","downMs":600159,"ts":1789518469357}
+{"action":"system_recovered","system":"idearium","downMs":60003,"ts":1789518589371}
+{"action":"gap_escalated","type":"system_offline","system":"intelligence","port":3753,"severity":"high","offlineMs":30011,"fix":"Start intelligence: node intelligence/boot.js or node service/intelligence-service.js","body":"intelligence offline for 30s — :3753 not responding","gapUuid":"8ecc8b10-c0c7-483b-801e-28b2e638e2a8","ts":1789523347566}
+{"action":"system_recovered","system":"intelligence","downMs":120037,"ts":1789523437525}
+{"action":"system_recovered","system":"copilot","downMs":30246,"ts":1789524241992}
+{"action":"forge_shell_unavailable","reason":"orchestrator offline","fix":"Start orchestrator","ts":1789526676559}
+{"action":"forge_shell_unavailable","reason":"ui/forge-shell.html missing","fix":"Deploy ui/forge-shell.html","ts":1789529862067}

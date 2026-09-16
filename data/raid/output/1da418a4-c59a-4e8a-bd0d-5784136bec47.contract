@@ -1,0 +1,73 @@
+envelope: 1
+uuid: nexus-export-contract-1da418a4-c59a-4e8a-bd0d-5784136bec47
+type: contract
+id: 1da418a4-c59a-4e8a-bd0d-5784136bec47
+context: null
+intent: heal:memory_pressure
+summary: null
+system: null
+tags: []
+exported_at: 1789529516620
+source: self-heal
+occurrences: 1
+firstSeenAt: 1789529516620
+lastSeenAt: 1789529516620
+fingerprint: null
+payload:
+  queueId: 1da418a4-c59a-4e8a-bd0d-5784136bec47
+  status: fail
+  verdict: null
+  trace_log:
+    - event: SPAWN
+      data:
+        intent_uuid: b8364192-ff7a-44d3-abf6-52b45c851a7b
+        snapId: 03a7beda-aab5-49e3-ab2a-72eda913c918
+      ts: 1789529512751
+    - event: EXECUTE_START
+      data: {}
+      ts: 1789529514277
+    - event: EXECUTE_ERROR
+      data:
+        error: >-
+          no real agent response available (forAgent=auto) — guardian unreachable, no connected
+          provider, or an empty response
+      ts: 1789529514285
+    - event: FAIL
+      data:
+        reason: >-
+          execution error: no real agent response available (forAgent=auto) — guardian unreachable,
+          no connected provider, or an empty response
+        violations: null
+        checks: null
+      ts: 1789529514285
+    - event: REWOUND
+      data:
+        snapId: 03a7beda-aab5-49e3-ab2a-72eda913c918
+      ts: 1789529516617
+    - event: CRYSTAL_LATTICE_UPDATE
+      data:
+        ran: true
+        lattice:
+          updated: true
+          edge:
+            uuid: 760fdaa1-bf41-445a-95cf-822f56e72445
+            edgeKey: 'CompartmentType:self-heal level-4: memory_pressure.implement->State:Resolution'
+            from: 'CompartmentType:self-heal level-4: memory_pressure.implement'
+            to: State:Resolution
+            weight: 0
+            success_rate: 0
+            failure_rate: 1
+            successCount: 0
+            failureCount: 30
+            totalCount: 30
+            decay_rate: 0.02
+            lastTransitionAt: 1789529516617
+            lastTransitionOutcome: FAIL
+            createdAt: 1789523358200
+            updatedAt: 1789529516617
+            id: 8c0707f9-4bc0-45c2-9101-36691979d323
+        crystal:
+          crystallized: false
+          frequency: 2
+          threshold: 3
+      ts: 1789529516619

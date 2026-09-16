@@ -46,6 +46,7 @@ import { randomUUID } from 'crypto';
 import { fileURLToPath } from 'url';
 import { loadTable, syncTable, migrateOnce } from '../lib/db.js';
 import { runImportPipeline } from './import-pipeline.js';
+import * as sourceFiles from './source-files.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const COMPONENT_ID = 'nexus-id';   // idearium, in the UID registry
@@ -129,14 +130,52 @@ export class RepoLayer {
       // silently vanish the first time a later writeFile()/deleteFile()
       // triggers a quiet re-materialize.
       const PRESERVE = new Set(['.git', 'manifest.json', 'project.json', 'chunks', 'atlas.json', 'indexes', 'verification.json']);
-      for (const entry of fs.readdirSync(outDir)) {
-        if (PRESERVE.has(entry)) continue;
-        fs.rmSync(path.join(outDir, entry), { recursive: true, force: true });
+
+      // §SOURCE-FILES 2026-09-15 — James: "it needs to import the real
+      // files from the uploaded project to the repo, not just the
+      // chunks." The sweep above is correct for AUTHORED content, where
+      // the manifest genuinely is the source and can regenerate
+      // everything it deletes. It is wrong for IMPORTED content, where
+      // the source was the uploaded zip — now gone — and the manifest is
+      // only a lossy reading of it (text-only, extension-filtered,
+      // truncated at max_chunk_bytes). Running the authored rule over
+      // imported bytes is what silently deleted every binary and
+      // truncated every large file. See repo/source-files.js's header
+      // for the full reasoning; here it is two real rules:
+      //
+      //   1. never DELETE a path the source layer owns
+      //   2. never WRITE A CHUNK OVER one — a chunk is a
+      //      possibly-truncated reading of that same file, so
+      //      overwriting real bytes with a truncated copy of themselves
+      //      is pure loss
+      //
+      // §FAIL SAFE — preserveEntries() returns null when a source
+      // manifest EXISTS but cannot be read. Deleting real,
+      // unrecoverable files because the list of what to keep was
+      // unreadable is the worst thing this function could do, so that
+      // case skips the destructive sweep entirely and says so, rather
+      // than falling back to "preserve nothing".
+      const srcManifest = sourceFiles.loadSourceManifest(outDir);
+      const srcPaths    = sourceFiles.sourcePathSet(srcManifest);
+      const srcPreserve = sourceFiles.preserveEntries(outDir);
+
+      if (srcPreserve === null) {
+        console.error(`[idearium/repo] §1.2 materialize(${repoUuid}) — ${sourceFiles.SOURCE_MANIFEST_FILE} exists but is unreadable; SKIPPING the stale-file sweep so no real source file is deleted. Chunks are still written. Fix or remove that file to restore normal materialize behavior.`);
+      } else {
+        for (const entry of srcPreserve) PRESERVE.add(entry);
+        for (const entry of fs.readdirSync(outDir)) {
+          if (PRESERVE.has(entry)) continue;
+          fs.rmSync(path.join(outDir, entry), { recursive: true, force: true });
+        }
       }
 
       let written = 0;
+      let deferred = 0;
       const files = this.get(repoUuid).files || [];
       for (const f of files) {
+        // Rule 2 — the real file wins. Counted as deferred, not skipped:
+        // the content IS on disk, just not from this layer.
+        if (srcPaths.has(f.path)) { deferred++; continue; }
         const content = this.readFile(repoUuid, f.path);
         if (content.error) continue; // §1.2 — logged by readFile itself; a real, individual missing chunk must not abort the whole materialize
         const dest = path.join(outDir, f.path);
@@ -144,7 +183,14 @@ export class RepoLayer {
         fs.writeFileSync(dest, content.content, 'utf8');
         written++;
       }
-      return { ok: true, dir: outDir, written, total: files.length };
+      return {
+        ok: true, dir: outDir, written, total: files.length,
+        // Honest accounting of the two layers, so a caller can tell
+        // "nothing was written because the repo is empty" from "nothing
+        // was written because the real files already cover every path".
+        sourceFiles: srcManifest && !srcManifest.unreadable ? srcManifest.totalFiles : 0,
+        deferredToSource: deferred,
+      };
     } catch (e) {
       // §1.2 loud, non-fatal — the real, authoritative manifest content
       // is untouched by a materialize failure; only the physical
@@ -152,6 +198,48 @@ export class RepoLayer {
       console.error(`[idearium/repo] materialize(${repoUuid}) failed: ${e.message}`);
       return { error: e.message };
     }
+  }
+
+  // §SOURCE-FILES 2026-09-15 — the real bytes of an imported project,
+  // written into the repo's physical directory before the first
+  // materialize() so that call already sees them as source-owned.
+  //
+  // §ORDER MATTERS AND IS NOT INCIDENTAL — a caller must do
+  // ingest() -> writeSources() -> materialize(). Reversing the last two
+  // means the first materialize() runs with no source manifest present,
+  // finds the directory empty of anything it recognizes, and behaves
+  // exactly as it did before this layer existed. Stated here because
+  // the requirement is invisible from the signatures alone.
+  //
+  // realFiles is lib/zip-ingest.js's realFiles shape:
+  // [{ path, buffer, bytes, binary, sha256 }].
+  writeSources(repoUuid, realFiles = []) {
+    const r = this.repos.repos.find(x => x.uuid === repoUuid);
+    if (!r) return { ok: false, error: 'repo not found' };
+    const outDir = r.materializeDir || path.join(this.dataDir, 'projects', repoUuid);
+
+    const result = sourceFiles.writeSourceFiles(outDir, realFiles, { verify: true });
+    if (result.ok && result.manifest) {
+      // Recorded on the repo record too, not only in the directory, so a
+      // reader that has the repo row but not the disk (a UI listing, an
+      // API response) can still say how much real content this repo
+      // holds without a filesystem round trip.
+      r.sourceFileCount = result.manifest.totalFiles;
+      r.sourceBytes     = result.manifest.totalBytes;
+      r.sourceWrittenAt = result.manifest.writtenAt;
+      if (result.failed.length) r.sourceFailedCount = result.failed.length;
+      r.updatedAt = Date.now();
+      this._save();
+    }
+    return result;
+  }
+
+  /** Real re-hash of this repo's source files against their manifest. */
+  verifySources(repoUuid) {
+    const r = this.repos.repos.find(x => x.uuid === repoUuid);
+    if (!r) return { ok: false, error: 'repo not found' };
+    const outDir = r.materializeDir || path.join(this.dataDir, 'projects', repoUuid);
+    return sourceFiles.verify(outDir);
   }
 
   get se() { return this._seGetter(); }

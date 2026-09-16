@@ -1,0 +1,45 @@
+envelope: 1
+uuid: nexus-export-job-da2546bb-62c3-4a92-8da4-9a38e3e76130
+type: job
+id: da2546bb-62c3-4a92-8da4-9a38e3e76130
+context: guardian real-time job dispatch
+intent: null
+summary: null
+system: guardian
+tags: []
+exported_at: 1789517495108
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1789517495108
+lastSeenAt: 1789517495108
+fingerprint: null
+payload:
+  id: da2546bb-62c3-4a92-8da4-9a38e3e76130
+  command: general
+  provider: chatgpt
+  prompt: |-
+    [CONTEXT]
+    [NEXUS] Guardian:online
+
+    [GAPS]
+    [high] delta.tension: delta tension 0.94 at guardian.job.chunk
+    [high] delta.tension: delta tension 0.87 at gate.failed
+    [high] delta.tension: delta tension 0.94 at guardian.job.chunk
+    [high] delta.tension: delta tension 0.87 at gate.failed
+    [high] delta.tension: delta tension 1.00 at guardian.job.chunk
+    [high] delta.tension: delta tension 1.00 at gate.failed
+
+    make a huge code base for me
+  content: null
+  source: chatgpt-console
+  tools: null
+  hat: null
+  status: responding
+  response: ''
+  ts: 1789517491076
+  updatedAt: 1789517495108
+  pingedAt: 1789517491078
+  deliveredAt: 1789517491163
+  ackedAt: 1789517491324
+  confirmedAt: 1789517493033
+  lastChunk: 1789517495108

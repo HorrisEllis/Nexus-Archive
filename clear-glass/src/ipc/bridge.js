@@ -219,6 +219,16 @@ class IpcBridge {
     // fixed here; named directly rather than faked with an empty stub.
     this.app.get('/cli/calltos',            (req, res) => res.json({ calltos: this.options?.listCalltos() || [] }));
     this.app.get('/cli/downloads/listeners',(req, res) => res.json({ listeners: this.options?.listDownloadListeners() || [] }));
+    // §BUILT 2026-09-15 — James: "...clearglass download manager..." as a
+    // guardian response sink. downloads:* was IPC-only (ipcMain.handle,
+    // renderer-side); nothing outside Electron could reach the real
+    // DownloadsStore. This is that missing HTTP entry, mirroring the
+    // shape downloads:list/downloads.js's add() already accepts.
+    this.app.post('/cli/downloads', (req, res) => {
+      if (!this.downloads) return res.status(503).json({ error: 'downloads store not available' });
+      try { res.json({ ok: true, record: this.downloads.add(req.body || {}) }); }
+      catch (e) { res.status(500).json({ error: e.message }); }
+    });
     this.app.get('/cli/site-settings',      (req, res) => res.json({ settings: this.siteSettings?.getAllForOrigin(req.query.url) || null }));
     this.app.get('/cli/rewind',             (req, res) => res.json({ snapshots: this.rewind?.list(req.query.agentId, req.query.limit ? +req.query.limit : undefined) || [] }));
     this.app.get('/cli/passwords',          (req, res) => res.json({ passwords: this.passwordVault?.list() || [] }));

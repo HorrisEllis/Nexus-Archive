@@ -1,0 +1,21 @@
+{
+  "id": "chunk-5d84c07eba68cea1",
+  "repository": "nexus-id-repo-3eed3fb0",
+  "file": "285-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-260-nexus-idearium-data-specs-ae44a65d-578a-47ec-ad5f-14208c07312e-00-meta-478bb084-md-md.md",
+  "range": {
+    "start_line": 1,
+    "end_line": 16
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "2a94730f34d7887ea5571cc068809a5b4a7d3de6af9574f9c734f776a3fad342"
+  },
+  "status": "complete",
+  "content": "---\nchunk_uuid: 478bb084-1070-4417-b8ac-262922ab35d0\nspec_uuid: ae44a65d-578a-47ec-ad5f-14208c07312e\nsection: meta\ntitle: Meta & Identity\ncomp_id: idearium.spec-engine\nseam_id: idearium.spec-engine:v1:chunk:ae44a65d:meta\ncontract_id: spec-contract:ae44a65d:meta:478bb084\nagent: ollama\nmodel: unknown\nstatus: complete\ncompleted_at: 2026-09-13T12:20:29.167Z\n---\n\n## Meta & Identity\nreal content 1789302023917"
+}

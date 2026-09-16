@@ -1,0 +1,81 @@
+---
+chunk_uuid: 0c16c06e-3532-486a-b643-e3d4deadb637
+spec_uuid: 09d1b526-4d03-4556-99e0-a4cd83abc4ae
+section: n139-idearium-repo-repos-nexus-id-repo-0672ffb3-163-nexus-idearium-data-specs-f79e4725-ace3-4d64-a93f-5526a4fa2a97-manifest-json-md
+title: n139/idearium/repo/repos/nexus-id-repo-0672ffb3/163-nexus-idearium-data-specs-f79e4725-ace3-4d64-a93f-5526a4fa2a97-manifest-json.md
+comp_id: idearium.spec-engine
+seam_id: idearium.spec-engine:v1:chunk:09d1b526:n139-idearium-repo-repos-nexus-id-repo-0672ffb3-163-nexus-idearium-data-specs-f79e4725-ace3-4d64-a93f-5526a4fa2a97-manifest-json-md
+contract_id: spec-contract:09d1b526:n139-idearium-repo-repos-nexus-id-repo-0672ffb3-163-nexus-idearium-data-specs-f79e4725-ace3-4d64-a93f-5526a4fa2a97-manifest-json-md:0c16c06e
+agent: ingest
+model: ingest:drop
+status: complete
+completed_at: 2026-09-16T00:22:42.763Z
+---
+
+{
+  "uuid": "f79e4725-ace3-4d64-a93f-5526a4fa2a97",
+  "dedupKey": "a30bf4061c004815",
+  "name": "mco22-test-repo",
+  "type": "codebase",
+  "description": "ingested from dropped files",
+  "author": "test",
+  "version": "0.1.0",
+  "phase": "40",
+  "status": "complete",
+  "agent": "auto",
+  "agentPriority": [
+    "ollama",
+    "chatgpt",
+    "claude"
+  ],
+  "buildEngine": "auto",
+  "ideaUuid": null,
+  "totalChunks": 1,
+  "doneChunks": 1,
+  "failedChunks": 0,
+  "progress": 100,
+  "createdAt": 1789426587242,
+  "updatedAt": 1789426587278,
+  "completedAt": 1789426587259,
+  "archivePath": null,
+  "templateId": null,
+  "templateIds": [],
+  "templateSeeded": [],
+  "duplicateOf": "3b26ebb5-7ea8-43f6-aaea-31e8bc1ec6ec",
+  "rootHash": "922977d72e977691aafaa9d196a09ef3532bbf168092f0a7fa5dbb336c9449bd",
+  "warpPrimitives": [],
+  "chunks": [
+    {
+      "uuid": "79087d2f-cfe0-4695-b682-7259a0b4cd6c",
+      "specUuid": "f79e4725-ace3-4d64-a93f-5526a4fa2a97",
+      "chunkIdx": 0,
+      "sectionId": "hello-txt",
+      "sectionTitle": "hello.txt",
+      "sectionDesc": "ingested file: hello.txt",
+      "comp_id": "idearium.spec-engine",
+      "seam_id": "idearium.spec-engine:v1:chunk:f79e4725:hello-txt",
+      "contract_id": "spec-contract:f79e4725:hello-txt:79087d2f",
+      "filePath": "/home/claude/work/nexus/idearium/data/specs/f79e4725-ace3-4d64-a93f-5526a4fa2a97/00-hello-txt-79087d2f.md",
+      "fileName": "00-hello-txt.md",
+      "status": "complete",
+      "dependsOn": [],
+      "agent": "ingest",
+      "agentModel": "ingest:drop",
+      "attempts": 1,
+      "failureMode": null,
+      "content": "real test content",
+      "byteSize": 391,
+      "createdAt": 1789426587242,
+      "updatedAt": 1789426587259,
+      "completedAt": 1789426587259,
+      "tags": [
+        "hello-txt",
+        "codebase",
+        "mco22-test-repo"
+      ],
+      "jobId": null,
+      "dispatchDir": null
+    }
+  ],
+  "specPath": "/home/claude/work/nexus/idearium/data/specs/f79e4725-ace3-4d64-a93f-5526a4fa2a97/f79e4725-ace3-4d64-a93f-5526a4fa2a97.spec"
+}

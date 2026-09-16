@@ -34,6 +34,14 @@ import { createRequire } from 'module';
 import { getTemplate, listTemplates, readSeed } from './templates.js';
 import { loadTable, syncTable, migrateOnce } from '../lib/db.js';
 import { getValue as getConfigValue } from '../lib/config.js';
+// §CHUNK-NODES 2026-09-15 — James: "chunks should be node types, .chunk,
+// look at the taxonomy." Every real chunk state transition below now
+// also writes a real .chunk node (lib/node-schemas/schema.chunk, type
+// registered in lib/node-export.js's KNOWN_TYPES). Non-fatal by design:
+// see idearium/lib/chunk-nodes.js's own header — a chunk is real when
+// its .md artifact is on disk and the manifest says so; a failed node
+// write costs queryability for that chunk, never the build.
+import * as chunkNodes from '../lib/chunk-nodes.js';
 // §BUILT 2026-09-03 — js-yaml is already a real root-workspace dependency
 // (package.json's workspaces include 'idearium'; compiler-bridge.js in
 // this same module already imports it, dynamically). Static import here —
@@ -893,6 +901,10 @@ export function completeChunk(specUuid, chunkUuid, content, { preserveWhitespace
   }
 
   saveSpec(manifest);
+  // §CHUNK-NODE — written after saveSpec, never before: the node is a
+  // record OF a real, persisted state, so writing it first would let a
+  // failed save leave a node claiming a completion that never happened.
+  chunkNodes.writeChunkNode(chunk, specUuid, { specName: manifest.name });
   console.log(`[${MODULE_ID}] ✓ chunk ${chunk.sectionId} complete · ${chunk.byteSize}b · ${manifest.progress}% done`);
   return chunk;
 }
@@ -917,6 +929,11 @@ export function failChunk(specUuid, chunkUuid, reason) {
   manifest.updatedAt = Date.now();
 
   saveSpec(manifest);
+  // §CHUNK-NODE — a failed chunk gets a node too. A node set that only
+  // recorded successes would make "how many chunks are stuck" an
+  // unanswerable question from the node layer, which is exactly the
+  // question it is most useful for.
+  chunkNodes.writeChunkNode(chunk, specUuid, { specName: manifest.name });
   console.warn(`[${MODULE_ID}] §1.2 chunk ${chunk.sectionId} ${chunk.status}: ${reason}`);
   return chunk;
 }
@@ -1221,6 +1238,10 @@ export function removeChunk(specUuid, chunkUuid) {
   manifest.rootHash     = computeRootHash(manifest);
   manifest.updatedAt   = Date.now();
   saveSpec(manifest);
+  // §CHUNK-NODE — the chunk's own .md artifact stays on disk (§7.4
+  // nothing discarded); the NODE goes, because an index entry for
+  // something no longer in the manifest is a lie with a timestamp.
+  chunkNodes.removeChunkNode(chunkUuid);
   return loadSpec(specUuid);
 }
 
@@ -1276,7 +1297,15 @@ export function ingestFilesAsSpec({ name, files = [], author = 'ingest' }) {
     }
     saveSpec(fresh);
   });
-  return loadSpec(manifest.uuid);
+  // §CHUNK-NODE — one pass at the end rather than per-file inside the
+  // loop above: an ingest of tens of thousands of files would otherwise
+  // re-read the config once per file for no gain, and the per-chunk
+  // writes in completeChunk() above have already fired with the
+  // pre-realPath state anyway. This pass writes the final, correct
+  // shape (realPath included) over them.
+  const finalManifest = loadSpec(manifest.uuid);
+  chunkNodes.writeManifestChunkNodes(finalManifest);
+  return finalManifest;
 }
 
 // findPriorSection — the chunk-level lever. The WARP exact cache reuses a chunk

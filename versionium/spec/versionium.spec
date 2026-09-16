@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        versionium
-    version:     3.0.0
+    version:     3.1.0
     status:      active
     canonical_implementation: versionium/lib/engine.js
     canonical_http_surface:
@@ -183,6 +183,57 @@ spec:
         a local fallback queue (lib/nexus-client.js already has a
         postDurable/buffer-drain pattern for exactly this; this change
         calls nx.post/nx.get directly, bypassing it) is an open call.
+    - date: 2026-09-15
+      summary: >
+        §GAP V5 CLOSED — file_delta's home decided (versionium/, per
+        idearium-repository-overhaul-phasemap.spec's own recommendation,
+        confirmed by James) ahead of MCO-A, and gap V5 closed the same
+        way V6 already was: a new, one-time idempotent backfill,
+        versionium/lib/migrate-idearium-snapshots.js, modeled directly on
+        migrate-legacy-data.js, copying pre-merge idearium_snapshots rows
+        into versionium_commits (tagged system:'idearium', state
+        preserved deep-cloned, original legacy row kept verbatim under
+        _migratedFrom for anyone checking the field-mapping guess against
+        real data later — see that file's own header for the honest
+        limitation: no idearium_snapshots row shipped with this checkout
+        to confirm field names against, so the mapping is defensive, not
+        assumed). Wired into server.js's boot sequence alongside
+        migrateLegacyData(), same idempotent-every-boot convention.
+        Verified: 3 new real tests (VSOV-009/010/011 in
+        tests/modules/test-versionium-sovereign.js), 11/11 total in that
+        file passing, against isolated temp dirs. §17.10 (verify before
+        promote) applied directly: the migration was run against a real
+        seeded legacy store and its output round-tripped through
+        getState() before being called done, not declared done on code
+        inspection alone.
+
+        Real, unplanned finding surfaced by this pass, fixed alongside
+        (§4.2 — fix bugs pre-emptively, don't just note and move on):
+        cortex/ had been sitting unextracted at the repo root as
+        Cortex.zip (the same working-tree/index mismatch the prior
+        session's handoff already flagged as broader-than-cortex).
+        Extracting it so migrate-idearium-snapshots.js's require of
+        cortex/memory/jaa-db.js could resolve at all exposed a real,
+        pre-existing test-isolation gap: test-versionium-sovereign.js's
+        VSOV-007 (migrateLegacyData) had only ever run against cortex's
+        require() failing (the try/catch skip path) — once it could
+        succeed, that test wrote real files into this repo's actual
+        data/cortex/memory/ default path, because JAA_DATA_DIR was never
+        set before requiring cortex/memory/jaa-db.js. Fixed by moving the
+        isolation env var to the top of the file, before any test runs
+        (§3.3 — the map found this, not an assumption that
+        migrateLegacyData was already safely isolated because it looked
+        idempotent).
+    - date: 2026-09-15
+      summary: >
+        cortex/versionium/index.js and cortex/versionium/causality.js
+        checked directly, not assumed — confirmed still real, unexecuted
+        archive per this spec's own 2026-09-02 entry (§0.3, kept not
+        deleted). No production code requires them; versionium/lib/
+        engine.js and causality.js remain the sole live implementation.
+        No change made to either file — recorded here as a checked, not
+        skipped, decision, per §3.3 (map before build extends to "map
+        before deciding not to build," not just to changes made).
 
   gaps:
     as_of: 2026-09-01

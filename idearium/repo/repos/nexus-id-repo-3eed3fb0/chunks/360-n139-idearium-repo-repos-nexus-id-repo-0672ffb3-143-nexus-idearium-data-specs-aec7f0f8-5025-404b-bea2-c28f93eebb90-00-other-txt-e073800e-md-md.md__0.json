@@ -1,0 +1,21 @@
+{
+  "id": "chunk-155c175df1356c69",
+  "repository": "nexus-id-repo-3eed3fb0",
+  "file": "360-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-143-nexus-idearium-data-specs-aec7f0f8-5025-404b-bea2-c28f93eebb90-00-other-txt-e073800e-md-md.md",
+  "range": {
+    "start_line": 1,
+    "end_line": 15
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "1a68555f5b5c7d9d02513e45fae6c9f5ceb213487d2158d886258819c5b15329"
+  },
+  "status": "complete",
+  "content": "---\nchunk_uuid: e073800e-fa3c-466e-94e1-771b59f4f6f7\nspec_uuid: aec7f0f8-5025-404b-bea2-c28f93eebb90\nsection: other-txt\ntitle: other.txt\ncomp_id: idearium.spec-engine\nseam_id: idearium.spec-engine:v1:chunk:aec7f0f8:other-txt\ncontract_id: spec-contract:aec7f0f8:other-txt:e073800e\nagent: ingest\nmodel: ingest:drop\nstatus: complete\ncompleted_at: 2026-09-14T22:56:27.315Z\n---\n\ndifferent real content"
+}

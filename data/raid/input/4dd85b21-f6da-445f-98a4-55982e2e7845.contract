@@ -1,0 +1,47 @@
+envelope: 1
+uuid: nexus-export-contract-4dd85b21-f6da-445f-98a4-55982e2e7845
+type: contract
+id: 4dd85b21-f6da-445f-98a4-55982e2e7845
+context: null
+intent: translate.utl
+summary: null
+system: null
+tags: []
+exported_at: 1789519686683
+source: architect
+occurrences: 1
+firstSeenAt: 1789519686683
+lastSeenAt: 1789519686683
+fingerprint: null
+payload:
+  uuid: 4dd85b21-f6da-445f-98a4-55982e2e7845
+  status: queued
+  intention: translate.utl
+  dir: null
+  language: null
+  stage: queued
+  system: null
+  source: architect
+  sourceDropId: null
+  boundary:
+    key: architect:translate.utl
+    primitive: architect/service.js POST /api/translate/utl
+    invariants: []
+    principles:
+      - §1.2
+      - §5.2
+  file: null
+  title: translate.utl
+  forAgent: null
+  contract:
+    content: translate.utl:dangling-hook hook 'nexus.lib.agent-tools.tools.schedule-task.export' is declare
+    title: translate.utl
+  dependsOn: []
+  onFail:
+    action: retry
+    maxRetries: 2
+  retryCount: 0
+  compartmentId: null
+  verdict: null
+  createdAt: 1789519686683
+  updatedAt: 1789519686683

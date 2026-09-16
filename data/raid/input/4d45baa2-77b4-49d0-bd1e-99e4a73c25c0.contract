@@ -1,0 +1,47 @@
+envelope: 1
+uuid: nexus-export-contract-4d45baa2-77b4-49d0-bd1e-99e4a73c25c0
+type: contract
+id: 4d45baa2-77b4-49d0-bd1e-99e4a73c25c0
+context: null
+intent: translate.utl
+summary: null
+system: null
+tags: []
+exported_at: 1789517374141
+source: architect
+occurrences: 1
+firstSeenAt: 1789517374141
+lastSeenAt: 1789517374141
+fingerprint: null
+payload:
+  uuid: 4d45baa2-77b4-49d0-bd1e-99e4a73c25c0
+  status: queued
+  intention: translate.utl
+  dir: null
+  language: null
+  stage: queued
+  system: null
+  source: architect
+  sourceDropId: null
+  boundary:
+    key: architect:translate.utl
+    primitive: architect/service.js POST /api/translate/utl
+    invariants: []
+    principles:
+      - §1.2
+      - §5.2
+  file: null
+  title: translate.utl
+  forAgent: null
+  contract:
+    content: 'translate.utl:dangling-hook  '
+    title: translate.utl
+  dependsOn: []
+  onFail:
+    action: retry
+    maxRetries: 2
+  retryCount: 0
+  compartmentId: null
+  verdict: null
+  createdAt: 1789517374141
+  updatedAt: 1789517374141

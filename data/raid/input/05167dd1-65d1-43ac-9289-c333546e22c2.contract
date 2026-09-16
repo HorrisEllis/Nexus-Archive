@@ -1,0 +1,47 @@
+envelope: 1
+uuid: nexus-export-contract-05167dd1-65d1-43ac-9289-c333546e22c2
+type: contract
+id: 05167dd1-65d1-43ac-9289-c333546e22c2
+context: null
+intent: translate.utl
+summary: null
+system: null
+tags: []
+exported_at: 1789524242080
+source: architect
+occurrences: 1
+firstSeenAt: 1789524242080
+lastSeenAt: 1789524242080
+fingerprint: null
+payload:
+  uuid: 05167dd1-65d1-43ac-9289-c333546e22c2
+  status: queued
+  intention: translate.utl
+  dir: null
+  language: null
+  stage: queued
+  system: null
+  source: architect
+  sourceDropId: null
+  boundary:
+    key: architect:translate.utl
+    primitive: architect/service.js POST /api/translate/utl
+    invariants: []
+    principles:
+      - §1.2
+      - §5.2
+  file: null
+  title: translate.utl
+  forAgent: null
+  contract:
+    content: translate.utl:dangling-hook hook 'nexus.cortex.snapshot.import' is declared as an INPUT but no
+    title: translate.utl
+  dependsOn: []
+  onFail:
+    action: retry
+    maxRetries: 2
+  retryCount: 0
+  compartmentId: null
+  verdict: null
+  createdAt: 1789524242080
+  updatedAt: 1789524242080

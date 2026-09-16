@@ -1,0 +1,21 @@
+{
+  "id": "chunk-b18a38e558363a39",
+  "repository": "nexus-id-repo-3eed3fb0",
+  "file": "18-n139-warp-core-index-js.md",
+  "range": {
+    "start_line": 1,
+    "end_line": 9
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "82e2e5a0a751dd40dc05316321b78dca0115146bd1a5fd546d8035405db7fc7b"
+  },
+  "status": "complete",
+  "content": "'use strict';\nconst { Event } = require('./Event');\nconst { Gate } = require('./Gate');\nconst { Axiom } = require('./Axiom');\nconst { Stream } = require('./Stream');\nconst { StreamLog } = require('./StreamLog');\nconst { fuseChain, canFuse } = require('./GateFusion');\n\nmodule.exports = { Event, Gate, Axiom, Stream, StreamLog, fuseChain, canFuse };"
+}

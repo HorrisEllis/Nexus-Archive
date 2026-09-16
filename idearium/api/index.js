@@ -1461,23 +1461,58 @@ async function handle(req, res, route, query, body) {
 
       const cfg = _require('../../lib/project-import.config.js');
       const { extractZipToFiles } = _require('../../lib/zip-ingest.js');
+      // §REAL-FILES 2026-09-15 — every bound now comes from the one
+      // idearium config (see lib/project-import.config.js's §REWIRED
+      // note), and the extraction returns two layers: `included` (the
+      // chunking input, unchanged) and `realFiles` (the verbatim bytes,
+      // binaries included). Both are passed on; neither is the other.
       const extraction = extractZipToFiles({
         buf,
-        maxFiles:        cfg.ZIP.maxFiles,
-        maxBytesPerFile: cfg.ZIP.maxBytesPerFile,
-        maxTotalBytes:   cfg.ZIP.maxTotalBytes,
-        skipDirs:        cfg.ZIP.skipDirs,
-        textExt:         cfg.ZIP.textExt,
+        maxFiles:         cfg.ZIP.maxFiles,
+        maxBytesPerFile:  cfg.ZIP.maxBytesPerFile,
+        maxTotalBytes:    cfg.ZIP.maxTotalBytes,
+        maxRealFileBytes: cfg.ZIP.maxRealFileBytes,
+        realFiles:        cfg.ZIP.realFiles,
+        includeBinary:    cfg.ZIP.includeBinary,
+        verifyHashes:     cfg.ZIP.verifyHashes,
+        skipDirs:         cfg.ZIP.skipDirs,
+        textExt:          cfg.ZIP.textExt,
       });
       if (!extraction.ok) return err(res, 400, extraction.error);
-      const { included, omitted } = extraction;
+      const { included, realFiles, omitted, stats } = extraction;
 
-      if (!included.length) return err(res, 400, 'no text files matched the bounds — nothing to import (see omitted reasons for what was skipped)');
+      // §HONEST EMPTY CHECK — "no text files" is no longer the same as
+      // "nothing to import". A zip of nothing but binaries is a real,
+      // importable project with zero chunks; only a zip that yielded
+      // neither layer is genuinely empty.
+      if (!included.length && !realFiles.length) {
+        return err(res, 400, 'nothing to import — no file passed the bounds (see omitted reasons for what was skipped)');
+      }
 
       const repoName = (name || filename.replace(/\.zip$/i, '')).slice(0, 200);
       const result = getRepoLayer().ingest({ name: repoName, files: included, source: 'import', ideaUuid: ideaUuid || null });
       if (result.error) return err(res, 400, result.error);
-      return ok(res, { ...result, fileCount: included.length, omittedCount: omitted.length, omitted: omitted.slice(0, 50) });
+
+      // ingest() -> writeSources() -> materialize(), in that order: the
+      // source manifest has to exist before the first materialize() or
+      // that call sweeps the directory knowing nothing about it. See
+      // RepoLayer.writeSources()'s own §ORDER MATTERS note.
+      let sources = null;
+      if (realFiles.length) {
+        sources = getRepoLayer().writeSources(result.repo.uuid, realFiles);
+        if (!sources.ok) console.error(`[api] source-file write degraded for ${result.repo.uuid}: ${sources.error}`);
+      }
+      const mat = getRepoLayer().materialize(result.repo.uuid);
+      if (mat.error) console.error(`[api] materialize after import-archive failed for ${result.repo.uuid}: ${mat.error}`);
+
+      return ok(res, {
+        ...result,
+        fileCount: included.length,
+        sourceFileCount: sources ? sources.written : 0,
+        sourceFailed: sources ? sources.failed : [],
+        omittedCount: omitted.length, omitted: omitted.slice(0, 50),
+        stats, materialize: mat.error ? { error: mat.error } : mat,
+      });
     }
 
     // ── Upload Project pipeline ─────────────────────────────────────────
@@ -1524,17 +1559,25 @@ async function handle(req, res, route, query, body) {
 
       const cfg = _require('../../lib/project-import.config.js');
       const { extractZipToFiles } = _require('../../lib/zip-ingest.js');
+      // §REAL-FILES 2026-09-15 — see repo.import-archive above; same two
+      // layers, same reasoning, same config source.
       const extraction = extractZipToFiles({
         buf,
-        maxFiles:        cfg.ZIP.maxFiles,
-        maxBytesPerFile: cfg.ZIP.maxBytesPerFile,
-        maxTotalBytes:   cfg.ZIP.maxTotalBytes,
-        skipDirs:        cfg.ZIP.skipDirs,
-        textExt:         cfg.ZIP.textExt,
+        maxFiles:         cfg.ZIP.maxFiles,
+        maxBytesPerFile:  cfg.ZIP.maxBytesPerFile,
+        maxTotalBytes:    cfg.ZIP.maxTotalBytes,
+        maxRealFileBytes: cfg.ZIP.maxRealFileBytes,
+        realFiles:        cfg.ZIP.realFiles,
+        includeBinary:    cfg.ZIP.includeBinary,
+        verifyHashes:     cfg.ZIP.verifyHashes,
+        skipDirs:         cfg.ZIP.skipDirs,
+        textExt:          cfg.ZIP.textExt,
       });
       if (!extraction.ok) return err(res, 400, extraction.error);
-      const { included, omitted } = extraction;
-      if (!included.length) return err(res, 400, 'no text files matched the bounds — nothing to import (see omitted reasons for what was skipped)');
+      const { included, realFiles, omitted, stats } = extraction;
+      if (!included.length && !realFiles.length) {
+        return err(res, 400, 'nothing to import — no file passed the bounds (see omitted reasons for what was skipped)');
+      }
 
       const pc = _require('../../lib/project-container.js');
       // Repo name mirrors repo.import-archive's own fallback: an explicit
@@ -1551,6 +1594,24 @@ async function handle(req, res, route, query, body) {
       if (ingestResult.error) return err(res, 400, ingestResult.error);
 
       const repoUuid = ingestResult.repo.uuid;
+
+      // §ORDER — ingest() -> writeSources() -> materialize(). The source
+      // manifest must exist before the first materialize() or that call
+      // sweeps the directory with no knowledge of which files are
+      // source-owned. See RepoLayer.writeSources()'s own note.
+      let sources = null;
+      if (realFiles.length) {
+        sources = getRepoLayer().writeSources(repoUuid, realFiles);
+        if (!sources.ok) {
+          // §1.2 — loud and fatal to the IMPORT, not swallowed. Unlike a
+          // chunk (regenerable from the manifest), a source file that
+          // failed to land is gone: the zip that held it is not kept.
+          // Finishing "successfully" with missing real files would be
+          // the exact silent loss this whole layer exists to end.
+          return err(res, 500, `source-file write failed — import aborted rather than completing with missing real files: ${sources.error}`);
+        }
+      }
+
       const mat = getRepoLayer().materialize(repoUuid);
       if (mat.error) return err(res, 500, `materialize after ingest failed: ${mat.error}`);
 
@@ -1568,13 +1629,27 @@ async function handle(req, res, route, query, body) {
         console.error(`[api] project-import pipeline FAULT for ${repoUuid}: ${pipeline.error || 'see verification tiers'}`);
       }
 
+      // §FILECOUNT IS REAL FILES NOW — the 'files-imported' end-state
+      // condition asks whether source files actually landed in the repo.
+      // Answering it with included.length (the CHUNK count) was right
+      // only while chunks were the repo's content; now that real files
+      // are, a binary-only project would have reported 0 files imported
+      // and failed its own end-state despite a complete, correct import.
+      // Falls back to the chunk count when the source layer is off
+      // (import.real_files = false), which is the one case where chunks
+      // genuinely are the content.
+      const realFileCount = sources ? sources.written : included.length;
+
       const result = await pc.finalizeContainer({
-        containerUuid: params.uuid, repoUuid, repoDir: mat.dir, fileCount: included.length,
+        containerUuid: params.uuid, repoUuid, repoDir: mat.dir,
+        fileCount: realFileCount, chunkCount: included.length,
       });
       return ok(res, {
         ...result, repo: ingestResult.repo, deduped: !!ingestResult.deduped,
-        fileCount: included.length, omittedCount: omitted.length, omitted: omitted.slice(0, 50),
-        pipeline,
+        fileCount: realFileCount, chunkCount: included.length,
+        sourceFailed: sources ? sources.failed : [],
+        omittedCount: omitted.length, omitted: omitted.slice(0, 50),
+        stats, materialize: mat, pipeline,
       });
     }
 

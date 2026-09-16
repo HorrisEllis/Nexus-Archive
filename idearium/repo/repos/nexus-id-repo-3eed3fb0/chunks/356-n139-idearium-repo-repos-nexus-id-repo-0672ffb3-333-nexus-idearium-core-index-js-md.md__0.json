@@ -1,0 +1,21 @@
+{
+  "id": "chunk-acfb9baaab11752a",
+  "repository": "nexus-id-repo-3eed3fb0",
+  "file": "356-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-333-nexus-idearium-core-index-js-md.md",
+  "range": {
+    "start_line": 1,
+    "end_line": 7
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "b48c2f132f70a575bfdf9478268a7ccb8d90ec5efd33a82c7b308d1638561027"
+  },
+  "status": "complete",
+  "content": "// ── idearium/core/index.js ────────────────────────────────────────────────────\n// Re-exports from idearium/index.js (the actual IdeaOS implementation).\n// This file was deleted during the audit cleanup but is required by api/index.js.\n// §M1 compliant — no logic lives here, all in ../index.js.\nexport { getIdeaOS, VERSION, NAMESPACE, PORT,\n         IDEA_PHASES, GAP_STATUSES, GAP_SEVERITIES, LINK_TYPES,\n         SNR_WEIGHTS } from '../index.js';"
+}

@@ -1,0 +1,21 @@
+{
+  "id": "chunk-19c07bc9e0fcb8b6",
+  "repository": "nexus-id-repo-3eed3fb0",
+  "file": "244-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-19-nexus-warp-core-gatefusion-js-md.md",
+  "range": {
+    "start_line": 1,
+    "end_line": 88
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "3082c959095c385f9aec4bc444ad1595d2dc8812baa99a87a8078c0be7dd27ae"
+  },
+  "status": "complete",
+  "content": "'use strict';\n/**\n * GateFusion — v1.4 \"gate fusion system.\" Merges an adjacent chain of\n * pure Gates into a single Gate, so Stream.emit()'s recursive dispatch\n * doesn't pay a Map lookup + axiom pass + log-record round trip per\n * intermediate hop for transforms that always fire together anyway.\n *\n * The spec's constraint was \"no shared side effects.\" Gate.transform is\n * already documented core primitive as pure with zero side effects (see\n * core/Gate.js's own header) — so that constraint is Gate's existing\n * contract, not a new check this module invents or verifies. fuseChain\n * does NOT attempt to prove purity at runtime (there is no way to prove\n * that generically); it trusts the same contract every other part of\n * WARP already trusts every Gate to honor, and documents that trust\n * explicitly rather than pretending to enforce it.\n *\n * What IS enforced: adjacency. Gate B only fuses onto Gate A if A's\n * transform can actually produce an event of the type B matches — this\n * module runs each gate's `matches` against a synthetic probe event of\n * every declared handoff type to catch a wrong chain order early,\n * rather than silently fusing gates that were never really adjacent.\n */\nconst { Event } = require('./Event');\nconst { Gate } = require('./Gate');\n\n/**\n * fuseChain(gates, fusedSignature) — gates: ordered array of Gate\n * instances, where gates[i]'s transform is expected to produce events\n * matched by gates[i+1]. Returns one Gate whose transform runs the whole\n * chain internally and returns only the final-stage output events (plus\n * any branch events that don't match the next stage, so nothing produced\n * along the way is silently dropped).\n */\nfunction fuseChain(gates, fusedSignature) {\n  if (!Array.isArray(gates) || gates.length < 2) {\n    throw new Error('[warp/GateFusion] fuseChain requires at least 2 gates');\n  }\n  for (let i = 0; i < gates.length - 1; i++) {\n    if (!(gates[i] instanceof Gate) || !(gates[i + 1] instanceof Gate)) {\n      throw new Error('[warp/GateFusion] fuseChain requires Gate instances');\n    }\n  }\n\n  const fused = new Gate(fusedSignature, {\n    matches: (event) => gates[0].matches(event),\n    transform: (event) => {\n      let frontier = [event];\n      const passthrough = [];\n\n      for (let stage = 0; stage < gates.length; stage++) {\n        const gate = gates[stage];\n        const next = [];\n        for (const e of frontier) {\n          if (!gate.matches(e)) { passthrough.push(e); continue; }\n          const produced = gate.transform(e);\n          const events = produced == null ? [] : (Array.isArray(produced) ? produced : [produced]);\n          next.push(...events);\n        }\n        frontier = next;\n        if (frontier.length === 0) break;\n      }\n\n      return [...passthrough, ...frontier];\n    },\n  });\n\n  fused.fusedFrom = gates.map(g => g.signature); // traceability — a fused gate still says what it's made of\n  return fused;\n}\n\n/**\n * canFuse(gateA, gateB, sampleEventTypes) — best-effort adjacency check.\n * For each declared sample type, run gateA.matches on a probe Event, and\n * if it matches, confirm gateA.transform's contract lines up with\n * gateB.matches on at least one plausible output type. This is a\n * heuristic sanity check, not a proof — see module header.\n */\nfunction canFuse(gateA, gateB, sampleEventTypes = []) {\n  for (const type of sampleEventTypes) {\n    const probe = new Event(type, {});\n    if (gateA.matches(probe)) return true;\n  }\n  // No sample types supplied — fall back to signature-name convention\n  // (best-effort only): can't prove adjacency, say so via null.\n  return sampleEventTypes.length === 0 ? null : false;\n}\n\nmodule.exports = { fuseChain, canFuse };"
+}

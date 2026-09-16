@@ -1,0 +1,21 @@
+{
+  "id": "chunk-63dd8460e6c243e4",
+  "repository": "nexus-id-repo-3eed3fb0",
+  "file": "65-n139-idearium-repo-repos-nexus-id-repo-c2dd91c5-manifest-json.md",
+  "range": {
+    "start_line": 1,
+    "end_line": 14
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "309c298801318b70b3764340c8c436d68afaa7280a8bcc2bc49bdfddf69a3f12"
+  },
+  "status": "complete",
+  "content": "{\n  \"name\": \"test\",\n  \"version\": \"1.0.0\",\n  \"uuid\": \"nexus-project-container-af781eaf\",\n  \"hookId\": \"idearium.project-container:v1:af781eaf\",\n  \"description\": \"Diagnose why the import keeps failing\",\n  \"layer\": \"idearium\",\n  \"repoUuid\": \"nexus-id-repo-c2dd91c5\",\n  \"containerUuid\": \"af781eaf-4dc1-4fca-8598-d3bf359e8034\",\n  \"compartmentId\": \"d5ec5067-dd2a-4f54-bba2-a2b5e84005ca\",\n  \"intentUuid\": \"c35907fe-38c5-4393-8ba1-0976e55c323c\",\n  \"endStateId\": \"es-1789502683464\",\n  \"importedAt\": 1789502709015\n}"
+}

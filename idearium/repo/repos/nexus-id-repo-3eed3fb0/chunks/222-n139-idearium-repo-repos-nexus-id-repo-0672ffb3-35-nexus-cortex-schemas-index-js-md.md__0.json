@@ -1,0 +1,21 @@
+{
+  "id": "chunk-1017a62724a0b6bf",
+  "repository": "nexus-id-repo-3eed3fb0",
+  "file": "222-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-35-nexus-cortex-schemas-index-js-md.md",
+  "range": {
+    "start_line": 1,
+    "end_line": 50
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "77b85c65538271d518e686066d7c71fa0790b797549c1bfa86e73326e2db6598"
+  },
+  "status": "complete",
+  "content": "'use strict';\n// cortex/schemas/index.js — cortex's own, fully sovereign schema registry.\n//\n// §CORRECTED 2026-09-12 — James: \"relevant individual node schemas per\n// system. Each system is sovereign remember that.\" The prior version of\n// this file referenced lib/node-schemas.js at runtime for shared types\n// (SHARED_TYPES + shared.get()) — real, working, but not actually\n// sovereign: cortex still depended on a central module to resolve most of\n// its own types. Every type cortex uses now has its own real, individual\n// file in this folder — a genuine copy, not a pointer. cortex can resolve\n// every one of its own types with zero runtime dependency on\n// lib/node-schemas.js.\n//\n// §HONEST TRADEOFF, NOT HIDDEN — sovereignty over centralization means\n// these copies can drift from lib/node-schemas.js's originals if the\n// canonical shape changes later and this copy isn't re-synced. Same\n// regression this codebase already names for hat/component's own\n// central schema files (lib/node-schemas.js's own header: \"if\n// hat-forge.js's HAT_SCHEMA... change later, these... schema files will\n// silently go stale\"). Real cost of real sovereignty, not concealed.\n\nconst fs = require('fs');\nconst path = require('path');\nconst nodeExport = require('../../lib/node-export.js');\n\nconst SCHEMAS_DIR = __dirname;\n\nfunction loadAll() {\n  const out = {};\n  const files = fs.readdirSync(SCHEMAS_DIR).filter((f) => f.startsWith('schema.'));\n  for (const f of files) {\n    const doc = nodeExport.importFromFile(path.join(SCHEMAS_DIR, f));\n    if (doc.type !== 'schema') {\n      throw new Error(`cortex/schemas/index.js: ${f} has type \"${doc.type}\", expected \"schema\"`);\n    }\n    out[doc.id] = doc.payload;\n  }\n  return out;\n}\n\nconst SCHEMAS = loadAll();\n\nfunction get(type) { return SCHEMAS[type] || null; }\n\n/** list() -> every type cortex owns, all of them real, local files — no shared reference left. */\nfunction list() {\n  return Object.entries(SCHEMAS).map(([type, s]) => ({ type, status: s.status, source: s.source, definedIn: 'cortex/schemas' }));\n}\n\nmodule.exports = { get, list, SCHEMAS, MODULE_ID: 'cortex-schemas', VERSION: '2.0.0' };"
+}

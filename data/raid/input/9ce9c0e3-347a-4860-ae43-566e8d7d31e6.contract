@@ -1,0 +1,47 @@
+envelope: 1
+uuid: nexus-export-contract-9ce9c0e3-347a-4860-ae43-566e8d7d31e6
+type: contract
+id: 9ce9c0e3-347a-4860-ae43-566e8d7d31e6
+context: null
+intent: translate.utl
+summary: null
+system: null
+tags: []
+exported_at: 1789529497869
+source: architect
+occurrences: 1
+firstSeenAt: 1789529497869
+lastSeenAt: 1789529497869
+fingerprint: null
+payload:
+  uuid: 9ce9c0e3-347a-4860-ae43-566e8d7d31e6
+  status: queued
+  intention: translate.utl
+  dir: null
+  language: null
+  stage: queued
+  system: null
+  source: architect
+  sourceDropId: null
+  boundary:
+    key: architect:translate.utl
+    primitive: architect/service.js POST /api/translate/utl
+    invariants: []
+    principles:
+      - §1.2
+      - §5.2
+  file: null
+  title: translate.utl
+  forAgent: null
+  contract:
+    content: 'translate.utl:dangling-hook hook ''loom.hook.declare'' is declared as an INPUT but no wire ever '
+    title: translate.utl
+  dependsOn: []
+  onFail:
+    action: retry
+    maxRetries: 2
+  retryCount: 0
+  compartmentId: null
+  verdict: null
+  createdAt: 1789529497868
+  updatedAt: 1789529497868

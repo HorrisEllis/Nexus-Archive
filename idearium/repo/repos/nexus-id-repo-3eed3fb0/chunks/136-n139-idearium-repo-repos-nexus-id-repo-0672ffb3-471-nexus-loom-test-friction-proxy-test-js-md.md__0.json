@@ -1,0 +1,21 @@
+{
+  "id": "chunk-8869e49f68c617f8",
+  "repository": "nexus-id-repo-3eed3fb0",
+  "file": "136-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-471-nexus-loom-test-friction-proxy-test-js-md.md",
+  "range": {
+    "start_line": 1,
+    "end_line": 56
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "84ec06223da695a268cba3206752045e5cc677b2c982c6aabc05fca08e7ddc7f"
+  },
+  "status": "complete",
+  "content": "'use strict';\n// §loom friction/tension proxy — real HTTP round trip through CA4's connections.js,\n// against both a live stand-in \"kernel\" and a genuinely unreachable one.\nconst assert = require('assert');\nconst path = require('path');\nconst http = require('http');\nlet passed = 0, failed = 0;\nasync function test(id, desc, fn) { try { await fn(); console.log(`  ✓ ${id} ${desc}`); passed++; } catch (e) { console.error(`  ✗ ${id} ${desc}\\n    ${e.message}`); failed++; } }\n\nprocess.env.LOOM_PORT = '13799';\n\n(async () => {\n  await test('T-001', '/api/friction proxies a real stand-in kernel and returns its actual body', async () => {\n    // A minimal stand-in for service/nexus-diagnostic.js's real /friction route —\n    // tests the PROXY, not the kernel's own internals (those are exercised live\n    // by actually booting the real kernel, done manually this session; a unit\n    // test shouldn't require a 2297-line service to be running to pass in CI).\n    const stand_in = http.createServer((req, res) => {\n      if (req.url === '/friction') { res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ ok: true, friction: { testsystem: { friction: 0.42 } } })); return; }\n      res.writeHead(404); res.end();\n    });\n    await new Promise(r => stand_in.listen(17825, '127.0.0.1', r));\n    process.env.DIAGNOSTIC_URL = 'http://127.0.0.1:17825';\n    process.env.LOOM_PORT = '13797';\n    delete require.cache[require.resolve(path.join(__dirname, '../..', 'loom/server.js'))];\n    const loomModule = require(path.join(__dirname, '../..', 'loom/server.js'));\n    await new Promise(r => setTimeout(r, 400));\n    try {\n      const res = await fetch('http://127.0.0.1:13797/api/friction');\n      const body = await res.json();\n      assert.strictEqual(body.ok, true);\n      assert.strictEqual(body.friction.testsystem.friction, 0.42, 'must be the stand-in\\'s real data, not fabricated');\n    } finally {\n      stand_in.close();\n      await new Promise(r => loomModule.server.close(r));\n    }\n  });\n\n  await test('T-002', '/api/friction returns an honest 502 when the diagnostic kernel is unreachable — not a fake 200', async () => {\n    process.env.DIAGNOSTIC_URL = 'http://127.0.0.1:1';   // nothing listens on port 1\n    process.env.LOOM_PORT = '13798';\n    delete require.cache[require.resolve(path.join(__dirname, '../..', 'loom/server.js'))];\n    const loomModule = require(path.join(__dirname, '../..', 'loom/server.js'));\n    await new Promise(r => setTimeout(r, 400));\n    try {\n      const res = await fetch('http://127.0.0.1:13798/api/friction');\n      assert.strictEqual(res.status, 502, 'an unreachable kernel must surface as a real error, not a silent empty success');\n      const body = await res.json();\n      assert.strictEqual(body.ok, false);\n    } finally {\n      await new Promise(r => loomModule.server.close(r));\n    }\n  });\n\n  console.log(`\\n${passed} passed, ${failed} failed`); process.exit(failed ? 1 : 0);\n})();"
+}

@@ -1,0 +1,21 @@
+{
+  "id": "chunk-128cb9eda771d9a5",
+  "repository": "nexus-id-repo-3eed3fb0",
+  "file": "439-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-247-nexus-idearium-data-specs-ac80119a-2d63-420f-86f4-e9d5ef674c12-02-brainos-main-changelog-md-2d13b930-md-md.md",
+  "range": {
+    "start_line": 1,
+    "end_line": 60
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "8e13f72891bf06d11000f50cbb221939c8e9c4975e0618dc50553389e57b3759"
+  },
+  "status": "complete",
+  "content": "---\nchunk_uuid: 2d13b930-a8ed-4ada-a523-6c31458e4589\nspec_uuid: ac80119a-2d63-420f-86f4-e9d5ef674c12\nsection: brainos-main-changelog-md\ntitle: BrainOS-main/CHANGELOG.md\ncomp_id: idearium.spec-engine\nseam_id: idearium.spec-engine:v1:chunk:ac80119a:brainos-main-changelog-md\ncontract_id: spec-contract:ac80119a:brainos-main-changelog-md:2d13b930\nagent: ingest\nmodel: ingest:drop\nstatus: complete\ncompleted_at: 2026-09-03T10:28:01.709Z\n---\n\n# BrainOS — Changelog\n\n## [5.0.0] — 2026-04-12\n\n### Critical Bug Fixes (were causing blank screen / JS failure)\n- **FIXED** Fatal syntax error `const url = ;` in `bayesForceUpdate()` at line 3131 — killed entire script block\n- **FIXED** Duplicate `uid()` declaration — `const` at line 1480 AND `function` at line 3809 — caused `SyntaxError` in strict mode\n- **FIXED** Double `display:none` on `#pipeline-overlay` and `#automation-overlay` — fought JS `display:flex` toggle\n\n### New Modules (v5)\n- **bus.js** — SISO-native typed event bus. All modules now communicate via bus only. Wildcard subscriptions, replay buffer, full audit log.\n- **routing-engine.js** — Agent routing engine. If/then/when/fail condition chains. Timer, cron, heartbeat, CLI, data, intent triggers. Feedback loops. Framework injection. Conversation capture to log.\n- **dns-server.js** — Full DNS server from scratch (UDP/53). Local zone, recursive resolver, blocklist, DDNS, cache. Import blocklists (uBlock/Pi-hole/hosts format).\n- **ddns.js** — Dynamic DNS client. No-port-forward. Cloudflare, No-IP, DynDNS2, internal. Auto-detects public IP change.\n- **firewall.js** — Rule-based firewall engine. IP/CIDR, port, protocol, intent, path, user-agent. JSON filter import with variables, sigmas, deltas, invariants. Windows Defender + Linux UFW sync hooks. Request logging.\n- **reverse-proxy.js** — HTTP/HTTPS reverse proxy. SNI routing. WebSocket tunnel (CONNECT). Firewall middleware hookpoint.\n\n### New Features (BrainOS.html)\n- **NETWORK tab** — DNS server control, DDNS management, firewall rules, reverse proxy config\n- **HELP tab** — Full in-app documentation from README + docs/\n- **JSON filter import** — Import firewall/SNR filters via JSON engine. Variables, sigmas, deltas, invariants. Format documented in help tab.\n- **Conversation logging** — Capture full workflow conversation to structured JSONL log\n- **Integration adapters** — Clocky, Make, n8n, Zapier as first-class pipeline step types\n- **Framework injection** — Inject engine/framework per step in routing workflows\n- **NEXUS Plugin roadmap** — Phase 3 updated: Claude.ai chat listener for each agent chat\n\n### Architecture\n- All modules now emit bus events instead of calling functions directly\n- SISO Core bundled at `src/siso/` (Event, Gate, Stream, StreamLog)\n- CJS wrapper at `src/siso/index.cjs` for Node.js require() compatibility\n\n### Docs\n- Full `README.md` at root\n- `CHANGELOG.md` (this file)\n- `MANIFEST.json` updated with all new module UUIDs\n- `ROADMAP.md` updated through Phase 6\n- Per-module `.md` files in `docs/modules/`\n\n## [4.0.0] — 2026-04-08 (previous)\n- Pipeline canvas, automation tab, Bayesian engine, SNR gate, key manager UI\n- Bridge canvas persistence, host rotation, port registry\n- 364/364 module tests passing\n\n## [3.2.0] — 2026-04-07\n- Phase 1 complete: storage layer, SNR filter v1, crypto engine, key manager, host rotation, port registry\n- 364/364 tests passing"
+}

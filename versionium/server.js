@@ -104,6 +104,17 @@ server.listen(PORT, () => {
     console.warn(`[versionium] legacy data migration failed (non-fatal): ${e.message}`);
   }
 
+  // §GAP V5 CLOSED 2026-09-15 — same idempotent, run-every-boot pattern as
+  // migrate-legacy-data.js above (closes V6). Separate call, separate file:
+  // see migrate-idearium-snapshots.js's own header for why V5 and V6 are
+  // not the same migration despite the shared shape.
+  try {
+    const { migrateIdeariumSnapshots } = require('./lib/migrate-idearium-snapshots.js');
+    migrateIdeariumSnapshots({ log: (msg) => console.log(msg) });
+  } catch (e) {
+    console.warn(`[versionium] idearium snapshot migration failed (non-fatal): ${e.message}`);
+  }
+
   // §VS1 — real cross-process field reader (see this file's own header).
   // A cortex that's unreachable degrades honestly: fieldReader returns
   // null entropy, engine.js's own real "no trigger fires without one"

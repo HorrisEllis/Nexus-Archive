@@ -1,0 +1,47 @@
+envelope: 1
+uuid: nexus-export-contract-348de323-0910-4e93-9022-a05ae361281d
+type: contract
+id: 348de323-0910-4e93-9022-a05ae361281d
+context: null
+intent: translate.utl
+summary: null
+system: null
+tags: []
+exported_at: 1789529682976
+source: architect
+occurrences: 1
+firstSeenAt: 1789529682976
+lastSeenAt: 1789529682976
+fingerprint: null
+payload:
+  uuid: 348de323-0910-4e93-9022-a05ae361281d
+  status: queued
+  intention: translate.utl
+  dir: null
+  language: null
+  stage: queued
+  system: null
+  source: architect
+  sourceDropId: null
+  boundary:
+    key: architect:translate.utl
+    primitive: architect/service.js POST /api/translate/utl
+    invariants: []
+    principles:
+      - §1.2
+      - §5.2
+  file: null
+  title: translate.utl
+  forAgent: null
+  contract:
+    content: 'translate.utl:dangling-hook hook ''nexus.guardian.tool-runtime.import'' is declared as an INPUT '
+    title: translate.utl
+  dependsOn: []
+  onFail:
+    action: retry
+    maxRetries: 2
+  retryCount: 0
+  compartmentId: null
+  verdict: null
+  createdAt: 1789529682976
+  updatedAt: 1789529682976

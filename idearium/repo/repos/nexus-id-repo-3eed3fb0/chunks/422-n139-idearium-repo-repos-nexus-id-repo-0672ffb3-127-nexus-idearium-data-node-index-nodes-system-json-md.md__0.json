@@ -1,0 +1,21 @@
+{
+  "id": "chunk-3df204932242f40e",
+  "repository": "nexus-id-repo-3eed3fb0",
+  "file": "422-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-127-nexus-idearium-data-node-index-nodes-system-json-md.md",
+  "range": {
+    "start_line": 1,
+    "end_line": 1
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "907826f22baca81b7b405005ad92138d1c4b4cfdf4cf329dddec23fdcceb6d35"
+  },
+  "status": "complete",
+  "content": "[{\"id\":\"idearium\",\"uuid\":\"nexus-export-system-idearium\",\"type\":\"system\",\"filePath\":\"/home/claude/work/merged/idearium/data/nodes/system/idearium.system\",\"context\":\"real, checked system record — capability-map.js SYSTEMS map + nexus/autopilot.js kernel defs + idearium/registry-components.js\",\"intent\":null,\"summary\":null,\"system\":\"idearium\",\"tags\":[],\"payload\":{\"id\":\"idearium\",\"hasCapabilities\":true,\"port\":4800,\"spec\":\"idearium/spec/idearium.spec\"},\"exportedAt\":1789250730207,\"updatedAt\":1789253181859,\"_deleted\":false}]"
+}

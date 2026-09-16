@@ -1,153 +1,170 @@
 /**
- * idearium/lib/config.js — idearium.config, MCO-F (idearium-repository-overhaul
- * phasemap §MCO-F_config).
+ * idearium/lib/config.js — idearium.config, the ESM entry point.
  *
  * §BUILT 2026-09-15 — James: "limit 500 for chunks needs to change. have
- * that as an option in the configuration file in idearium." Per the
- * merged phasemap's config_schema, this is the one real, live-adjustable
- * store for idearium.config — not a second env-var-only file next to
- * lib/project-import.config.js (that file's ZIP.maxFiles stays as the
- * deploy-time env-var default/floor; this is the runtime value both it
- * and the drop-ingest chunk cap actually read on every call, so a change
- * here takes effect immediately, no redeploy).
+ * that as an option in the configuration file in idearium."
+ * §EXPANDED 2026-09-15 — James: "500 chunks is too low, make a full
+ * config file for idearium to change those kinds of values." The first
+ * pass held five keys while every other real bound in the import path
+ * stayed hardcoded or env-only in lib/project-import.config.js
+ * (maxBytesPerFile, maxTotalBytes, skipDirs, textExt, the repo storage
+ * dir, the git identity, the compartment budgets) plus the API's own
+ * PORT/BINDING/CHUNK_EVENTS_LIMIT in a second file (idearium/config.js).
+ * "Those kinds of values" is all of them — they are all in the schema
+ * now, and the modules that used to own them read from here.
  *
- * §PERSISTENCE — same seam every other idearium store uses (idearium/lib/db.js
- * -> cortex/memory/jaa-db.js), one singleton row in table 'idearium_config'.
- * §1.2 loud, not silent: an out-of-range set() throws instead of silently
- * clamping or ignoring.
+ * §THIN ON PURPOSE — the schema, the three-layer merge and all the
+ * validation live in idearium/lib/config-core.cjs, NOT here. That file's
+ * own header explains why: lib/project-import.config.js is CJS and
+ * cannot import this ESM module, so putting the logic here would have
+ * forced a second copy on the CJS side, and two readers that disagree
+ * about the same key is precisely the drift this config exists to end.
+ * This module is the ESM face of that shared core, and adds exactly one
+ * thing the core deliberately does not have: the database.
  *
- * §COPILOT-WRITABLE — the schema marks each key copilot_writable or not
- * (ssh_key_path is human-only). set() takes an `actor` ('user'|'copilot'|
- * other agent id) and rejects a copilot actor writing a non-writable key.
- * A human write and a copilot write differ ONLY in that actor field on the
- * returned event — same validation, same persistence, same shape.
+ * §THREE LAYERS, lowest to highest — SCHEMA defaults ->
+ * idearium/idearium.config.json (re-read every call, so an edit needs no
+ * restart) -> the persisted row in JAA table 'idearium_config'. A runtime
+ * set() shadows the file; resetConfig() drops the override so the file
+ * shows through again. describe() reports which layer every key actually
+ * came from, which is what makes a layered config debuggable rather than
+ * mysterious.
+ *
+ * §PERSISTENCE — idearium/lib/db.js -> cortex's JaaStore, one singleton
+ * row, same seam every other idearium store uses.
  */
 
+import fs from 'fs';
 import { loadTable, syncTable } from './db.js';
+import { createRequire } from 'module';
 
-const TABLE = 'idearium_config';
-const ROW_UUID = 'idearium-config-singleton';
+const require = createRequire(import.meta.url);
+const core = require('./config-core.cjs');
 
-// ── schema — mirrors idearium-repository-overhaul-phasemap.spec's
-// MCO-F_config.config_schema.idearium.config exactly ─────────────────────
-const SCHEMA = {
-  chunk_cap:     { default: 500,   min: 1, max: 5000, copilot_writable: true,  type: 'number' },
-  zoom_levels:   { default: 4,     copilot_writable: true,  type: 'number' },
-  snapshot_mode: { default: 'delta', enum: ['full', 'delta'], copilot_writable: true, type: 'string' },
-  auto_phasemap: { default: true,  copilot_writable: true,  type: 'boolean' },
-  cicd: {
-    push_enabled:  { default: false, copilot_writable: true,  type: 'boolean' },
-    pull_enabled:  { default: false, copilot_writable: true,  type: 'boolean' },
-    ssh_key_path:  { default: null,  copilot_writable: false, type: 'string|null' },
-  },
-};
-
-function _defaults() {
-  const out = {};
-  for (const [k, v] of Object.entries(SCHEMA)) {
-    if (k === 'cicd') {
-      out.cicd = {};
-      for (const [ck, cv] of Object.entries(v)) out.cicd[ck] = cv.default;
-    } else {
-      out[k] = v.default;
-    }
-  }
-  return out;
-}
+const { TABLE, ROW_UUID, CONFIG_FILE, SCHEMA, ALIASES } = core;
 
 function _load() {
   const rows = loadTable(TABLE);
-  const row = rows.find((r) => r.uuid === ROW_UUID);
-  // Additive merge over defaults — a schema key added later (or an older
-  // persisted row missing a newer key) never crashes a reader; it just
-  // falls back to that key's own default until explicitly set.
-  const defaults = _defaults();
-  if (!row) return { uuid: ROW_UUID, values: defaults, updatedAt: null, updatedBy: null };
+  const row  = rows.find((r) => r.uuid === ROW_UUID);
+  const persisted = core.foldAliases(row && row.values);
   return {
     uuid: ROW_UUID,
-    values: { ...defaults, ...row.values, cicd: { ...defaults.cicd, ...(row.values && row.values.cicd) } },
-    updatedAt: row.updatedAt || null,
-    updatedBy: row.updatedBy || null,
+    values: core.resolveValues(persisted),
+    _persisted: persisted,
+    updatedAt: (row && row.updatedAt) || null,
+    updatedBy: (row && row.updatedBy) || null,
   };
 }
 
 function _save(state) {
-  syncTable(TABLE, [state], 'uuid');
+  // Only the RUNTIME layer is written back. Persisting the merged result
+  // would freeze today's defaults and file values into the row, so a
+  // later edit to idearium.config.json — or a changed default — would
+  // appear to do nothing forever after the first write. This is the
+  // difference between a config that layers and one that silently
+  // collapses the moment anything sets a key.
+  syncTable(TABLE, [{
+    uuid: ROW_UUID, values: state._persisted,
+    updatedAt: state.updatedAt, updatedBy: state.updatedBy,
+  }], 'uuid');
 }
 
-function _resolve(keyPath) {
-  // 'chunk_cap' -> [SCHEMA.chunk_cap]; 'cicd.push_enabled' -> [SCHEMA.cicd.push_enabled]
-  const parts = String(keyPath).split('.');
-  let node = SCHEMA;
-  for (const p of parts) {
-    node = node && node[p];
-    if (!node) throw new Error(`idearium/lib/config: unknown config key '${keyPath}'`);
-  }
-  return { parts, def: node };
-}
+/** Full current config, all layers merged. */
+export function getConfig() { return _load().values; }
 
-function _getAt(values, parts) {
-  let v = values;
-  for (const p of parts) v = v == null ? undefined : v[p];
-  return v;
-}
-
-function _setAt(values, parts, val) {
-  let node = values;
-  for (let i = 0; i < parts.length - 1; i++) node = node[parts[i]];
-  node[parts[parts.length - 1]] = val;
-}
-
-/** Full current config, e.g. for idearium.config.get with no key. */
-export function getConfig() {
-  return _load().values;
-}
-
-/** One key's current live value — e.g. getValue('chunk_cap'). */
+/**
+ * One key's live value. Accepts a nested path ('chunking.chunk_cap') or
+ * a legacy top-level alias ('chunk_cap') — see core's ALIASES for why
+ * both keep working.
+ */
 export function getValue(keyPath) {
-  const { parts } = _resolve(keyPath);
-  return _getAt(_load().values, parts);
+  const { parts } = core.resolve(keyPath);
+  return core.getAt(_load().values, parts);
 }
 
 /**
- * setConfig(keyPath, value, { actor }) — validates against SCHEMA (type,
- * min/max, enum), enforces copilot_writable, persists, and returns the
- * event idearium.config.set fires. actor defaults to 'user'; anything
- * else (an agent id, 'copilot') is treated as non-human for the
- * copilot_writable check.
+ * setConfig(keyPath, value, { actor }) — validates against the schema
+ * (type, min/max, enum), enforces copilot_writable, persists to the
+ * runtime layer only, and returns the event idearium.config.set fires.
+ * A human write and a copilot write differ ONLY in the actor field.
  */
 export function setConfig(keyPath, value, { actor = 'user' } = {}) {
-  const { parts, def } = _resolve(keyPath);
-  const isHuman = actor === 'user';
-  if (!isHuman && !def.copilot_writable) {
-    throw new Error(`idearium/lib/config: '${keyPath}' is not copilot_writable — human write required`);
-  }
-  if (def.type === 'number') {
-    const n = Number(value);
-    if (!Number.isFinite(n)) throw new Error(`idearium/lib/config: '${keyPath}' must be a number`);
-    if (def.min != null && n < def.min) throw new Error(`idearium/lib/config: '${keyPath}' must be >= ${def.min}`);
-    if (def.max != null && n > def.max) throw new Error(`idearium/lib/config: '${keyPath}' must be <= ${def.max}`);
-    value = n;
-  } else if (def.enum && !def.enum.includes(value)) {
-    throw new Error(`idearium/lib/config: '${keyPath}' must be one of ${def.enum.join(', ')}`);
-  } else if (def.type === 'boolean') {
-    value = !!value;
-  }
+  const { parts, real } = core.resolve(keyPath);
+  const coerced = core.validate(keyPath, value, actor);
 
   const state = _load();
-  _setAt(state.values, parts, value);
+  core.setAt(state._persisted, parts, coerced);
+  core.setAt(state.values, parts, coerced);
   state.updatedAt = Date.now();
   state.updatedBy = actor;
   _save(state);
 
-  const event = {
-    type: 'idearium.config.set', key: keyPath, value, actor,
-    at: state.updatedAt,
+  console.log(`[idearium/config] ${real} -> ${JSON.stringify(coerced)} (actor: ${actor})`);
+  return { type: 'idearium.config.set', key: real, value: coerced, actor, at: state.updatedAt };
+}
+
+/**
+ * resetConfig(keyPath, { actor }) — drops the runtime override so the
+ * file layer (or the default) shows through again. Without this the
+ * runtime layer would be a one-way door: once anything wrote a key, no
+ * edit to idearium.config.json could ever be seen for it again.
+ */
+export function resetConfig(keyPath, { actor = 'user' } = {}) {
+  const { parts, def, real } = core.resolve(keyPath);
+  if (actor !== 'user' && !def.copilot_writable) {
+    throw new Error(`idearium/lib/config: '${keyPath}' is not copilot_writable — human reset required`);
+  }
+  const state = _load();
+  core.deleteAt(state._persisted, parts);
+  state.updatedAt = Date.now();
+  state.updatedBy = actor;
+  _save(state);
+  const effective = core.getAt(_load().values, parts);
+  console.log(`[idearium/config] reset ${real} -> ${JSON.stringify(effective)} (actor: ${actor})`);
+  return { type: 'idearium.config.reset', key: real, value: effective, actor, at: state.updatedAt };
+}
+
+/**
+ * describe() — every key with its value, the layer it actually came
+ * from, its bounds and whether a non-human actor may write it. The
+ * `source` field ('default' | 'file' | 'runtime') is the part that makes
+ * "I changed the file and nothing happened" answerable.
+ */
+export function describe() {
+  const state = _load();
+  const file  = core.fileLayer();
+  const defs  = core.defaults();
+  const keys  = [];
+  (function walk(schema, prefix) {
+    for (const [k, v] of Object.entries(schema)) {
+      const keyPath = prefix ? `${prefix}.${k}` : k;
+      const parts = keyPath.split('.');
+      if (core.isLeaf(v)) {
+        const inRuntime = core.getAt(state._persisted, parts) !== undefined;
+        const inFile    = core.getAt(file, parts) !== undefined;
+        keys.push({
+          key: keyPath,
+          value: core.getAt(state.values, parts),
+          source: inRuntime ? 'runtime' : inFile ? 'file' : 'default',
+          default: core.getAt(defs, parts),
+          type: v.type,
+          min: v.min == null ? null : v.min,
+          max: v.max == null ? null : v.max,
+          enum: v.enum || null,
+          copilot_writable: !!v.copilot_writable,
+        });
+      } else walk(v, keyPath);
+    }
+  })(SCHEMA, '');
+  return {
+    configFile: CONFIG_FILE,
+    configFileExists: fs.existsSync(CONFIG_FILE),
+    configFileError: core.fileError(),
+    updatedAt: state.updatedAt, updatedBy: state.updatedBy,
+    keys,
   };
-  console.log(`[idearium/config] ${keyPath} -> ${JSON.stringify(value)} (actor: ${actor})`);
-  return event;
 }
 
 export const MODULE_ID = 'idearium-config';
-export const VERSION = '1.0.0';
-export { SCHEMA };
+export const VERSION = '2.0.0';
+export { SCHEMA, ALIASES, CONFIG_FILE };

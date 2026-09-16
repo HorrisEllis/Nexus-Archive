@@ -1,0 +1,69 @@
+envelope: 1
+uuid: nexus-export-contract-f6638b9c-5db9-4562-8fb7-b84772d5f474
+type: contract
+id: f6638b9c-5db9-4562-8fb7-b84772d5f474
+context: null
+intent: heal:memory_pressure
+summary: null
+system: null
+tags: []
+exported_at: 1789524222311
+source: self-heal
+occurrences: 1
+firstSeenAt: 1789524222311
+lastSeenAt: 1789524222311
+fingerprint: null
+payload:
+  queueId: f6638b9c-5db9-4562-8fb7-b84772d5f474
+  status: fail
+  verdict: null
+  trace_log:
+    - event: SPAWN
+      data:
+        intent_uuid: add4c73c-6e6d-489e-9ee8-9d2cf29ae277
+        snapId: null
+      ts: 1789524220419
+    - event: EXECUTE_START
+      data: {}
+      ts: 1789524222286
+    - event: EXECUTE_ERROR
+      data:
+        error: >-
+          no real agent response available (forAgent=auto) — guardian unreachable, no connected
+          provider, or an empty response
+      ts: 1789524222302
+    - event: FAIL
+      data:
+        reason: >-
+          execution error: no real agent response available (forAgent=auto) — guardian unreachable,
+          no connected provider, or an empty response
+        violations: null
+        checks: null
+      ts: 1789524222302
+    - event: CRYSTAL_LATTICE_UPDATE
+      data:
+        ran: true
+        lattice:
+          updated: true
+          edge:
+            uuid: 760fdaa1-bf41-445a-95cf-822f56e72445
+            edgeKey: 'CompartmentType:self-heal level-4: memory_pressure.implement->State:Resolution'
+            from: 'CompartmentType:self-heal level-4: memory_pressure.implement'
+            to: State:Resolution
+            weight: 0
+            success_rate: 0
+            failure_rate: 1
+            successCount: 0
+            failureCount: 14
+            totalCount: 14
+            decay_rate: 0.02
+            lastTransitionAt: 1789524222302
+            lastTransitionOutcome: FAIL
+            createdAt: 1789523358200
+            updatedAt: 1789524222302
+            id: 8c0707f9-4bc0-45c2-9101-36691979d323
+        crystal:
+          crystallized: false
+          frequency: 1
+          threshold: 3
+      ts: 1789524222302

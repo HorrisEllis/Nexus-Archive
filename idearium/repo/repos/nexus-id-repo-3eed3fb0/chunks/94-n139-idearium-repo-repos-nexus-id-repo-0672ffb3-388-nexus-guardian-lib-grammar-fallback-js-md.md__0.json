@@ -1,0 +1,21 @@
+{
+  "id": "chunk-3b4a42a729e0dcca",
+  "repository": "nexus-id-repo-3eed3fb0",
+  "file": "94-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-388-nexus-guardian-lib-grammar-fallback-js-md.md",
+  "range": {
+    "start_line": 1,
+    "end_line": 66
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "3132597cf3d55a4db3b6e22d887e20c4bb69c1cc35c06788f0e760e9c089cd2f"
+  },
+  "status": "complete",
+  "content": "'use strict';\n/**\n * lib/grammar-fallback.js — NEXUS Grammar-Driven Command Resolution\n * UUID: nexus-grammar-fallback-v1-0000-4000-0000-000000000001\n * Version: 1.0.0\n *\n * §PHASE-15: guardian's /cli/exec previously had zero grammar-engine\n * involvement — any command outside its hand-coded switch returned a flat\n * \"Unknown command\" error, with no path to anything registered dynamically\n * via component-registry. This is the single, shared resolution step that\n * closes that gap.\n *\n * §5.7 Low coupling, high cohesion: this is the one place that calls\n * grammar-engine.resolve() + component-registry.get() together for CLI\n * dispatch. guardian/server.js calls this; it does not duplicate the logic\n * inline. Any future CLI surface (nexus-repl.js, a future cockpit) should\n * call this too rather than re-implementing it.\n *\n * §5.5 / honesty note: this resolves a command to a component and reports\n * its declared route. It does NOT invoke that route. Nothing else in this\n * codebase dereferences component.route into a real HTTP call yet — that's\n * Phase 40 (Component Descriptor) territory. Building real invocation here\n * would be scope creep dressed up as a fix.\n */\n\nconst ge      = require('../../lib/grammar-engine');\nconst compReg = require('../../lib/component-registry');\n\nconst MODULE_ID = 'grammar-fallback';\nconst VERSION   = '1.0.0';\n\n/**\n * Resolve a raw CLI command string against the live grammar tree.\n * @param {string} raw - the full command line, e.g. \"cortex gaps list\"\n * @param {object} [opts]\n * @param {string} [opts.orchestratorUrl] - defaults to local orchestrator\n * @returns {Promise<{resolved:boolean, componentId?:string, matched?:string,\n *   remainder?:string[], route?:object|null, note?:string}>}\n */\nasync function resolveCommand(raw, opts = {}) {\n  const orchestratorUrl = opts.orchestratorUrl || 'http://127.0.0.1:9000';\n\n  if (!ge.status().ready) {\n    try { await ge.fetch(orchestratorUrl); }\n    catch (_) { return { resolved: false, reason: 'grammar engine unavailable — orchestrator unreachable' }; }\n  }\n\n  const result = ge.resolve(raw);\n  if (!result) return { resolved: false, reason: 'no grammar match' };\n\n  let comp = null;\n  try { comp = compReg.get(result.componentId); } catch (_) { /* registry unreachable — still report the match */ }\n\n  return {\n    resolved: true,\n    componentId: result.componentId,\n    matched: result.matched,\n    remainder: result.remainder,\n    route: comp?.route || null,\n    note: comp?.route\n      ? 'Resolved via grammar engine. Route invocation is not wired yet (Phase 40) — call it directly.'\n      : 'Resolved via grammar engine, but this component has no registered route.',\n  };\n}\n\nmodule.exports = { resolveCommand, MODULE_ID, VERSION };"
+}

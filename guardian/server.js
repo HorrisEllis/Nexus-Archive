@@ -1904,20 +1904,124 @@ function handleExtendedRoutes(req, res, url, method) {
     return true;
   }
 
+  // ── POST /response/:jobId — the real fan-out route ──────────────────────────
+  // §BUILT 2026-09-15 — James: "we need to create another api route to
+  // stream to a .response node in the data folder, clearglass download
+  // manager, the ledger, and the sse, to use as fallback, or synthesize
+  // them, make sure they reach the return point."
+  //
+  // One delivery, four independent sinks (guardian/lib/response-sink.js):
+  // the .response node under data/nodes/response/, the CFR ledger + JAA
+  // artifacts row, Clear Glass's downloads manager, and the real bus
+  // events GET /stream/:jobId already listens for. No sink depends on
+  // another; each reports its own real outcome, and those outcomes are
+  // recorded ON the node so a failure can't vanish into a log line.
+  //
+  // Body: { text, provider?, status?, done?, source?, prompt?, command?,
+  //         chatUrl?, error? }
+  //   done:false  — a real streaming increment. Emits a chunk event, does
+  //                 NOT close the stream, records the node as 'partial'.
+  //                 That status is honest: a stream that was never
+  //                 terminated is partial, not complete.
+  //   done:true   — terminal. Chunk + complete, node written 'complete'.
+  //
+  // Returns 200 when at least one DURABLE sink (node or ledger) accepted
+  // it — the real condition for "this can still be found later" — and 502
+  // when none did, because a delivery nothing kept is a failed delivery
+  // however many events were emitted.
+  if (method==='POST' && url.pathname.startsWith('/response/')) {
+    const jid = url.pathname.split('/')[2];
+    if (!jid) { pRes(res, 400, { ok:false, error:'jobId required in path' }); return true; }
+    bodyJ(req).then(async body => {
+      const b = body || {};
+      const job = jobs.get(jid) || null;
+      const sink = require('./lib/response-sink.js');
+      const result = await sink.deliver({
+        jobId:    jid,
+        // Fall back to the live job's own real provider/command rather
+        // than defaulting to a guess — an unattributable response is
+        // worse than one honestly marked 'unknown'.
+        provider: b.provider || (job && job.provider) || 'unknown',
+        status:   b.status || (b.done === false ? 'partial' : (b.error ? 'error' : 'complete')),
+        text:     b.text || b.response || '',
+        error:    b.error || null,
+        done:     b.done !== false,
+        source:   b.source || 'api',
+        prompt:   b.prompt || (job && job.prompt) || null,
+        command:  b.command || (job && job.command) || null,
+        chatUrl:  b.chatUrl || null,
+      }, { bus, jaa, evLedger: _evLedger, updateJob, jobs });
+      pRes(res, result.ok ? 200 : 502, result);
+    }).catch(e => pRes(res, 500, { ok:false, error:e.message }));
+    return true;
+  }
+
   // ── /response/:jobId — Forge GuardianClient reads completed response ────────
+  // §FIXED 2026-09-15 — the return point used to answer
+  // `{ok:true, status, response:''}` — HTTP 200, ok:true, empty string —
+  // for every job whose response genuinely existed but wasn't in the two
+  // places it looked. That is a silent lie a caller cannot distinguish
+  // from a real empty answer, and it was reachable three real ways: the
+  // jobs Map is in-memory and dies with the process; the artifacts row is
+  // written late in ncp-handler's completion branch, after several things
+  // that can throw; and a SEAM-routed jobId is never in the jobs Map at
+  // all, by design.
+  //
+  // Now: the fast path is unchanged (live job first — same field order,
+  // same shape, no behavior change for the case that already worked), and
+  // when it comes up empty the request falls through to synthesize(),
+  // which searches every durable sink in descending order of
+  // trustworthiness and says which one answered. If nothing holds it, the
+  // response is a real 404 with a real reason — never a 200 with an empty
+  // string.
   if (method==='GET' && url.pathname.startsWith('/response/')) {
     const jid = url.pathname.split('/')[2];
     const job = jobs.get(jid) || jaa.get('jobs', { id: jid });
-    if (!job) { pRes(res, 404, { ok:false, error:'job not found' }); return true; }
-    // Look up stored response text
     const art = (jaa.all('artifacts') || []).find(a => a.jobId === jid);
+    const fast = (job && (job.responseText || job.text)) || art?.content || '';
+
+    if (job && fast) {
+      pRes(res, 200, {
+        ok:       true,
+        jobId:    jid,
+        status:   job.status,
+        response: fast,
+        provider: job.provider,
+        ts:       job.ts,
+        source:   'job',
+      });
+      return true;
+    }
+
+    const sink = require('./lib/response-sink.js');
+    const found = sink.synthesize(jid, { jobs, jaa });
+    if (!found.found) {
+      // A job that exists but has no recorded response is a real, distinct
+      // state from a job that never existed — 404 either way, but the
+      // caller is told which.
+      pRes(res, 404, {
+        ok: false, jobId: jid,
+        error: job ? `job ${jid} exists (status: ${job.status}) but no response was recorded in any sink`
+                   : `job not found: ${jid}`,
+        jobExists: !!job,
+        status: job ? job.status : null,
+        searched: ['job', 'node', 'artifacts', 'chat_log', 'intake'],
+      });
+      return true;
+    }
     pRes(res, 200, {
-      ok:       true,
-      jobId:    jid,
-      status:   job.status,
-      response: job.responseText || job.text || art?.content || '',
-      provider: job.provider,
-      ts:       job.ts,
+      ok: true, jobId: jid,
+      status: found.status,
+      response: found.response,
+      provider: found.provider,
+      ts: job ? job.ts : null,
+      // Which sink actually answered, and whether that copy is capped.
+      // A caller comparing lengths against contentHash needs both.
+      source: found.source,
+      synthesized: true,
+      truncated: !!found.truncated,
+      ...(found.note ? { note: found.note } : {}),
+      ...(found.dropId ? { dropId: found.dropId } : {}),
     });
     return true;
   }

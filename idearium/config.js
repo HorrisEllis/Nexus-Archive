@@ -1,31 +1,60 @@
 /**
- * idearium/config.js — real, distinct config, not inline constants
- * scattered across idearium/api/index.js (imported from ../config.js
- * relative to that file). Matches the pattern established by
- * guardian/config.js, copilot/config.js, cortex/config.js, etc. — but
- * genuinely ESM (export default), not CommonJS, since idearium/
- * package.json declares "type": "module".
+ * idearium/config.js — the API server's own config surface.
  *
- * §SCOPE — PORT, BINDING, CHUNK_EVENTS_LIMIT, CORS are the real,
- * tunable config values. IDEARIUM_DATA_DIR/PROJECTS_DIR left in
- * index.js — structural paths derived from import.meta.url, matching
- * the precedent of leaving ROOT/UI_DIR in place elsewhere. CAPS and
- * ROUTE_CAP deliberately NOT here — real authorization schema (which
- * capability a route requires), not tunable config in the same sense.
+ * §REWIRED 2026-09-15 — James: "make a full config file for idearium to
+ * change those kinds of values." This file used to own PORT, BINDING,
+ * CHUNK_EVENTS_LIMIT and CORS as its own env-var constants, which meant
+ * idearium had two config files that knew nothing about each other:
+ * this one, and idearium/lib/config.js (the live, persisted, copilot-
+ * writable store). Two config files for one system is the same drift
+ * problem in miniature. These four values are now schema keys under
+ * `api.*` in idearium/lib/config-core.cjs, and this module reads them
+ * from there — so they are visible in GET /api/config, changeable in
+ * idearium.config.json, and bounded like everything else.
+ *
+ * §WHAT STAYED HERE — nothing but the read. IDEARIUM_DATA_DIR /
+ * PROJECTS_DIR remain in index.js: structural paths derived from
+ * import.meta.url, not tunables (same precedent as leaving ROOT/UI_DIR in
+ * place elsewhere). CAPS and ROUTE_CAP are deliberately still not config
+ * — they are a real authorization schema (which capability a route
+ * requires), not a value anyone should be able to tune at runtime.
+ *
+ * §READ-ONCE, HONESTLY — PORT and BINDING are read at listen() time and
+ * a running socket does not move when they change. Changing them records
+ * the intent and takes effect on the next start; that is stated plainly
+ * here rather than left for someone to discover. CHUNK_EVENTS_LIMIT and
+ * CORS are read per request, so those are genuinely live.
+ *
+ * §ENV STILL WINS AT BOOT — IDEARIUM_PORT / IDEARIUM_BIND are still
+ * honored above the config for the process-level knobs, because a
+ * supervisor (orchestrator/autopilot) sets those per spawn and must not
+ * be overridden by a persisted row it can't see.
  */
 
+import { getConfig } from './lib/config.js';
+
+const api = () => getConfig().api;
+
 export default {
-  PORT: parseInt(process.env.IDEARIUM_PORT || '4800', 10),
-  BINDING: process.env.IDEARIUM_BIND || '127.0.0.1',
+  get PORT() {
+    return parseInt(process.env.IDEARIUM_PORT || String(api().port), 10);
+  },
+  get BINDING() {
+    return process.env.IDEARIUM_BIND || api().binding;
+  },
 
   // Most-recent-first cap — a 58-chunk spec with retries can generate
   // hundreds of rows; the UI needs a trail, not the full audit log on
   // every request (real reasoning preserved from the source).
-  CHUNK_EVENTS_LIMIT: parseInt(process.env.IDEARIUM_CHUNK_EVENTS_LIMIT || '200', 10),
+  get CHUNK_EVENTS_LIMIT() {
+    return parseInt(process.env.IDEARIUM_CHUNK_EVENTS_LIMIT || String(api().chunk_events_limit), 10);
+  },
 
-  CORS: {
-    'Access-Control-Allow-Origin':  '*',
-    'Access-Control-Allow-Methods': 'GET,POST,PATCH,DELETE,OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+  get CORS() {
+    return {
+      'Access-Control-Allow-Origin':  api().cors_origin,
+      'Access-Control-Allow-Methods': 'GET,POST,PATCH,DELETE,OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+    };
   },
 };

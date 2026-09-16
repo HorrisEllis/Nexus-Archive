@@ -1,0 +1,21 @@
+{
+  "id": "chunk-67bf17232ba6f786",
+  "repository": "nexus-id-repo-3eed3fb0",
+  "file": "88-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-108-nexus-idearium-data-projects-nexus-id-repo-956b011e-01-output-dddd6da0-5027-4de5-9c03-7f71e063d5b9-md-md.md",
+  "range": {
+    "start_line": 1,
+    "end_line": 1
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "117367705c6e7ef5d779dd71de15a95ee62339e1ef635f08246f8e1ec99167e2"
+  },
+  "status": "complete",
+  "content": "{\"status\":\"pass\"}"
+}

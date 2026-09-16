@@ -1,0 +1,21 @@
+{
+  "id": "chunk-07e50f60cfd9e63a",
+  "repository": "nexus-id-repo-3eed3fb0",
+  "file": "168-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-165-nexus-idearium-data-specs-f79e4725-ace3-4d64-a93f-5526a4fa2a97-f79e4725-ace3-4d64-a93f-5526a4fa2a97-spec-md.md",
+  "range": {
+    "start_line": 1,
+    "end_line": 13
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "b905d23668985f74eb5d5dce717aeb3c0d0b246650840b5e7b203be7991577be"
+  },
+  "status": "complete",
+  "content": "spec:\n  name: mco22-test-repo\n  uuid: f79e4725-ace3-4d64-a93f-5526a4fa2a97\n  version: 0.1.0\n  type: codebase\n  phase: 40\n  status: complete\n  agent: auto\n  completed_at: 2026-09-14T22:56:27.259Z\n\n# hello.txt\n\nreal test content"
+}

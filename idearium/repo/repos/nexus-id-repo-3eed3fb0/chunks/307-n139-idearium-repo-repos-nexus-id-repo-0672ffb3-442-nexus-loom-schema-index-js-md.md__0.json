@@ -1,0 +1,21 @@
+{
+  "id": "chunk-8456a013f83273af",
+  "repository": "nexus-id-repo-3eed3fb0",
+  "file": "307-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-442-nexus-loom-schema-index-js-md.md",
+  "range": {
+    "start_line": 1,
+    "end_line": 13
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "018b17063a3e91b4f857adebb2f7d81c6f6bac9b36caf2e523e8f899994221a4"
+  },
+  "status": "complete",
+  "content": "'use strict';\n/**\n * loom/schema/index.js — public surface of Phase 131.\n * comp_id: nexus.loom.schema (entry point)\n *\n * Everything CLI (Phase 132) and API (Phase 133-adjacent, per the stated\n * order CLI-then-API) will call lives behind this one export. Neither\n * layer touches gates.js, axioms.js, or registry.js directly.\n */\nconst { LoomDriver } = require('./driver');\nconst definitions = require('./definitions');\n\nmodule.exports = { LoomDriver, ...definitions };"
+}

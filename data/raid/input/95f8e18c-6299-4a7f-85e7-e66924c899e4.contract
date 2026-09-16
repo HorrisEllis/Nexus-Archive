@@ -1,0 +1,47 @@
+envelope: 1
+uuid: nexus-export-contract-95f8e18c-6299-4a7f-85e7-e66924c899e4
+type: contract
+id: 95f8e18c-6299-4a7f-85e7-e66924c899e4
+context: null
+intent: translate.utl
+summary: null
+system: null
+tags: []
+exported_at: 1789524242069
+source: architect
+occurrences: 1
+firstSeenAt: 1789524242069
+lastSeenAt: 1789524242069
+fingerprint: null
+payload:
+  uuid: 95f8e18c-6299-4a7f-85e7-e66924c899e4
+  status: queued
+  intention: translate.utl
+  dir: null
+  language: null
+  stage: queued
+  system: null
+  source: architect
+  sourceDropId: null
+  boundary:
+    key: architect:translate.utl
+    primitive: architect/service.js POST /api/translate/utl
+    invariants: []
+    principles:
+      - §1.2
+      - §5.2
+  file: null
+  title: translate.utl
+  forAgent: null
+  contract:
+    content: translate.utl:dangling-hook hook 'nexus.lib.component-ledger.import' is declared as an INPUT b
+    title: translate.utl
+  dependsOn: []
+  onFail:
+    action: retry
+    maxRetries: 2
+  retryCount: 0
+  compartmentId: null
+  verdict: null
+  createdAt: 1789524242069
+  updatedAt: 1789524242069

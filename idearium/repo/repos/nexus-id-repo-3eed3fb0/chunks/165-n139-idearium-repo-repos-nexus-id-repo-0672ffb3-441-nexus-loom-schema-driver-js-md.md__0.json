@@ -1,0 +1,21 @@
+{
+  "id": "chunk-7ef5e13bbf4bcf6b",
+  "repository": "nexus-id-repo-3eed3fb0",
+  "file": "165-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-441-nexus-loom-schema-driver-js-md.md",
+  "range": {
+    "start_line": 1,
+    "end_line": 100
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "e7dd42bbb2b4d6368cbd920000a805e0cef8266665a40aa40ba804fa8281e498"
+  },
+  "status": "complete",
+  "content": "'use strict';\n/**\n * loom/schema/driver.js — the one function outside code calls: declare().\n * comp_id: nexus.loom.driver\n * UUID: nexus-loom-driver-v1-0000-2026-0701-jamesbrooks-001\n *\n * Wires the four Gates + five Axioms into a real Warp Stream+StreamLog,\n * emits the declaration, and persists whatever the Gate legitimately\n * produced to the disk-first LoomRegistry. This is CLI/API's future\n * entry point (Phase 132/133) — those layers call declare(), they don't\n * reimplement any of this.\n *\n * Why a Gate's transform() is called directly here, not only reached\n * via stream.emit(): Stream.emit() is void — it recurses internally and\n * returns nothing, by design (Warp's Stream, like SISO's, drives a\n * pipeline, it doesn't hand results back to the caller). We still route\n * every declaration through stream.emit() first, for the real axiom-\n * checked, logged, audited path — rejected declarations stop there and\n * never reach transform(). Only for a declaration that already passed\n * every hard axiom do we call gate.transform(event) directly to obtain\n * its output for persistence. This is safe specifically because\n * Gate.transform is guaranteed pure (\"same input -> same output,\n * always\" — Warp's own design law): calling it a second time after\n * stream.emit() already called it once produces byte-identical output,\n * so there is no double-effect, only a double-computation of a pure\n * function. No warp/core file is modified to make this work.\n */\nconst { Stream, StreamLog } = require('../../warp/core');\nconst { Event } = require('../../warp/core');\nconst { LoomRegistry } = require('./registry');\nconst { makeLoomAxioms } = require('./axioms');\nconst {\n  componentDeclareGate, seamDeclareGate, hookDeclareGate, wireDeclareGate, concernDeclareGate,\n} = require('./gates');\n\nconst KIND_TO_GATE = {\n  component: componentDeclareGate,\n  seam: seamDeclareGate,\n  hook: hookDeclareGate,\n  wire: wireDeclareGate,\n  concern: concernDeclareGate,\n};\n\nclass LoomDriver {\n  constructor({ dataDir = null } = {}) {\n    this.registry = new LoomRegistry({ dataDir });\n    this.log = new StreamLog();\n    this.stream = new Stream({ log: this.log, axioms: makeLoomAxioms(this.registry) });\n    for (const gate of Object.values(KIND_TO_GATE)) this.stream.register(gate);\n  }\n\n  /**\n   * declare(kind, payload) -> { ok, stored?, rejected?, reason? }\n   * kind: 'component' | 'seam' | 'hook' | 'wire'\n   */\n  declare(kind, payload) {\n    if (!KIND_TO_GATE[kind]) {\n      throw new Error(`[loom/driver] unknown declaration kind: ${kind}`);\n    }\n    const gate = KIND_TO_GATE[kind];\n    const event = new Event(`loom.${kind}.declare`, payload);\n\n    // Real axiom-checked, logged path first.\n    const preCheck = this.stream._checkAxioms(event, gate);\n    this.stream.emit(event);\n\n    if (!preCheck.ok) {\n      return { ok: false, reason: 'axiom-rejected', failures: preCheck.failures };\n    }\n\n    // Axioms passed — obtain the Gate's pure output for persistence.\n    const produced = gate.transform(event);\n    const registered = produced.find(e => e.type === `loom.${kind}.registered`);\n    const rejected = produced.find(e => e.type === `loom.${kind}.rejected`);\n\n    if (rejected) {\n      return { ok: false, reason: 'schema-rejected', detail: rejected.data };\n    }\n    if (!registered) {\n      return { ok: false, reason: 'no-output-produced' };\n    }\n\n    const stored = this.registry.add(kind, registered.data);\n    return { ok: true, stored };\n  }\n\n  graph() {\n    return this.registry.graph();\n  }\n\n  rejectedLog() {\n    return [...this.stream.rejected];\n  }\n\n  auditTrail() {\n    return this.log.entries();\n  }\n}\n\nmodule.exports = { LoomDriver };"
+}

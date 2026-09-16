@@ -1,0 +1,90 @@
+envelope: 1
+uuid: nexus-export-contract-3b7d73d4-45af-43aa-8698-3ec9984593d6
+type: contract
+id: 3b7d73d4-45af-43aa-8698-3ec9984593d6
+context: null
+intent: heal:memory_pressure
+summary: null
+system: null
+tags: []
+exported_at: 1789524298694
+source: self-heal
+occurrences: 1
+firstSeenAt: 1789524298694
+lastSeenAt: 1789524298694
+fingerprint: null
+payload:
+  queueId: 3b7d73d4-45af-43aa-8698-3ec9984593d6
+  status: fail
+  verdict: null
+  trace_log:
+    - event: SPAWN
+      data:
+        intent_uuid: f9ec9d0c-7109-4bf5-9154-9473950fb62c
+        snapId: 24497cc4-56a9-4b24-b60d-a43903e582ba
+      ts: 1789524295675
+    - event: EXECUTE_START
+      data: {}
+      ts: 1789524297166
+    - event: EXECUTE_ERROR
+      data:
+        error: >-
+          no real agent response available (forAgent=auto) — guardian unreachable, no connected
+          provider, or an empty response
+      ts: 1789524297171
+    - event: FAIL
+      data:
+        reason: >-
+          execution error: no real agent response available (forAgent=auto) — guardian unreachable,
+          no connected provider, or an empty response
+        violations: null
+        checks: null
+      ts: 1789524297171
+    - event: REWOUND
+      data:
+        snapId: 24497cc4-56a9-4b24-b60d-a43903e582ba
+      ts: 1789524298692
+    - event: CRYSTAL_LATTICE_UPDATE
+      data:
+        ran: true
+        lattice:
+          updated: true
+          edge:
+            uuid: 760fdaa1-bf41-445a-95cf-822f56e72445
+            edgeKey: 'CompartmentType:self-heal level-4: memory_pressure.implement->State:Resolution'
+            from: 'CompartmentType:self-heal level-4: memory_pressure.implement'
+            to: State:Resolution
+            weight: 0
+            success_rate: 0
+            failure_rate: 1
+            successCount: 0
+            failureCount: 19
+            totalCount: 19
+            decay_rate: 0.02
+            lastTransitionAt: 1789524298692
+            lastTransitionOutcome: FAIL
+            createdAt: 1789523358200
+            updatedAt: 1789524298692
+            id: 8c0707f9-4bc0-45c2-9101-36691979d323
+        crystal:
+          crystallized: true
+          crystal:
+            uuid: 268445dd-6a61-421a-9fec-560e7ca026b9
+            kind: CREATE_NEGATIVE_CRYSTAL
+            pattern_signature: 'self-heal level-4: memory_pressure:implement:FAIL'
+            entry_conditions:
+              domain: 'self-heal level-4: memory_pressure'
+              verb: implement
+              risk_ceiling: null
+            exit_conditions:
+              outcome: FAIL
+            success_probability: 0
+            failure_boundaries:
+              - FAIL
+            support_paths:
+              - 8aac840d-782f-49a4-b089-6ac013574d8b
+            usage_count: 1
+            pattern_frequency_at_creation: 3
+            source: crystal-lattice
+            ts: 1789524298692
+      ts: 1789524298694

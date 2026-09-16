@@ -1,0 +1,3011 @@
+{
+  "repository": "nexus-id-repo-3eed3fb0",
+  "generatedAt": 1789518561398,
+  "fileCount": 500,
+  "byLanguage": {
+    "markdown": 500
+  },
+  "failedCount": 0,
+  "tree": {
+    "00-n139-warp-spec-warp-spec.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 457
+    },
+    "01-n139-warp-test-v1-4-additions-test-js.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 265
+    },
+    "02-n139-warp-test-dispatch-test-js.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 131
+    },
+    "03-n139-warp-test-digest-regression-test-js.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 45
+    },
+    "04-n139-warp-test-core-test-js.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 109
+    },
+    "05-n139-warp-test-v1-1-0-additions-test-js.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 106
+    },
+    "06-n139-warp-dispatch-digest-js.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 40
+    },
+    "07-n139-warp-dispatch-deltacache-js.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 143
+    },
+    "08-n139-warp-dispatch-cascade-js.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 113
+    },
+    "09-n139-warp-dispatch-canonicalize-js.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 86
+    },
+    "10-n139-warp-dispatch-index-js.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 230
+    },
+    "11-n139-warp-dispatch-benchmark-js.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 225
+    },
+    "12-n139-warp-dispatch-pregen-js.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 52
+    },
+    "13-n139-warp-dispatch-population-js.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 180
+    },
+    "14-n139-warp-core-streamlog-js.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 111
+    },
+    "15-n139-warp-core-stream-js.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 298
+    },
+    "16-n139-warp-core-axiom-js.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 45
+    },
+    "17-n139-warp-core-event-js.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 27
+    },
+    "18-n139-warp-core-index-js.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 9
+    },
+    "19-n139-warp-core-gatefusion-js.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 88
+    },
+    "20-n139-warp-core-gate-js.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 57
+    },
+    "21-n139-warp-manifest-json.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 11
+    },
+    "22-n139-warp-plugins-scorer-default-js.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 38
+    },
+    "23-n139-warp-plugins-crystallizer-flatfile-js.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 58
+    },
+    "24-n139-tablet-index-html.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 437
+    },
+    "25-n139-tablet-homepage-html.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 445
+    },
+    "26-n139-tablet-map3d-html.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 172
+    },
+    "27-n139-nexus-node-taxonomy-session-readme-2026-09-12-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 95
+    },
+    "28-n139-idearium-changes-2026-07-11-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 91
+    },
+    "29-n139-idearium-ui-index-html.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 1650
+    },
+    "30-n139-idearium-ui-js-app-js.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 1760
+    },
+    "31-n139-idearium-spec-idearium-spec.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 125
+    },
+    "32-n139-idearium-spec-idearium-node-taxonomy-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 18
+    },
+    "33-n139-idearium-spec-nexus-repository-system-spec.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 541
+    },
+    "34-n139-idearium-interaction-contract-json.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 410
+    },
+    "35-n139-idearium-spec-engine-warp-build-dispatch-js.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 182
+    },
+    "36-n139-idearium-spec-engine-templates-js.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 282
+    },
+    "37-n139-idearium-spec-engine-guardian-extract-js.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 88
+    },
+    "38-n139-idearium-spec-engine-templates-event-system-spec.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 362
+    },
+    "39-n139-idearium-spec-engine-templates-minimal-kernel-spec.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 76
+    },
+    "40-n139-idearium-spec-engine-templates-schemas-spec.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 49
+    },
+    "41-n139-idearium-spec-engine-templates-axioms-spec.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 70
+    },
+    "42-n139-idearium-spec-engine-templates-genesis-spec.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 611
+    },
+    "43-n139-idearium-spec-engine-templates-api-service-spec.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 167
+    },
+    "44-n139-idearium-spec-engine-templates-plugin-runtime-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 22
+    },
+    "45-n139-idearium-spec-engine-templates-architecture-spec.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 61
+    },
+    "46-n139-idearium-spec-engine-templates-compartments-spec.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 69
+    },
+    "47-n139-idearium-spec-engine-templates-ai-agent-system-spec.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 45
+    },
+    "48-n139-idearium-spec-engine-templates-checklists-spec.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 63
+    },
+    "49-n139-idearium-spec-engine-blocks-yaml.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 64
+    },
+    "50-n139-idearium-spec-engine-index-js.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 1350
+    },
+    "51-n139-idearium-spec-engine-chunk-dispatch-js.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 278
+    },
+    "52-n139-idearium-schemas-interaction-contract-json.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 143
+    },
+    "53-n139-idearium-schemas-index-js.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 46
+    },
+    "54-n139-idearium-copilot-adapter-index-js.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 137
+    },
+    "55-n139-idearium-agent-suite-index-js.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 379
+    },
+    "56-n139-idearium-registry-components-js.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 105
+    },
+    "57-n139-idearium-api-index-js.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 2742
+    },
+    "58-n139-idearium-test-e2e-pipeline-test-js.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 122
+    },
+    "59-n139-idearium-repo-repos-nexus-id-repo-c2dd91c5-07-ui-import-project-import-project-css-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 239
+    },
+    "60-n139-idearium-repo-repos-nexus-id-repo-c2dd91c5-06-idearium-ui-js-app-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 1760
+    },
+    "61-n139-idearium-repo-repos-nexus-id-repo-c2dd91c5-02-lib-zip-ingest-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 95
+    },
+    "62-n139-idearium-repo-repos-nexus-id-repo-c2dd91c5-00-lib-project-container-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 371
+    },
+    "63-n139-idearium-repo-repos-nexus-id-repo-c2dd91c5-01-lib-project-import-config-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 112
+    },
+    "64-n139-idearium-repo-repos-nexus-id-repo-c2dd91c5-04-idearium-repo-index-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 496
+    },
+    "65-n139-idearium-repo-repos-nexus-id-repo-c2dd91c5-manifest-json.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 14
+    },
+    "66-n139-idearium-repo-repos-nexus-id-repo-c2dd91c5-03-idearium-api-index-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 2622
+    },
+    "67-n139-idearium-repo-repos-nexus-id-repo-c2dd91c5-08-ui-import-project-import-project-html-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 276
+    },
+    "68-n139-idearium-repo-repos-nexus-id-repo-c2dd91c5-project-json.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 8
+    },
+    "69-n139-idearium-repo-repos-nexus-id-repo-c2dd91c5-05-idearium-ui-index-html-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 1650
+    },
+    "70-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-151-nexus-idearium-data-specs-a434ae13-9e53-4e45-be1b-7d31929df2d4-08-brainos-main-account-manager-js-ddf0f871-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 103
+    },
+    "71-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-172-nexus-idearium-data-specs-7cdb7374-6f0b-44db-a075-4634f21d4196-7cdb7374-6f0b-44db-a075-4634f21d4196-spec-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 13
+    },
+    "72-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-86-nexus-idearium-spec-engine-templates-genesis-spec-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 611
+    },
+    "73-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-329-nexus-idearium-package-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 4
+    },
+    "74-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-113-nexus-idearium-data-projects-nexus-id-repo-1886b8cb-05-events-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 1
+    },
+    "75-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-452-nexus-loom-spec-loom-node-taxonomy-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 22
+    },
+    "76-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-189-nexus-idearium-data-specs-78a72e70-56a9-4c94-987f-c7285f1b1de2-78a72e70-56a9-4c94-987f-c7285f1b1de2-spec-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 1768
+    },
+    "77-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-446-nexus-loom-schema-hook-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 38
+    },
+    "78-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-395-nexus-guardian-lib-response-watchdog-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 245
+    },
+    "79-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-338-nexus-guardian-userscript-perplexity-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 927
+    },
+    "80-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-217-nexus-idearium-data-specs-22c28fe5-6df0-4898-93db-1fee3fb79f3f-manifest-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 349
+    },
+    "81-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-159-nexus-idearium-data-specs-a434ae13-9e53-4e45-be1b-7d31929df2d4-16-brainos-main-ddns-js-8c408b75-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 139
+    },
+    "82-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-464-nexus-loom-scanners-stub-finder-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 161
+    },
+    "83-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-262-nexus-idearium-data-specs-ae44a65d-578a-47ec-ad5f-14208c07312e-manifest-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 337
+    },
+    "84-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-135-nexus-idearium-data-specs-a4ec50b2-d420-4a54-9cb0-e3d1c8c6ff92-07-failure-modes-e2864708-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "85-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-351-nexus-guardian-ui-agents-mistral-index-html-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 288
+    },
+    "86-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-240-nexus-idearium-data-specs-ac80119a-2d63-420f-86f4-e9d5ef674c12-06-brainos-main-readme-md-851d5511-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 42
+    },
+    "87-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-32-nexus-cortex-snapshot-index-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 477
+    },
+    "88-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-108-nexus-idearium-data-projects-nexus-id-repo-956b011e-01-output-dddd6da0-5027-4de5-9c03-7f71e063d5b9-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 1
+    },
+    "89-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-264-nexus-idearium-data-specs-ae44a65d-578a-47ec-ad5f-14208c07312e-02-axioms-750b1cb6-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "90-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-47-nexus-cortex-tools-table-materializer-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 180
+    },
+    "91-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-177-nexus-idearium-data-specs-9e4af1ce-b54e-4a7c-855f-f6e9f15b4444-manifest-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 67
+    },
+    "92-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-307-nexus-idearium-data-specs-62e3aea3-dfe5-44d5-b1d8-3b685ec0f162-02-axioms-21088b27-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "93-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-167-nexus-idearium-data-specs-c9276ac2-e37a-4419-a187-c4ecfa2b884a-01-output-dddd6da0-5027-4de5-9c03-7f71e063d5b9-023443e0-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 15
+    },
+    "94-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-388-nexus-guardian-lib-grammar-fallback-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 66
+    },
+    "95-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-16-nexus-warp-core-axiom-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 45
+    },
+    "96-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-414-nexus-orchestrator-event-taxonomy-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 52
+    },
+    "97-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-426-nexus-orchestrator-lib-autonomous-loop-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 545
+    },
+    "98-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-41-nexus-cortex-self-heal-fault-taxonomy-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 199
+    },
+    "99-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-354-nexus-guardian-ui-agents-claude-index-html-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 315
+    },
+    "100-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-457-nexus-loom-scanners-wiring-gaps-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 102
+    },
+    "101-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-432-nexus-orchestrator-lib-ui-registry-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 257
+    },
+    "102-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-208-nexus-idearium-data-specs-f2792648-ed83-48c7-a47e-f94683c1b12a-02-axioms-e02ae0fc-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "103-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-75-nexus-idearium-ui-js-app-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 1613
+    },
+    "104-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-15-nexus-warp-core-stream-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 298
+    },
+    "105-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-55-nexus-cortex-core-raid-officiator-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 317
+    },
+    "106-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-483-nexus-loom-data-node-index-nodes-capability-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 1
+    },
+    "107-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-422-nexus-orchestrator-lib-sigma-compaction-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 145
+    },
+    "108-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-269-nexus-idearium-data-specs-b91469e2-e515-4e69-9d0c-7913d883ae3b-02-axioms-0be767eb-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "109-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-129-nexus-idearium-data-specs-a4ec50b2-d420-4a54-9cb0-e3d1c8c6ff92-a4ec50b2-d420-4a54-9cb0-e3d1c8c6ff92-spec-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 77
+    },
+    "110-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-409-nexus-skills-nexus-session-changelog-skill-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 188
+    },
+    "111-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-343-nexus-guardian-memory-store-chat-log-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 1
+    },
+    "112-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-365-nexus-guardian-event-taxonomy-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 117
+    },
+    "113-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-306-nexus-idearium-data-specs-62e3aea3-dfe5-44d5-b1d8-3b685ec0f162-manifest-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 346
+    },
+    "114-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-316-nexus-idearium-data-specs-686d8642-3f00-4754-b1c1-3fa8442980be-03-schema-fe61bea3-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "115-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-119-nexus-idearium-data-projects-nexus-id-repo-1886b8cb-02-axioms-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 1
+    },
+    "116-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-424-nexus-orchestrator-lib-mcp-tools-tokensave-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 234
+    },
+    "117-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-102-nexus-idearium-test-e2e-pipeline-test-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 122
+    },
+    "118-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-336-nexus-guardian-jaa-store-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 714
+    },
+    "119-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-361-nexus-guardian-userscript-memory-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 299
+    },
+    "120-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-482-nexus-loom-data-node-index-settings-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 1
+    },
+    "121-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-375-nexus-guardian-data-node-index-nodes-intent-ledger-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 1
+    },
+    "122-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-297-nexus-idearium-data-specs-51e26753-c339-404f-9e69-399a09faef36-manifest-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 337
+    },
+    "123-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-25-nexus-tablet-homepage-html-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 445
+    },
+    "124-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-484-nexus-loom-data-node-index-nodes-command-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 1
+    },
+    "125-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-493-nexus-loom-maps-observability-map-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 227
+    },
+    "126-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-425-nexus-orchestrator-lib-contract-handshake-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 240
+    },
+    "127-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-176-nexus-idearium-data-specs-9e4af1ce-b54e-4a7c-855f-f6e9f15b4444-9e4af1ce-b54e-4a7c-855f-f6e9f15b4444-spec-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 13
+    },
+    "128-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-70-nexus-cortex-memory-table-deduplicator-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 262
+    },
+    "129-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-54-nexus-cortex-core-raid-snr-filter-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 167
+    },
+    "130-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-355-nexus-guardian-spec-guardian-node-taxonomy-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 47
+    },
+    "131-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-160-nexus-idearium-data-specs-a434ae13-9e53-4e45-be1b-7d31929df2d4-02-brainos-main-changelog-md-5c4b7c3c-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 60
+    },
+    "132-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-335-nexus-guardian-api-dispatch-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 285
+    },
+    "133-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-112-nexus-idearium-data-projects-nexus-id-repo-1886b8cb-01-purpose-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 1
+    },
+    "134-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-73-nexus-idearium-changes-2026-07-11-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 91
+    },
+    "135-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-144-nexus-idearium-data-specs-a434ae13-9e53-4e45-be1b-7d31929df2d4-03-brainos-main-manifest-json-3fec9a1a-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 124
+    },
+    "136-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-471-nexus-loom-test-friction-proxy-test-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 56
+    },
+    "137-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-175-nexus-idearium-data-specs-9e4af1ce-b54e-4a7c-855f-f6e9f15b4444-00-contract-md-3cb0e7c1-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 15
+    },
+    "138-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-87-nexus-idearium-spec-engine-templates-api-service-spec-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 167
+    },
+    "139-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-224-nexus-idearium-data-specs-0202f237-e051-4102-adf0-6fd8511d082d-manifest-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 346
+    },
+    "140-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-121-nexus-idearium-data-projects-nexus-id-repo-1886b8cb-08-build-order-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 1
+    },
+    "141-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-103-nexus-idearium-repo-watcher-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 177
+    },
+    "142-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-400-nexus-guardian-userscript-gemini-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 906
+    },
+    "143-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-474-nexus-loom-test-contracts-test-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 163
+    },
+    "144-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-243-nexus-idearium-data-specs-ac80119a-2d63-420f-86f4-e9d5ef674c12-11-brainos-main-agent-registry-js-31067c81-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 141
+    },
+    "145-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-282-nexus-idearium-data-specs-f3f86309-e803-4bb7-b907-1f73fe014b78-f3f86309-e803-4bb7-b907-1f73fe014b78-spec-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 77
+    },
+    "146-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-458-nexus-loom-scanners-event-taxonomy-map-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 155
+    },
+    "147-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-381-nexus-guardian-nexus-hey-claude-user-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 2729
+    },
+    "148-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-154-nexus-idearium-data-specs-a434ae13-9e53-4e45-be1b-7d31929df2d4-06-brainos-main-readme-md-4c3b13fc-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 42
+    },
+    "149-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-74-nexus-idearium-ui-index-html-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 1600
+    },
+    "150-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-389-nexus-guardian-lib-ncp-dispatch-target-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 83
+    },
+    "151-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-235-nexus-idearium-data-specs-2afd0854-b9a7-41f2-8af6-977204afd144-01-purpose-62a698a7-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "152-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-492-nexus-loom-maps-session-2026-08-14-map-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 472
+    },
+    "153-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-21-nexus-warp-manifest-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 11
+    },
+    "154-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-197-nexus-idearium-data-specs-24478305-8a62-438b-ba47-f3b04c7d07f3-03-schema-2858115d-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "155-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-346-nexus-guardian-memory-store-ledger-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 1
+    },
+    "156-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-293-nexus-idearium-data-specs-51e26753-c339-404f-9e69-399a09faef36-03-schema-8127a4d2-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "157-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-98-nexus-idearium-copilot-adapter-index-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 137
+    },
+    "158-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-277-nexus-idearium-data-specs-18e47204-b11f-4689-af6f-6ff34fa36219-manifest-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 335
+    },
+    "159-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-433-nexus-orchestrator-lib-peer-relay-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 224
+    },
+    "160-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-390-nexus-guardian-lib-ncp-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 514
+    },
+    "161-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-436-nexus-orchestrator-orchestrator-config-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 78
+    },
+    "162-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-201-nexus-idearium-data-specs-24478305-8a62-438b-ba47-f3b04c7d07f3-05-events-78595326-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "163-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-50-nexus-cortex-core-raid-context-gate-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 145
+    },
+    "164-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-111-nexus-idearium-data-projects-nexus-id-repo-63322320-00-contract-md-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 1
+    },
+    "165-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-441-nexus-loom-schema-driver-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 100
+    },
+    "166-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-210-nexus-idearium-data-specs-f2792648-ed83-48c7-a47e-f94683c1b12a-manifest-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 346
+    },
+    "167-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-128-nexus-idearium-data-node-index-nodes-capability-ledger-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 1
+    },
+    "168-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-165-nexus-idearium-data-specs-f79e4725-ace3-4d64-a93f-5526a4fa2a97-f79e4725-ace3-4d64-a93f-5526a4fa2a97-spec-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 13
+    },
+    "169-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-357-nexus-guardian-agents-index-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 514
+    },
+    "170-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-429-nexus-orchestrator-lib-mcp-stdio-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 96
+    },
+    "171-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-374-nexus-guardian-data-node-index-nodes-system-ledger-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 1
+    },
+    "172-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-313-nexus-idearium-data-specs-b245418c-aa33-4f25-ac75-5d84192bbeb7-manifest-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 67
+    },
+    "173-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-66-nexus-cortex-memory-bep-lookup-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 51
+    },
+    "174-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-319-nexus-idearium-data-specs-686d8642-3f00-4754-b1c1-3fa8442980be-01-purpose-5c0ab770-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "175-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-248-nexus-idearium-data-specs-ac80119a-2d63-420f-86f4-e9d5ef674c12-13-brainos-main-bridge-canvas-persistence-js-6209a763-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 119
+    },
+    "176-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-31-nexus-cortex-spec-cortex-spec-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 291
+    },
+    "177-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-481-nexus-loom-data-node-index-nodes-command-ledger-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 1
+    },
+    "178-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-273-nexus-idearium-data-specs-b91469e2-e515-4e69-9d0c-7913d883ae3b-04-api-6a370af8-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "179-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-383-nexus-guardian-lib-gap-hunter-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 21
+    },
+    "180-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-216-nexus-idearium-data-specs-22c28fe5-6df0-4898-93db-1fee3fb79f3f-00-meta-7297b4b7-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 15
+    },
+    "181-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-366-nexus-guardian-userscripts-yaml-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 168
+    },
+    "182-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-69-nexus-cortex-memory-tiers-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 122
+    },
+    "183-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-255-nexus-idearium-data-specs-ac80119a-2d63-420f-86f4-e9d5ef674c12-16-brainos-main-ddns-js-958ee399-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 139
+    },
+    "184-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-272-nexus-idearium-data-specs-b91469e2-e515-4e69-9d0c-7913d883ae3b-manifest-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 335
+    },
+    "185-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-360-nexus-guardian-spec-namer-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 21
+    },
+    "186-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-166-nexus-idearium-data-specs-c9276ac2-e37a-4419-a187-c4ecfa2b884a-manifest-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 97
+    },
+    "187-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-460-nexus-loom-scanners-dangling-report-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 107
+    },
+    "188-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-478-nexus-loom-doc-generator-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 115
+    },
+    "189-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-38-nexus-cortex-contract-index-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 133
+    },
+    "190-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-53-nexus-cortex-core-raid-envelope-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 86
+    },
+    "191-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-206-nexus-idearium-data-specs-f2792648-ed83-48c7-a47e-f94683c1b12a-07-failure-modes-8b185a2c-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "192-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-134-nexus-idearium-data-specs-a4ec50b2-d420-4a54-9cb0-e3d1c8c6ff92-04-api-e8304485-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "193-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-44-nexus-cortex-versionium-causality-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 133
+    },
+    "194-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-96-nexus-idearium-schemas-interaction-contract-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 143
+    },
+    "195-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-268-nexus-idearium-data-specs-0135abb2-d066-494b-8185-7261f7450dd2-0135abb2-d066-494b-8185-7261f7450dd2-spec-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 13
+    },
+    "196-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-449-nexus-loom-seed-2026-07-11-session-wires-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 166
+    },
+    "197-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-148-nexus-idearium-data-specs-a434ae13-9e53-4e45-be1b-7d31929df2d4-13-brainos-main-bridge-canvas-persistence-js-7e5f2775-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 119
+    },
+    "198-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-232-nexus-idearium-data-specs-3b26ebb5-7ea8-43f6-aaea-31e8bc1ec6ec-00-hello-txt-4c4e3f5e-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 15
+    },
+    "199-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-323-nexus-idearium-data-specs-686d8642-3f00-4754-b1c1-3fa8442980be-06-integration-09f4b795-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "200-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-72-nexus-cortex-config-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 21
+    },
+    "201-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-239-nexus-idearium-data-specs-2afd0854-b9a7-41f2-8af6-977204afd144-05-events-4833fbc4-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "202-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-359-nexus-guardian-schemas-index-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 50
+    },
+    "203-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-416-nexus-orchestrator-lib-changelog-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 152
+    },
+    "204-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-27-nexus-nexus-node-taxonomy-session-readme-2026-09-12-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 95
+    },
+    "205-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-496-nexus-loom-maps-ledger-wire-person-model-map-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 147
+    },
+    "206-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-237-nexus-idearium-data-specs-2afd0854-b9a7-41f2-8af6-977204afd144-manifest-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 337
+    },
+    "207-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-71-nexus-cortex-memory-causal-lookup-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 79
+    },
+    "208-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-00-nexus-warp-spec-warp-spec-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 457
+    },
+    "209-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-203-nexus-idearium-data-specs-24478305-8a62-438b-ba47-f3b04c7d07f3-01-purpose-d7a99797-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "210-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-447-nexus-loom-schema-concern-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 31
+    },
+    "211-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-411-nexus-orchestrator-orchestrator-contract-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 165
+    },
+    "212-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-170-nexus-idearium-data-specs-7cdb7374-6f0b-44db-a075-4634f21d4196-00-contract-md-74b75bd5-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 15
+    },
+    "213-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-234-nexus-idearium-data-specs-2afd0854-b9a7-41f2-8af6-977204afd144-00-meta-155e4aed-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "214-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-137-nexus-idearium-data-specs-a4ec50b2-d420-4a54-9cb0-e3d1c8c6ff92-06-integration-68905240-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "215-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-334-nexus-idearium-config-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 31
+    },
+    "216-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-155-nexus-idearium-data-specs-a434ae13-9e53-4e45-be1b-7d31929df2d4-a434ae13-9e53-4e45-be1b-7d31929df2d4-spec-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 1768
+    },
+    "217-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-179-nexus-idearium-data-specs-78a72e70-56a9-4c94-987f-c7285f1b1de2-12-brainos-main-bootloader-js-c2dc5c67-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 134
+    },
+    "218-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-308-nexus-idearium-data-specs-62e3aea3-dfe5-44d5-b1d8-3b685ec0f162-62e3aea3-dfe5-44d5-b1d8-3b685ec0f162-spec-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 77
+    },
+    "219-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-317-nexus-idearium-data-specs-686d8642-3f00-4754-b1c1-3fa8442980be-686d8642-3f00-4754-b1c1-3fa8442980be-spec-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 77
+    },
+    "220-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-287-nexus-idearium-data-specs-f3f86309-e803-4bb7-b907-1f73fe014b78-02-axioms-7f3d53b5-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "221-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-440-nexus-loom-schema-axioms-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 74
+    },
+    "222-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-35-nexus-cortex-schemas-index-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 50
+    },
+    "223-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-487-nexus-loom-data-node-index-nodes-capability-ledger-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 1
+    },
+    "224-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-22-nexus-warp-plugins-scorer-default-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 38
+    },
+    "225-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-11-nexus-warp-dispatch-benchmark-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 225
+    },
+    "226-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-225-nexus-idearium-data-specs-0202f237-e051-4102-adf0-6fd8511d082d-02-axioms-3cb6de33-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "227-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-204-nexus-idearium-data-specs-f2792648-ed83-48c7-a47e-f94683c1b12a-00-meta-250f2a16-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "228-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-77-nexus-idearium-spec-idearium-node-taxonomy-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 18
+    },
+    "229-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-419-nexus-orchestrator-lib-grammar-misfire-tracker-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 137
+    },
+    "230-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-397-nexus-guardian-lib-dispatch-pool-bridge-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 53
+    },
+    "231-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-394-nexus-guardian-lib-dispatcher-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 379
+    },
+    "232-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-342-nexus-guardian-memory-store-event-log-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 1
+    },
+    "233-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-494-nexus-loom-maps-raid-events-and-tools-map-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 123
+    },
+    "234-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-229-nexus-idearium-data-specs-0202f237-e051-4102-adf0-6fd8511d082d-07-failure-modes-d4ea66da-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "235-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-95-nexus-idearium-spec-engine-chunk-dispatch-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 278
+    },
+    "236-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-81-nexus-idearium-spec-engine-guardian-extract-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 88
+    },
+    "237-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-228-nexus-idearium-data-specs-0202f237-e051-4102-adf0-6fd8511d082d-00-meta-ddd3be4b-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "238-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-178-nexus-idearium-data-specs-78a72e70-56a9-4c94-987f-c7285f1b1de2-10-brainos-main-agent-factory-js-8bdf0e8f-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 147
+    },
+    "239-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-213-nexus-idearium-data-specs-f2792648-ed83-48c7-a47e-f94683c1b12a-04-api-31939032-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "240-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-253-nexus-idearium-data-specs-ac80119a-2d63-420f-86f4-e9d5ef674c12-ac80119a-2d63-420f-86f4-e9d5ef674c12-spec-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 1768
+    },
+    "241-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-37-nexus-cortex-registry-components-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 73
+    },
+    "242-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-344-nexus-guardian-memory-store-seam-sessions-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 1
+    },
+    "243-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-23-nexus-warp-plugins-crystallizer-flatfile-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 58
+    },
+    "244-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-19-nexus-warp-core-gatefusion-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 88
+    },
+    "245-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-473-nexus-loom-test-phasemap-map-test-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 134
+    },
+    "246-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-180-nexus-idearium-data-specs-78a72e70-56a9-4c94-987f-c7285f1b1de2-13-brainos-main-bridge-canvas-persistence-js-da91353f-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 119
+    },
+    "247-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-330-nexus-idearium-lib-db-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 181
+    },
+    "248-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-223-nexus-idearium-data-specs-0202f237-e051-4102-adf0-6fd8511d082d-09-tests-5d05b868-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "249-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-455-nexus-loom-scanners-closed-door-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 186
+    },
+    "250-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-08-nexus-warp-dispatch-cascade-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 113
+    },
+    "251-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-169-nexus-idearium-data-specs-c9276ac2-e37a-4419-a187-c4ecfa2b884a-00-contract-md-8c143488-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 15
+    },
+    "252-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-241-nexus-idearium-data-specs-ac80119a-2d63-420f-86f4-e9d5ef674c12-04-brainos-main-readme-investor-md-21644aa7-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 67
+    },
+    "253-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-320-nexus-idearium-data-specs-686d8642-3f00-4754-b1c1-3fa8442980be-04-api-cfdcf4ad-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "254-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-168-nexus-idearium-data-specs-c9276ac2-e37a-4419-a187-c4ecfa2b884a-c9276ac2-e37a-4419-a187-c4ecfa2b884a-spec-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 19
+    },
+    "255-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-106-nexus-idearium-changes-2026-07-11-merge-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 97
+    },
+    "256-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-212-nexus-idearium-data-specs-f2792648-ed83-48c7-a47e-f94683c1b12a-06-integration-267c01ea-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "257-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-347-nexus-guardian-memory-store-artifacts-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 1
+    },
+    "258-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-192-nexus-idearium-data-specs-78a72e70-56a9-4c94-987f-c7285f1b1de2-07-brainos-main-roadmap-md-038ab3ce-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 73
+    },
+    "259-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-91-nexus-idearium-spec-engine-templates-ai-agent-system-spec-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 45
+    },
+    "260-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-367-nexus-guardian-dropzone-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 451
+    },
+    "261-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-188-nexus-idearium-data-specs-78a72e70-56a9-4c94-987f-c7285f1b1de2-manifest-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 511
+    },
+    "262-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-378-nexus-guardian-data-node-index-nodes-capability-ledger-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 1
+    },
+    "263-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-58-nexus-cortex-core-raid-routing-ir-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 126
+    },
+    "264-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-123-nexus-idearium-data-node-index-settings-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 1
+    },
+    "265-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-427-nexus-orchestrator-lib-quick-notes-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 95
+    },
+    "266-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-43-nexus-cortex-gap-finder-index-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 101
+    },
+    "267-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-190-nexus-idearium-data-specs-78a72e70-56a9-4c94-987f-c7285f1b1de2-14-brainos-main-bus-js-1f2c731e-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 135
+    },
+    "268-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-309-nexus-idearium-data-specs-62e3aea3-dfe5-44d5-b1d8-3b685ec0f162-09-tests-8f46215f-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "269-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-285-nexus-idearium-data-specs-f3f86309-e803-4bb7-b907-1f73fe014b78-06-integration-910509d6-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "270-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-116-nexus-idearium-data-projects-nexus-id-repo-1886b8cb-00-meta-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 1
+    },
+    "271-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-491-nexus-loom-maps-warp-map-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 101
+    },
+    "272-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-396-nexus-guardian-lib-artifact-namer-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 81
+    },
+    "273-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-407-nexus-guardian-ask-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 322
+    },
+    "274-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-130-nexus-idearium-data-specs-a4ec50b2-d420-4a54-9cb0-e3d1c8c6ff92-02-axioms-6992c392-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "275-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-227-nexus-idearium-data-specs-0202f237-e051-4102-adf0-6fd8511d082d-05-events-b9727914-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "276-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-463-nexus-loom-scanners-spec-map-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 246
+    },
+    "277-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-187-nexus-idearium-data-specs-78a72e70-56a9-4c94-987f-c7285f1b1de2-09-brainos-main-adapters-js-8851e421-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 135
+    },
+    "278-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-408-nexus-guardian-config-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 59
+    },
+    "279-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-435-nexus-orchestrator-lib-spec-drift-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 365
+    },
+    "280-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-62-nexus-cortex-core-raid-contract-boundary-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 199
+    },
+    "281-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-497-nexus-loom-contracts-index-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 223
+    },
+    "282-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-152-nexus-idearium-data-specs-a434ae13-9e53-4e45-be1b-7d31929df2d4-04-brainos-main-readme-investor-md-0747e06d-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 67
+    },
+    "283-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-370-nexus-guardian-data-node-index-nodes-command-ledger-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 1
+    },
+    "284-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-222-nexus-idearium-data-specs-0202f237-e051-4102-adf0-6fd8511d082d-04-api-0ce157d1-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "285-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-260-nexus-idearium-data-specs-ae44a65d-578a-47ec-ad5f-14208c07312e-00-meta-478bb084-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "286-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-115-nexus-idearium-data-projects-nexus-id-repo-1886b8cb-07-failure-modes-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 1
+    },
+    "287-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-146-nexus-idearium-data-specs-a434ae13-9e53-4e45-be1b-7d31929df2d4-14-brainos-main-bus-js-d6afabda-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 135
+    },
+    "288-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-315-nexus-idearium-data-specs-686d8642-3f00-4754-b1c1-3fa8442980be-09-tests-695e4c39-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "289-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-89-nexus-idearium-spec-engine-templates-architecture-spec-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 61
+    },
+    "290-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-305-nexus-idearium-data-specs-62e3aea3-dfe5-44d5-b1d8-3b685ec0f162-03-schema-88bfa173-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "291-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-97-nexus-idearium-schemas-index-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 46
+    },
+    "292-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-90-nexus-idearium-spec-engine-templates-compartments-spec-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 69
+    },
+    "293-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-325-nexus-idearium-data-specs-686d8642-3f00-4754-b1c1-3fa8442980be-08-build-order-9173a233-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "294-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-286-nexus-idearium-data-specs-f3f86309-e803-4bb7-b907-1f73fe014b78-01-purpose-53fb2744-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "295-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-413-nexus-orchestrator-orchestrator-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 3212
+    },
+    "296-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-469-nexus-loom-test-doc-generator-test-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 67
+    },
+    "297-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-488-nexus-loom-data-registry-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 5163
+    },
+    "298-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-423-nexus-orchestrator-lib-versionium-auto-commit-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 128
+    },
+    "299-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-476-nexus-loom-test-ingest-test-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 96
+    },
+    "300-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-193-nexus-idearium-data-specs-78a72e70-56a9-4c94-987f-c7285f1b1de2-16-brainos-main-ddns-js-0955d322-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 139
+    },
+    "301-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-461-nexus-loom-scanners-phasemap-map-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 258
+    },
+    "302-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-105-nexus-idearium-cli-index-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 742
+    },
+    "303-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-406-nexus-guardian-routes-mesh-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 88
+    },
+    "304-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-88-nexus-idearium-spec-engine-templates-plugin-runtime-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 22
+    },
+    "305-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-230-nexus-idearium-data-specs-3b26ebb5-7ea8-43f6-aaea-31e8bc1ec6ec-3b26ebb5-7ea8-43f6-aaea-31e8bc1ec6ec-spec-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 13
+    },
+    "306-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-489-nexus-loom-server-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 665
+    },
+    "307-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-442-nexus-loom-schema-index-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 13
+    },
+    "308-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-60-nexus-cortex-core-raid-contract-intake-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 1426
+    },
+    "309-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-140-nexus-idearium-data-specs-a4ec50b2-d420-4a54-9cb0-e3d1c8c6ff92-01-purpose-19fcdf72-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "310-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-147-nexus-idearium-data-specs-a434ae13-9e53-4e45-be1b-7d31929df2d4-07-brainos-main-roadmap-md-2bf98ac3-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 73
+    },
+    "311-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-40-nexus-cortex-self-heal-failure-mode-forensics-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 170
+    },
+    "312-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-42-nexus-cortex-self-heal-index-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 348
+    },
+    "313-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-376-nexus-guardian-data-node-index-nodes-intent-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 1
+    },
+    "314-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-479-nexus-loom-ingest-revisions-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 82
+    },
+    "315-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-417-nexus-orchestrator-lib-pulse-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 287
+    },
+    "316-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-221-nexus-idearium-data-specs-0202f237-e051-4102-adf0-6fd8511d082d-06-integration-abf5aeec-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "317-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-64-nexus-cortex-memory-table-compactor-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 258
+    },
+    "318-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-403-nexus-guardian-cli-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 472
+    },
+    "319-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-161-nexus-idearium-data-specs-a434ae13-9e53-4e45-be1b-7d31929df2d4-12-brainos-main-bootloader-js-ab776b67-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 134
+    },
+    "320-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-18-nexus-warp-core-index-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 9
+    },
+    "321-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-328-nexus-idearium-index-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 885
+    },
+    "322-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-296-nexus-idearium-data-specs-51e26753-c339-404f-9e69-399a09faef36-05-events-79c755a4-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "323-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-399-nexus-guardian-server-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 3773
+    },
+    "324-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-131-nexus-idearium-data-specs-a4ec50b2-d420-4a54-9cb0-e3d1c8c6ff92-05-events-01053d80-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "325-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-326-nexus-idearium-data-specs-686d8642-3f00-4754-b1c1-3fa8442980be-00-meta-1e0cc1dc-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "326-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-114-nexus-idearium-data-projects-nexus-id-repo-1886b8cb-03-schema-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 1
+    },
+    "327-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-468-nexus-loom-test-schema-test-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 449
+    },
+    "328-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-68-nexus-cortex-memory-fix-map-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 97
+    },
+    "329-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-371-nexus-guardian-data-node-index-settings-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 1
+    },
+    "330-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-275-nexus-idearium-data-specs-18e47204-b11f-4689-af6f-6ff34fa36219-01-purpose-ed27a535-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "331-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-428-nexus-orchestrator-lib-hot-loader-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 221
+    },
+    "332-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-56-nexus-cortex-core-raid-worker-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 86
+    },
+    "333-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-163-nexus-idearium-data-specs-f79e4725-ace3-4d64-a93f-5526a4fa2a97-manifest-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 67
+    },
+    "334-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-363-nexus-guardian-guardian-api-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 465
+    },
+    "335-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-350-nexus-guardian-ui-agents-perplexity-index-html-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 258
+    },
+    "336-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-284-nexus-idearium-data-specs-f3f86309-e803-4bb7-b907-1f73fe014b78-04-api-c99879fc-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "337-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-249-nexus-idearium-data-specs-ac80119a-2d63-420f-86f4-e9d5ef674c12-00-brainos-main-brainos-v2-html-466fcd6a-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 132
+    },
+    "338-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-124-nexus-idearium-data-node-index-nodes-capability-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 1
+    },
+    "339-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-278-nexus-idearium-data-specs-18e47204-b11f-4689-af6f-6ff34fa36219-04-api-a8bb9cf3-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "340-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-196-nexus-idearium-data-specs-78a72e70-56a9-4c94-987f-c7285f1b1de2-00-brainos-main-brainos-v2-html-7cf7d3fa-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 132
+    },
+    "341-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-233-nexus-idearium-data-specs-2afd0854-b9a7-41f2-8af6-977204afd144-04-api-5c3d55ac-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "342-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-202-nexus-idearium-data-specs-24478305-8a62-438b-ba47-f3b04c7d07f3-02-axioms-75c4938c-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "343-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-244-nexus-idearium-data-specs-ac80119a-2d63-420f-86f4-e9d5ef674c12-15-brainos-main-crypto-engine-js-fe0c317c-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 131
+    },
+    "344-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-33-nexus-cortex-interaction-contract-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 105
+    },
+    "345-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-242-nexus-idearium-data-specs-ac80119a-2d63-420f-86f4-e9d5ef674c12-10-brainos-main-agent-factory-js-35d1eeb3-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 147
+    },
+    "346-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-259-nexus-idearium-data-specs-ae44a65d-578a-47ec-ad5f-14208c07312e-03-schema-a4caaa99-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "347-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-276-nexus-idearium-data-specs-18e47204-b11f-4689-af6f-6ff34fa36219-03-schema-a58df150-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "348-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-311-nexus-idearium-data-specs-62e3aea3-dfe5-44d5-b1d8-3b685ec0f162-01-purpose-da5b4a01-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "349-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-364-nexus-guardian-userscript-nexus-wake-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 509
+    },
+    "350-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-254-nexus-idearium-data-specs-ac80119a-2d63-420f-86f4-e9d5ef674c12-08-brainos-main-account-manager-js-31678243-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 103
+    },
+    "351-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-261-nexus-idearium-data-specs-ae44a65d-578a-47ec-ad5f-14208c07312e-01-purpose-8cc8a146-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "352-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-332-nexus-idearium-compiler-bridge-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 255
+    },
+    "353-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-171-nexus-idearium-data-specs-7cdb7374-6f0b-44db-a075-4634f21d4196-manifest-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 67
+    },
+    "354-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-348-nexus-guardian-memory-store-event-stats-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 2171
+    },
+    "355-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-450-nexus-loom-ui-index-html-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 724
+    },
+    "356-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-333-nexus-idearium-core-index-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 7
+    },
+    "357-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-83-nexus-idearium-spec-engine-templates-minimal-kernel-spec-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 76
+    },
+    "358-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-186-nexus-idearium-data-specs-78a72e70-56a9-4c94-987f-c7285f1b1de2-02-brainos-main-changelog-md-13c4d754-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 60
+    },
+    "359-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-431-nexus-orchestrator-lib-sigma-writer-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 326
+    },
+    "360-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-143-nexus-idearium-data-specs-aec7f0f8-5025-404b-bea2-c28f93eebb90-00-other-txt-e073800e-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 15
+    },
+    "361-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-101-nexus-idearium-api-index-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 2556
+    },
+    "362-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-245-nexus-idearium-data-specs-ac80119a-2d63-420f-86f4-e9d5ef674c12-12-brainos-main-bootloader-js-788ae62f-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 134
+    },
+    "363-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-405-nexus-guardian-routes-autonomous-loop-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 283
+    },
+    "364-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-157-nexus-idearium-data-specs-a434ae13-9e53-4e45-be1b-7d31929df2d4-00-brainos-main-brainos-v2-html-5056f7bd-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 132
+    },
+    "365-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-279-nexus-idearium-data-specs-18e47204-b11f-4689-af6f-6ff34fa36219-00-meta-2a558fa5-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "366-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-26-nexus-tablet-map3d-html-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 172
+    },
+    "367-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-164-nexus-idearium-data-specs-f79e4725-ace3-4d64-a93f-5526a4fa2a97-00-hello-txt-79087d2f-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 15
+    },
+    "368-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-444-nexus-loom-schema-definitions-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 38
+    },
+    "369-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-220-nexus-idearium-data-specs-0202f237-e051-4102-adf0-6fd8511d082d-08-build-order-52c4aa33-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "370-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-288-nexus-idearium-data-specs-f3f86309-e803-4bb7-b907-1f73fe014b78-manifest-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 346
+    },
+    "371-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-380-nexus-guardian-dropzone-persist-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 47
+    },
+    "372-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-126-nexus-idearium-data-node-index-nodes-system-ledger-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 1
+    },
+    "373-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-485-nexus-loom-data-node-index-nodes-system-ledger-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 1
+    },
+    "374-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-138-nexus-idearium-data-specs-a4ec50b2-d420-4a54-9cb0-e3d1c8c6ff92-08-build-order-eec9838f-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "375-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-57-nexus-cortex-core-raid-event-taxonomy-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 40
+    },
+    "376-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-214-nexus-idearium-data-specs-f2792648-ed83-48c7-a47e-f94683c1b12a-09-tests-e1f3a522-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "377-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-173-nexus-idearium-data-specs-07c37e3e-76e8-41eb-aba3-fa02a9e92476-00-meta-be147340-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 15
+    },
+    "378-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-321-nexus-idearium-data-specs-686d8642-3f00-4754-b1c1-3fa8442980be-05-events-a27e451f-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "379-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-415-nexus-orchestrator-lib-intent-map-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 171
+    },
+    "380-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-231-nexus-idearium-data-specs-3b26ebb5-7ea8-43f6-aaea-31e8bc1ec6ec-manifest-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 67
+    },
+    "381-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-454-nexus-loom-bootstrap-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 278
+    },
+    "382-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-104-nexus-idearium-repo-index-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 483
+    },
+    "383-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-341-nexus-guardian-memory-store-settings-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 1
+    },
+    "384-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-280-nexus-idearium-data-specs-18e47204-b11f-4689-af6f-6ff34fa36219-02-axioms-ac52d45a-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "385-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-472-nexus-loom-test-system-scaffold-test-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 209
+    },
+    "386-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-12-nexus-warp-dispatch-pregen-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 52
+    },
+    "387-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-78-nexus-idearium-interaction-contract-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 421
+    },
+    "388-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-412-nexus-orchestrator-spec-orchestrator-spec-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 142
+    },
+    "389-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-298-nexus-idearium-data-specs-51e26753-c339-404f-9e69-399a09faef36-04-api-81c677c4-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "390-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-434-nexus-orchestrator-lib-request-handler-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 830
+    },
+    "391-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-145-nexus-idearium-data-specs-a434ae13-9e53-4e45-be1b-7d31929df2d4-11-brainos-main-agent-registry-js-3771b6dc-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 141
+    },
+    "392-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-283-nexus-idearium-data-specs-f3f86309-e803-4bb7-b907-1f73fe014b78-00-meta-a7015550-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "393-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-475-nexus-loom-test-agent-suite-test-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 108
+    },
+    "394-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-156-nexus-idearium-data-specs-a434ae13-9e53-4e45-be1b-7d31929df2d4-manifest-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 511
+    },
+    "395-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-324-nexus-idearium-data-specs-686d8642-3f00-4754-b1c1-3fa8442980be-02-axioms-88d50e75-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "396-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-303-nexus-idearium-data-specs-62e3aea3-dfe5-44d5-b1d8-3b685ec0f162-07-failure-modes-60f7711a-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "397-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-251-nexus-idearium-data-specs-ac80119a-2d63-420f-86f4-e9d5ef674c12-manifest-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 511
+    },
+    "398-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-110-nexus-idearium-data-projects-nexus-id-repo-2a77b548-00-contract-md-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 1
+    },
+    "399-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-153-nexus-idearium-data-specs-a434ae13-9e53-4e45-be1b-7d31929df2d4-09-brainos-main-adapters-js-7d3dbb84-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 135
+    },
+    "400-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-258-nexus-idearium-data-specs-ac80119a-2d63-420f-86f4-e9d5ef674c12-07-brainos-main-roadmap-md-02838549-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 73
+    },
+    "401-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-499-nexus-mesh-readme-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 107
+    },
+    "402-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-462-nexus-loom-scanners-source-map-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 281
+    },
+    "403-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-304-nexus-idearium-data-specs-62e3aea3-dfe5-44d5-b1d8-3b685ec0f162-06-integration-7352651c-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "404-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-141-nexus-idearium-data-specs-aec7f0f8-5025-404b-bea2-c28f93eebb90-aec7f0f8-5025-404b-bea2-c28f93eebb90-spec-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 13
+    },
+    "405-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-467-nexus-loom-test-history-routes-test-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 58
+    },
+    "406-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-386-nexus-guardian-lib-dispatch-pool-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 158
+    },
+    "407-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-337-nexus-guardian-tool-runtime-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 114
+    },
+    "408-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-495-nexus-loom-maps-copilot-capability-map-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 306
+    },
+    "409-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-85-nexus-idearium-spec-engine-templates-axioms-spec-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 70
+    },
+    "410-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-465-nexus-loom-agent-suite-index-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 215
+    },
+    "411-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-314-nexus-idearium-data-specs-b245418c-aa33-4f25-ac75-5d84192bbeb7-00-contract-md-a03fb6af-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 15
+    },
+    "412-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-377-nexus-guardian-data-node-index-nodes-system-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 1
+    },
+    "413-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-93-nexus-idearium-spec-engine-blocks-yaml-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 64
+    },
+    "414-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-52-nexus-cortex-core-raid-router-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 208
+    },
+    "415-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-384-nexus-guardian-lib-ncp-handler-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 778
+    },
+    "416-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-292-nexus-idearium-data-specs-f3f86309-e803-4bb7-b907-1f73fe014b78-03-schema-f51c667f-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "417-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-34-nexus-cortex-cortex-v2-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 1356
+    },
+    "418-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-185-nexus-idearium-data-specs-78a72e70-56a9-4c94-987f-c7285f1b1de2-01-brainos-main-brainos-html-e503bf18-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 132
+    },
+    "419-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-420-nexus-orchestrator-lib-mcp-server-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 649
+    },
+    "420-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-181-nexus-idearium-data-specs-78a72e70-56a9-4c94-987f-c7285f1b1de2-11-brainos-main-agent-registry-js-40c4a2a8-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 141
+    },
+    "421-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-362-nexus-guardian-registry-components-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 83
+    },
+    "422-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-127-nexus-idearium-data-node-index-nodes-system-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 1
+    },
+    "423-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-291-nexus-idearium-data-specs-f3f86309-e803-4bb7-b907-1f73fe014b78-09-tests-38f69663-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "424-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-410-nexus-skills-james-brooks-skill-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 434
+    },
+    "425-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-379-nexus-guardian-userscript-deepseek-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 949
+    },
+    "426-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-158-nexus-idearium-data-specs-a434ae13-9e53-4e45-be1b-7d31929df2d4-01-brainos-main-brainos-html-d894c1fa-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 132
+    },
+    "427-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-453-nexus-loom-schemas-index-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 50
+    },
+    "428-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-215-nexus-idearium-data-specs-f2792648-ed83-48c7-a47e-f94683c1b12a-f2792648-ed83-48c7-a47e-f94683c1b12a-spec-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 77
+    },
+    "429-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-281-nexus-idearium-data-specs-f3f86309-e803-4bb7-b907-1f73fe014b78-05-events-8fe2e049-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "430-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-142-nexus-idearium-data-specs-aec7f0f8-5025-404b-bea2-c28f93eebb90-manifest-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 67
+    },
+    "431-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-391-nexus-guardian-lib-response-nodes-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 266
+    },
+    "432-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-132-nexus-idearium-data-specs-a4ec50b2-d420-4a54-9cb0-e3d1c8c6ff92-manifest-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 346
+    },
+    "433-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-194-nexus-idearium-data-specs-78a72e70-56a9-4c94-987f-c7285f1b1de2-03-brainos-main-manifest-json-d5776de5-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 124
+    },
+    "434-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-369-nexus-guardian-guardian-config-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 86
+    },
+    "435-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-294-nexus-idearium-data-specs-51e26753-c339-404f-9e69-399a09faef36-02-axioms-6697a985-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "436-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-59-nexus-cortex-core-raid-index-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 875
+    },
+    "437-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-84-nexus-idearium-spec-engine-templates-schemas-spec-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 49
+    },
+    "438-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-267-nexus-idearium-data-specs-0135abb2-d066-494b-8185-7261f7450dd2-00-other-txt-571ecfbc-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 15
+    },
+    "439-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-247-nexus-idearium-data-specs-ac80119a-2d63-420f-86f4-e9d5ef674c12-02-brainos-main-changelog-md-2d13b930-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 60
+    },
+    "440-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-107-nexus-idearium-data-projects-nexus-id-repo-956b011e-00-contract-md-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 1
+    },
+    "441-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-80-nexus-idearium-spec-engine-templates-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 282
+    },
+    "442-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-302-nexus-idearium-data-specs-62e3aea3-dfe5-44d5-b1d8-3b685ec0f162-08-build-order-4db6178a-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "443-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-270-nexus-idearium-data-specs-b91469e2-e515-4e69-9d0c-7913d883ae3b-00-meta-da832710-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "444-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-398-nexus-guardian-lib-node-registry-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 172
+    },
+    "445-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-226-nexus-idearium-data-specs-0202f237-e051-4102-adf0-6fd8511d082d-03-schema-bc4bf4be-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "446-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-401-nexus-guardian-userscript-chatgpt-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 2828
+    },
+    "447-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-274-nexus-idearium-data-specs-b91469e2-e515-4e69-9d0c-7913d883ae3b-01-purpose-58b05abb-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "448-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-14-nexus-warp-core-streamlog-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 111
+    },
+    "449-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-133-nexus-idearium-data-specs-a4ec50b2-d420-4a54-9cb0-e3d1c8c6ff92-00-meta-789e0ded-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "450-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-209-nexus-idearium-data-specs-f2792648-ed83-48c7-a47e-f94683c1b12a-03-schema-03e2e2fa-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "451-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-404-nexus-guardian-routes-settings-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 82
+    },
+    "452-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-445-nexus-loom-schema-seam-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 22
+    },
+    "453-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-109-nexus-idearium-data-projects-nexus-id-repo-146efe03-00-contract-md-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 1
+    },
+    "454-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-480-nexus-loom-ingest-index-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 163
+    },
+    "455-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-310-nexus-idearium-data-specs-62e3aea3-dfe5-44d5-b1d8-3b685ec0f162-04-api-ce1f443a-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "456-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-353-nexus-guardian-ui-agents-gemini-index-html-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 285
+    },
+    "457-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-439-nexus-loom-schema-component-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 21
+    },
+    "458-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-356-nexus-guardian-spec-guardian-spec-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 179
+    },
+    "459-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-368-nexus-guardian-clear-glass-bridge-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 229
+    },
+    "460-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-82-nexus-idearium-spec-engine-templates-event-system-spec-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 362
+    },
+    "461-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-358-nexus-guardian-interaction-contract-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 409
+    },
+    "462-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-63-nexus-cortex-memory-decay-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 190
+    },
+    "463-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-418-nexus-orchestrator-lib-file-push-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 278
+    },
+    "464-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-456-nexus-loom-scanners-capability-map-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 276
+    },
+    "465-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-256-nexus-idearium-data-specs-ac80119a-2d63-420f-86f4-e9d5ef674c12-14-brainos-main-bus-js-0a400455-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 135
+    },
+    "466-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-385-nexus-guardian-lib-provider-routing-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 280
+    },
+    "467-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-04-nexus-warp-test-core-test-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 109
+    },
+    "468-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-67-nexus-cortex-memory-relevance-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 225
+    },
+    "469-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-117-nexus-idearium-data-projects-nexus-id-repo-1886b8cb-06-integration-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 1
+    },
+    "470-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-99-nexus-idearium-agent-suite-index-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 295
+    },
+    "471-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-139-nexus-idearium-data-specs-a4ec50b2-d420-4a54-9cb0-e3d1c8c6ff92-09-tests-146eaa89-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "472-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-28-nexus-cortex-personas-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 122
+    },
+    "473-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-61-nexus-cortex-core-raid-tunables-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 88
+    },
+    "474-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-76-nexus-idearium-spec-idearium-spec-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 121
+    },
+    "475-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-02-nexus-warp-test-dispatch-test-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 131
+    },
+    "476-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-149-nexus-idearium-data-specs-a434ae13-9e53-4e45-be1b-7d31929df2d4-15-brainos-main-crypto-engine-js-b3da16b1-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 131
+    },
+    "477-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-20-nexus-warp-core-gate-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 57
+    },
+    "478-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-51-nexus-cortex-core-raid-context-synthesis-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 176
+    },
+    "479-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-79-nexus-idearium-spec-engine-warp-build-dispatch-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 182
+    },
+    "480-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-09-nexus-warp-dispatch-canonicalize-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 86
+    },
+    "481-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-318-nexus-idearium-data-specs-686d8642-3f00-4754-b1c1-3fa8442980be-07-failure-modes-35436d39-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "482-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-24-nexus-tablet-index-html-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 437
+    },
+    "483-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-382-nexus-guardian-userscript-claude-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 2918
+    },
+    "484-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-39-nexus-cortex-self-heal-escalation-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 381
+    },
+    "485-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-421-nexus-orchestrator-lib-contract-poller-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 63
+    },
+    "486-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-486-nexus-loom-data-node-index-nodes-system-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 1
+    },
+    "487-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-29-nexus-cortex-ui-ideas-html-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 90
+    },
+    "488-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-238-nexus-idearium-data-specs-2afd0854-b9a7-41f2-8af6-977204afd144-03-schema-adff0c9d-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "489-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-03-nexus-warp-test-digest-regression-test-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 45
+    },
+    "490-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-100-nexus-idearium-registry-components-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 105
+    },
+    "491-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-345-nexus-guardian-memory-store-gaps-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 1
+    },
+    "492-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-312-nexus-idearium-data-specs-b245418c-aa33-4f25-ac75-5d84192bbeb7-b245418c-aa33-4f25-ac75-5d84192bbeb7-spec-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 13
+    },
+    "493-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-218-nexus-idearium-data-specs-0202f237-e051-4102-adf0-6fd8511d082d-0202f237-e051-4102-adf0-6fd8511d082d-spec-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 77
+    },
+    "494-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-387-nexus-guardian-lib-jobs-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 181
+    },
+    "495-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-136-nexus-idearium-data-specs-a4ec50b2-d420-4a54-9cb0-e3d1c8c6ff92-03-schema-46f8c53c-md-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 16
+    },
+    "496-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-174-nexus-idearium-data-specs-07c37e3e-76e8-41eb-aba3-fa02a9e92476-manifest-json-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 335
+    },
+    "497-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-477-nexus-loom-templates-system-scaffold-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 615
+    },
+    "498-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-393-nexus-guardian-lib-command-index-extract-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 109
+    },
+    "499-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-498-nexus-loom-config-js-md.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 19
+    }
+  }
+}

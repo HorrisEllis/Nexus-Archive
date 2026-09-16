@@ -1,0 +1,21 @@
+{
+  "id": "chunk-521f2c9adce7662b",
+  "repository": "nexus-id-repo-3eed3fb0",
+  "file": "322-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-296-nexus-idearium-data-specs-51e26753-c339-404f-9e69-399a09faef36-05-events-79c755a4-md-md.md",
+  "range": {
+    "start_line": 1,
+    "end_line": 16
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "21c481d7b26ae52281f9359989ebdcd8c51e0ca23a8347b46d5a71fdb7701110"
+  },
+  "status": "complete",
+  "content": "---\nchunk_uuid: 79c755a4-2f5c-4056-ae37-08a6a43f5e9e\nspec_uuid: 51e26753-c339-404f-9e69-399a09faef36\nsection: events\ntitle: Events & Bus\ncomp_id: idearium.spec-engine\nseam_id: idearium.spec-engine:v1:chunk:51e26753:events\ncontract_id: spec-contract:51e26753:events:79c755a4\nagent: ollama\nmodel: unknown\nstatus: complete\ncompleted_at: 2026-09-13T17:17:20.991Z\n---\n\n## Events & Bus\nreal content 1789303597510"
+}

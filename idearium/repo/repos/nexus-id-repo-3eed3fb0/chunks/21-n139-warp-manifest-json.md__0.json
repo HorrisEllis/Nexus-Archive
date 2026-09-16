@@ -1,0 +1,21 @@
+{
+  "id": "chunk-203fb426a247dd48",
+  "repository": "nexus-id-repo-3eed3fb0",
+  "file": "21-n139-warp-manifest-json.md",
+  "range": {
+    "start_line": 1,
+    "end_line": 11
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "c20c91a414f16d562e647e63b8258e94e5651a30c0321c4cf2af46d5d5973f4b"
+  },
+  "status": "complete",
+  "content": "{\n  \"name\": \"warp\",\n  \"version\": \"1.4.0\",\n  \"description\": \"Pure functional event-driven devkit. Event -> Gate -> Stream -> StreamLog, plus Axiom as an enforced primitive and a unified dispatch (exact-cache / pre-generation-filter / population / cascade / axiom-gate / score-retain / escalate). v1.4 adds: canonicalization pipeline, fuzzy pre-generation reuse (opt-in), population lifecycle control (decay/pruning/dedup), two-stage generation, gate fusion, axiom cost weighting, and a structural delta cache. Zero dependencies, zero coupling to any consuming project.\",\n  \"license\": \"MIT\",\n  \"author\": \"James Brooks\",\n  \"dependencies\": \"none\",\n  \"decoupling_rule\": \"warp/core and warp/dispatch import nothing outside warp/. Consuming projects import warp and supply adapters via Stream.hook().\",\n  \"spec\": \"spec/warp.spec\",\n  \"changelog_note\": \"v1.4 additions are opt-in and default OFF except decay/pruning being available at zero rate by default (i.e. a no-op unless configured) — existing v1.1.0 callers see zero behavior change. See dispatch/benchmark.js section 4 for real measurements; the original v1.4 patch doc's '10x-35x cheaper / 15x-50x faster' claims were not benchmarked against anything and are not repeated here.\"\n}"
+}

@@ -403,10 +403,10 @@ spec:
       status: >
         ⚠ PARTIAL, real correction to a stale note — this entry previously said "INTUITION/MASTERMIND are inline functions in cortex/boot.js, not separate files." That's no longer true and, per phase 1's own commit history, was never quite accurate even before — they were always real, separate files (cortex/intelligence/intuition.js, mastermind.js), just instantiated from cortex/boot.js's own closure. As of this session's phase 1 move, both files live at intelligence/intuition.js and intelligence/mastermind.js; cortex/boot.js remains their real, documented composition root. Also closed this session: neither had ever been reachable via HTTP anywhere — real routes now exist on cortex/boot.js (GET /api/intelligence/intuition, POST /api/intelligence/mastermind), verified live.
     - spec:             'versionium.spec'
-      version:          '1.0.0'
-      last_drift_check: '2026-06-29'
+      version:          '3.1.0'
+      last_drift_check: '2026-09-15'
       status: >
-        ✓ NEW — no implementation exists under this name (lib/version.js is a flat string). Real shape built from primitives already proven this session: idearium's commit graph (branch/parentId bug still open), file-integrity's hashing, rfr2-nexus's compress/clip/context (diff vs replay-engine.js still undone).
+        ✓ CHECKED — real, live at versionium/lib/engine.js (port 3754). §6.3 drift check found this entry stale (last read version 1.0.0/2026-06-29, three major versions behind: 2.0.0 VS-reconciliation, 2.1.0 SnapshotGate merge, 3.0.0 sovereign promotion, now 3.1.0). This session closed gap V5 (idearium_snapshots backfill, versionium/lib/migrate-idearium-snapshots.js, mirroring the already-closed V6) and confirmed cortex/versionium/index.js + causality.js remain correctly archived, unexecuted, per §0.3 — see versionium.spec's own 2026-09-15 history entries for the full account.
     - spec:             'warp.spec'
       version:          '1.4.0'
       last_drift_check: '2026-07-24'
@@ -908,6 +908,29 @@ spec:
       last_drift_check: '2026-09-12'
       governs: >
         Maps an uploaded external BrainOS reference project's concepts onto real NEXUS equivalents (mapping only, nothing built by the spec itself). §REGISTERED 2026-09-12 (same missing-registration gap as the sibling orchestration-phasemap spec above). Drift found and closed same pass: the trigger/scheduler/branching GENUINE_GAP entry was still open though closed by automation-engine.js in 0.39.89/0.39.91 — corrected to CLOSED with version references and the real remaining scope (branch/http/notification step types) named explicitly.
+    - spec:             'docs/idearium-repository-overhaul-phasemap.spec'
+      version:          '0.2.0-phasemap'
+      status:           'active'
+      last_drift_check: '2026-09-15'
+      governs: >
+        §REGISTERED 2026-09-15 — copied into docs/ from a separate
+        session-handoff bundle where it previously lived disconnected
+        from this repo (§2.1/§6.3 — a spec not in this tree and not in
+        this registry is unaccounted for). 13-MCO merged phasemap for
+        turning idearium into a full creative-repo host. MCO0 (real-code
+        audit) and MCO-A (schema.phase_node + schema.file_delta
+        registered) DONE; MCO-B through MCO-G remain NOT STARTED per the
+        file's own build_order.
+    - spec:             'docs/idearium-creative-repo.spec'
+      version:          '1.0.0'
+      status:           'active'
+      last_drift_check: '2026-09-15'
+      governs: >
+        §REGISTERED 2026-09-15, same reason as its sibling phasemap
+        above. Canonical spec the merged phasemap's MCOs build toward —
+        depends_on nexus-repository-system.spec/versionium.spec/
+        idearium.spec/loom.spec, owns nothing they already own. Core
+        axiom ICR-001 NO_PHANTOM_PROGRESS, invariants ICR-001..014.
 
   # ── Full original document, preserved verbatim — every narrative session
   # log, every filename mentioned only in prose, zero information loss.

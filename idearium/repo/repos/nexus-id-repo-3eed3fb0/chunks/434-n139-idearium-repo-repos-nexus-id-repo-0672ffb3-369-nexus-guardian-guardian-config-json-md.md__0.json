@@ -1,0 +1,21 @@
+{
+  "id": "chunk-3abcde6566bcf28b",
+  "repository": "nexus-id-repo-3eed3fb0",
+  "file": "434-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-369-nexus-guardian-guardian-config-json-md.md",
+  "range": {
+    "start_line": 1,
+    "end_line": 86
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "9e06b14b7b9e2271e3ecc64d3ef729642ed1ab100767da9ff6bcb2392ab0b8c6"
+  },
+  "status": "complete",
+  "content": "{\n  \"_comment\": \"Guardian v8 config — runtime settings live in SQLite settings table. Edit via /settings API or Cockpit dashboard.\",\n\n  \"server\": {\n    \"httpPort\":    7820,\n    \"wssPort\":     7821,\n    \"dropzonePort\":7822,\n    \"memoryPort\":  7823,\n    \"host\":        \"127.0.0.1\",\n    \"lanHost\":     \"0.0.0.0\",\n    \"nexusUrl\":    \"http://127.0.0.1:3001\"\n  },\n\n  \"tls\": {\n    \"certFile\": \"guardian-cert.pem\",\n    \"keyFile\":  \"guardian-key.pem\"\n  },\n\n  \"persistence\": {\n    \"engine\":   \"better-sqlite3\",\n    \"dbFile\":   \"guardian.db\",\n    \"schemaFile\":\"schema.sql\",\n    \"fallback\": \"flat-file-json\"\n  },\n\n  \"siso\": {\n    \"logLevel\": \"EVENTS\",\n    \"channels\": [\n      \"guardian.artifact\",\n      \"guardian.gaps\",\n      \"guardian.job.complete\",\n      \"guardian.pa.session\",\n      \"guardian.ledger\",\n      \"guardian.download\",\n      \"guardian.session.named\",\n      \"guardian.timeline\",\n      \"guardian.setting.update\"\n    ]\n  },\n\n  \"gaphunter\": {\n    \"version\":   \"3.0.0\",\n    \"minScore\":  0.25,\n    \"taxonomy\":  \"gap-taxonomy.js\"\n  },\n\n  \"cockpit\": {\n    \"url\": \"http://127.0.0.1:7820/cockpit\",\n    \"panels\": [\"stream\",\"artifacts\",\"gaps\",\"pa\",\"sessions\",\"agents\",\"settings\",\"cli\"]\n  },\n\n  \"api\": {\n    \"endpoints\": {\n      \"cockpit\":   \"/cockpit\",\n      \"events\":    \"/events\",\n      \"command\":   \"/command\",\n      \"jobs\":      \"/jobs\",\n      \"artifacts\": \"/artifacts\",\n      \"gaps\":      \"/gaps\",\n      \"ledger\":    \"/ledger\",\n      \"sessions\":  \"/sessions\",\n      \"pa\":        \"/pa\",\n      \"timeline\":  \"/timeline\",\n      \"settings\":  \"/settings\",\n      \"memory\":    \"/memory\",\n      \"providers\": \"/providers\",\n      \"health\":    \"/health\",\n      \"stream\":    \"/stream/:jobId\",\n      \"response\":  \"/response/:jobId\"\n    }\n  },\n\n  \"defaults\": {\n    \"session_greeting_enabled\":  true,\n    \"scan_debounce_ms\":          1500,\n    \"artifact_max\":              500,\n    \"gap_min_score\":             0.25,\n    \"pa_enabled\":                true,\n    \"memory_auto_push\":          true,\n    \"dropzone_auto_upload\":      true,\n    \"stream_log_level\":          \"EVENTS\",\n    \"greeting_delay_ms\":         1200,\n    \"poll_interval_ms\":          500,\n    \"stable_count_threshold\":    5\n  }\n}"
+}

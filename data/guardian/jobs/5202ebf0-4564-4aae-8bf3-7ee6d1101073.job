@@ -1,0 +1,37 @@
+envelope: 1
+uuid: nexus-export-job-5202ebf0-4564-4aae-8bf3-7ee6d1101073
+type: job
+id: 5202ebf0-4564-4aae-8bf3-7ee6d1101073
+context: guardian real-time job dispatch
+intent: null
+summary: null
+system: guardian
+tags: []
+exported_at: 1789517353532
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1789517353532
+lastSeenAt: 1789517353532
+fingerprint: null
+payload:
+  id: 5202ebf0-4564-4aae-8bf3-7ee6d1101073
+  command: general
+  provider: chatgpt
+  prompt: |-
+    [CONTEXT]
+    [NEXUS] Guardian:online
+
+    hello
+  content: null
+  source: chatgpt-console
+  tools: null
+  hat: null
+  status: responding
+  response: ''
+  ts: 1789517351517
+  updatedAt: 1789517353531
+  pingedAt: 1789517351519
+  deliveredAt: 1789517351650
+  ackedAt: 1789517352039
+  confirmedAt: 1789517352342
+  lastChunk: 1789517353531

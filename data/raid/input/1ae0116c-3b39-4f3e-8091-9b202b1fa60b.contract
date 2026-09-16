@@ -1,0 +1,47 @@
+envelope: 1
+uuid: nexus-export-contract-1ae0116c-3b39-4f3e-8091-9b202b1fa60b
+type: contract
+id: 1ae0116c-3b39-4f3e-8091-9b202b1fa60b
+context: null
+intent: translate.utl
+summary: null
+system: null
+tags: []
+exported_at: 1789529497884
+source: architect
+occurrences: 1
+firstSeenAt: 1789529497884
+lastSeenAt: 1789529497884
+fingerprint: null
+payload:
+  uuid: 1ae0116c-3b39-4f3e-8091-9b202b1fa60b
+  status: queued
+  intention: translate.utl
+  dir: null
+  language: null
+  stage: queued
+  system: null
+  source: architect
+  sourceDropId: null
+  boundary:
+    key: architect:translate.utl
+    primitive: architect/service.js POST /api/translate/utl
+    invariants: []
+    principles:
+      - §1.2
+      - §5.2
+  file: null
+  title: translate.utl
+  forAgent: null
+  contract:
+    content: 'translate.utl:dangling-hook hook ''nexus.idearium.spec-engine.templates.import'' is declared as '
+    title: translate.utl
+  dependsOn: []
+  onFail:
+    action: retry
+    maxRetries: 2
+  retryCount: 0
+  compartmentId: null
+  verdict: null
+  createdAt: 1789529497884
+  updatedAt: 1789529497884

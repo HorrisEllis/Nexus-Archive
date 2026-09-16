@@ -1,0 +1,21 @@
+{
+  "id": "chunk-9cb7d4e18ba28582",
+  "repository": "nexus-id-repo-3eed3fb0",
+  "file": "212-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-170-nexus-idearium-data-specs-7cdb7374-6f0b-44db-a075-4634f21d4196-00-contract-md-74b75bd5-md-md.md",
+  "range": {
+    "start_line": 1,
+    "end_line": 15
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "b21ed28a070f64e68c9c26b31db2e38b8b7efb3da5c069688834d516e53d23cc"
+  },
+  "status": "complete",
+  "content": "---\nchunk_uuid: 74b75bd5-ddb6-4dc8-ae05-4d15de51ba27\nspec_uuid: 7cdb7374-6f0b-44db-a075-4634f21d4196\nsection: contract-md\ntitle: CONTRACT.md\ncomp_id: idearium.spec-engine\nseam_id: idearium.spec-engine:v1:chunk:7cdb7374:contract-md\ncontract_id: spec-contract:7cdb7374:contract-md:74b75bd5\nagent: ingest\nmodel: ingest:drop\nstatus: complete\ncompleted_at: 2026-09-13T16:04:51.235Z\n---\n\nreal test content two"
+}

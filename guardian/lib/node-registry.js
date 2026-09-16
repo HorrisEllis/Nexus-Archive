@@ -7,7 +7,7 @@ const nodeIndex   = require('../../lib/node-index.js');
 
 const DEFAULT_NODES_DIR = path.join(__dirname, '..', 'data', 'nodes');
 let NODES_DIR = DEFAULT_NODES_DIR;
-const GUARDIAN_NODE_TYPES = Object.freeze(['tool', 'agent', 'command', 'event', 'intent']);
+const GUARDIAN_NODE_TYPES = Object.freeze(['tool', 'agent', 'command', 'event', 'intent', 'response']);
 const LEDGER_FILE = '_ledger.jsonl';
 
 let _bus = null;

@@ -1,7 +1,16 @@
 # NEXUS Changelog
 
+## 2026-09-16 — auto-generated from spec version bumps
+
+- **idearium-creative-repo-overhaul** — new spec, v0.1.0-phasemap. (no purpose line found — undocumented change, check the spec directly)
+- **idearium-creative-repo** — new spec, v1.0.0. Defines the layer idearium adds ON TOP of a repository once
+- **idearium-repository-overhaul** — new spec, v0.2.0-phasemap. (no purpose line found — undocumented change, check the spec directly)
+- **nexus-repository-system-build** — new spec, v0.1.0-phasemap. (no purpose line found — undocumented change, check the spec directly)
+
 ## 2026-09-15 — auto-generated from spec version bumps
 
+- **versionium** — v3.0.0 -> v3.1.0. Gap V5 closed: versionium/lib/migrate-idearium-snapshots.js, one-time idempotent backfill of pre-merge idearium_snapshots rows into versionium_commits (system:'idearium'), mirroring the already-closed gap V6. cortex/ extracted into the working tree from Cortex.zip so the migration's cortex/memory/jaa-db.js dependency resolves; cortex/versionium/index.js + causality.js checked and confirmed correctly still archived, unexecuted. 3 new tests (VSOV-009/010/011), 11/11 passing.
+- **MCO-A (idearium-repository-overhaul-phasemap.spec)** — DONE. schema.file_delta registered in versionium/schemas/ (home confirmed versionium/, not cortex/), schema.phase_node registered in idearium/schemas/. Both status OPEN (no production writer yet — MCO-B/MCO-E). Gate proof: 6 new round-trip tests (tests/modules/test-mco-a-file-delta-schema.js, idearium/test/test-mco-a-phase-node-schema.js), 6/6 passing against each system's real sovereign store. Phasemap and canonical spec (docs/idearium-repository-overhaul-phasemap.spec, docs/idearium-creative-repo.spec) copied into this repo's docs/ and registered in SPEC-REGISTRY.spec — previously lived only in a disconnected session-handoff bundle.
 - **2026-08-22-session-full** — new spec, v0.1.0-phasemap. (no purpose line found — undocumented change, check the spec directly)
 - **2026-08-23-backlog** — new spec, v0.2.0-phasemap. (no purpose line found — undocumented change, check the spec directly)
 - **2026-08-27-event-taxonomy-and-brainstorm** — new spec, v0.1.0-phasemap. (no purpose line found — undocumented change, check the spec directly)

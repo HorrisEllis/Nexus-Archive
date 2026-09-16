@@ -1,0 +1,47 @@
+envelope: 1
+uuid: nexus-export-contract-1e402ac3-83b9-44c2-995d-6cc14171b4bf
+type: contract
+id: 1e402ac3-83b9-44c2-995d-6cc14171b4bf
+context: null
+intent: translate.utl
+summary: null
+system: null
+tags: []
+exported_at: 1789524242055
+source: architect
+occurrences: 1
+firstSeenAt: 1789524242055
+lastSeenAt: 1789524242055
+fingerprint: null
+payload:
+  uuid: 1e402ac3-83b9-44c2-995d-6cc14171b4bf
+  status: queued
+  intention: translate.utl
+  dir: null
+  language: null
+  stage: queued
+  system: null
+  source: architect
+  sourceDropId: null
+  boundary:
+    key: architect:translate.utl
+    primitive: architect/service.js POST /api/translate/utl
+    invariants: []
+    principles:
+      - §1.2
+      - §5.2
+  file: null
+  title: translate.utl
+  forAgent: null
+  contract:
+    content: translate.utl:dangling-hook hook 'nexus.tests.modules.run-pipeline-tool.test.import' is declar
+    title: translate.utl
+  dependsOn: []
+  onFail:
+    action: retry
+    maxRetries: 2
+  retryCount: 0
+  compartmentId: null
+  verdict: null
+  createdAt: 1789524242055
+  updatedAt: 1789524242055

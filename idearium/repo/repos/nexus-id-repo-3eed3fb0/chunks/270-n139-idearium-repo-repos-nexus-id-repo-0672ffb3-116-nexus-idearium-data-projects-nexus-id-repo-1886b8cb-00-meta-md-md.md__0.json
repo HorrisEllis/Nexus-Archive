@@ -1,0 +1,21 @@
+{
+  "id": "chunk-703a9b13dbaad3c7",
+  "repository": "nexus-id-repo-3eed3fb0",
+  "file": "270-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-116-nexus-idearium-data-projects-nexus-id-repo-1886b8cb-00-meta-md-md.md",
+  "range": {
+    "start_line": 1,
+    "end_line": 1
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "347e07e872850774e9b49542b8d8246cbf073dd2f6c45d51d641bfbab4c01bdb"
+  },
+  "status": "complete",
+  "content": "real content for the first chunk"
+}
