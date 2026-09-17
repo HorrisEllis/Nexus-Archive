@@ -1,0 +1,21 @@
+{
+  "id": "chunk-4c5b51828a9cddc2",
+  "repository": "nexus-id-repo-3eed3fb0",
+  "file": "209-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-203-nexus-idearium-data-specs-24478305-8a62-438b-ba47-f3b04c7d07f3-01-purpose-d7a99797-md-md.md",
+  "range": {
+    "start_line": 1,
+    "end_line": 16
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "92f1947ab95bd9a027ee0bf724f89c823a9df71ee500e43dd7b8a8efe2683300"
+  },
+  "status": "complete",
+  "content": "---\nchunk_uuid: d7a99797-20e6-4d40-adf7-a02c3f4d580c\nspec_uuid: 24478305-8a62-438b-ba47-f3b04c7d07f3\nsection: purpose\ntitle: Purpose & Intent\ncomp_id: idearium.spec-engine\nseam_id: idearium.spec-engine:v1:chunk:24478305:purpose\ncontract_id: spec-contract:24478305:purpose:d7a99797\nagent: ollama\nmodel: unknown\nstatus: complete\ncompleted_at: 2026-09-13T16:04:05.572Z\n---\n\n## Purpose & Intent\nreal content 1789303597412"
+}

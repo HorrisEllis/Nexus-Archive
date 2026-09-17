@@ -1,0 +1,21 @@
+{
+  "id": "chunk-9819d22228be5d67",
+  "repository": "nexus-id-repo-3eed3fb0",
+  "file": "386-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-12-nexus-warp-dispatch-pregen-js-md.md",
+  "range": {
+    "start_line": 1,
+    "end_line": 52
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "39d01ad167c678db6b85c4efbbde5ef0e3d6f7daa2a43a3f19069b5fcb303671"
+  },
+  "status": "complete",
+  "content": "'use strict';\n/**\n * pregen.js — v1.4 \"pre-generation filter layer.\"\n *\n * Placement matters: this runs AFTER the exact-cache miss (step 1) and\n * BEFORE cascade generation (step 3), not before step 1. The spec patch\n * described it as avoiding generation when a \"structurally equivalent\"\n * solution already exists — that's necessarily fuzzy (similarityScore,\n * not digest equality), so it can only ever be a step *down* from the\n * exact cache, never a replacement for it. Fuzzy-reusing content-bearing\n * output is a correctness trade, not a free win, so:\n *\n *   - it is OFF by default (opts in via unifiedDispatch({ preGeneration }))\n *   - a reuse never bypasses axiom checks — the reused output still runs\n *     through the axiom gate before being returned, same as generated\n *     output. \"Faster\" never means \"less verified.\"\n *   - every reuse is logged with its similarity score, so a false-positive\n *     reuse is traceable after the fact instead of an invisible cache\n *     poison.\n */\nconst { similarityScore } = require('./canonicalize');\n\nconst DEFAULT_THRESHOLD = 0.87;\n\n/**\n * check({ eventData, population, gateClass, threshold, log })\n * -> { action: 'reuse', variant, score } | { action: 'proceed', bestScore }\n */\nfunction preGenerationCheck({ eventData, population, gateClass, threshold = DEFAULT_THRESHOLD, log = null }) {\n  const candidates = population.variantsFor ? population.variantsFor(gateClass) : [];\n  let best = null;\n  let bestScore = 0;\n\n  for (const variant of candidates) {\n    if (variant.sourceEventData === undefined) continue; // no stored sample to compare shape against\n    const score = similarityScore(eventData, variant.sourceEventData);\n    if (score > bestScore) {\n      bestScore = score;\n      best = variant;\n    }\n  }\n\n  if (best && bestScore >= threshold) {\n    log?.record({ step: 'pre-generation-filter', result: 'reuse', gateClass, score: bestScore, digest: best.digest });\n    return { action: 'reuse', variant: best, score: bestScore };\n  }\n\n  log?.record({ step: 'pre-generation-filter', result: 'proceed', gateClass, bestScore });\n  return { action: 'proceed', bestScore };\n}\n\nmodule.exports = { preGenerationCheck, DEFAULT_THRESHOLD };"
+}

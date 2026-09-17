@@ -1,0 +1,21 @@
+{
+  "id": "chunk-0326d574b6f5075d",
+  "repository": "nexus-id-repo-3eed3fb0",
+  "file": "179-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-383-nexus-guardian-lib-gap-hunter-js-md.md",
+  "range": {
+    "start_line": 1,
+    "end_line": 21
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "1111cad3c904de7422939c7ce4df6d60719a177804ba7db55565916af4ffaef8"
+  },
+  "status": "complete",
+  "content": "'use strict';\n/**\n * guardian/lib/gap-hunter.js — FORWARDING SHIM\n * UUID: guardian-gap-hunter-v1-0000-4000-0000-000000000001\n *\n * §CONSOLIDATED 2026-07-06 — this used to be a byte-identical copy of\n * meta/gap/hunter.js (confirmed via diff — same UUID, same \"GapHunter v3\"\n * header, only the relative import paths for liminal/confidence differed).\n * Two copies of the same logic, each with its own consumers\n * (guardian/server.js + 3 test files here; guardian/lib/ncp.js,\n * guardian/server.js, service/nexus-diagnostic.js, lib/reflection.js,\n * lib/open-loop-taxonomy.js, lib/nexus-expansion-boot.js on the meta/\n * side) — any future fix would need to land in both or silently drift.\n * meta/gap/hunter.js is canonical now — matches meta/'s own stated role\n * as the domain-agnostic home for this class of detector, and already\n * had more consumers. This shim exists for backward compatibility only —\n * same pattern lib/meta/index.js already uses for the broader meta\n * layer. Update any require('./lib/gap-hunter') to require('../../meta/gap/hunter')\n * directly when touching a file that uses this.\n */\nmodule.exports = require('../../intelligence/gap/hunter.js');"
+}

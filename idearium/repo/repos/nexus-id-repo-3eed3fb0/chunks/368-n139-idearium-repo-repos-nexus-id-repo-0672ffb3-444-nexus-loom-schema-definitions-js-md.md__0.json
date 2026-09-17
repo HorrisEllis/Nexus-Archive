@@ -1,0 +1,21 @@
+{
+  "id": "chunk-2e0b4c7f411a1db7",
+  "repository": "nexus-id-repo-3eed3fb0",
+  "file": "368-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-444-nexus-loom-schema-definitions-js-md.md",
+  "range": {
+    "start_line": 1,
+    "end_line": 38
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "44f06a6849be610388c58bc7a79e57a85041ad7665e71b40b5eb3f37efc6db7b"
+  },
+  "status": "complete",
+  "content": "'use strict';\n/**\n * loom/schema/definitions.js — LOOM Phase 131: component/seam/hook/wire\n * schema.\n * comp_id: nexus.loom.schema\n * UUID: nexus-loom-schema-v1-0000-2026-0701-jamesbrooks-001\n * Spec source: NEXUS-LATTICE-COGNITION-ROADMAP-v0.2.md, phase-map entry 131\n *\n * §SPLIT 2026-09-03 — James: \"look at all the rest. all schemas should be\n * seperated.\" Was a 5-schema monolith (component/seam/hook/wire/concern\n * all defined inline in this one file) — same shape lib/node-schemas.js\n * was before its own split earlier this session. This file is now a real\n * thin loader, same real export names as before (both real consumers —\n * lib/node-schemas/component.js's destructure, and anything else that\n * requires this file — keep working unchanged), sourcing each schema\n * from its own file under this directory instead of defining it inline.\n *\n * Four primitives, matching the four nouns James named, plus concern\n * (added 2026-07-14). Each mirrors the shape architect/registry-\n * components.js already uses for its own per-component declarations\n * (id, namespace, version, tags) so LOOM doesn't invent a fifth\n * convention next to Architect's existing one.\n */\n\nconst { COMPONENT_SCHEMA }               = require('./component.js');\nconst { SEAM_SCHEMA }                    = require('./seam.js');\nconst { HOOK_SCHEMA, KNOWN_HOOK_TYPES }  = require('./hook.js');\nconst { WIRE_SCHEMA }                    = require('./wire.js');\nconst { CONCERN_SCHEMA }                 = require('./concern.js');\n\nmodule.exports = {\n  KNOWN_HOOK_TYPES,\n  COMPONENT_SCHEMA,\n  SEAM_SCHEMA,\n  HOOK_SCHEMA,\n  WIRE_SCHEMA,\n  CONCERN_SCHEMA,\n};"
+}

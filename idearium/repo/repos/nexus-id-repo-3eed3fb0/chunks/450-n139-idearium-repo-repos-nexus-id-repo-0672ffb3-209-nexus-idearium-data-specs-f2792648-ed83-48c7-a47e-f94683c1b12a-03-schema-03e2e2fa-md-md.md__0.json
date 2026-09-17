@@ -1,0 +1,21 @@
+{
+  "id": "chunk-666e093da048f303",
+  "repository": "nexus-id-repo-3eed3fb0",
+  "file": "450-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-209-nexus-idearium-data-specs-f2792648-ed83-48c7-a47e-f94683c1b12a-03-schema-03e2e2fa-md-md.md",
+  "range": {
+    "start_line": 1,
+    "end_line": 16
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "0f08b92c3c5a4abc4d3cde146913b532f6f065eb030a8fff5d263f56beb0913d"
+  },
+  "status": "complete",
+  "content": "---\nchunk_uuid: 03e2e2fa-308b-4d73-bcab-057630f5dc90\nspec_uuid: f2792648-ed83-48c7-a47e-f94683c1b12a\nsection: schema\ntitle: Data Schema\ncomp_id: idearium.spec-engine\nseam_id: idearium.spec-engine:v1:chunk:f2792648:schema\ncontract_id: spec-contract:f2792648:schema:03e2e2fa\nagent: deepseek\nmodel: unknown\nstatus: complete\ncompleted_at: 2026-09-13T03:28:47.062Z\n---\n\n## Data Schema\nreal content 1789270127062"
+}

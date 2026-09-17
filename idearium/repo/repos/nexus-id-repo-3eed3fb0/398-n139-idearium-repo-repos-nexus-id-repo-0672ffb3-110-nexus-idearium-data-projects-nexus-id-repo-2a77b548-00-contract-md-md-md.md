@@ -1,0 +1,1 @@
+real simulated contract content

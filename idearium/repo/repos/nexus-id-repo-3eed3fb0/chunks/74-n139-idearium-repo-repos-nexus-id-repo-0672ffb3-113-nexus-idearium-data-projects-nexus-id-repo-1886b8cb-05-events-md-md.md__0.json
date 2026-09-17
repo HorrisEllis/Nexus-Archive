@@ -1,0 +1,21 @@
+{
+  "id": "chunk-cfecd327ef8e186b",
+  "repository": "nexus-id-repo-3eed3fb0",
+  "file": "74-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-113-nexus-idearium-data-projects-nexus-id-repo-1886b8cb-05-events-md-md.md",
+  "range": {
+    "start_line": 1,
+    "end_line": 1
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "a58510a4f78195d931660d94daec001a0dc0831d2e66d9d74f1c8c3e1e59a836"
+  },
+  "status": "complete",
+  "content": "<!-- nexus/idearium/data/projects/nexus-id-repo-1886b8cb/05-events.md: no text content captured -->"
+}

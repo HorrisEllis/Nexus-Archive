@@ -1,0 +1,21 @@
+{
+  "id": "chunk-60cb1a25404077f8",
+  "repository": "nexus-id-repo-3eed3fb0",
+  "file": "428-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-215-nexus-idearium-data-specs-f2792648-ed83-48c7-a47e-f94683c1b12a-f2792648-ed83-48c7-a47e-f94683c1b12a-spec-md.md",
+  "range": {
+    "start_line": 1,
+    "end_line": 77
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "e874086ce617c2849ddb2a77e54747a771df1f8a76c5176db85be61d51970771"
+  },
+  "status": "complete",
+  "content": "spec:\n  name: phase-sync-test-1789270126962\n  uuid: f2792648-ed83-48c7-a47e-f94683c1b12a\n  version: 0.1.0\n  type: component\n  phase: 40\n  status: complete\n  agent: auto\n  completed_at: 2026-09-13T03:28:47.193Z\n\n# Meta & Identity\n\n## Meta & Identity\nreal content 1789270126979\n\n---\n\n# Purpose & Intent\n\n## Purpose & Intent\nreal content 1789270127024\n\n---\n\n# Axioms Enforced\n\n## Axioms Enforced\nreal content 1789270127043\n\n---\n\n# Data Schema\n\n## Data Schema\nreal content 1789270127062\n\n---\n\n# API & Routes\n\n## API & Routes\nreal content 1789270127079\n\n---\n\n# Events & Bus\n\n## Events & Bus\nreal content 1789270127110\n\n---\n\n# Integration Points\n\n## Integration Points\nreal content 1789270127127\n\n---\n\n# Failure Modes\n\n## Failure Modes\nreal content 1789270127147\n\n---\n\n# Build Order\n\n## Build Order\nreal content 1789270127167\n\n---\n\n# Tests & Verification\n\n## Tests & Verification\nreal content 1789270127193"
+}

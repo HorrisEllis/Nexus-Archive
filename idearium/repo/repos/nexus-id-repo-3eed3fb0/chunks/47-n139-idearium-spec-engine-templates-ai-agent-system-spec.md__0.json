@@ -1,0 +1,21 @@
+{
+  "id": "chunk-b5b25dbf83178d7e",
+  "repository": "nexus-id-repo-3eed3fb0",
+  "file": "47-n139-idearium-spec-engine-templates-ai-agent-system-spec.md",
+  "range": {
+    "start_line": 1,
+    "end_line": 45
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "5695b2adbb81fc5620129f1b2dfe6d80317fc419cfa9ef3a19629ef9db79fabc"
+  },
+  "status": "complete",
+  "content": "# §SEED PROVENANCE — extracted verbatim from NEXUS-GUARDIAN.spec, the\n# `cockpit_forge` block (lines 731-769 of the source file), authored by\n# james-brooks. Real spec for a shipped \"AI-powered self-modification\n# engine\" (routing priority across local/remote models, entry points,\n# fail-loud fallback) — chosen as the reference shape for an \"AI Agent\n# System\" archetype.\n  cockpit_forge:\n    file: \"cockpit/forge/cockpit-forge.js\"\n    formerly: \"forge.js\"\n    uuid: rheon-forge-0000-2026-0529-jamesbrooks-001\n    component_id: rheon.forge\n    version: \"1.0.0\"\n    description: \"AI-powered self-modification engine. Local-first. No API key.\"\n\n    routing_priority:\n      1: \"Guardian HTTP — http://127.0.0.1:7820/command\"\n      2: \"Ollama — http://127.0.0.1:11434/api/generate\"\n      3: \"FAIL LOUD — §1.2\"\n\n    entry_points:\n      - \"forgeModule(src, instruction, opts) — full module rewrite\"\n      - \"forgePatch(src, patchSpec, opts)    — minimal targeted patch\"\n      - \"forgeGate(description, opts)        — generate SISO gate function body\"\n      - \"forgeHook(src, hookSpec, opts)      — add new exported function with UUID\"\n\n    invariants:\n      - \"ForgePatchRecord written to JAA before patch applied (§2.1)\"\n      - \"Zero external npm dependencies\"\n      - \"All mutations via SISO bus emit(), never direct calls\"\n      - \"Every new exported symbol gets @hook UUID comment\"\n      - \"Never remove existing @hook UUIDs or change existing signatures\"\n      - \"Source is CommonJS (require/module.exports)\"\n\n    system_prompt_nucleus:\n      laws:\n        - \"§1.1 Nothing pretends to work\"\n        - \"§1.2 Nothing silently fails\"\n        - \"§2.1 JAA write before behavior\"\n        - \"§5.1 UUID on everything\"\n        - \"§CF No engine consumes raw meaning — all engines operate on ConstraintField\"\n        - \"§SISO Every gate has exactly one signature\"\n\n  # ════════════════════════════════════════════════════════════════\n  # GTCI — GAP-TRIGGERED CONTEXT INJECTION\n  # ════════════════════════════════════════════════════════════════"
+}

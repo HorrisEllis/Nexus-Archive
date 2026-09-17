@@ -1,0 +1,21 @@
+{
+  "id": "chunk-9e0872c95dbfe685",
+  "repository": "nexus-id-repo-3eed3fb0",
+  "file": "96-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-414-nexus-orchestrator-event-taxonomy-js-md.md",
+  "range": {
+    "start_line": 1,
+    "end_line": 52
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "62127a8898a84c20ff1966f0698ab7ba15f7ea83ab90ccc3a8fa1c33632a6a3a"
+  },
+  "status": "complete",
+  "content": "'use strict';\n// orchestrator/event-taxonomy.js — ET4_orchestrator_autopilot_event_taxonomy.\n// Conforms to lib/event-taxonomy-pattern.js's real ET1 shape.\n//\n// §CORRECTED against the phasemap's own summary — same discipline\n// already applied to ET2, not assumed accurate just because it's\n// written down. The phase claimed \"gap.found and resource.pressure\n// already exist as real bus events [from orchestrator/autopilot],\n// confirmed by grep.\" Checked directly: both are real events, but\n// neither originates from orchestrator or autopilot — gap.found is\n// service/nexus-diagnostic.js's own broadcast (confirmed by a comment\n// in orchestrator.js itself naming diagnostic as the source), and\n// nexus.resource.pressure comes from a separate resource-monitor\n// module; orchestrator only subscribes to it (nexusBus.on(...)) and\n// relays it onward to cortex. Neither belongs in a taxonomy file\n// scoped to what orchestrator/autopilot themselves emit.\n\nmodule.exports = Object.freeze({\n  // ── Real, already-governed bus events ──────────────────────────────────────\n  SYSTEM_CONTRACT_VERIFIED: {\n    description: \"A system's real contract (route/hash) was checked against orchestrator's expectation and verified to match.\",\n    payloadShape: ['systemId', 'trust', 'hash', 'routeCount'],\n    severity: 'info',\n  },\n  ORCHESTRATOR_SYSTEM_ONLINE: {\n    description: \"The watchdog's real health check found a previously-offline system responding again.\",\n    payloadShape: ['type', 'systemId', 'online', 'ms', 'ts'],\n    severity: 'notable',\n  },\n  ORCHESTRATOR_SYSTEM_OFFLINE: {\n    description: \"The watchdog's real health check found a previously-online system no longer responding.\",\n    payloadShape: ['type', 'systemId', 'online', 'ms', 'ts'],\n    severity: 'warning',\n  },\n\n  // ── §HONEST GAP — real, confirmed-happening events with no real bus\n  //    emission yet, only console+file logging via autopilot.js's own\n  //    _log() helper (checked directly: console.log + fs.appendFileSync,\n  //    no bus.emit anywhere in it). These genuinely need real\n  //    instrumentation added, not just a taxonomy entry describing\n  //    something that can't be queried — a bigger, separate, more\n  //    invasive change to autopilot's real boot-supervision code than\n  //    this taxonomy pass makes on its own:\n  //      - \"[kernel] phase N gate passed\" (autopilot.js) - a supervised\n  //        kernel's boot phase gate succeeded.\n  //      - \"[kernel] stable for 60s — backoff reset\" (autopilot.js) - a\n  //        kernel ran long enough that its real crash-loop backoff timer\n  //        reset to base.\n  //      - \"contract.unreachable\" - referenced only in a comment\n  //        (autopilot.js:181) describing what a contract poller logs;\n  //        no real emission found anywhere by grep.\n});"
+}

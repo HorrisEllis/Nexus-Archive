@@ -1,0 +1,21 @@
+{
+  "id": "chunk-9276ab2ea01f95cc",
+  "repository": "nexus-id-repo-3eed3fb0",
+  "file": "288-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-315-nexus-idearium-data-specs-686d8642-3f00-4754-b1c1-3fa8442980be-09-tests-695e4c39-md-md.md",
+  "range": {
+    "start_line": 1,
+    "end_line": 16
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "b5b5374cbc7ea5e76ba108567f021b5bcb521074069df87981a45156d44a2098"
+  },
+  "status": "complete",
+  "content": "---\nchunk_uuid: 695e4c39-8949-45d6-8f77-2c28c53a6b14\nspec_uuid: 686d8642-3f00-4754-b1c1-3fa8442980be\nsection: tests\ntitle: Tests & Verification\ncomp_id: idearium.spec-engine\nseam_id: idearium.spec-engine:v1:chunk:686d8642:tests\ncontract_id: spec-contract:686d8642:tests:695e4c39\nagent: deepseek\nmodel: unknown\nstatus: complete\ncompleted_at: 2026-09-13T12:20:24.084Z\n---\n\n## Tests & Verification\nreal content 1789302024084"
+}

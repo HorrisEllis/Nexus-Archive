@@ -83,6 +83,43 @@ SYMBOL_PATTERNS.typescript = [
 
 function sha256(s) { return crypto.createHash('sha256').update(s, 'utf8').digest('hex'); }
 
+// ── component classification (§16) — deterministic path/name evidence
+// first, per spec §16's own rule ("deterministic structural evidence
+// first, semantic inference second"). Ported from the standalone
+// chunk-index.js prototype built earlier and never wired in — same
+// boundary logic, ­added here instead of as a second, competing storage
+// system, since this pipeline is the one actually integrated end to end
+// (incremental re-chunk on every write, a real .repository node, atlas/
+// indexes on disk). "component" is the default, smallest unit — one
+// executable file — when nothing more specific matches.
+const KIND_BOUNDARY_BEFORE = '(?:^|[\\/\\-_])';
+const KIND_BOUNDARY_AFTER  = '(?=[\\/.\\-_]|$)';
+function kindRe(pattern) { return new RegExp(KIND_BOUNDARY_BEFORE + pattern + KIND_BOUNDARY_AFTER, 'i'); }
+const KIND_RULES = [
+  [kindRe('kernel'),                    'kernel'],
+  [kindRe('engine'),                    'engine'],
+  [kindRe('runtime'),                   'runtime'],
+  [kindRe('cli'),                       'CLI'],
+  [kindRe('api'),                       'API'],
+  [/\.test\.[jt]sx?$|\.spec\.[jt]sx?$|(^|\/)tests?(\/|$)/i, 'test'],
+  [kindRe('(routes?|router|controllers?)'), 'controller'],
+  [kindRe('(adapters?|bridge)'),        'adapter'],
+  [/(^|\/)(config)(\/|\.|$)|\.config\.[jt]s$/i, 'configuration'],
+  [kindRe('registry'),                  'registry'],
+  [kindRe('(store|storage|db)'),        'storage'],
+  [kindRe('dispatch(er)?'),             'dispatcher'],
+  [kindRe('pars(er|e)'),                'parser'],
+  [kindRe('compil(er|e)'),              'compiler'],
+  [kindRe('providers?'),                'provider'],
+  [kindRe('services?'),                 'service'],
+  [kindRe('(events?|bus)'),             'event-bus'],
+  [kindRe('interfaces?'),               'interface'],
+];
+function classifyKind(filePath) {
+  for (const [re, kind] of KIND_RULES) if (re.test(filePath)) return kind;
+  return 'component';
+}
+
 // ── PARSE (L2) ─────────────────────────────────────────────────────────────
 function parseFile(repoDir, relPath) {
   const abs = path.join(repoDir, relPath);
@@ -148,6 +185,7 @@ function summarizeParse(parsed) {
 // ── ATLAS (L4) — compressed topology, not raw source ────────────────────────
 function buildAtlas(repo, parsed) {
   const tree = {};
+  const components = [];
   for (const p of parsed) {
     const parts = p.path.split('/');
     let node = tree;
@@ -155,15 +193,19 @@ function buildAtlas(repo, parsed) {
       node[parts[i]] = node[parts[i]] || { __dir: true, children: {} };
       node = node[parts[i]].children;
     }
-    node[parts[parts.length - 1]] = { language: p.language, status: p.status, symbolCount: p.symbols.length, lineCount: p.lineCount };
+    const kind = classifyKind(p.path);
+    node[parts[parts.length - 1]] = { language: p.language, status: p.status, symbolCount: p.symbols.length, lineCount: p.lineCount, kind };
+    components.push({ path: p.path, kind, language: p.language, symbolCount: p.symbols.length });
   }
   const byLanguage = {};
   for (const p of parsed) { const l = p.language || 'unknown'; byLanguage[l] = (byLanguage[l] || 0) + 1; }
+  const byKind = {};
+  for (const c of components) byKind[c.kind] = (byKind[c.kind] || 0) + 1;
   return {
     repository: repo.uuid, generatedAt: Date.now(),
-    fileCount: parsed.length, byLanguage,
+    fileCount: parsed.length, byLanguage, byKind,
     failedCount: parsed.filter(p => p.status === 'failed').length,
-    tree,
+    tree, components,
   };
 }
 
@@ -238,6 +280,72 @@ function buildIndexes(parsed, chunks) {
   for (const p of parsed) for (const s of p.symbols) symbols.push({ name: s.name, file: p.path, line: s.line });
   const chunkIndex = chunks.map(c => ({ id: c.id, file: c.file, range: c.range, symbols: c.symbols, hash: c.hash.content }));
   return { files, symbols, chunks: chunkIndex };
+}
+
+// ── Query surface — reads what runImportPipeline() already wrote to
+// disk (atlas.json, indexes/*.json, chunks/*.json). No second storage
+// system: everything below is a read, never a write, of the same files
+// the pipeline itself produces.
+function loadJsonSafe(p) { try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch { return null; } }
+
+/** readAtlas(repoDir) — §14 compressed map: files/symbols/chunk metadata,
+ * component kinds, no chunk content. */
+export function readAtlas(repoDir) {
+  const atlas = loadJsonSafe(path.join(repoDir, 'atlas.json'));
+  const files = loadJsonSafe(path.join(repoDir, 'indexes', 'files.json')) || [];
+  const symbols = loadJsonSafe(path.join(repoDir, 'indexes', 'symbols.json')) || [];
+  const chunks = loadJsonSafe(path.join(repoDir, 'indexes', 'chunks.json')) || [];
+  if (!atlas) return { error: 'no atlas.json — repo has not been through the import pipeline yet' };
+  return { ...atlas, indexes: { files, symbols, chunks } };
+}
+
+/** queryByKind(repoDir, kind) — components of one kind (kernel/engine/runtime/...). */
+export function queryByKind(repoDir, kind) {
+  const atlas = loadJsonSafe(path.join(repoDir, 'atlas.json'));
+  if (!atlas) return [];
+  return (atlas.components || []).filter(c => c.kind === kind);
+}
+
+function tokenize(s) {
+  if (!s) return [];
+  return (s.match(/[A-Za-z]+|[0-9]+/g) || [])
+    .flatMap(w => w.replace(/([a-z])([A-Z])/g, '$1 $2').split(/[\s_\-./]+/))
+    .map(w => w.toLowerCase())
+    .filter(w => w.length >= 2);
+}
+
+/**
+ * searchRepo(repoDir, query) — deterministic token-overlap search over
+ * symbol names and chunk file paths (no LLM, no separate index to keep
+ * in sync — reads indexes/symbols.json + indexes/chunks.json directly).
+ * Ranks by how many distinct query tokens matched.
+ */
+export function searchRepo(repoDir, query) {
+  const qTokens = new Set(tokenize(query));
+  if (!qTokens.size) return [];
+  const symbols = loadJsonSafe(path.join(repoDir, 'indexes', 'symbols.json')) || [];
+  const chunkIdx = loadJsonSafe(path.join(repoDir, 'indexes', 'chunks.json')) || [];
+  const scoreByChunkFile = new Map(); // file -> {score, chunkIds}
+
+  for (const s of symbols) {
+    const matched = tokenize(s.name).filter(t => qTokens.has(t)).length;
+    if (!matched) continue;
+    const forFile = scoreByChunkFile.get(s.file) || { score: 0, chunkIds: new Set(), symbols: [] };
+    forFile.score += matched; forFile.symbols.push(s.name);
+    scoreByChunkFile.set(s.file, forFile);
+  }
+  for (const c of chunkIdx) {
+    const nameTokens = (c.symbols || []).flatMap(tokenize).concat(tokenize(c.file));
+    const matched = nameTokens.filter(t => qTokens.has(t)).length;
+    if (!matched) continue;
+    const forFile = scoreByChunkFile.get(c.file) || { score: 0, chunkIds: new Set(), symbols: [] };
+    forFile.score += matched; forFile.chunkIds.add(c.id);
+    scoreByChunkFile.set(c.file, forFile);
+  }
+
+  return [...scoreByChunkFile.entries()]
+    .map(([file, v]) => ({ file, score: v.score, symbols: v.symbols, chunkIds: [...v.chunkIds] }))
+    .sort((a, b) => b.score - a.score);
 }
 
 // ── orchestrator ─────────────────────────────────────────────────────────

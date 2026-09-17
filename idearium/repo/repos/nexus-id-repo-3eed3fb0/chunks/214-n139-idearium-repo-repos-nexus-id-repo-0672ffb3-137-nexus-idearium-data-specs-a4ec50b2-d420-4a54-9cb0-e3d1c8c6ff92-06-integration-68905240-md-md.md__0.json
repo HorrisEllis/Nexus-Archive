@@ -1,0 +1,21 @@
+{
+  "id": "chunk-4eddc447b530d4f6",
+  "repository": "nexus-id-repo-3eed3fb0",
+  "file": "214-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-137-nexus-idearium-data-specs-a4ec50b2-d420-4a54-9cb0-e3d1c8c6ff92-06-integration-68905240-md-md.md",
+  "range": {
+    "start_line": 1,
+    "end_line": 16
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "eed9fafacd1463bae5e8253212860de0f7e88c551bc205925a7c4d2599deb864"
+  },
+  "status": "complete",
+  "content": "---\nchunk_uuid: 68905240-cc3f-4a7c-b303-c1cc39430829\nspec_uuid: a4ec50b2-d420-4a54-9cb0-e3d1c8c6ff92\nsection: integration\ntitle: Integration Points\ncomp_id: idearium.spec-engine\nseam_id: idearium.spec-engine:v1:chunk:a4ec50b2:integration\ncontract_id: spec-contract:a4ec50b2:integration:68905240\nagent: gemini\nmodel: unknown\nstatus: complete\ncompleted_at: 2026-09-13T12:46:37.529Z\n---\n\n## Integration Points\nreal content 1789303597529"
+}

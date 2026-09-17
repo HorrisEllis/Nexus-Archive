@@ -1,0 +1,21 @@
+{
+  "id": "chunk-3957d3175b78c219",
+  "repository": "nexus-id-repo-3eed3fb0",
+  "file": "84-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-135-nexus-idearium-data-specs-a4ec50b2-d420-4a54-9cb0-e3d1c8c6ff92-07-failure-modes-e2864708-md-md.md",
+  "range": {
+    "start_line": 1,
+    "end_line": 16
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "68a9d58fec038b5fdf7d2f17935fff2d4252d06cf7d6ac5a1a138e230e3bba79"
+  },
+  "status": "complete",
+  "content": "---\nchunk_uuid: e2864708-277f-4e14-a2ed-a0e8008f2e72\nspec_uuid: a4ec50b2-d420-4a54-9cb0-e3d1c8c6ff92\nsection: failure_modes\ntitle: Failure Modes\ncomp_id: idearium.spec-engine\nseam_id: idearium.spec-engine:v1:chunk:a4ec50b2:failure_modes\ncontract_id: spec-contract:a4ec50b2:failure_modes:e2864708\nagent: claude\nmodel: unknown\nstatus: complete\ncompleted_at: 2026-09-13T12:46:37.554Z\n---\n\n## Failure Modes\nreal content 1789303597554"
+}

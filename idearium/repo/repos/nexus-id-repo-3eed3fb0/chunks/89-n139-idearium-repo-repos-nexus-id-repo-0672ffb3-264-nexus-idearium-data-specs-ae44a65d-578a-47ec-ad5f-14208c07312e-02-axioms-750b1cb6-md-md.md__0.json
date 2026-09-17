@@ -1,0 +1,21 @@
+{
+  "id": "chunk-c91b07350b492283",
+  "repository": "nexus-id-repo-3eed3fb0",
+  "file": "89-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-264-nexus-idearium-data-specs-ae44a65d-578a-47ec-ad5f-14208c07312e-02-axioms-750b1cb6-md-md.md",
+  "range": {
+    "start_line": 1,
+    "end_line": 16
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "cd3ea9ce79572ca381d07d3fdf4e53fa674cfa11bf9d88920aaa425f2edcd762"
+  },
+  "status": "complete",
+  "content": "---\nchunk_uuid: 750b1cb6-201c-4e6a-be25-64e2291c5d8b\nspec_uuid: ae44a65d-578a-47ec-ad5f-14208c07312e\nsection: axioms\ntitle: Axioms Enforced\ncomp_id: idearium.spec-engine\nseam_id: idearium.spec-engine:v1:chunk:ae44a65d:axioms\ncontract_id: spec-contract:ae44a65d:axioms:750b1cb6\nagent: claude\nmodel: unknown\nstatus: complete\ncompleted_at: 2026-09-13T16:04:27.693Z\n---\n\n## Axioms Enforced\nreal content 1789303597434"
+}

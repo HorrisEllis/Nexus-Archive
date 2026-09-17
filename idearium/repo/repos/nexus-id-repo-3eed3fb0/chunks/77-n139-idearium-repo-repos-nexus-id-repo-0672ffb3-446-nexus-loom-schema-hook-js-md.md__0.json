@@ -1,0 +1,21 @@
+{
+  "id": "chunk-90874a7a23fb1997",
+  "repository": "nexus-id-repo-3eed3fb0",
+  "file": "77-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-446-nexus-loom-schema-hook-js-md.md",
+  "range": {
+    "start_line": 1,
+    "end_line": 38
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "d2dcc72a98c9b27719e330d8bc994e4fc70ad277da1c16cf731f4f1734519d44"
+  },
+  "status": "complete",
+  "content": "'use strict';\n/**\n * loom/schema/hook.js — Hook: a named, typed wire endpoint on one\n * component. Directly the Architect spec's own primitive: \"a named,\n * typed wire between two system surfaces.\" A hook is one end of that; a\n * wire (wire.js) is the pairing of two hooks.\n * §SPLIT 2026-09-03 — see component.js's header for the split rationale.\n * Content unchanged — a pure move. KNOWN_HOOK_TYPES moved here rather\n * than left floating in definitions.js's thin loader — it's a hook's own\n * `type` field's seed list, its most direct real association, not a\n * cross-cutting constant that belongs nowhere in particular.\n *\n * Wire \"type\" is intentionally an open string, not a closed enum — per\n * the Architect spec's own authorial intent: \"type (api, event bus,\n * callto, direct and any invention you can think of, like webserver.)\"\n * KNOWN_HOOK_TYPES below is a *seed list*, not a ceiling. New types are\n * added by registering them, not by editing an enum.\n */\n\nconst KNOWN_HOOK_TYPES = Object.freeze([\n  'api',        // REST/HTTP surface\n  'event_bus',  // pub/sub, SSE fanout\n  'callto',     // direct function/method invocation across a boundary\n  'direct',     // in-process direct reference, no boundary crossing\n  'webserver',  // a hook that itself serves, not just calls\n  'cli',        // command-line surface\n]);\n\nconst HOOK_SCHEMA = Object.freeze({\n  requiredKeys: ['id', 'component_id', 'name', 'type', 'direction'],\n  types: {\n    id: 'string', component_id: 'string', name: 'string',\n    type: 'string', direction: 'string',\n  },\n  // direction: 'in' | 'out' | 'bidirectional'. uuid — see note above.\n});\n\nmodule.exports = { HOOK_SCHEMA, KNOWN_HOOK_TYPES };"
+}

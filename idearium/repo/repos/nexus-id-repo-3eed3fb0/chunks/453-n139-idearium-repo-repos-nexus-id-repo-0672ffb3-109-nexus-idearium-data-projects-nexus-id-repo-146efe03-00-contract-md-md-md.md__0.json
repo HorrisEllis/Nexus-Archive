@@ -1,0 +1,21 @@
+{
+  "id": "chunk-3be174b7e546b053",
+  "repository": "nexus-id-repo-3eed3fb0",
+  "file": "453-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-109-nexus-idearium-data-projects-nexus-id-repo-146efe03-00-contract-md-md-md.md",
+  "range": {
+    "start_line": 1,
+    "end_line": 1
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "17d9e373a49e7620b75cad6cf7acf78291b8529160ff9e2f41e2bc7694635575"
+  },
+  "status": "complete",
+  "content": "real test content"
+}

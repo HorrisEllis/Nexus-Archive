@@ -1,0 +1,21 @@
+{
+  "id": "chunk-72c884e7e2a7f355",
+  "repository": "nexus-id-repo-3eed3fb0",
+  "file": "243-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-23-nexus-warp-plugins-crystallizer-flatfile-js-md.md",
+  "range": {
+    "start_line": 1,
+    "end_line": 58
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "f654dd45f483a6f6e0c1d04f6e0fdc86dc3742951c72db8f78aa21029b3f3d1a"
+  },
+  "status": "complete",
+  "content": "'use strict';\n/**\n * crystallizer-flatfile.js — default storage adapter for the exact-cache.\n * Trivial in-memory + optional flat-file persistence. A consuming project\n * swaps this for its own adapter (e.g. NEXUS's JAA) without core ever\n * changing — this file lives outside core/ specifically so it's optional.\n */\nconst fs = require('fs');\n\nclass FlatFileCrystallizer {\n  constructor({ path = null } = {}) {\n    this._path = path;\n    this._store = new Map();\n    if (path && fs.existsSync(path)) {\n      try {\n        const raw = JSON.parse(fs.readFileSync(path, 'utf8'));\n        for (const [k, v] of Object.entries(raw)) this._store.set(k, v);\n      } catch (_) { /* corrupt or empty — start fresh, never crash boot */ }\n    }\n  }\n\n  get(digest) {\n    return this._store.has(digest) ? this._store.get(digest) : null;\n  }\n\n  set(digest, value) {\n    this._store.set(digest, value);\n    if (this._path) {\n      const obj = Object.fromEntries(this._store);\n      fs.writeFileSync(this._path, JSON.stringify(obj, null, 2));\n    }\n  }\n\n  /**\n   * invalidate(digest) — rollback. A promoted crystal found wrong later\n   * (an axiom bug that let something bad through, later fixed) needs a\n   * way to be un-promoted. Without this, correctness could only ever\n   * improve by luck of the axiom version bump orphaning the old digest —\n   * the bad entry would sit in the store forever, unreachable but never\n   * actually gone. This makes removal explicit and logged by the caller,\n   * never silent.\n   */\n  invalidate(digest) {\n    const existed = this._store.has(digest);\n    this._store.delete(digest);\n    if (existed && this._path) {\n      const obj = Object.fromEntries(this._store);\n      fs.writeFileSync(this._path, JSON.stringify(obj, null, 2));\n    }\n    return existed;\n  }\n\n  size() {\n    return this._store.size;\n  }\n}\n\nmodule.exports = { FlatFileCrystallizer };"
+}

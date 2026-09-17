@@ -1,0 +1,21 @@
+{
+  "id": "chunk-0509184b87c304ff",
+  "repository": "nexus-id-repo-3eed3fb0",
+  "file": "341-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-233-nexus-idearium-data-specs-2afd0854-b9a7-41f2-8af6-977204afd144-04-api-5c3d55ac-md-md.md",
+  "range": {
+    "start_line": 1,
+    "end_line": 16
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "652bb0f698f08edd92681ca58b1447f718b382ed6ef1a21fba1e76de990330cd"
+  },
+  "status": "complete",
+  "content": "---\nchunk_uuid: 5c3d55ac-630d-40ff-98d4-faf6a84c1ebd\nspec_uuid: 2afd0854-b9a7-41f2-8af6-977204afd144\nsection: api\ntitle: API & Routes\ncomp_id: idearium.spec-engine\nseam_id: idearium.spec-engine:v1:chunk:2afd0854:api\ncontract_id: spec-contract:2afd0854:api:5c3d55ac\nagent: claude\nmodel: unknown\nstatus: complete\ncompleted_at: 2026-09-13T16:05:25.382Z\n---\n\n## API & Routes\nreal content 1789303597484"
+}

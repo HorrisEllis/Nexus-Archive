@@ -1,0 +1,21 @@
+{
+  "id": "chunk-9b92e00eaf624537",
+  "repository": "nexus-id-repo-3eed3fb0",
+  "file": "265-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-427-nexus-orchestrator-lib-quick-notes-js-md.md",
+  "range": {
+    "start_line": 1,
+    "end_line": 95
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "2ffafb577b30e4a487d78a5f410fdca8c42ed79ec5e5c950e8eb54be3c1fc158"
+  },
+  "status": "complete",
+  "content": "'use strict';\n// ── lib/quick-notes.js ──────────────────────────────────────────────────────\n// UUID: nexus-quick-notes-v1-0000-3500-0000-000000000001\n// Version: 1.0.0\n// Phase: 35 — Quick Notes: Synchronized Across All Pills\n//\n// HTTP-layer agnostic by design — orchestrator.js wires real jaaDB, real\n// broadcast(), and the already-verified POST /api/idearium/ideas proxy in;\n// this module never imports orchestrator or makes assumptions about\n// transport, so it's fully testable without a live server (see\n// tests/modules/quick-notes.test.js).\n//\n// Scope note: the 300ms typing debounce described in docs/home-ui.spec is\n// a client-side UI concern (don't fire a request per keystroke) — this\n// module only implements the backend create/list/delete + broadcast +\n// tag-to-idea surface. The debounce has nothing to verify server-side.\n\nconst crypto = require('crypto');\n\nconst MODULE_ID = 'quick-notes';\nconst VERSION   = '1.0.0';\nconst TABLE     = 'quick_notes';\n\nlet _jaa = null;\nlet _broadcast = () => {};\nlet _postIdea = null; // async ({text, tags}) => result — injected, not imported\n\nfunction init(jaaDB, opts = {}) {\n  _jaa = jaaDB;\n  _broadcast = typeof opts.broadcast === 'function' ? opts.broadcast : () => {};\n  _postIdea  = typeof opts.postIdea === 'function' ? opts.postIdea : null;\n  return { ok: true };\n}\n\nfunction listNotes() {\n  if (!_jaa) return [];\n  try {\n    return _jaa.query(TABLE, () => true, 200)\n      .filter(n => !n.deleted)\n      .sort((a, b) => b.ts - a.ts);\n  } catch (_) {\n    return [];\n  }\n}\n\nasync function createNote({ text, tags = [] }) {\n  if (!text || typeof text !== 'string' || !text.trim()) {\n    return { ok: false, error: 'text is required' };\n  }\n  if (!_jaa) return { ok: false, error: 'quick-notes not initialized' };\n\n  const note = {\n    uuid: crypto.randomUUID(),\n    text: text.trim(),\n    tags: Array.isArray(tags) ? tags : [],\n    ts: Date.now(),\n    deleted: false,\n  };\n\n  try {\n    _jaa.insert(TABLE, note);\n  } catch (e) {\n    return { ok: false, error: `storage failed: ${e.message}` };\n  }\n\n  // Broadcast first — every connected pill should see the note immediately,\n  // regardless of whether the optional idea-tagging step below succeeds.\n  try { _broadcast({ type: 'notes.created', note }); } catch (_) {}\n\n  let idea = null;\n  if (note.tags.length && _postIdea) {\n    try {\n      idea = await _postIdea({ text: note.text, tags: note.tags });\n    } catch (e) {\n      idea = { ok: false, error: e.message };\n    }\n  }\n\n  return { ok: true, note, idea };\n}\n\nasync function deleteNote(uuid) {\n  if (!_jaa) return { ok: false, error: 'quick-notes not initialized' };\n  try {\n    const existing = _jaa.query(TABLE, n => n.uuid === uuid, 1)[0];\n    if (!existing) return { ok: false, error: 'note not found' };\n    _jaa.update(TABLE, existing.uuid, { ...existing, deleted: true });\n    try { _broadcast({ type: 'notes.deleted', uuid }); } catch (_) {}\n    return { ok: true };\n  } catch (e) {\n    return { ok: false, error: e.message };\n  }\n}\n\nmodule.exports = { init, listNotes, createNote, deleteNote, MODULE_ID, VERSION };"
+}

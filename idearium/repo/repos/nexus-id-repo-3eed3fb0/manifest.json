@@ -1,0 +1,14 @@
+{
+  "name": "fesfes",
+  "version": "1.0.0",
+  "uuid": "nexus-project-container-1cf2e388",
+  "hookId": "idearium.project-container:v1:1cf2e388",
+  "description": "sefes",
+  "layer": "idearium",
+  "repoUuid": "nexus-id-repo-3eed3fb0",
+  "containerUuid": "1cf2e388-5cae-4347-a4e9-5a32e87ea55a",
+  "compartmentId": "23af8961-2e78-4f94-a7f8-c34695d1421c",
+  "intentUuid": "3c5f9119-5635-44fc-8321-a00c0f69cdb8",
+  "endStateId": "es-1789517819847",
+  "importedAt": 1789518440563
+}

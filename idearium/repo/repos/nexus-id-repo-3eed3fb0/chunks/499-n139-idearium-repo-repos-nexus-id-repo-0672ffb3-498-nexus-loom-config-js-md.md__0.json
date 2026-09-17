@@ -1,0 +1,21 @@
+{
+  "id": "chunk-40de07977021937e",
+  "repository": "nexus-id-repo-3eed3fb0",
+  "file": "499-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-498-nexus-loom-config-js-md.md",
+  "range": {
+    "start_line": 1,
+    "end_line": 19
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "c8589f15e734b9ec4a93ecf376826f8836e4ea97b9de158f3b2788b79c338286"
+  },
+  "status": "complete",
+  "content": "'use strict';\n/**\n * loom/config.js — real, distinct config, not inline constants\n * scattered across loom/server.js. Matches the pattern established by\n * guardian/config.js, copilot/config.js, bridge/config.js, and\n * eravos/config.js earlier this session.\n *\n * §SCOPE — PORT, DIAG_URL, and OR_URL are the real, tunable config\n * values (checked directly). SYSTEM_ID left in server.js, matching\n * every other config.js's precedent — a fixed identity string, not\n * a config value. SCAFFOLD_TEMPLATES also left in place — a real,\n * structural data array, not a numeric/string tunable.\n */\n\nmodule.exports = {\n  PORT: parseInt(process.env.LOOM_PORT || '3752', 10),\n  DIAG_URL: process.env.DIAGNOSTIC_URL || 'http://127.0.0.1:7825',\n  OR_URL: process.env.ORCH_URL || 'http://127.0.0.1:9000',\n};"
+}

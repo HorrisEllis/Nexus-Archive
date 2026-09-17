@@ -687,6 +687,12 @@ function matchRoute(method, url) {
     ['POST',   ['api','repos',    ':uuid','file'],         'repo.file.write'],
     ['DELETE', ['api','repos',    ':uuid','file'],         'repo.file.delete'],
     ['GET',    ['api','repos',    ':uuid','export'],       'repo.export'],
+    // §QUERY-SURFACE 2026-09-17 — reads of import-pipeline.js's own
+    // atlas.json/indexes output, added alongside repo.chunk.show rather
+    // than as a second storage system. repo.index never returns chunk
+    // content (spec §14); repo.search ranks by symbol/file token match.
+    ['GET',    ['api','repos',    ':uuid','index'],         'repo.index'],
+    ['GET',    ['api','repos',    ':uuid','search'],        'repo.search'],
     // ── §NEXUS-REPO-TOOLS 2026-09-15 — read access to what
     // import-pipeline.js's L2-L5 steps produce, for agent-suite's
     // repository.* tools (NEXUS-001 ALWAYS_MAP_FIRST — an agent maps
@@ -1471,6 +1477,7 @@ async function handle(req, res, route, query, body) {
 
       const cfg = _require('../../lib/project-import.config.js');
       const { extractZipToFiles } = _require('../../lib/zip-ingest.js');
+      const pc = _require('../../lib/project-container.js');
       // §REAL-FILES 2026-09-15, RESTORED 2026-09-17 — every bound comes
       // from the one idearium config (lib/project-import.config.js's
       // §REWIRED note), and extraction returns two layers: `included`
@@ -1503,7 +1510,35 @@ async function handle(req, res, route, query, body) {
       }
 
       const repoName = (name || filename.replace(/\.zip$/i, '')).slice(0, 200);
-      const result = getRepoLayer().ingest({ name: repoName, files: included, source: 'import', ideaUuid: ideaUuid || null });
+
+      // §COS-IMPORT-PROJECT 2026-09-17, RE-FIXED — this route (the older,
+      // synchronous "Import Project" screen) had regressed back to
+      // compartmentId always null, the exact gap fixed once already and
+      // lost in a prior merge. Re-fixed here using the NEWER real
+      // mechanism project-import.finalize below already established
+      // (lib/project-container.js's startContainer/ingestFilesIntoContainer/
+      // finalizeContainer) instead of the older classify()+spawn() patch,
+      // so this route and the newer "Upload Project" flow now share one
+      // real compartment lifecycle rather than two different ones. A
+      // container failure must never fail the import itself — the repo
+      // content is already real and extracted — so every step here is
+      // best-effort and logged, never fatal, same as the newer flow's
+      // own non-blocking pipeline-fault handling below.
+      let container = null;
+      try {
+        const started = await pc.startContainer({ name: repoName, goal: repoName, intentText: repoName });
+        if (started.ok) {
+          const ingestedIntoContainer = pc.ingestFilesIntoContainer(started.containerUuid, included);
+          if (!ingestedIntoContainer.ok) console.warn(`[api] repo.import-archive: container file ingest failed for ${started.containerUuid}: ${ingestedIntoContainer.error}`);
+          container = started;
+        } else {
+          console.warn(`[api] repo.import-archive: startContainer failed for "${repoName}": ${started.error}`);
+        }
+      } catch (e) {
+        console.warn(`[api] repo.import-archive: container lifecycle threw for "${repoName}": ${e.message}`);
+      }
+
+      const result = getRepoLayer().ingest({ name: repoName, files: included, source: 'import', ideaUuid: ideaUuid || null, compartmentId: container?.compartmentId || null });
       if (result.error) return err(res, 400, result.error);
 
       // ingest() -> writeSources() -> materialize(), in that order: the
@@ -1518,6 +1553,23 @@ async function handle(req, res, route, query, body) {
       const mat = getRepoLayer().materialize(result.repo.uuid);
       if (mat.error) console.error(`[api] materialize after import-archive failed for ${result.repo.uuid}: ${mat.error}`);
 
+      // §PIPELINE 2026-09-17 — this route never ran the L2-L5 pipeline
+      // (parse/atlas/chunk/verify/index) at all; project-import.finalize
+      // was the only caller. Same non-blocking fault handling as that
+      // handler: a pipeline FAULT is logged and surfaced, never blocks
+      // the import response, since the repo itself already succeeded.
+      let pipeline = null;
+      if (!mat.error) {
+        const enrichedRepo = getRepoLayer().get(result.repo.uuid);
+        pipeline = runImportPipeline(enrichedRepo, mat.dir);
+        if (pipeline.state === 'FAULT') console.error(`[api] repo.import-archive pipeline FAULT for ${result.repo.uuid}: ${pipeline.error || 'see verification tiers'}`);
+      }
+
+      if (container) {
+        const finalized = await pc.finalizeContainer({ containerUuid: container.containerUuid, repoUuid: result.repo.uuid, repoDir: mat.dir, fileCount: included.length });
+        if (!finalized.ok) console.warn(`[api] repo.import-archive: container finalize failed for ${container.containerUuid}: ${finalized.error}`);
+      }
+
       return ok(res, {
         ...result,
         fileCount: included.length,
@@ -1525,6 +1577,7 @@ async function handle(req, res, route, query, body) {
         sourceFailed: sources ? sources.failed : [],
         omittedCount: omitted.length, omitted: omitted.slice(0, 50),
         stats, materialize: mat.error ? { error: mat.error } : mat,
+        pipeline: pipeline ? { state: pipeline.state, chunks: pipeline.chunks, indexes: pipeline.indexes } : null,
       });
     }
 
@@ -1738,6 +1791,29 @@ async function handle(req, res, route, query, body) {
       const filePath = chunk.realPath || chunk.fileName;
       const result = filePath ? getRepoLayer().readFile(params.uuid, filePath) : { error: 'chunk has neither realPath nor fileName — nothing to read' };
       return ok(res, { chunk, filePath, content: result.error ? null : result.content, readError: result.error || null });
+    }
+
+    // §QUERY-SURFACE 2026-09-17 — see route-table comment above. Both
+    // read straight off import-pipeline.js's own disk output
+    // (atlas.json / indexes/*.json) — no second storage system, no
+    // content in repo.index's response (spec §14).
+    case 'repo.index': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const repoDir = repo.materializeDir || path.join(getRepoLayer().dataDir, 'projects', params.uuid);
+      const { readAtlas } = await import('../repo/import-pipeline.js');
+      const atlas = readAtlas(repoDir);
+      if (atlas.error) return err(res, 404, atlas.error);
+      return ok(res, atlas);
+    }
+
+    case 'repo.search': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      if (!query.q) return err(res, 400, 'q (query string) required');
+      const repoDir = repo.materializeDir || path.join(getRepoLayer().dataDir, 'projects', params.uuid);
+      const { searchRepo } = await import('../repo/import-pipeline.js');
+      return ok(res, { query: query.q, results: searchRepo(repoDir, query.q) });
     }
 
     case 'repo.file.write': {

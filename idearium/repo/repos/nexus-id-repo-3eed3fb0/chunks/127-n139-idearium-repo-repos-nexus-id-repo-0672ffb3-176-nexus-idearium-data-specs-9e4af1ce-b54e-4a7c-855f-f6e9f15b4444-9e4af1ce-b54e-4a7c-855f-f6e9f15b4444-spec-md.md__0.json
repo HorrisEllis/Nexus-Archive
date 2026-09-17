@@ -1,0 +1,21 @@
+{
+  "id": "chunk-2365ded4c9151331",
+  "repository": "nexus-id-repo-3eed3fb0",
+  "file": "127-n139-idearium-repo-repos-nexus-id-repo-0672ffb3-176-nexus-idearium-data-specs-9e4af1ce-b54e-4a7c-855f-f6e9f15b4444-9e4af1ce-b54e-4a7c-855f-f6e9f15b4444-spec-md.md",
+  "range": {
+    "start_line": 1,
+    "end_line": 13
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "4c11941b5e26f74cf722aef919440b95a806bd5929d5facda44badde01171c15"
+  },
+  "status": "complete",
+  "content": "spec:\n  name: raid-contract-sim-1\n  uuid: 9e4af1ce-b54e-4a7c-855f-f6e9f15b4444\n  version: 0.1.0\n  type: codebase\n  phase: 40\n  status: complete\n  agent: auto\n  completed_at: 2026-09-13T16:05:27.225Z\n\n# CONTRACT.md\n\nreal simulated contract content"
+}
