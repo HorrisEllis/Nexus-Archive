@@ -479,6 +479,34 @@ async function _registerWithNexus() {
   } else {
     console.log(`[ClearGlass §AXIOM] orchestrator offline — running standalone`);
   }
+
+  // §RAID-FIX 2026-09-16 — James: "raid also needs to stop failing, i
+  // dont think its using the agent mesh, router..." Real, traced gap:
+  // the registration above (and the whole COMPONENTS list it sends —
+  // seam/registry-components.js, already real, already covers
+  // mesh.spawn/send/route/enqueue/list AND driver.exec — this file
+  // wasn't missing a capability description, it just never left this
+  // process) only ever reaches ORCHESTRATOR's own component-registry
+  // instance. cortex/core/raid/router.js resolves against CORTEX's
+  // separate instance (cortex/boot.js's own capabilityRegistry.init) —
+  // a different process, a different in-memory registry — so RAID has
+  // never been able to route to agent-mesh or the driver, regardless of
+  // orchestrator-side registration succeeding. Additive: orchestrator
+  // registration above is untouched (still does its own real job —
+  // system.registered broadcast, presence, trust). COMPONENTS is
+  // already in the exact shape cortex's registry expects (id/namespace/
+  // name/version/grammar/route/description — seam/registry-components.js's
+  // own header says so), so this goes straight to the batch endpoint,
+  // no lib/self-register-remote.js capability-list wrapping needed.
+  _ncReq(NEXUS_PORTS.cortex, 'POST', '/api/components/register-batch',
+    { components: COMPONENTS }, 5000).then((cr) => {
+    if (cr.ok && cr.data && cr.data.ok) {
+      console.log(`[ClearGlass §AXIOM] registered ${cr.data.registered} capabilit${cr.data.registered === 1 ? 'y' : 'ies'} with RAID (cortex :${NEXUS_PORTS.cortex})`);
+    } else {
+      console.log(`[ClearGlass §AXIOM] RAID self-registration incomplete: ${cr.error || (cr.data && cr.data.error) || 'unknown'}`);
+    }
+  }).catch(() => {});
+
   return r;
 }
 
