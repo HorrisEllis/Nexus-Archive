@@ -231,6 +231,31 @@ function _getSendBtn() {
          document.querySelector('button[type="submit"]') ||
          document.querySelector('[data-testid="submit-button"]');
 }
+
+// §BUILT 2026-09-17, HONEST-PARTIAL — same real sync mechanism as
+// userscript-claude.js/userscript-chatgpt.js's _nexusGetFullChat(), but
+// this provider has no verified human-turn selector in this file (only
+// findResponseEl(), which finds the assistant's LAST response — that's
+// the one thing already confirmed real here). Rather than guess a user-
+// turn selector with no evidence it matches this provider's actual DOM,
+// sync here honestly returns partial:true and the last assistant
+// response only. Full multi-turn extraction needs a real, verified
+// selector added the same way findResponseEl()'s own was — not invented
+// blind.
+function _nexusGetFullChat() {
+  const el = findResponseEl();
+  const text = el ? (el.innerText || el.textContent || '').trim() : '';
+  const messages = text ? [{ role: 'assistant', text }] : [];
+  return { provider: PROVIDER, chatId: chatId(), url: location.href, extractedAt: Date.now(), messages, partial: true, note: 'no verified human-turn selector for this provider yet — assistant\'s last response only' };
+}
+
+function handleSyncRequest(msg) {
+  let chat, error = null;
+  try { chat = _nexusGetFullChat(); }
+  catch (e) { chat = null; error = e.message; }
+  ncpPost(NCP_RESULT, { type: 'GUARDIAN_SYNC_RESULT', syncId: msg.syncId, provider: PROVIDER, tabId: MY_TAB, chat, error });
+}
+
 function findResponseEl() {
   const answers = document.querySelectorAll('.prose, [data-testid="answer"], .answer-text, .result__content');
   return answers.length ? answers[answers.length - 1] : null;
@@ -881,6 +906,7 @@ function _handleServerMessage(msg) {
     case 'GUARDIAN_RELEASE': releaseTab(); break;
     case 'GUARDIAN_JOB': currentJobId = msg.jobId; handleJob(msg); break;
     case 'NEXUS_CONTEXT_RESPONSE': if (msg.context) _intelligenceCtx = msg.context; break;
+    case 'GUARDIAN_SYNC_REQUEST': handleSyncRequest(msg); break;
     default: _log('debug', `NCP: ${msg.type}`);
   }
 }

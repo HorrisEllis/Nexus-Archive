@@ -391,6 +391,40 @@ Examples:
       return;
     }
 
+    // §BUILT 2026-09-17 — James: "why can't we manipulate the entire
+    // dom... use that as a way to synchronize the chats." Hits guardian's
+    // new POST /sync (guardian/lib/chat-sync.js's requestSync()), then
+    // feeds the real result into the artifact-chat-index compartment
+    // (clear-glass/src/downloads/artifact-chat-index.js's
+    // recordResponse()) — this is the actual "synchronize" step, not
+    // just a print. --no-store skips that write for a dry-run look.
+    if (args[0] === 'sync') {
+      if (!args[1]) { console.error('Usage: guardian sync <provider> [--no-store]'); process.exit(1); }
+      const provider = args[1];
+      const result = await post('/sync', { provider });
+      if (!result.ok) { console.error(`Sync failed: ${result.reason || result.error}`); process.exit(1); }
+
+      const chat = result.chat;
+      const msgCount = chat?.messages?.length || 0;
+      console.log(`Synced ${provider}: ${msgCount} message(s)${chat?.partial ? ' (partial — ' + chat.note + ')' : ''}`);
+
+      if (!process.argv.includes('--no-store')) {
+        try {
+          const { ensureCompartment, recordResponse } = require('../clear-glass/src/downloads/artifact-chat-index.js');
+          const { createHost } = require('../cos/host/index.js'); // real COS host bootstrap — confirmed the actual export, not guessed
+          const host = createHost();
+          const compartment = ensureCompartment(host);
+          const root = compartment.fs?.root || compartment.root;
+          const stored = recordResponse(root, { kind: 'chat', provider, chatId: chat?.chatId, raw: chat });
+          console.log(`Stored: ${stored.responsePath}`);
+        } catch (e) {
+          console.error(`Warning: sync succeeded but storing to the index failed: ${e.message}`);
+          console.error('(the chat was still read from the DOM — this only affects the durable index write)');
+        }
+      }
+      return;
+    }
+
     // ── /seam <queueId> — watch a SEAM queue's chunk-by-chunk progress ─────────
     if (args[0] === '/seam') {
       if (!args[1]) { console.error('Usage: guardian /seam <queueId>'); process.exit(1); }

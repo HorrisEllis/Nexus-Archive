@@ -586,6 +586,15 @@ function createNCPMessageHandler(deps) {
         break;
       }
 
+      // §BUILT 2026-09-17 — the result half of GUARDIAN_SYNC_REQUEST
+      // (dispatched by lib/chat-sync.js's requestSync()). Same real
+      // bus-event round trip as GUARDIAN_PING_ACK's 'guardian.ncp.pong'
+      // above — requestSync() listens for this exact event.
+      case 'GUARDIAN_SYNC_RESULT': {
+        bus.emit('guardian.ncp.sync_result', { provider, tabId, syncId: msg.syncId, chat: msg.chat, error: msg.error });
+        break;
+      }
+
       case 'NEXUS_DOM_MAP': {
         // DOM snapshot from userscript — store in tab context for agent tooling
         if (msg.nodes && Array.isArray(msg.nodes)) {

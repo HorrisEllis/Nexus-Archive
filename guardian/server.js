@@ -599,6 +599,13 @@ const ncp = createNCPServer({
   busEmit: (type, data) => bus.emit(type, data),
 });
 
+// §BUILT 2026-09-17 — James: "why can't we manipulate the entire dom...
+// use that as a way to synchronize the chats." Only needs {bus, ncp},
+// both already real above — no need to route this through
+// wireGuardianCore() the way dispatcher.js's job-dispatch machinery does.
+const { createChatSync } = require('./lib/chat-sync.js');
+const { requestSync } = createChatSync({ bus, ncp });
+
 // §DECOMPILED 2026-09-02 — guardian's job/provider/dispatch core, wired from
 // guardian/lib/. pendingQueue stays a plain Map owned here (dispatcher.js,
 // flushQueuedJobs, and the extended-routes handlers below all read/write it
@@ -2071,6 +2078,20 @@ function handleExtendedRoutes(req, res, url, method) {
   }
   if (method==='POST' && url.pathname==='/result') {
     ncp.handleResult(req, res, bodyJ); return true;
+  }
+  // §BUILT 2026-09-17 — the CLI-facing half of the DOM sync mechanism.
+  // requestSync() (guardian/lib/chat-sync.js) does the real push/wait/
+  // timeout round trip; this route is just the HTTP surface over it,
+  // same shape as every other POST route here (bodyJ -> pRes).
+  if (method==='POST' && url.pathname==='/sync') {
+    bodyJ(req).then(async body => {
+      const provider = body.provider;
+      if (!provider) { pRes(res, 400, { ok: false, error: 'provider required' }); return; }
+      if (!ncp.isConnected(provider)) { pRes(res, 409, { ok: false, error: `provider "${provider}" not connected` }); return; }
+      const result = await requestSync(provider, body.timeoutMs || 15000);
+      pRes(res, result.ok ? 200 : 502, result);
+    }).catch(e => pRes(res, 400, { ok: false, error: e.message }));
+    return true;
   }
   if (method==='POST' && url.pathname.startsWith('/stream/')) {
     const streamJobId = url.pathname.slice('/stream/'.length);

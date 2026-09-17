@@ -1120,6 +1120,7 @@ function _handleServerMessage(msg) {
       break;
     case 'GUARDIAN_SESSION_NAMED': _log('info','Session named', msg.name); break;
     case 'GUARDIAN_ARTIFACT_SAVED': _log('ok','Artifact saved', msg.artifactId); break;
+    case 'GUARDIAN_SYNC_REQUEST': handleSyncRequest(msg); break;
     default: _log('debug', `NCP: ${msg.type}`);
   }
 }
@@ -1782,6 +1783,28 @@ function _nexusGetMessages() {
     msgs.push({ role: isHuman ? 'user' : 'assistant', text: text.slice(0, 2000) });
   }
   return msgs;
+}
+
+// §BUILT 2026-09-17 — same real-DOM sync mechanism as userscript-claude.js's
+// _nexusGetFullChat(); see that file's header for the reasoning. Same
+// selector _nexusGetMessages() already uses, no 2000-char truncation.
+function _nexusGetFullChat() {
+  const all = [...document.querySelectorAll('[data-message-author-role]')];
+  const messages = [];
+  for (const el of all) {
+    const text = (el.innerText || el.textContent || '').trim();
+    if (!text) continue;
+    const isHuman = el.getAttribute('data-message-author-role') === 'user';
+    messages.push({ role: isHuman ? 'user' : 'assistant', text });
+  }
+  return { provider: PROVIDER, chatId: chatId(), url: location.href, extractedAt: Date.now(), messages };
+}
+
+function handleSyncRequest(msg) {
+  let chat, error = null;
+  try { chat = _nexusGetFullChat(); }
+  catch (e) { chat = null; error = e.message; }
+  ncpPost(NCP_RESULT, { type: 'GUARDIAN_SYNC_RESULT', syncId: msg.syncId, provider: PROVIDER, tabId: MY_TAB, chat, error });
 }
 
 // ── Post message to NEXUS (chat-logger + BDA) ─────────────────────────────────

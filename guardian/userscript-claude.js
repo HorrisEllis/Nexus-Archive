@@ -1172,6 +1172,7 @@ function _handleServerMessage(msg) {
       if (msg.title) nativeToast(msg.title, msg.body || '', { requireInteraction: !!msg.requireInteraction, tag: msg.tag });
       else _log('err', 'GUARDIAN_NATIVE_TOAST received with no title');
       break;
+    case 'GUARDIAN_SYNC_REQUEST': handleSyncRequest(msg); break;
     default: _log('debug', `NCP: ${msg.type}`);
   }
 }
@@ -1945,6 +1946,38 @@ function _nexusGetMessages() {
     msgs.push({ role: isHuman ? 'user' : 'assistant', text: text.slice(0, 2000) });
   }
   return msgs;
+}
+
+// §BUILT 2026-09-17 — James: "why can't we manipulate the entire dom...
+// use that as a way to synchronize the chats." _nexusGetMessages() above
+// already does the real DOM walk (interleaved by DOM order, real
+// selectors) but truncates every message to 2000 chars — correct for its
+// original job (a lightweight BDA signal), wrong for a sync meant to feed
+// the durable chat index, where "complete" is the actual point. Same
+// selectors, no truncation.
+function _nexusGetFullChat() {
+  const all = [...document.querySelectorAll(
+    '[data-testid="human-turn-content"], [data-testid="assistant-turn-content"], .font-claude-message, .human-turn'
+  )];
+  const messages = [];
+  for (const el of all) {
+    const text = (el.innerText || el.textContent || '').trim();
+    if (!text) continue;
+    const isHuman = el.matches('[data-testid="human-turn-content"], .human-turn, [class*="HumanMessage"]');
+    messages.push({ role: isHuman ? 'user' : 'assistant', text });
+  }
+  return { provider: PROVIDER, chatId: chatId(), url: location.href, extractedAt: Date.now(), messages };
+}
+
+// GUARDIAN_SYNC_REQUEST — dispatched from guardian's POST /sync (see
+// lib/chat-sync.js), same real push/result round trip as GUARDIAN_PING/
+// PING_ACK. Read-only: never touches the composer, never submits
+// anything — a sync must not risk sending a message.
+function handleSyncRequest(msg) {
+  let chat, error = null;
+  try { chat = _nexusGetFullChat(); }
+  catch (e) { chat = null; error = e.message; }
+  ncpPost(NCP_RESULT, { type: 'GUARDIAN_SYNC_RESULT', syncId: msg.syncId, provider: PROVIDER, tabId: MY_TAB, chat, error });
 }
 
 // ── Post message to NEXUS (chat-logger + BDA) ─────────────────────────────────
