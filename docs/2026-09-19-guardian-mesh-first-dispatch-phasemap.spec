@@ -2,7 +2,7 @@ spec:
   meta:
     name: guardian-mesh-first-dispatch
     version: 0.1.0-phasemap
-    status: "GUARDIAN SIDE BUILT 2026-09-19 (registry, ladder, mesh client, dispatcher hook, RAID feedback); default GUARDIAN_TRANSPORT=ncp-only so behaviour is unchanged. CLEAR GLASS SIDE (P1-P4) NOT BUILT: /agent-mesh/send and /agent-mesh/diagnose do not exist yet (the client treats 404 as mesh_unreachable => userscript)."
+    status: "GUARDIAN SIDE BUILT 2026-09-19 (registry, ladder, mesh client, dispatcher hook, RAID feedback); default GUARDIAN_TRANSPORT=ncp-only so behaviour is unchanged. CLEAR GLASS SIDE BUILT (0.39.155) but ONLY VERIFIED against jsdom fixtures and a fake Electron, never a real site or real Electron. See code_base_scale and live_smoke_required."
     ask: "James: guardian should send jobs to the agent MESH (ClearDriver: DOM inject + mutation observer) and use the
       userscripts (NCP) as the FALLBACK. Today guardian -> NCP -> userscript. agentId + account manager + cookie vault for
       multiple accounts."
@@ -66,3 +66,43 @@ spec:
       builds, tool calls: already gated). Gating every prompt would make cortex/constitution a hard dependency of all dispatch (fail-closed today for browser)."
     bugs_found: "guardian's feedback body never matched cortex's handler (read {agent,outcome}, got {provider,ok}); the handler only nudged a cortex-local health
       number, not RAID's fitness weights; port 3748 was hardcoded. needs_user must not count as an agent failure."
+  code_base_scale:
+    james: "remember this is for coding entire code bases."
+    consequences_found_and_handled: |
+      1. INJECTION. Prompts are megabytes; the userscripts use execCommand('insertText') which chokes on that. The page library writes
+         textareas in one native-setter call, tries a synthetic paste then CHUNKED insertText for rich editors, and ATTACHES bulk `content`
+         as a file (input[type=file]) above `inlineMax` (120k chars), typing only the instruction. Everything is verified before sending.
+      2. OUTPUT. The userscripts read answers with innerText, which drops the ``` fences and language tags. The mesh converts DOM->markdown
+         keeping fenced code with language and indentation (longer fence when the code contains ```), lists, tables, headings.
+      3. TIME. Generation runs for many minutes. Completion = "not generating AND quiet"; stall guard; "Continue generating" is clicked and
+         segments joined. Jobs are ASYNC and POLLED, and IDEMPOTENT by jobId, so a guardian restart re-attaches instead of resending.
+      4. SENT IS THREE-VALUED (true | false | null). Slow acceptance of a big paste is normal, so an unconfirmed send is null and is NEVER resent.
+      5. SILENT LIMITS FOUND IN THE EXISTING PIPELINE, now fixed: ncp-handler truncated every response to 100,000 chars (now
+         GUARDIAN_MAX_RESPONSE_CHARS, default 5M, flagged via job.responseTruncated); the completion watch was a fixed 90s then REQUEUED (=resent the
+         prompt) with no activity awareness (now an idle window, default 15 min, re-armed by guardian.job.chunk/confirmed,
+         GUARDIAN_COMPLETION_TIMEOUT_MS); Clear Glass built request bodies with `body += chunk`, corrupting multi-byte characters that straddle chunk
+         boundaries (reproduced in test MC-001c; fixed with setEncoding, and in mesh-client); mesh timeout is GUARDIAN_MESH_TIMEOUT_MS, default 1h.
+      6. ClearDriver/archaeology fell back to the FOCUSED window for an unknown agent. Now ONE shared page-resolver (clear-glass/src/driver/
+         page-resolver.js) resolves the <webview> guest and throws no_window/no_webview; mesh-*/ncp-* ids can never fall back. Non-agent ids keep
+         the legacy fallback because the interactive tabs may rely on it.
+  built_clearglass:
+    - "clear-glass/src/mesh/page/agent-page.js  (in-page library, window.__cgAgent)"
+    - "clear-glass/src/mesh/dom-transport.js    (host: jobs, lanes per agent, poll, diagnose, read)"
+    - "clear-glass/src/driver/page-resolver.js  (shared lookup)"
+    - "agent-mesh.js: spawn({contextId}) deterministic + never joins the userscript tab; sendViaDom/getDomJob/diagnoseDom/readDomJob"
+    - "main/index.js: POST /agent-mesh/send (202, async), GET /agent-mesh/job, POST /agent-mesh/diagnose, POST /agent-mesh/read"
+  live_smoke_required: |
+    Nothing below has been run against a real site or real Electron. Do this before flipping GUARDIAN_TRANSPORT=mesh-first:
+      a. one short prompt per provider (claude, chatgpt, gemini, perplexity, mistral, deepseek, grok): does it inject, send, and return text?
+      b. a ~100k-char prompt (inline) and a ~1M-char `content` (attachment path): does each provider accept the file input, and does
+         `input[type=file]` exist without clicking the attach button? (Some sites only create it on click: the attach path then fails
+         with attach_failed => userscript fallback.)
+      c. an answer with several code blocks: fences + language intact? Does each site's "Continue" label match /^(continue( generating)?|keep going)$/i?
+      d. selector drift drill: break a selector in the registry and confirm diagnose repairs it and the repair persists.
+      e. kill and restart guardian mid-generation: the job must re-attach, not resend.
+      f. two accounts of one provider: distinct tabs/partitions/cookies (mesh-<provider>-<account>).
+  known_limits:
+    - "Login detection is heuristic (password field / login URL). Captcha detection is heuristic. Rate-limit detection is a regex on the answer tail."
+    - "Auto DOM mapping proposes replacements for the failing selector only, never rewrites working ones; it cannot find a response container on a page with no assistant message yet."
+    - "Streaming detection uses generic indicators (data-is-streaming, a visible Stop control, class *streaming*). A provider using none of these is caught by the quiet-period rule instead."
+    - "Provider size limits are unknown: a paste over a site's limit would surface as inject_failed/attach_failed or a rate-limit message, not as silent truncation, but the mesh cannot know the limit in advance."

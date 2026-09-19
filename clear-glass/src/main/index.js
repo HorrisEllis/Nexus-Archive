@@ -717,6 +717,9 @@ async function _startWire() {
     }
 
     let body = '';
+    // 2026-09-19: setEncoding, or multi-byte characters split across chunk boundaries become U+FFFD: a multi-MB
+    // prompt containing non-ASCII source would be silently corrupted.
+    req.setEncoding('utf8');
     req.on('data', c => body += c);
     req.on('end', async () => {
       let parsed = {};
@@ -791,6 +794,24 @@ async function _startWire() {
       // as a side effect if needed) but there was no direct "spawn this
       // agent" entry point of its own — BrainOS's context menu (below)
       // needs exactly that without requiring a prompt to go with it.
+      // ── guardian mesh-first dispatch (2026-09-19). send is async + idempotent by jobId; poll /agent-mesh/job. ──
+      if (u === '/agent-mesh/send' && req.method === 'POST') {
+        try { const r = await mesh.sendViaDom(parsed); res.writeHead(r.accepted === false ? 200 : 202); return res.end(JSON.stringify({ ok: r.accepted !== false, ...r })); }
+        catch (e) { res.writeHead(500); return res.end(JSON.stringify({ ok: false, accepted: false, sent: false, stage: 'inject_failed', error: e.message })); }
+      }
+      if (u === '/agent-mesh/job' && req.method === 'GET') {
+        const id = new URL(req.url, 'http://127.0.0.1').searchParams.get('jobId');
+        res.writeHead(200); return res.end(JSON.stringify({ ok: true, ...mesh.getDomJob(id) }));
+      }
+      if (u === '/agent-mesh/diagnose' && req.method === 'POST') {
+        try { res.writeHead(200); return res.end(JSON.stringify(await mesh.diagnoseDom(parsed))); }
+        catch (e) { res.writeHead(500); return res.end(JSON.stringify({ ok: false, repaired: false, error: e.message })); }
+      }
+      if (u === '/agent-mesh/read' && req.method === 'POST') {
+        try { res.writeHead(200); return res.end(JSON.stringify(await mesh.readDomJob(parsed))); }
+        catch (e) { res.writeHead(500); return res.end(JSON.stringify({ ok: false, error: e.message })); }
+      }
+
       if (u === '/agent-mesh/spawn' && req.method === 'POST') {
         const { agentKey } = parsed;
         if (!agentKey) { res.writeHead(400); return res.end(JSON.stringify({ ok: false, error: 'agentKey required' })); }

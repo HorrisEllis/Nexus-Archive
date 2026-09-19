@@ -624,6 +624,8 @@ const _ladder = require('./lib/dispatch-ladder').createLadder({
     cockpitBroadcast({ type: 'GUARDIAN_PICKER_NEEDED', jobId: a.job && a.job.id, provider: a.provider, reason: a.reason, note: a.note || null });
   } },
   log: (m) => console.log(`[guardian/ladder] ${m}`),
+  // long generations: surface progress on the job and the bus (drives dashboards; proves the job is alive)
+  onProgress: (job, p) => { try { updateJob(job.id, { progress: p }); bus.emit('guardian.job.progress', { jobId: job.id, provider: job.provider, ...p }); } catch (_) {} },
 });
 // A mesh answer completes the job through the SAME handler an NCP GUARDIAN_COMPLETE goes through
 // (chat_log, response sink, bus events): no second completion implementation. Lazy: _handleNCPMessage is

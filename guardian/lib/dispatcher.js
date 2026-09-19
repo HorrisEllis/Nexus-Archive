@@ -71,11 +71,16 @@ function createDispatcher(deps) {
   // shadow/negative-space event — it exists BECAUSE something expected
   // did not happen, not because anything positively went wrong.
   const _completionWatch = new Map();
-  const _COMPLETION_TIMEOUT_MS = completionTimeoutMs || 90000;
+  // 2026-09-19: was a fixed 90s, then REQUEUE (i.e. resend the prompt). A whole-code-base answer routinely generates
+  // for many minutes, so a slow-but-alive generation was asked twice. Now an IDLE window (default 15 min) that is
+  // re-armed by real activity (userscript chunks / confirmation), configurable via GUARDIAN_COMPLETION_TIMEOUT_MS.
+  const _COMPLETION_TIMEOUT_MS = completionTimeoutMs || parseInt(process.env.GUARDIAN_COMPLETION_TIMEOUT_MS || '900000', 10);
+  const _watchedJobs = new Map();
   const _MAX_TIMEOUT_RETRIES = 2; // §1.2 — bounded, not an infinite requeue loop
 
   function _armCompletionWatch(job) {
     _clearCompletionWatch(job.id);
+    _watchedJobs.set(job.id, job);
     _completionWatch.set(job.id, setTimeout(() => {
       _completionWatch.delete(job.id);
       const retries = (job._timeoutRetries || 0) + 1;
@@ -99,6 +104,11 @@ function createDispatcher(deps) {
     const t = _completionWatch.get(jobId);
     if (t) { clearTimeout(t); _completionWatch.delete(jobId); }
   }
+  // activity => the generation is alive: restart the idle window instead of letting it expire mid-stream
+  const _touch = ({ jobId }) => { if (_completionWatch.has(jobId) && _watchedJobs.get(jobId)) _armCompletionWatch(_watchedJobs.get(jobId)); };
+  bus.on('guardian.job.chunk', _touch);
+  bus.on('guardian.job.confirmed', _touch);
+  bus.on('guardian.job.complete', ({ jobId }) => _watchedJobs.delete(jobId));
 
   // Real completion, from anywhere (NCP GUARDIAN_COMPLETE, GUARDIAN_REPLAY's
   // non-replay branch, dispatch-pool-bridge) all emit this same bus event —

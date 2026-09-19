@@ -432,6 +432,11 @@ class DomArchaeology {
   }
 
   _getWebContents(agentId) {
+    // 2026-09-19: agent ids (mesh-*, ncp-*: the pages that receive whole code bases) resolve through the ONE shared
+    // page-resolver and are NEVER allowed to fall back to the focused window (that typed into whatever page was
+    // focused). Non-agent ids keep the legacy fallback: the interactive browser tabs may rely on it.
+    try { return this._pageResolver().resolve(agentId); }
+    catch (e) { if (/^(mesh|ncp)-/.test(String(agentId))) return null; }
     const all = webContents.getAllWebContents();
     for (const wc of all) {
       try {
@@ -441,6 +446,7 @@ class DomArchaeology {
     }
     return webContents.getFocusedWebContents() || all[0] || null;
   }
+  _pageResolver() { return this.__resolver || (this.__resolver = require('../driver/page-resolver').createPageResolver({ electron: require('electron') })); }
 
   listPicks() { return [...this.picks.values()]; }
 }

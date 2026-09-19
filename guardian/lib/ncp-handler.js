@@ -197,7 +197,12 @@ function createNCPMessageHandler(deps) {
           // for SEAM-generated content too, so it still runs either way.
           // Store response text on job so /response/:jobId can serve it
           if (job) {
-            job.responseText = finalText.slice(0, 100000);
+            // 2026-09-19: this was slice(0, 100000), a SILENT cap: a whole-code-base answer is routinely several
+            // times that and lost its tail with no signal. The cap is now generous, configurable, and flagged.
+            const _MAX = parseInt(process.env.GUARDIAN_MAX_RESPONSE_CHARS || '5000000', 10);
+            job.responseText = finalText.slice(0, _MAX);
+            job.responseTruncated = finalText.length > _MAX;
+            if (job.responseTruncated) console.warn(`[guardian] ${jobId}: response of ${finalText.length} chars truncated to ${_MAX} (GUARDIAN_MAX_RESPONSE_CHARS)`);
             job.status = 'complete';
             // §WIRED 2026-08-14 — the tool-call half of P4. See
             // _extractToolCallsFromDOM's header note: this is the one real

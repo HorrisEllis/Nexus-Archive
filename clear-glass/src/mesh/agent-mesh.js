@@ -177,6 +177,7 @@ class AgentMesh {
     this.vault    = vault;
     this.accounts = accounts || null;
     this.rewind   = rewind || null;
+    this.domTransport = null;   // built lazily (needs electron): see _dom()
     this.agents  = new Map(); // agentKey → AgentState
     this.queue   = [];        // pending tasks
     this.processing = false;
@@ -334,14 +335,16 @@ class AgentMesh {
     // per-account mesh-* scheme, there being no ProviderHost session to
     // share.
     let guardianOwned = false;
-    try {
+    // 2026-09-19: an explicit options.contextId (guardian's deterministic agentId, mesh-<provider>-<account>) means
+    // the mesh owns this tab. It must NOT join the userscript's ncp-<agent> tab: two actuators on one page.
+    if (!options.contextId) try {
       const guardianProviders = await this._guardianProviders();
       guardianOwned = guardianProviders?.providers?.[agentKey] === 'connected';
     } catch (_) { /* fail-soft, matches _guardianProviders' own contract */ }
 
-    const contextId = guardianOwned
+    const contextId = options.contextId || (guardianOwned
       ? `ncp-${agentKey}`
-      : `mesh-${agentKey}-${uuidv4().slice(0, 8)}`;
+      : `mesh-${agentKey}-${uuidv4().slice(0, 8)}`);
     const accountId = this._resolveAccountId(agentKey, options.accountId);
 
     // §FIX 2026-08-30 — James, directly: "The agent mesh needs to be
@@ -1113,6 +1116,48 @@ class AgentMesh {
   updateWorkflowStep(id, stepId, patch) { return this._automation.updateStep(id, stepId, patch); }
   removeWorkflowStep(id, stepId) { return this._automation.removeStep(id, stepId); }
   moveWorkflowStep(id, stepId, dir) { return this._automation.moveStep(id, stepId, dir); }
+
+  // ── §BUILT 2026-09-19 — DOM transport for guardian's mesh-first ladder ─────────────────────────────
+  // (docs/2026-09-19-guardian-mesh-first-dispatch-phasemap.spec). Guardian sends jobs here; the mesh spawns/reuses
+  // a deterministic tab per (provider, account), injects into the agent's chat input, watches the DOM for the
+  // response, and repairs drifted selectors with DOM mapping. Built for whole code bases: async idempotent jobs,
+  // bulk content attached as a file, markdown with fences preserved. See clear-glass/src/mesh/dom-transport.js.
+  _dom() {
+    if (this.domTransport) return this.domTransport;
+    const { createDomTransport } = require('./dom-transport');
+    const { createPageResolver } = require('../driver/page-resolver');
+    const resolver = createPageResolver({ electron: require('electron') });
+    this.domTransport = createDomTransport({
+      resolvePage: async (agentId, o) => resolver.resolve(agentId, o),
+      execJs: (wc, code) => wc.executeJavaScript(code, true),
+      onProgress: (e) => this.sse.emit('mesh.job.progress', { ...e, ts: Date.now() }),
+    });
+    return this.domTransport;
+  }
+
+  // Ensure the agent's own tab exists (deterministic contextId, separate persist:mesh-* partition, vault-restored
+  // cookies for that account), then queue the job. Returns at once: poll getDomJob().
+  async sendViaDom({ provider, prompt, content, agentId, accountId, jobId, selectors, timeoutMs, opts }) {
+    const def = AGENT_REGISTRY[provider];
+    if (!def) return { accepted: false, sent: false, stage: 'no_window', error: `unknown agent: ${provider}` };
+    if (!jobId) return { accepted: false, sent: false, stage: 'inject_failed', error: 'jobId required (idempotency key)' };
+    const dom = this._dom();
+    if (dom.getJob(jobId).known) return dom.send({ jobId, agentId });                    // repeat ask (guardian restart): never respawn/resend
+    const contextId = agentId || `mesh-${provider}-${accountId || 'default'}`;
+    if (!this.agents.has(contextId)) {
+      try { await this.spawn(provider, { contextId, accountId }); }
+      catch (e) { return { accepted: false, sent: false, stage: 'no_window', error: `could not open a tab: ${e.message}` }; }
+    }
+    return dom.send({ jobId, agentId: contextId, provider, prompt, content, selectors: selectors || { input: def.inputSel, send: def.sendSel, resp: def.respSel }, url: def.url, timeoutMs, opts });
+  }
+  getDomJob(jobId) { return this._dom().getJob(jobId); }
+  async readDomJob({ jobId, selectors }) { return this._dom().read({ jobId, selectors }); }
+  async diagnoseDom({ provider, agentId, accountId, stage, selectors }) {
+    const def = AGENT_REGISTRY[provider];
+    const contextId = agentId || `mesh-${provider}-${accountId || 'default'}`;
+    return this._dom().diagnose({ agentId: contextId, url: def && def.url, selectors: selectors || {}, stage });
+  }
+
 }
 
 module.exports = AgentMesh;

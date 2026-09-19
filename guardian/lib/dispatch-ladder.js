@@ -31,9 +31,14 @@ const MODULE_ID = 'guardian.dispatch-ladder';
 
 const SELECTOR_STAGES = new Set(['input_not_found', 'send_not_found', 'response_not_found']);
 const USER_STAGES     = new Set(['no_login', 'captcha']);
+// The payload could not be delivered by the mesh (bulk attach / injection refused): the userscript is the right fallback,
+// but the mesh itself is healthy, so this must not trip the circuit breaker.
+const CONTENT_STAGES  = new Set(['attach_failed', 'inject_failed']);
 
 function createLadder({ registry, mesh, picker, mode = () => process.env.GUARDIAN_TRANSPORT || 'ncp-only',
-                        breakerThreshold = 3, breakerMs = 60000, timeoutMs = 90000, now = Date.now, log = () => {} } = {}) {
+                        breakerThreshold = 3, breakerMs = 60000, now = Date.now, log = () => {}, onProgress = null,
+                        // Whole code bases generate for many minutes: 90s was a guaranteed failure. Env-configurable, default 1h.
+                        timeoutMs = parseInt(process.env.GUARDIAN_MESH_TIMEOUT_MS || '3600000', 10) } = {}) {
   let infraFails = 0, openUntil = 0;
 
   const breakerOpen = () => now() < openUntil;
@@ -61,7 +66,7 @@ function createLadder({ registry, mesh, picker, mode = () => process.env.GUARDIA
     catch (e) { return { kind: 'failed', reason: e.code || 'account_error', error: e.message, trail }; }
     const agentId = job.agentId || `mesh-${job.provider}-${accountId || 'default'}`;
 
-    const send = (selectors) => callMesh({ provider: job.provider, prompt: job.prompt, content: job.content, agentId, accountId, jobId: job.id, selectors, timeoutMs });
+    const send = (selectors) => callMesh({ provider: job.provider, prompt: job.prompt, content: job.content, agentId, accountId, jobId: job.id, selectors, timeoutMs, onProgress: onProgress ? (p) => onProgress(job, p) : null });
     let r = await send(agent.selectors);
     step('mesh', r);
 
@@ -84,13 +89,28 @@ function createLadder({ registry, mesh, picker, mode = () => process.env.GUARDIA
     }
     registry.recordOutcome(job.provider, { ok: false, stage: r.stage || 'unknown' });
 
+    // The prompt is already spent (for a code base that is the expensive part) but we could not FIND the answer because our
+    // response selector drifted: repair it and RE-READ the page. Never resend.
+    if (r.sent === true && r.stage === 'response_not_found' && typeof mesh.read === 'function') {
+      let d = null;
+      try { d = await mesh.diagnose({ provider: job.provider, agentId, accountId, stage: r.stage, selectors: agent.selectors }); } catch (e) { d = { ok: false }; }
+      trail.push({ tier: 'repair', ok: !!(d && d.repaired), evidence: d && d.evidence || null, at: now() });
+      if (d && d.ok && d.repaired && d.selectors) {
+        const rep = registry.recordRepair(job.provider, d.selectors, { source: 'archaeology', evidence: d.evidence });
+        let rr; try { rr = await mesh.read({ jobId: job.id, selectors: rep.selectors, timeoutMs, onProgress: onProgress ? (p) => onProgress(job, p) : null }); } catch (e) { rr = { ok: false, sent: true, stage: 'mesh_unreachable' }; }
+        step('mesh-reread', rr);
+        if (rr.ok) { infraOk(); registry.recordOutcome(job.provider, { ok: true }); return { kind: 'complete', text: rr.text, chatUrl: rr.chatUrl || null, agentId, accountId, trail }; }
+        r = rr;
+      }
+    }
+
     // sent:null = the mesh timed out mid-flight: the prompt MAY be in the chat, so treat it as sent.
     if (r.sent || r.sent === null) {   // the prompt is (or may be) already in the chat: NEVER resend
       return { kind: 'user', reason: 'sent_no_response', note: 'The prompt was already injected; do not resend it. Pick the response element or paste it.', stage: r.stage, trail };
     }
     if (USER_STAGES.has(r.stage)) return { kind: 'user', reason: r.stage, note: `${job.provider} needs a human (${r.stage}).`, stage: r.stage, trail };
 
-    if (!SELECTOR_STAGES.has(r.stage)) infraFailure();   // no_window / no_webview / mesh_unreachable / ...
+    if (!SELECTOR_STAGES.has(r.stage) && !CONTENT_STAGES.has(r.stage)) infraFailure();   // no_window / no_webview / mesh_unreachable / ...
     return { kind: 'ncp', reason: r.stage || 'mesh_failed', stage: r.stage, trail };   // userscript fallback
   }
 
@@ -104,4 +124,4 @@ function createLadder({ registry, mesh, picker, mode = () => process.env.GUARDIA
   return { attempt, escalateToUser, breakerOpen, MODULE_ID };
 }
 
-module.exports = { createLadder, SELECTOR_STAGES, USER_STAGES, MODULE_ID };
+module.exports = { createLadder, SELECTOR_STAGES, USER_STAGES, CONTENT_STAGES, MODULE_ID };
