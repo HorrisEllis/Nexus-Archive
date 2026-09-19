@@ -41,6 +41,7 @@
 
 const { jaaDB, uid } = require('../cortex/memory/jaa-db');
 const bus = require('../nexus/nexus-bus');
+const domainNodes = require('./lib/domain-nodes.js');
 
 const MODULE_ID = 'cortex/intelligence';
 // §WIRED — real, distinct config, not inline constants. See
@@ -740,6 +741,7 @@ function _announceCrystallisation(p) {
     // Write new patterns to JAA
     for (const p of newPatterns) {
       jaaDB.insert('bep_patterns', p);
+      domainNodes.writePatternNode(p);
       _patternIndex.push(p);
       if (p.crystallised) _announceCrystallisation(p);
     }
@@ -898,8 +900,8 @@ function _scanMetaPatterns() {
           + `treat its "always co-occurs" pairings as detector loudness, not a discovered relationship`,
         actionable: true, crystallised: true, source: MODULE_ID, ts: now,
       };
-      if (existing) { jaaDB.update('bep_patterns', existing.uuid, patch); Object.assign(existing, patch); }
-      else { const row = { uuid: uid(), ...patch }; jaaDB.insert('bep_patterns', row); _patternIndex.push(row); }
+      if (existing) { jaaDB.update('bep_patterns', existing.uuid, patch); Object.assign(existing, patch); domainNodes.writePatternNode(existing); }
+      else { const row = { uuid: uid(), ...patch }; jaaDB.insert('bep_patterns', row); domainNodes.writePatternNode(row); _patternIndex.push(row); }
     }
 
     if (!_metaSummary || _metaSummary.noiseSources?.length !== noiseSources.length) {
@@ -1303,7 +1305,7 @@ async function _crossLedger() {
         g => g.type === 'baseline_drift' && g.status === 'open', 1
       );
       if (!existing.length) {
-        jaaDB.insert('gaps', {
+        const gapRow = {
           uuid:      uid(),
           type:      'baseline_drift',
           path:      'cortex/intelligence/cross_ledger',
@@ -1314,7 +1316,9 @@ async function _crossLedger() {
           causedBy:  null,
           createdAt: now, ts: now,
           meta: { driftScore, avgSigma, avgFriction, recentGaps: recentGaps.length },
-        });
+        };
+        jaaDB.insert('gaps', gapRow);
+        domainNodes.writeGapNode(gapRow);
         _log(`drift gap opened — score ${driftScore.toFixed(2)}`);
       }
     }

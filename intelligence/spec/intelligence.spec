@@ -267,3 +267,41 @@ spec:
     - "No James-run, real-machine test yet of any of this — everything above is real and tested in this sandbox only."
 
   not_yet_done: []   # §2026-08-22 — was a real, honest list at the start of phase 1; every item on it is now done. Left as an empty array, not deleted, so its own history stays visible per §17.3.
+
+  # ── 2026-09-19 — heartbeat/pulse + node-export/schema work ─────────────────
+  built_2026_09_19_pulse_and_nodes:
+    pulse: >
+      intelligence/server.js was the one sovereign system relying on
+      orchestrator's active poll instead of pulsing itself (checked against
+      all 11 others, all already wired). Now wired identically via
+      startHeartbeat -> orchestrator/lib/pulse.js's real createPulse.
+      Separately, pulse.js and orchestrator.js's real POST /api/heartbeat
+      gained a real bpm/healthScore computation (computeBpmHealth, unit-
+      tested against 6 scenarios) — regularity + steadiness + latency +
+      missed-beat axes, weighted, clamped 0-100, exposed on /api/heartbeat
+      and /api/status. Refuses to fabricate a score with zero real beats.
+    domain_nodes: >
+      intelligence.node-taxonomy.md's own "node: NOT USED" row is closed:
+      intelligence/lib/domain-nodes.js exports real .gap/.bep_pattern/
+      .pattern_sequence/.resonance_crystal files and indexes them into
+      real jaaDB tables, wired at every real construction site. Schema-
+      checked on write via lib/node-schemas.js's checkPayload().
+    schema_corrections_found_along_the_way: >
+      First draft used the generic pat/crystal types; both already taken
+      by unrelated real mechanisms (pat <- case-library.js, crystal <-
+      crystal-lattice.js). Corrected to bep_pattern/resonance_crystal.
+      Validating real payloads then surfaced real pre-existing mismatches:
+      schema.gap's occurrences was required but neither real intelligence
+      gap site sets it — relaxed to optional. schema.bep_pattern only
+      matched the co-occurrence shape, not intelligence's own second real
+      shape (meta_noise_source) — relaxed the fields unique to each.
+      mastermind.js's sequence pattern was a third, genuinely different
+      shape — given its own new type, schema.pattern_sequence. Also fixed,
+      unrelated but blocking: lib/node-schemas/schema.repository had
+      invalid YAML crashing require('lib/node-schemas.js') for every
+      caller in the tree, not just this one.
+    verified: >
+      Every real payload shape run against the corrected schemas: zero
+      warnings, correct files, correct jaaDB index rows. One real mistake
+      (rm -rf briefly deleted 37 pre-existing node files) caught via git
+      status and restored via git checkout before anything was committed.

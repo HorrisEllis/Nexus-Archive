@@ -60,7 +60,7 @@ payload:
     byLanguage:
       type: object
       required: false
-      description: real { language: count } map from atlas.json, copied through (small, genuinely summary-shaped — not the same discipline violation as copying chunk content would be)
+      description: "real { language: count } map from atlas.json, copied through (small, genuinely summary-shaped — not the same discipline violation as copying chunk content would be)"
     failedCount:
       type: number
       required: false

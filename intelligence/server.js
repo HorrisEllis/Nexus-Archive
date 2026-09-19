@@ -223,6 +223,21 @@ function start() {
   routes.startLatticeFeed();
   server.listen(PORT, () => {
     console.log(`[intelligence] :${PORT} — v1.0.0 — cognition + system-health layer online`);
+    // §BUILT — real heartbeat/pulse, matching every other sovereign system's
+    // established pattern exactly (see versionium/server.js, loom/server.js,
+    // ollama/server.js, copilot/server.js for the same call). Before this,
+    // intelligence was the one system orchestrator had to actively poll for
+    // liveness (HEALTH_PATHS['intelligence']); every sibling system instead
+    // announces itself and pulses every 10s via orchestrator/lib/pulse.js's
+    // real createPulse (latency ring, p95, honest online/offline transitions
+    // on missed beats) — polling never told orchestrator it was there between
+    // ticks, and never noticed a hang faster than the next poll interval.
+    try {
+      const { startHeartbeat } = require('../nexus/nexus-connect');
+      startHeartbeat('intelligence', PORT);
+    } catch (e) {
+      console.warn(`[intelligence] pulse/heartbeat failed to start (non-fatal, falls back to orchestrator polling): ${e.message}`);
+    }
   });
   return server;
 }

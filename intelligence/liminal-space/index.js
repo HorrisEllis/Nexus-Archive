@@ -60,6 +60,7 @@
 
 const crypto = require('crypto');
 const { jaaDB, uid } = require('../../cortex/memory/jaa-db');
+const domainNodes = require('../lib/domain-nodes.js');
 
 const MODULE_ID = 'liminal-space';
 const VERSION   = '1.0.0';
@@ -348,6 +349,7 @@ function _crystallise(focalPoint, type, items, path) {
 
   try { jaaDB.insert('crystals', crystal); }
   catch(e) { console.warn(`[${MODULE_ID}] crystal write failed: ${e.message}`); }
+  domainNodes.writeCrystalNode(crystal);
 
   // Mark items as crystallised
   for (const item of items) {

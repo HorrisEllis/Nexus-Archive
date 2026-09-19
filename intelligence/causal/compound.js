@@ -45,6 +45,7 @@
 
 const { randomUUID } = require('crypto');
 const { CausalGraph } = require('../../intelligence/cfr/graph');
+const domainNodes = require('../lib/domain-nodes.js');
 
 // ══════════════════════════════════════════════════════════════════════════════
 // CAUSAL IMPULSE — the physics underneath regime detection
@@ -392,7 +393,7 @@ class TidalAlertGate extends Gate {
     // Tidal waves open a gap
     if (compoundClass === COMPOUND_CLASS.TIDAL && this._ctx.jaaDB) {
       try {
-        this._ctx.jaaDB.insert('gaps', {
+        const gapRow = {
           uuid:      randomUUID(),
           type:      'tidal_cascade',
           path:      `compound/${record.rootSystem || 'unknown'}`,
@@ -414,7 +415,9 @@ class TidalAlertGate extends Gate {
             compoundingFactors: record.compoundingFactors,
             causalRecordUuid: record.uuid,
           },
-        });
+        };
+        this._ctx.jaaDB.insert('gaps', gapRow);
+        domainNodes.writeGapNode(gapRow);
       } catch(_) {}
     }
   }

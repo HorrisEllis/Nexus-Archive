@@ -182,6 +182,7 @@ const SYS = {
   ollama:     { port:3749, host:'127.0.0.1', label:'Ollama Bridge', color:'#00ff88', healthPath:'/health' },
   copilot:    { port:3750, host:'127.0.0.1', label:'Co-pilot',      color:'#cc44ff', healthPath:'/health' },
   loom:       { port:3752, host:'127.0.0.1', label:'Loom',          color:'#e879f9', healthPath:'/health' },
+  versionium: { port:3754, host:'127.0.0.1', label:'Versionium',   color:'#8855ff', healthPath:'/health' },
   autopilot:  { port:7799,  host:'127.0.0.1', label:'Autopilot',   color:'#fbbf24' },
 };
 
@@ -196,7 +197,7 @@ const CHANNELS = [
   { from:'guardian',  ch:'guardian.setting.update',      to:['jaa'],         desc:'Setting changed' },
   { from:'cortex',    ch:'cortex.gap.found',             to:['guardian'],    desc:'Gap → guardian ledger' },
   { from:'idearium',  ch:'idearium.idea.created',        to:['cortex'],      desc:'Idea → cortex + tagged' },
-  { from:'idearium',  ch:'idearium.snapshot.pushed',     to:['cortex'],      desc:'Snapshot → versionium' },
+  { from:'idearium',  ch:'idearium.snapshot.pushed',     to:['versionium'],  desc:'Snapshot → versionium (no real subscriber yet — documentation only, §6.1)' },
   { from:'alk',       ch:'alk.signal.composite',         to:['cortex'],      desc:'ALK composite → event_log' },
   { from:'architect', ch:'architect.hook.registered',    to:['cortex'],      desc:'Hook declared → cortex event_log' },
   { from:'architect', ch:'architect.hook.wired',         to:['cortex'],      desc:'Hook wiring → cortex event_log' },
@@ -303,13 +304,15 @@ const PATCH= (sys, p, b, timeout) => sysReq(sys, 'PATCH',  p, b, timeout);
 
 // ── All systems health ────────────────────────────────────────────────────────
 const HEALTH_PATHS = {
-  cortex:    '/health',
-  guardian:  '/health',
-  idearium:  '/health',
-  emerge:    '/status',
-  architect: '/health',
-  ollama:    '/api/tags',
-  autopilot: '/status',
+  cortex:       '/health',
+  guardian:     '/health',
+  idearium:     '/health',
+  emerge:       '/status',
+  architect:    '/health',
+  ollama:       '/api/tags',
+  autopilot:    '/status',
+  intelligence: '/health',
+  versionium:   '/health',
 };
 
 async function allHealth() {
@@ -331,7 +334,87 @@ const sseClients = new Set();
 // All systems register here on boot. CLI uses recall to read state.
 // Connection order: system → event bus → kernel → orchestrator
 const SYSTEM_REGISTRY = new Map();
-// { systemId → { port, registeredAt, lastSeen, meta, online } }
+// { systemId → { port, registeredAt, lastSeen, meta, online, _intervals, bpm, healthScore } }
+
+// ── §BPM — heartbeat-derived health score, not binary online/offline ─────────
+// James: "systems have to announce themselves, then use the bpm as a health
+// score system." Announce = the existing POST /api/register (real, unchanged).
+// Pulse = the existing 10s POST /api/heartbeat (real, unchanged). What was
+// missing: turning the actual, observed beat-to-beat rhythm into one honest
+// number instead of just "last beat was < 30s ago -> online".
+//
+// Four real signals, each independently checkable against a live system:
+//   regularity  — is the actual gap between beats close to the cadence this
+//                 system itself said it would beat at (intervalMs, sent this
+//                 pass)? A system that's fine but slow to schedule its own
+//                 timer looks different from one that's actually stalling.
+//   steadiness  — coefficient of variation across the last BPM_RING_SIZE real
+//                 intervals. A regular-on-average-but-erratic rhythm (long
+//                 pause, burst, long pause) is a real degradation signature
+//                 a simple average would hide.
+//   latency     — the system's OWN measured round-trip to /api/heartbeat
+//                 (orchestrator/lib/pulse.js's real latency ring, now sent
+//                 in the beat body) — network/handling slowness, not guessed.
+//   missed      — the system's OWN missed-beat count since its last online
+//                 transition (same real pulse.js counter).
+// Weighted, clamped 0-100. Weights are a first, honest pass (§16.4 — simple,
+// generalize after real repetition) — not tuned against production data yet,
+// which is why they're named constants here, not buried magic numbers.
+const BPM_RING_SIZE      = 10;
+const BPM_WEIGHT         = { regularity: 0.5, steadiness: 0.2, latency: 0.15, missed: 0.15 };
+const BPM_LATENCY_CEILING_MS = 2000; // self-reported avg latency at/above this scores 0 on that axis
+const BPM_MISSED_PENALTY_PER = 0.1;  // each recent missed beat costs 10% on that axis, floor 0
+
+function _mean(arr) { return arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0; }
+function _clamp01(n) { return Math.max(0, Math.min(1, n)); }
+
+/**
+ * computeBpmHealth — pure function, no side effects, so it's testable without
+ * a running orchestrator. `intervals` is the real, observed gap-between-beats
+ * history (ms), oldest first. `expectedIntervalMs` is the system's own
+ * self-reported cadence. `stats` is the system's own self-reported
+ * { latencyAvgMs, missed } from this beat (may be absent — older/other pulse
+ * clients that haven't sent it yet degrade honestly, not falsely-perfect).
+ * Returns { bpm, targetBpm, healthScore, components } — components kept for
+ * anyone debugging why a score is what it is (§16.2 — systems explain
+ * themselves), not just the final number.
+ */
+function computeBpmHealth(intervals, expectedIntervalMs, stats = {}) {
+  if (!intervals.length || !expectedIntervalMs) {
+    return { bpm: null, targetBpm: null, healthScore: null, components: null };
+  }
+  const avgIntervalMs = _mean(intervals);
+  const bpm       = Math.round(60000 / avgIntervalMs);
+  const targetBpm = Math.round(60000 / expectedIntervalMs);
+
+  const regularity = _clamp01(1 - Math.abs(avgIntervalMs - expectedIntervalMs) / expectedIntervalMs);
+
+  const variance = intervals.length > 1
+    ? _mean(intervals.map(v => (v - avgIntervalMs) ** 2))
+    : 0;
+  const cov = avgIntervalMs > 0 ? Math.sqrt(variance) / avgIntervalMs : 0;
+  const steadiness = _clamp01(1 - cov);
+
+  const latencyScore = typeof stats.latencyAvgMs === 'number'
+    ? _clamp01(1 - stats.latencyAvgMs / BPM_LATENCY_CEILING_MS)
+    : 0.5; // unknown — neutral, not falsely perfect and not falsely failing
+  const missedScore = typeof stats.missed === 'number'
+    ? _clamp01(1 - stats.missed * BPM_MISSED_PENALTY_PER)
+    : 0.5;
+
+  const healthScore = Math.round(100 * _clamp01(
+    BPM_WEIGHT.regularity * regularity +
+    BPM_WEIGHT.steadiness * steadiness +
+    BPM_WEIGHT.latency    * latencyScore +
+    BPM_WEIGHT.missed     * missedScore
+  ));
+
+  return {
+    bpm, targetBpm, healthScore,
+    components: { regularity: +regularity.toFixed(3), steadiness: +steadiness.toFixed(3),
+                   latencyScore: +latencyScore.toFixed(3), missedScore: +missedScore.toFixed(3) },
+  };
+}
 
 function registryUpdate(systemId, data) {
   const existing = SYSTEM_REGISTRY.get(systemId) || {};
@@ -1023,10 +1106,15 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
   if (M==='GET' && sub==='status') {
     const systems = await allHealth();
     return json(res, 200, { ok:true, ts:Date.now(),
-      systems: Object.fromEntries(systems.map(s=>[s.id,{
-        online:s.online, ms:s.ms, label:s.sys.label,
-        port:s.sys.port, color:s.sys.color, data:s.d,
-      }])),
+      systems: Object.fromEntries(systems.map(s=>{
+        const reg = SYSTEM_REGISTRY.get(s.id);
+        return [s.id,{
+          online:s.online, ms:s.ms, label:s.sys.label,
+          port:s.sys.port, color:s.sys.color, data:s.d,
+          bpm: reg?.bpm ?? null, targetBpm: reg?.targetBpm ?? null,
+          healthScore: reg?.healthScore ?? null,
+        }];
+      })),
     });
   }
 
@@ -1531,14 +1619,31 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
   // Returns: full system health snapshot so caller can update dots immediately
   if (M==='POST' && sub==='heartbeat') {
     const body = await readBody(req);
-    const { systemId, port, status = 'online', seq, pulseId, meta = {} } = body;
+    const { systemId, port, status = 'online', seq, pulseId, intervalMs, stats, meta = {} } = body;
     const now = Date.now();
 
     if (systemId) {
       const existing = SYSTEM_REGISTRY.get(systemId) || {};
+
+      // §BPM — real, observed gap since this same system's last beat. Only
+      // meaningful once there IS a prior beat, and only within a sane window
+      // (a >2min gap is a restart/stall, not "the rhythm slowed down" — don't
+      // let one huge outlier permanently poison the ring's average).
+      let intervals = existing._intervals || [];
+      if (existing.lastSeen) {
+        const observed = now - existing.lastSeen;
+        if (observed > 0 && observed < 120000) {
+          intervals = [...intervals, observed].slice(-BPM_RING_SIZE);
+        }
+      }
+      const bpmHealth = computeBpmHealth(intervals, intervalMs, stats);
+
       SYSTEM_REGISTRY.set(systemId, {
         ...existing, systemId, port, status, meta,
         lastSeen: now, seq, pulseId,
+        _intervals: intervals,
+        bpm: bpmHealth.bpm, targetBpm: bpmHealth.targetBpm,
+        healthScore: bpmHealth.healthScore, healthComponents: bpmHealth.components,
       });
       // §BUG FIXED 2026-07-06 — a separate, duplicate heartbeat route was
       // added earlier this session to fix Nerve's empty _sources map, at
@@ -1558,6 +1663,9 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
         online: (now - (s.lastSeen || 0)) < 30000,
         ms:     s.latencyMs || null,
         port:   s.port,
+        bpm:         s.bpm ?? null,
+        targetBpm:   s.targetBpm ?? null,
+        healthScore: s.healthScore ?? null, // 0-100, null until 2+ real beats observed
       };
     }
 

@@ -329,9 +329,9 @@ spec:
         not yet checked against live code this pass
     - spec:             'intelligence.spec'
       version:          '1.0.0'
-      last_drift_check: '2026-08-22'
+      last_drift_check: '2026-09-19'
       status: >
-        ✓ CHECKED, this is now the real intelligence system's own governing spec, not a proposal — 4 phases done (cortex/intelligence + lib/baseline.js + lib/snapshot-trigger.js + meta/cfr all real, moved, and consumer-verified), plus a real, standalone server/CLI/event system built after. See intelligence/spec/intelligence.spec's own rollout section for the full, commit-hash-referenced record.
+        ✓ CHECKED, extended (not rewritten) — added built_2026_09_19_pulse_and_nodes: intelligence/server.js wired into the real orchestrator pulse/heartbeat system (was the one sovereign system relying on active polling), and intelligence/lib/domain-nodes.js closes intelligence.node-taxonomy.md's own "node: NOT USED" finding — real, schema-validated .gap/.bep_pattern/.pattern_sequence/.resonance_crystal node exports at every real construction site. See intelligence/spec/intelligence.spec's own new section for the full record, including two pre-existing schema mismatches and one unrelated blocking YAML bug (lib/node-schemas/schema.repository) found and fixed along the way.
     - spec:             'jaa-db.spec'
       version:          '6.0.0'
       last_drift_check: '2026-07-24'
@@ -1024,7 +1024,7 @@ spec:
     | `hot-module-loader.spec` | 1.0.0 | — | not yet checked against live code this pass |
     | `idearium.spec` | 3.0.0 | 2026-06-29 | ✓ AX-008 closed session 5/7 (idearium→copilot wire built and verified) — this spec's axioms list updated to match. |
     | `intelligence-bridge.spec` | 1.0.0 | — | not yet checked against live code this pass |
-    | `intelligence.spec` | 1.0.0 | 2026-08-22 | ✓ CHECKED, this is now the real intelligence system's own governing spec, not a proposal — 4 phases done (cortex/intelligence + lib/baseline.js + lib/snapshot-trigger.js + meta/cfr all real, moved, and consumer-verified), plus a real, standalone server/CLI/event system built after. See intelligence/spec/intelligence.spec's own rollout section for the full, commit-hash-referenced record. |
+    | `intelligence.spec` | 1.0.0 | 2026-09-19 | ✓ CHECKED, extended — added built_2026_09_19_pulse_and_nodes: intelligence wired into the real orchestrator pulse/heartbeat system, plus intelligence/lib/domain-nodes.js closing the node-taxonomy's own "node: NOT USED" finding with schema-validated .gap/.bep_pattern/.pattern_sequence/.resonance_crystal exports. See intelligence.spec's own new section for the full record. |
     | `jaa-db.spec` | 6.0.0 | 2026-07-24 | ✓ CHECKED, correction — this spec governs the `JaaDB` append-only journal class (`new JaaDB({dir})`, `cortex/memory/jaa-db.js` lines 110-289), confirmed by its exact exports list. It does NOT govern `JaaStore` (`guardian/jaa-store.js`) despite the similar file/name — different class, different persistence model (JSONL append-only vs full-snapshot JSON), no shared code. My prior entry here (same date, since corrected) wrongly attributed `JaaStore`'s undocumented `skipTables` mechanism to this spec as drift. That was wrong — this spec is untouched and accurate for what it actually governs. See the new note below the table for the real, still-open finding: `JaaStore` has no spec at all. |
     | `jaa-store.spec` | 1.0.0 | 2026-07-24 | ✓ NEW — first spec ever written for `guardian/jaa-store.js` (class `JaaStore`), the shared persistence layer for 9+ processes. Written from live code (§3.3), not proposed. Documents the real construction options (`tablePrefix`/`tables`/`skipTables`), the 3-way where-clause dispatch, the multi-process merge-on-flush mechanism, and the 2026-07-24b recursion fix. Two known-open issues named explicitly rather than hidden: the still-unfixed MP-001 concurrent-write race, and `stats()`'s hardcoded table list. Closes the §17.1/§8.5 gap flagged two commits ago. |
     | `lib.spec` | 1.0.0 | — | not yet checked against live code this pass |

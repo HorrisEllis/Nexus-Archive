@@ -147,7 +147,7 @@ const FILES = [
   ['intelligence/cfr/ledger.js', 'nexus.intelligence.cfr.ledger', ['nexus.intelligence.cfr.sigma', 'nexus.intelligence.cfr.delta', 'nexus.intelligence.cfr.field', 'nexus.intelligence.cfr.graph', 'nexus.intelligence.causal.compound', 'nexus.cortex.jaa-db']],
   ['intelligence/causal/index.js', 'nexus.intelligence.causal', ['nexus.intelligence.causal.anomaly', 'nexus.intelligence.causal.compound']],
   ['intelligence/causal/anomaly.js', 'nexus.intelligence.causal.anomaly', []],
-  ['intelligence/causal/compound.js', 'nexus.intelligence.causal.compound', ['nexus.intelligence.cfr.graph']],
+  ['intelligence/causal/compound.js', 'nexus.intelligence.causal.compound', ['nexus.intelligence.cfr.graph', 'nexus.intelligence.domain-nodes']],
   ['intelligence/cfr/contract-verifier.js', 'nexus.intelligence.cfr.contract-verifier', []],
   ['lib/scheduler.js',            'nexus.lib.scheduler',
     ['nexus.copilot.self-model', 'nexus.lib.ledger-fanin', 'nexus.lib.agent-pull']],  // CA1 — schedule tasks/jobs/alarms/timed payloads, RAID-gated

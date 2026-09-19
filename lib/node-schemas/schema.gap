@@ -51,8 +51,15 @@ payload:
       description: real dedup key — repeated gaps bump occurrences instead of duplicating
     occurrences:
       type: number
-      required: true
-      description: real repeat counter, starts at 1
+      required: false
+      description: >-
+        real repeat counter, starts at 1 — REQUIRED for lib/gap-field.js's own
+        dedup mechanism, but relaxed to optional here (2026-09-19) once
+        intelligence/index.js's and intelligence/causal/compound.js's own real
+        gap-writing sites were checked directly: neither implements dedup/
+        occurrence-counting, so their real rows never carry this field. Making
+        a field optional can't reject a payload that already supplies it —
+        lib/gap-field.js's own rows are unaffected.
     component:
       type: string
       required: false

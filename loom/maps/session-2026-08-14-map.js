@@ -35,7 +35,7 @@ const FILES = [
   ['lib/diagnostic-report.js',      'nexus.lib.diagnostic-report',      'lib', []],
   ['guardian/lib/ncp.js',           'nexus.guardian.lib.ncp',           'guardian/lib', []],
   ['guardian/lib/gap-hunter.js', 'nexus.guardian.lib.gap-hunter', 'guardian/lib', ['nexus.intelligence.gap.hunter']],
-  ['intelligence/liminal-space/index.js', 'nexus.intelligence.liminal-space', 'intelligence/liminal-space', ['nexus.cortex.jaa-db']],
+  ['intelligence/liminal-space/index.js', 'nexus.intelligence.liminal-space', 'intelligence/liminal-space', ['nexus.cortex.jaa-db', 'nexus.intelligence.domain-nodes']],
   ['clear-glass/src/userscripts/manager.js', 'nexus.clear-glass.userscripts.manager', 'clear-glass/src/userscripts', []],
   // §2026-08-23 — real, standalone HTTP bridge (:7704) proxying to
   // erosmancer-os's own real API (:7432) and clear-glass's IPC (:7702) —
@@ -117,7 +117,7 @@ const FILES = [
 
   // §ADDED 2026-08-17f — found genuinely unregistered while fixing 3 real
   // recency bugs in it (query() vs tail()).
-  ['intelligence/index.js', 'nexus.intelligence', 'intelligence', []],
+  ['intelligence/index.js', 'nexus.intelligence', 'intelligence', ['nexus.intelligence.domain-nodes']],
   ['lib/uid/component-map.js', 'nexus.lib.uid.component-map', 'lib/uid', []],
   ['lib/event-types.js', 'nexus.lib.event-types', 'lib', []],
 

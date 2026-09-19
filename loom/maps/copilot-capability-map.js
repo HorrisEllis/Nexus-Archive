@@ -193,6 +193,20 @@ const FILES = [
   ['intelligence/consumer.js', 'nexus.intelligence.consumer', ['nexus.lib.contract-queue', 'nexus.intelligence.framework-builder']],
   ['intelligence/schemas.js', 'nexus.intelligence.schemas', []],
   ['intelligence/config.js', 'nexus.intelligence.config', []],
+  // §BUILT 2026-09-19 — James: "each node type needs a schema to make
+  // sure they stay consistent." lib/node-index.js was a real, load-
+  // bearing shared module (guardian/lib/node-registry.js's own queryable
+  // index layer) that had never been declared as a component at all —
+  // found while wiring domain-nodes.js into it, closed here alongside
+  // the new real work rather than left as a second orphan.
+  ['lib/node-index.js', 'nexus.lib.node-index', ['nexus.cortex.jaa-db']],
+  ['intelligence/lib/domain-nodes.js', 'nexus.intelligence.domain-nodes',
+    ['nexus.lib.node-export', 'nexus.lib.node-index', 'nexus.lib.node-schemas', 'nexus.guardian.jaa-store']],
+  // intelligence/mastermind.js was referenced as a dependency target by
+  // observability-map.js and other components (nexus.intelligence.mastermind)
+  // but never itself declared — a real, pre-existing orphan-target gap,
+  // closed here while wiring its own new real dependency on domain-nodes.js.
+  ['intelligence/mastermind.js', 'nexus.intelligence.mastermind', ['nexus.intelligence.domain-nodes']],
 
   ['lib/account-identity-index.js', 'nexus.lib.account-identity-index', ['nexus.cortex.jaa-db']],   // §2026-08-22 — stable UUID per (agent, account)
 

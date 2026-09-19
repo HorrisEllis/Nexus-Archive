@@ -98,6 +98,17 @@ function createPulse({
       seq,
       pulseId,
       ts:       sentAt,
+      intervalMs, // §BPM — the cadence this system was told to beat at; lets the
+                  // receiver (orchestrator) judge regularity against the real
+                  // target instead of assuming one.
+      stats: {    // §BPM — self-measured, sent along so the health score can use
+                  // real numbers this process already has instead of guessing
+                  // them from arrival timing alone (arrival timing alone can't
+                  // tell "this system is slow" from "the network is slow").
+        latencyAvgMs: _latency.avg(),
+        latencyP95Ms: _latency.p95(),
+        missed:       _missed,
+      },
       meta:     {
         ...meta,
         uptime: process.uptime(),

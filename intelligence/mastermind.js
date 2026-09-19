@@ -18,6 +18,8 @@
  * are the same data the prose is built from, just also exposed structured.
  */
 
+const domainNodes = require('./lib/domain-nodes.js');
+
 function createMastermind({ jaaDB, getField, getCausalGraphClass }) {
   const BEP_FREQUENCY_THRESHOLD = parseInt(process.env.CRYSTAL_FREQUENCY_THRESHOLD || '3');
   function buildRecentCausalGraph(limit = 300) {
@@ -184,14 +186,16 @@ function createMastermind({ jaaDB, getField, getCausalGraphClass }) {
         // mock-jaaDB pattern tests/modules/mastermind-fractals.test.js
         // already uses for everything else in this file. Use the one
         // that's already here.
-        jaaDB.upsert('bep_patterns', {
+        const row = {
           sequence,
           occurrenceCount:  f.occurrenceCount || 0,
           chainLength:      f.chainLength || null,
           selfSimilarity:   f.selfSimilarityScore ?? null,
           crystallisedAt:   Date.now(),
           source:           'mastermind.detectRecurringPatterns',
-        }, 'sequence');
+        };
+        jaaDB.upsert('bep_patterns', row, 'sequence');
+        domainNodes.writePatternNode(row);
       } catch (e) {
         // §1.2 — a failed write is logged, never silently dropped.
         console.warn(`[mastermind] bep_patterns upsert failed for "${sequence}": ${e.message}`);
