@@ -459,6 +459,27 @@ const server = http.createServer(async (req, res) => {
       const rows = componentLedger.tail(200);
       return json(res, 200, { ok: true, history: rows, count: rows.length });
     }
+    // §MCO05 2026-09-18 — real, durable per-version changelog. Distinct
+    // from /api/history above (component MOVEMENT) — this is "what
+    // shipped in version X.Y.Z," recorded once per version, never
+    // edited (loom/lib/changelog.js's own real append-only guarantee).
+    if (method === 'GET' && p === '/api/changelog') {
+      const changelog = require('./lib/changelog.js');
+      return json(res, 200, { ok: true, changelog: changelog.getChangelog() });
+    }
+    if (method === 'GET' && p.startsWith('/api/changelog/')) {
+      const version = decodeURIComponent(p.slice('/api/changelog/'.length));
+      const changelog = require('./lib/changelog.js');
+      const entry = changelog.getVersion(version);
+      if (!entry) return json(res, 404, { ok: false, error: `no changelog entry for version "${version}"` });
+      return json(res, 200, { ok: true, entry });
+    }
+    if (method === 'POST' && p === '/api/changelog') {
+      const changelog = require('./lib/changelog.js');
+      const body = await readBody(req);
+      const result = changelog.recordVersion(body);
+      return json(res, result.ok ? 200 : 400, result);
+    }
     if (method === 'GET' && p.startsWith('/api/history/system/')) {
       const system = decodeURIComponent(p.slice('/api/history/system/'.length));
       if (!system) return json(res, 400, { ok: false, error: 'system required' });

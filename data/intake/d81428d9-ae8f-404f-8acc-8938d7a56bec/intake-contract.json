@@ -1,0 +1,55 @@
+{
+  "id": "intake-d81428d9-ae8f-404f-8acc-8938d7a56bec",
+  "dropId": "d81428d9-ae8f-404f-8acc-8938d7a56bec",
+  "version": "1.0.0",
+  "module": "nexus.lib.intake",
+  "state": "STAGED",
+  "stagedAt": 1789800959957,
+  "provenance": {
+    "provider": null,
+    "chatUrl": null,
+    "filename": "mco01-src-Nk5STq.zip",
+    "downloadedAt": null,
+    "jobId": null,
+    "raidQueueId": null,
+    "sourcePath": "/tmp/mco01-src-Nk5STq.zip"
+  },
+  "claims": [
+    {
+      "source": "mco01-src-Nk5STq.zip.expanded/mco01-src-Nk5STq/proj/package.json",
+      "target": "mco01-src-Nk5STq.zip.expanded/mco01-src-Nk5STq/proj/package.json",
+      "mapped": false,
+      "bytes": 2,
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "effect": "UNPLACED"
+    },
+    {
+      "source": "mco01-src-Nk5STq.zip.expanded/mco01-src-Nk5STq/proj/src/app.js",
+      "target": "mco01-src-Nk5STq.zip.expanded/mco01-src-Nk5STq/proj/src/app.js",
+      "mapped": false,
+      "bytes": 1,
+      "sha256": "2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881",
+      "effect": "UNPLACED"
+    }
+  ],
+  "summary": {
+    "files": 2,
+    "create": 0,
+    "overwrite": 0,
+    "identical": 0,
+    "unplaced": 2,
+    "archives": 0,
+    "unexpandedArchives": []
+  },
+  "verdict": null,
+  "promoted": null,
+  "expanded": {
+    "at": 1789800959973,
+    "archives": [
+      {
+        "archive": "mco01-src-Nk5STq.zip",
+        "into": "mco01-src-Nk5STq.zip.expanded"
+      }
+    ]
+  }
+}

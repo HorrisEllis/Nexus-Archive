@@ -1,0 +1,55 @@
+{
+  "id": "intake-303842e0-fdee-4373-ad97-1dabd5572b77",
+  "dropId": "303842e0-fdee-4373-ad97-1dabd5572b77",
+  "version": "1.0.0",
+  "module": "nexus.lib.intake",
+  "state": "STAGED",
+  "stagedAt": 1789800959987,
+  "provenance": {
+    "provider": null,
+    "chatUrl": null,
+    "filename": "mco01-flat-1789800959984.zip",
+    "downloadedAt": null,
+    "jobId": null,
+    "raidQueueId": null,
+    "sourcePath": "/tmp/mco01-flat-1789800959984.zip"
+  },
+  "claims": [
+    {
+      "source": "mco01-flat-1789800959984.zip.expanded/one.js",
+      "target": "mco01-flat-1789800959984.zip.expanded/one.js",
+      "mapped": false,
+      "bytes": 1,
+      "sha256": "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b",
+      "effect": "UNPLACED"
+    },
+    {
+      "source": "mco01-flat-1789800959984.zip.expanded/two.js",
+      "target": "mco01-flat-1789800959984.zip.expanded/two.js",
+      "mapped": false,
+      "bytes": 1,
+      "sha256": "d4735e3a265e16eee03f59718b9b5d03019c07d8b6c51f90da3a666eec13ab35",
+      "effect": "UNPLACED"
+    }
+  ],
+  "summary": {
+    "files": 2,
+    "create": 0,
+    "overwrite": 0,
+    "identical": 0,
+    "unplaced": 2,
+    "archives": 0,
+    "unexpandedArchives": []
+  },
+  "verdict": null,
+  "promoted": null,
+  "expanded": {
+    "at": 1789800959990,
+    "archives": [
+      {
+        "archive": "mco01-flat-1789800959984.zip",
+        "into": "mco01-flat-1789800959984.zip.expanded"
+      }
+    ]
+  }
+}

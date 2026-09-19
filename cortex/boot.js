@@ -492,45 +492,6 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // ── §RAID-FIX 2026-09-16 — cross-process self-registration ──────────────
-  // James: "raid also needs to stop failing, i dont think its using the
-  // agent mesh, router, ncp, or the job dispatcher." Real root cause,
-  // traced: lib/self-register.js's registerSelf() — the one and only
-  // established convention for a system announcing its capabilities to
-  // RAID — works by calling lib/component-registry.js's register()
-  // DIRECTLY, in-process. That's exactly right for intelligence/index.js
-  // (the only real caller today — required straight into this same cortex
-  // process by boot.js). It CANNOT work for guardian, copilot (NCP),
-  // clear-glass (agent-mesh + its driver/router), or orchestrator — each
-  // is its own OS process with `server.listen()` of its own, so a bare
-  // require('lib/component-registry').register(...) from any of them
-  // creates a throwaway, never-initialized registry instance that this
-  // cortex process — the one RAID's router.js actually resolves against
-  // (cortex/boot.js:1713-1715) — never sees. Every RAID envelope aimed at
-  // those four systems has always resolved to NO_ROUTE, silently, because
-  // they were never in the registry to begin with — not a routing bug,
-  // a missing capability. This is the real cross-process path: any
-  // external system's own boot POSTs its capability list here once; this
-  // process (the one that actually owns the registry) registers them
-  // in-process from here, same register()/registerBatch() intelligence
-  // already uses (lib/self-register-remote.js is the client half — same
-  // shape-building logic as registerSelf, factored so neither copy drifts).
-  if (p === '/api/components/register-batch' && method === 'POST') {
-    const body = await readBody(req);
-    const items = Array.isArray(body.components) ? body.components : [];
-    if (!items.length) { json(res, 400, { ok: false, error: 'components must be a non-empty array' }); return; }
-    try {
-      const componentRegistry = require('../lib/component-registry');
-      const results = componentRegistry.registerBatch(items);
-      const registered = results.filter(r => r.ok).length;
-      json(res, 200, { ok: true, registered, failed: results.length - registered, results });
-    } catch (e) {
-      json(res, 500, { ok: false, error: e.message });
-    }
-    return;
-  }
-
-
   if (p === '/api/events') {
     const n      = parseInt(url.searchParams.get('n') || url.searchParams.get('limit') || '30');
     const source = url.searchParams.get('source');

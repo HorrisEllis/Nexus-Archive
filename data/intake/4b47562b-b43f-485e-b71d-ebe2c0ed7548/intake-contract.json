@@ -1,0 +1,47 @@
+{
+  "id": "intake-4b47562b-b43f-485e-b71d-ebe2c0ed7548",
+  "dropId": "4b47562b-b43f-485e-b71d-ebe2c0ed7548",
+  "version": "1.0.0",
+  "module": "nexus.lib.intake",
+  "state": "STAGED",
+  "stagedAt": 1789801067193,
+  "provenance": {
+    "provider": null,
+    "chatUrl": null,
+    "filename": "mco01-src-F1sgMQ.zip",
+    "downloadedAt": null,
+    "jobId": null,
+    "raidQueueId": null,
+    "sourcePath": "/tmp/mco01-src-F1sgMQ.zip"
+  },
+  "claims": [
+    {
+      "source": "mco01-src-F1sgMQ.zip.expanded/mco01-src-F1sgMQ/a/b/c/real.js",
+      "target": "mco01-src-F1sgMQ.zip.expanded/mco01-src-F1sgMQ/a/b/c/real.js",
+      "mapped": false,
+      "bytes": 1,
+      "sha256": "a1fce4363854ff888cff4b8e7875d600c2682390412a8cf79b37d0b11148b0fa",
+      "effect": "UNPLACED"
+    }
+  ],
+  "summary": {
+    "files": 1,
+    "create": 0,
+    "overwrite": 0,
+    "identical": 0,
+    "unplaced": 1,
+    "archives": 0,
+    "unexpandedArchives": []
+  },
+  "verdict": null,
+  "promoted": null,
+  "expanded": {
+    "at": 1789801067197,
+    "archives": [
+      {
+        "archive": "mco01-src-F1sgMQ.zip",
+        "into": "mco01-src-F1sgMQ.zip.expanded"
+      }
+    ]
+  }
+}

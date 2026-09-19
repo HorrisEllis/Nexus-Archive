@@ -90,22 +90,29 @@ function _buildPrompt(goalText, workingMemory, constraintFrame) {
 // guardian internals, injected via ctx (same style routes/settings.js
 // already established for jaa) rather than required fresh, so this file
 // can't accidentally stand up a second, desynced copy of any of them.
-function _makeExecutor({ goalText, provider, timeoutMs, jobs, createJob, dispatchJob, ncp }) {
+function _makeExecutor({ goalText, provider, timeoutMs, jobs, createJob, dispatchJob, ncp, runId }) {
   const { askSync } = require('../ask.js');
-  return async function executor(workingMemory, constraintFrame) {
-    const prompt = _buildPrompt(goalText, workingMemory, constraintFrame);
-    const result = await askSync(prompt, {
-      provider: provider || 'auto',
+  // §MCO04 2026-09-18 — James: "Migrate to cos." Real, confirmed
+  // correction: §MCO02/03's phase model lived on lib/compartment-
+  // engine.js — the RAID constraint-frame concept, explicitly documented
+  // elsewhere in this codebase as NOT the same thing as COS (cos/), the
+  // real disk-backed compartment runtime. This executor now creates a
+  // real COS compartment per run and advances its real workPhase
+  // (EXPLORING -> ACTING -> VERIFYING) via lib/cos-bridge.js, gated by
+  // the real gate/state-machine in cos/host/gates/compartment.js — not
+  // a parallel phase concept bolted onto the wrong module.
+  //
+  // §SOVEREIGN, PER THIS FILE'S OWN CONTRACT ABOVE — dispatchToAgent
+  // still wraps askSync unchanged; only the shared, protocol-level tool-
+  // loop wrapper is reused. No new agent-dispatch mechanism.
+  const dispatchToAgent = async (prompt, opts = {}) => {
+    return askSync(prompt, {
+      provider: opts.provider || provider || 'auto',
       timeoutMs: timeoutMs || DEFAULT_STEP_TIMEOUT_MS,
       command: 'ask',
     }, {
-      createJob,
-      dispatchJob,
-      getJob: (id) => jobs.get(id),
+      createJob, dispatchJob, getJob: (id) => jobs.get(id),
       isProviderConnected: (p) => { try { return ncp.isConnected(p); } catch (_) { return false; } },
-      // Same RAID-then-reserve fallback POST /api/copilot/prompt already
-      // uses — asks cortex over its real API, never requires across the
-      // system boundary. LAW_III unconditional reserve on failure.
       resolveProvider: async (p) => {
         try {
           const nx = require('../../lib/nexus-client');
@@ -117,8 +124,74 @@ function _makeExecutor({ goalText, provider, timeoutMs, jobs, createJob, dispatc
         }
       },
     });
-    if (!result.ok) throw new Error(result.error || 'executor: askSync failed with no error message');
-    return { text: result.text, provider: result.provider, jobId: result.jobId };
+  };
+
+  return async function executor(workingMemory, constraintFrame, compartment) {
+    const userPrompt = _buildPrompt(goalText, workingMemory, constraintFrame);
+    const cosBridge = require('../../lib/cos-bridge.js');
+    const compName = `guardian-run-${runId || Date.now()}`;
+    let cosCompartment = null;
+
+    try {
+      const { makeNcpCallModel } = require('../../copilot/tool-runtime.js');
+      const agentTools = require('../../lib/agent-tools/index.js');
+      const callModel = makeNcpCallModel(dispatchToAgent, { provider: provider || 'auto' });
+
+      // §HONEST DEGRADE — if COS is unreachable (this run's environment
+      // has no compartment-os store/gate host — see lib/cos-bridge.js's
+      // own lastError()), run one unscoped tool-calling pass rather than
+      // failing the whole run outright.
+      const created = cosBridge.createCompartment({ name: compName, purpose: goalText });
+      if (!created.ok) {
+        console.warn(`[autonomous-loop-route] COS compartment create failed (${created.error}) — running unscoped, no phase gating`);
+        const loopResult = await agentTools.runToolLoop(callModel,
+          'You are guardian\'s autonomous build executor. You have real tools; use them.',
+          userPrompt, { maxIterations: 10 });
+        if (!loopResult.text) throw new Error('executor: tool loop produced no final text');
+        return { text: loopResult.text, iterations: loopResult.iterations, toolCallLog: loopResult.toolCallLog };
+      }
+      cosCompartment = created.compartment;
+
+      const allToolCallLog = [];
+      const phasePrompts = {
+        EXPLORING: 'Phase: EXPLORING. Only read-only tools are available. Investigate the goal and the working memory before acting — do not attempt to mutate anything yet.',
+        ACTING:    'Phase: ACTING. Mutation-capable tools are now available. Use what you learned in EXPLORING to do the real work.',
+        VERIFYING: 'Phase: VERIFYING. Back to read-only tools. Check the real result of what you did in ACTING and report it honestly.',
+      };
+      let lastText = '';
+      for (const phase of ['EXPLORING', 'ACTING', 'VERIFYING']) {
+        const adv = cosBridge.advanceWorkPhase({ name: compName, nextPhase: phase });
+        if (!adv.ok) throw new Error(`executor: could not advance COS compartment "${compName}" to ${phase}: ${adv.error}`);
+        cosCompartment = adv.compartment;
+
+        const allowedTools = cosBridge.toolsAllowedForWorkPhase(phase, { agentTools });
+        const systemPrompt = [
+          'You are guardian\'s autonomous build executor, working through real, distinct phases inside a real COS compartment.',
+          phasePrompts[phase],
+        ].join(' ');
+        const phasePrompt = phase === 'EXPLORING' ? userPrompt
+          : `${userPrompt}\n\n[Real result from the previous phase]\n${lastText}`;
+        const loopResult = await agentTools.runToolLoop(callModel, systemPrompt, phasePrompt, { maxIterations: 6, allowedTools });
+        allToolCallLog.push(...(loopResult.toolCallLog || []).map(c => ({ ...c, phase })));
+        lastText = loopResult.text || '';
+      }
+      if (!lastText) throw new Error('executor: phased tool loop produced no final text');
+      return { text: lastText, toolCallLog: allToolCallLog, workPhase: cosCompartment.workPhase, cosCompartmentId: cosCompartment.id };
+    } catch (e) {
+      console.warn(`[autonomous-loop-route] COS-phased tool-calling executor failed (${e.message}) — falling back to single-shot askSync`);
+      const result = await dispatchToAgent(userPrompt, { provider });
+      if (!result.ok) throw new Error(result.error || 'executor: askSync failed with no error message');
+      return { text: result.text, provider: result.provider, jobId: result.jobId };
+    } finally {
+      // §CLEANUP — this compartment's own root is a fresh directory COS
+      // created for this one run (never an externally mounted project
+      // path — see cos-bridge.js's own destroyCompartment() doc), so
+      // wiping it here is always safe, not a risk to any real project.
+      if (cosCompartment) {
+        const destroyed = cosBridge.destroyCompartment(compName, { wipe: true, force: true });
+        if (!destroyed.ok) console.warn(`[autonomous-loop-route] COS compartment cleanup failed for "${compName}": ${destroyed.error}`);
+      }
+    }
   };
 }
 
@@ -196,7 +269,7 @@ function handle(req, res, ctx) {
 
       const executor = _makeExecutor({
         goalText, provider: body.provider, timeoutMs: body.stepTimeoutMs,
-        jobs, createJob, dispatchJob, ncp,
+        jobs, createJob, dispatchJob, ncp, runId,
       });
 
       try {

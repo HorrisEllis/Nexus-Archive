@@ -2570,40 +2570,6 @@ server.listen(PORT, () => {
   setTimeout(_connectGuardianStream, 3000);
   setTimeout(_connectIdeariumStream, 4000);
 
-  // §RAID-FIX 2026-09-16 — James: "raid also needs to stop failing, i
-  // dont think its using... ncp." Real, traced gap: register() above
-  // already POSTs copilot's components to orchestrator's /api/register
-  // — but that feeds ORCHESTRATOR's own component-registry instance
-  // (orchestrator.js calls compReg.init(jaaDB, nexusBus) on its own
-  // boot — a second, separate registry living in orchestrator's own
-  // process, for orchestrator's own presence/trust/heartbeat purposes).
-  // cortex/core/raid/router.js resolves against CORTEX's registry
-  // instance (cortex/boot.js's own capabilityRegistry.init(...)) — a
-  // different process, a different in-memory registry. copilot's real
-  // capabilities were always reaching orchestrator, never cortex, so
-  // RAID could never route to NCP. This is additive, not a replacement
-  // for register() above — orchestrator's own registration still does
-  // its own real job (system.registered broadcast, contract
-  // verification, heartbeat) and is untouched.
-  try {
-    const { registerSelfRemote } = require('../lib/self-register-remote.js');
-    registerSelfRemote('copilot', [
-      { name: 'prompt',       description: 'dispatch a prompt to the live co-pilot — real system state, gap/component/test awareness',
-        route: { method: 'POST', path: '/api/prompt' } },
-      { name: 'prompt_tools', description: 'dispatch a prompt with the full agent-tools registry available — the same loop wake-relay and autonomous jobs run',
-        route: { method: 'POST', path: '/api/prompt/tools' } },
-      { name: 'diagnose',     description: 'run real diagnostics — system health, bottlenecks, friction, queue state',
-        route: { method: 'POST', path: '/api/diagnose' } },
-      { name: 'build',        description: 'trigger a real build/pipeline action through copilot',
-        route: { method: 'POST', path: '/api/build' } },
-    ], { registeredBy: 'copilot/server.js' }).then((r) => {
-      if (r.ok) console.log(`[copilot] registered ${r.registered} capabilit${r.registered === 1 ? 'y' : 'ies'} with RAID (cortex)`);
-      else console.warn(`[copilot] RAID self-registration incomplete: ${r.error || (r.failed + ' failed')}`);
-    });
-  } catch (err) {
-    console.warn('[copilot] RAID self-registration failed:', err.message);
-  }
-
   // §ADDED 2026-07-07 — continuous stream digest. The _stream buffer is
   // already fed live from Cortex/Guardian SSE and already flows into
   // context assembly; this adds the two missing pieces (normalize to

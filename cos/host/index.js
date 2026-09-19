@@ -37,6 +37,7 @@ const {
   StartCompartmentGate,
   StopCompartmentGate,
   DestroyCompartmentGate,
+  AdvanceWorkPhaseGate,
 } = require('./gates/compartment.js');
 
 const {
@@ -117,6 +118,7 @@ function createHost(opts = {}) {
   bus.register(new StartCompartmentGate());
   bus.register(new StopCompartmentGate());
   bus.register(new DestroyCompartmentGate());
+  bus.register(new AdvanceWorkPhaseGate());
 
   //    Process lifecycle
   bus.register(new ProcessSpawnGate());

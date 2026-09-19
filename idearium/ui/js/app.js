@@ -180,16 +180,7 @@ async function loadStats()    { try { STATS = (await api('/api/stats')).stats; }
 // up by ideaUuid/specUuid from idea/spec detail panels. API_REPOS is the
 // client-side cache loadAll() refreshes alongside everything else.
 let API_REPOS = [];
-async function loadApiRepos() {
-  try {
-    API_REPOS = (await api('/api/repos')).repos || [];
-    renderRepoLibrary();
-    if (CURRENT_API_REPO) {
-      const fresh = API_REPOS.find(r => r.uuid === CURRENT_API_REPO.uuid);
-      if (fresh) { CURRENT_API_REPO = fresh; renderApiRepoPanel(fresh); }
-    }
-  } catch(e){ console.warn('[idearium] loadApiRepos failed:', e.message); }
-}
+async function loadApiRepos() { try { API_REPOS = (await api('/api/repos')).repos || []; } catch(e){} }
 
 // §NEW 2026-07-15 — chunk retry trail + build artifacts for a spec-engine
 // spec, read from speceng.show's `history` block. Kept out of SPECS/loadSpecs
@@ -292,7 +283,6 @@ function setView(v) {
     g.classList.remove('open');
   });
   if (v === 'projects') loadProjects();
-  if (v === 'repo') renderRepoLibrary();
 }
 
 // Top-tab subnav dropdowns (Create ▾ / Build ▾) — hover works via CSS,
@@ -1309,204 +1299,44 @@ function openRepoFor(ideaUuid, specUuid, label) {
     (specUuid && r.promotedFromSpec === specUuid) ||
     (CURRENT_REPO_IDEA && r.ideaUuid === CURRENT_REPO_IDEA) ||
     (specUuid && r.specUuid === specUuid));
-  if (repo) selectApiRepo(repo.uuid); else renderApiRepoPanel(null);
-}
-
-// §OVERHAUL 2026-09-17 — the compartment → repo rail. Real grouping on
-// repo.compartmentId (idearium/repo/index.js's own real field, §SBP1 —
-// see that file's header), not a fabricated hierarchy. Repos with no
-// compartmentId (the common case today — most repos are still created
-// without one) land in one honestly-labeled "Uncategorized" bucket
-// rather than being hidden or given a fake group name.
-//
-// There is no idearium-side endpoint that resolves a compartmentId to a
-// human name (COS's compartment registry — cos/manager.js — is a
-// separate subsystem idearium's API never wired a lookup to). Rather
-// than invent a name, the group label is the id itself, in the same
-// mono/truncated style every other id already appears in across this
-// app — an honest identifier, not a guessed label.
-let REPO_RAIL_COLLAPSED = new Set(); // compartment keys the user closed
-function renderRepoLibrary() {
-  const body = document.getElementById('repo-rail-body');
-  const badge = document.getElementById('repo-count-badge');
-  if (badge) badge.textContent = API_REPOS.length ? String(API_REPOS.length) : '';
-  if (!API_REPOS.length) {
-    body.innerHTML = `<div class="repo-rail-empty">no repos yet<br><br>drop files or promote a spec to create one</div>`;
-    return;
-  }
-  const q = (document.getElementById('repo-rail-filter')?.value || '').toLowerCase().trim();
-  const groups = new Map(); // compartmentId (or '') -> repos[]
-  for (const r of API_REPOS) {
-    if (q && !r.name.toLowerCase().includes(q)) continue;
-    const key = r.compartmentId || '';
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key).push(r);
-  }
-  if (!groups.size) { body.innerHTML = `<div class="repo-rail-empty">no repos match "${escapeHtml(q)}"</div>`; return; }
-  // Uncategorized last, others by first-repo recency (newest activity first)
-  const keys = [...groups.keys()].sort((a, b) => {
-    if (!a) return 1; if (!b) return -1;
-    return Math.max(...groups.get(b).map(r=>r.updatedAt||0)) - Math.max(...groups.get(a).map(r=>r.updatedAt||0));
-  });
-  body.innerHTML = keys.map(key => {
-    const repos = groups.get(key).slice().sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
-    const label = key ? key : 'Uncategorized';
-    const collapsed = REPO_RAIL_COLLAPSED.has(key);
-    return `
-      <div class="compartment-group${collapsed?' collapsed':''}" data-key="${escapeHtml(key)}">
-        <div class="compartment-head" onclick="toggleCompartment('${key.replace(/'/g,"\\'")}')">
-          <span class="compartment-caret">▾</span>
-          <span class="compartment-name" title="${escapeHtml(label)}">${escapeHtml(label)}</span>
-          <span class="compartment-count">${repos.length}</span>
-        </div>
-        <div class="compartment-repos">
-          ${repos.map(r => {
-            const dotClass = r.phase === 'complete' ? 'done' : (r.phase === 'building' ? 'building' : '');
-            return `
-            <div class="repo-card${CURRENT_API_REPO && CURRENT_API_REPO.uuid===r.uuid?' active':''}" onclick="selectApiRepo('${r.uuid}')">
-              ${dotClass ? `<span class="repo-card-dot ${dotClass}"></span>` : ''}
-              <div class="repo-card-body">
-                <div class="repo-card-name">${escapeHtml(r.name)}</div>
-                <div class="repo-card-meta">${r.fileCount} files · ${escapeHtml(r.phase||'—')}</div>
-              </div>
-            </div>`;
-          }).join('')}
-        </div>
-      </div>`;
-  }).join('');
-}
-function toggleCompartment(key) {
-  if (REPO_RAIL_COLLAPSED.has(key)) REPO_RAIL_COLLAPSED.delete(key); else REPO_RAIL_COLLAPSED.add(key);
-  renderRepoLibrary();
-}
-function selectApiRepo(uuid) {
-  const repo = API_REPOS.find(r => r.uuid === uuid);
-  if (!repo) return;
-  if (CURRENT_API_REPO && CURRENT_API_REPO.uuid !== uuid) {
-    // switching to a genuinely different repo — any open file belongs to
-    // the old one and must close, unlike a same-repo background refresh
-    ACTIVE_API_FILE = null; API_FILE_DIRTY = false;
-    document.getElementById('ide-tabs').textContent = 'no file open';
-    document.getElementById('ide-code').textContent = '// click a file in the tree to open it here';
-    _showIdeEditor(false);
-  }
-  document.getElementById('repo-context').textContent = '';
-  renderRepoLibrary(); // refresh active-card highlight
   renderApiRepoPanel(repo);
 }
 
-// Renders the selected repo as a real, nested, expanded-by-default file
-// tree (same path-splitting the server's own RepoLayer.checklist() uses
-// — see that method's header — replicated client-side since checklist()
-// itself isn't exposed over HTTP; re-derives the exact same tree from
-// the same files[] this panel already has). §OVERHAUL 2026-09-17 —
-// previously a flat, unnested list of every path (unusable at scale —
-// the repo this was built against has 502 files); now a real tree.
-let REPO_TREE_COLLAPSED = new Set(); // dir paths the user closed (opt OUT, default open)
+// Renders a RepoLayer-tracked repo's file manifest. Honest limitation, not
+// hidden: RepoLayer only persists path+bytes for ingested files (besides the
+// canonical .spec, whose text lands in the spec's intent section) — there is
+// no content-addressable blob store yet, so these entries are not clickable
+// into the IDE pane the way locally-picked-folder files are. That's a real
+// gap, not a UI oversight; fixing it means RepoLayer needs actual file
+// storage, which is separate, larger work.
 function renderApiRepoPanel(repo) {
   const tree = document.getElementById('file-tree');
-  if (!ACTIVE_API_FILE) {
-    document.getElementById('ide-tabs').textContent = 'no file open';
-    document.getElementById('ide-code').textContent = '// click a file in the tree to open it here';
-    _showIdeEditor(false);
-  }
+  document.getElementById('ide-tabs').textContent = 'no file open';
+  document.getElementById('ide-code').textContent = '// click a file in the tree to open it here';
   if (!repo) {
+    document.getElementById('repo-badge').textContent = 'no repo linked to this idea';
     tree.innerHTML = `<div class="repo-empty">no repo linked yet<br><br>drop files below to attach one to this idea<br><br><button class="modal-btn confirm" onclick="document.getElementById('repo-drop-input').click()">drop repo files…</button></div>`;
-    CURRENT_API_REPO = null; ACTIVE_API_FILE = null;
+    CURRENT_API_REPO = null; ACTIVE_API_FILE = null; _showIdeEditor(false);
     return;
   }
+  document.getElementById('repo-badge').textContent = `${repo.fileCount} files · ${repo.phase}${repo.forks.length?` · ${repo.forks.length} fork(s)`:''}${repo.localPath?' · materialized on disk':''}`;
   CURRENT_API_REPO = repo;
   const statusLine = repo.localPath
-    ? `${repo.materializedCount||repo.fileCount} of ${repo.fileCount} files materialized — <span style="color:var(--mint)">${escapeHtml(repo.localPath)}</span>`
-    : (repo.promotedFromSpec ? 'promoted from spec — file structure as components' : 'manifest only — file content isn\'t stored yet');
-
-  // dir path -> { __dir:true, children:{} } | { __dir:false, ...file }
-  const root = {};
-  for (const f of (repo.files || [])) {
-    const parts = f.path.split('/');
-    let node = root;
-    let acc = '';
-    for (let i = 0; i < parts.length - 1; i++) {
-      acc = acc ? `${acc}/${parts[i]}` : parts[i];
-      node[parts[i]] = node[parts[i]] || { __dir: true, __path: acc, children: {} };
-      node = node[parts[i]].children;
-    }
-    node[parts[parts.length - 1]] = { __dir: false, __path: f.path, ...f };
-  }
-  const canDelete = !!repo.localPath;
-  function renderNode(node, depth) {
-    const indent = `<span class="tree-indent" style="width:${depth*14}px"></span>`;
-    const entries = Object.entries(node).sort(([a,av],[b,bv]) => {
-      if (av.__dir !== bv.__dir) return av.__dir ? -1 : 1; // dirs first
-      return a.localeCompare(b);
-    });
-    let html = '';
-    for (const [name, entry] of entries) {
-      if (entry.__dir) {
-        const collapsed = REPO_TREE_COLLAPSED.has(entry.__path);
-        html += `<div class="tree-node dir tree-dir${collapsed?' collapsed':''}" onclick="toggleTreeDir('${entry.__path.replace(/'/g,"\\'")}')">${indent}<span class="tree-caret">▾</span>📁 ${escapeHtml(name)}</div>`;
-        html += `<div class="tree-children">${renderNode(entry.children, depth+1)}</div>`;
-      } else {
-        const active = ACTIVE_API_FILE === entry.__path ? ' active' : '';
-        const statusDot = entry.status ? `<span class="tree-status-dot ${entry.status}" title="${escapeHtml(entry.status)}"></span>` : '';
-        const compTag = entry.comp_id ? ` <span style="color:var(--violet);font-size:9px">▸${escapeHtml(entry.comp_id)}</span>` : '';
-        const delBtn = canDelete ? `<span class="tree-file-del" title="delete" onclick="event.stopPropagation();deleteApiRepoFile('${repo.uuid}','${entry.__path.replace(/'/g,"\\'")}')">×</span>` : '';
-        html += `<div class="tree-node file${active}" onclick="openApiRepoFile('${repo.uuid}','${entry.__path.replace(/'/g,"\\'")}')">${indent}${statusDot||'📄'}<span class="tree-file-name">${escapeHtml(name)}${compTag}</span><span class="tree-file-bytes">${entry.bytes||0}b</span>${delBtn}</div>`;
-      }
-    }
-    return html;
-  }
-  const treeHtml = Object.keys(root).length ? renderNode(root, 0) : '<div style="padding:14px;color:var(--text3);font-family:var(--mono);font-size:11px">no files</div>';
+    ? `${repo.materializedCount||repo.fileCount} of ${repo.fileCount} files materialized as real files — <span style="color:var(--mint)">${escapeHtml(repo.localPath)}</span>`
+    : (repo.promotedFromSpec ? 'promoted from spec — file structure as components (no content-addressable store for this one — metadata only)' : 'manifest only — file content isn\'t stored yet');
+  const addBtn = `<div style="padding:4px 2px 10px"><button class="action-btn" onclick="addApiRepoFile('${repo.uuid}')">+ add file</button></div>`;
   tree.innerHTML = `
-    <div class="repo-detail-strip">
-      <span class="repo-detail-name" title="${escapeHtml(repo.name)}">${escapeHtml(repo.name)}</span>
-      <button class="repo-detail-btn" title="add file" onclick="addApiRepoFile('${repo.uuid}')">+</button>
-      <button class="repo-detail-btn" title="fork" onclick="forkApiRepo('${repo.uuid}')">⑂</button>
-      <button class="repo-detail-btn" title="export .zip" onclick="exportApiRepo()">⇩</button>
-      <button class="repo-detail-btn danger" title="archive" onclick="archiveApiRepo()">✕</button>
-    </div>
-    <div style="padding:8px 10px 4px;font-family:var(--mono);font-size:9px;color:var(--text3);line-height:1.5" id="repo-badge">${statusLine}</div>
-    <div class="tree-toolbar"><input type="text" id="tree-file-filter" placeholder="filter files…" oninput="renderApiRepoPanel(CURRENT_API_REPO)"></div>
-    <div>${treeHtml}</div>`;
-  // client-side file filter (kept simple — text match on path, re-render
-  // is cheap even at 500 files since it's one innerHTML write)
-  const q = (document.getElementById('tree-file-filter')?.value || '').toLowerCase().trim();
-  if (q) {
-    const filtered = {};
-    for (const f of (repo.files||[])) if (f.path.toLowerCase().includes(q)) filtered[f.path] = true;
-    // simplest correct filter: hide tree-node.file rows whose path doesn't match, and any dir with no visible children
-    tree.querySelectorAll('.tree-node.file').forEach(el => {
-      const onclickAttr = el.getAttribute('onclick') || '';
-      const m = onclickAttr.match(/openApiRepoFile\('[^']*','([^']*)'\)/);
-      const path = m ? m[1].replace(/\\'/g, "'") : '';
-      el.style.display = filtered[path] ? '' : 'none';
-    });
-    tree.querySelectorAll('.tree-dir').forEach(dirEl => {
-      const children = dirEl.nextElementSibling;
-      const anyVisible = children && [...children.querySelectorAll('.tree-node.file')].some(f => f.style.display !== 'none');
-      dirEl.style.display = anyVisible ? '' : 'none';
-      if (children) children.style.display = anyVisible ? '' : 'none';
-    });
-  }
-}
-function toggleTreeDir(path) {
-  if (REPO_TREE_COLLAPSED.has(path)) REPO_TREE_COLLAPSED.delete(path); else REPO_TREE_COLLAPSED.add(path);
-  renderApiRepoPanel(CURRENT_API_REPO);
-}
-// §NEW 2026-09-17 — repo.fork existed as a real API endpoint
-// (idearium/interaction-contract.json's repo.fork) with no UI ever
-// wired to it.
-async function forkApiRepo(uuid) {
-  const repo = API_REPOS.find(r => r.uuid === uuid);
-  const name = await themedPrompt(`name for the fork (forking "${repo?.name||uuid}"):`, 'fork repo');
-  if (!name) return;
-  try {
-    const r = await api(`/api/repos/${uuid}/fork`, { method: 'POST', body: JSON.stringify({ name }) });
-    toast(`forked → ${name}`, 'ok');
-    await loadApiRepos();
-    renderRepoLibrary();
-    if (r && r.repo && r.repo.uuid) selectApiRepo(r.repo.uuid);
-  } catch (e) { toast(`fork failed: ${e.message}`, 'err'); }
+    <div class="repo-empty" style="text-align:left;padding:14px">
+      <div style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-bottom:8px">${statusLine}</div>
+      ${addBtn}
+      ${(repo.files||[]).map(f=>`
+        <div style="display:flex;align-items:center;gap:6px;padding:3px 0" class="api-file-row${ACTIVE_API_FILE===f.path?' active':''}">
+          <span style="font-family:var(--mono);font-size:11px;color:var(--text2);cursor:pointer;flex:1" onclick="openApiRepoFile('${repo.uuid}','${f.path.replace(/'/g,"\\'")}')">
+            ${escapeHtml(f.path)} <span style="color:var(--text3)">(${f.bytes}b)</span>${f.comp_id?`<br><span style="color:var(--accent);font-size:9px;padding-left:12px">▸ ${escapeHtml(f.comp_id)}${f.status?` · ${f.status}`:''}</span>`:''}
+          </span>
+          ${repo.localPath ? `<span style="cursor:pointer;color:var(--text3);font-size:12px;padding:0 4px" title="delete" onclick="event.stopPropagation();deleteApiRepoFile('${repo.uuid}','${f.path.replace(/'/g,"\\'")}')">×</span>` : ''}
+        </div>`).join('') || '<div style="color:var(--text3)">no files</div>'}
+    </div>`;
 }
 
 // ════════════════════════════════════════════════════

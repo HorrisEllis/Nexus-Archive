@@ -1,1 +1,0 @@
-[{"uuid":"29505813-501f-46bf-b3c1-a329d4dea6b8","faultClass":"memory_pressure","status":"proposed","causedBy":null,"body":"nexus.resource.pressure level=pressure reasons=[\"free memory 17.4% < warn threshold 20%\"]","successRate":0,"ts":1789517833603,"proposedBy":"cortex/self-heal","gapUuid":null,"id":"c90e5597-cd79-4837-bdbd-591e41c2159b"}]

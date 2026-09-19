@@ -1,1 +1,0 @@
-<!-- nexus/idearium/data/projects/nexus-id-repo-1886b8cb/01-purpose.md: no text content captured -->

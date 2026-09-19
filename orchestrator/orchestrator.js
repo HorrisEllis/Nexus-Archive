@@ -3001,31 +3001,6 @@ try {
   } catch(e) {
     console.warn('  [component-registry] init skipped:', e.message);
   }
-
-  // §PERSISTENCE-NODES 2026-09-16 — James: "how about .job .dispatch and
-  // .response .artifact nodes for persistence?" Real endpoint this maps
-  // to: GET /api/ledger above (system=clear-glass&n=...) — the durable,
-  // on-disk, per-system ledger this same file writes (ledgerWrite,
-  // LEDGER dict) and clear-glass's DOM-mutation stream + download-capture
-  // now both feed (added this session). orchestrator is the real, always-
-  // on process that actually SERVES this read, so it registers under its
-  // own namespace here rather than a misleading 'clear-glass.artifact'
-  // pointing at a port clear-glass doesn't even serve on. Same cross-
-  // process path guardian/copilot/clear-glass now use — orchestrator is
-  // its own OS process too (this file's own server.listen above), so this
-  // can't be the in-process registerSelf() intelligence/index.js uses.
-  try {
-    const { registerSelfRemote } = require('../lib/self-register-remote.js');
-    registerSelfRemote('orchestrator', [
-      { name: 'artifact', description: 'real, durable per-agent-per-chatUrl artifact and DOM-mutation ledger (clear-glass downloads + DOM archaeology) — filter with ?system=clear-glass',
-        route: { method: 'GET', path: '/api/ledger?system={system}&n={n}' } },
-    ], { registeredBy: 'orchestrator/orchestrator.js' }).then((r) => {
-      if (r.ok) console.log(`  [orchestrator] registered ${r.registered} capabilit${r.registered === 1 ? 'y' : 'ies'} with RAID (cortex)`);
-      else console.warn(`  [orchestrator] RAID self-registration incomplete: ${r.error || (r.failed + ' failed')}`);
-    });
-  } catch (err) {
-    console.warn('  [orchestrator] RAID self-registration failed:', err.message);
-  }
   // §9.5 mutation contract (seam-component-registry-spec.md) — must init
   // before any CLI/API mutateProperty() call, or it fails loudly by design
   // (see lib/mutation-contract.js's audit-first ordering rationale).

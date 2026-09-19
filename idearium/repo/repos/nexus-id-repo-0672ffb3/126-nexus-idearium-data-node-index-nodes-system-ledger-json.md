@@ -1,1 +1,0 @@
-[{"uuid":"c4863661-e857-48b6-82e7-c05bc98525e8","nodeId":"idearium","type":"system","action":"added","filePath":"/home/claude/work/merged/idearium/data/nodes/system/idearium.system","ts":1789253181859,"id":"48837afb-ab74-4781-9279-346189157b50"}]

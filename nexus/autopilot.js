@@ -479,22 +479,9 @@ function _spawnKernel(kernel, color) {
   //      UNKNOWN, the supervisor counts it as a crash, and immediately retries.
   const isNode = /(^|[\\/])node(\.exe)?$/i.test(kernel.cmd);
   const heapMB = kernel.maxOldSpaceMB || DEFAULT_MAX_OLD_SPACE_MB;
-  let kernelArgs = isNode && !kernel.args.some(a => String(a).startsWith('--max-old-space-size'))
+  const kernelArgs = isNode && !kernel.args.some(a => String(a).startsWith('--max-old-space-size'))
     ? [`--max-old-space-size=${heapMB}`, ...kernel.args]
     : kernel.args;
-
-  // §FIX 2026-09-17 — from a real Windows console: cortex/self-heal/escalation
-  // hits critical memory pressure repeatedly and every time logs "global.gc()
-  // is not exposed (start this process with --expose-gc...)" then refuses to
-  // heal because it's stuck in FAILURE_MODE with no forced-collection path
-  // available. The escalation ladder's memory-pressure recovery step has
-  // existed the whole time; it was just never given the V8 flag it needs to
-  // run. Same injection pattern as --max-old-space-size above, so this
-  // applies to every Node kernel autopilot spawns, not just cortex — any of
-  // them can hit this same dead end.
-  if (isNode && !kernelArgs.some(a => String(a) === '--expose-gc')) {
-    kernelArgs = ['--expose-gc', ...kernelArgs];
-  }
 
   // §PRIORITY 2026-07-31 — from a real Windows console: cortex (phase 1, the
   // memory core everything else writes through) OOM-crashed, then couldn't

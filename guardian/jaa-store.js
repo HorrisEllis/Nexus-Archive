@@ -50,32 +50,6 @@ const DEFAULT_SETTINGS = {
   stable_count_threshold:   '5',
 };
 
-// ── §FIX 2026-09-17 — process-level flush-on-exit ──────────────────────────────
-// One listener per process, shared across every JaaStore instance that process
-// creates (cortex/memory/jaa-db.js's shared singleton, guardian/server.js's own
-// store, etc. — each just calls _registerStore(this) from its constructor).
-// Idempotent: a second construction in the same process adds to the Set, not a
-// second listener.
-const _liveStores = new Set();
-let _exitHandlerInstalled = false;
-
-function _registerStore(store) {
-  _liveStores.add(store);
-  if (_exitHandlerInstalled) return;
-  _exitHandlerInstalled = true;
-  const _flushAllOnSignal = (signal) => {
-    console.log(`[jaa] ${signal} received — flushing ${_liveStores.size} store(s) before exit`);
-    for (const s of _liveStores) {
-      try { s.close(); } catch (e) { console.error('[jaa] flush-on-exit failed for a store:', e.message); }
-    }
-    // Re-raise the default behavior so the process actually exits afterward
-    // rather than hanging on an unhandled signal.
-    process.exit(signal === 'SIGINT' ? 130 : 143);
-  };
-  process.on('SIGTERM', () => _flushAllOnSignal('SIGTERM'));
-  process.on('SIGINT',  () => _flushAllOnSignal('SIGINT'));
-}
-
 // ── JaaStore ───────────────────────────────────────────────────────────────────
 
 class JaaStore {
@@ -122,20 +96,6 @@ class JaaStore {
     this._loadAll();
     this._bootstrapSettings();
     console.log('[jaa] Store ready —', dir, this.tablePrefix ? `(prefix: ${this.tablePrefix})` : '');
-
-    // §FIX 2026-09-17 — close() (flush + stop timers, above) has existed since
-    // the flush-lock work but nothing ever called it on process exit. Every
-    // kernel crash or supervisor restart therefore skipped it: dirty tables
-    // never flushed and the in-progress flush's lock file (if any) was left
-    // for the next boot to find and break as "STALE FLUSH LOCK ... presumed
-    // crashed mid-flush" — a real, repeated symptom in boot logs, not a
-    // hypothetical one. SIGTERM/SIGINT are the signals autopilot's normal
-    // restart and shutdown paths actually send; a bare `process.kill()`/
-    // taskkill /F still bypasses this, same as it bypasses any Node exit
-    // handler, so this closes the ordinary-restart case, not every case.
-    // Registered once per process (all instances in this process share the
-    // listener) so N stores sharing a directory don't install N handlers.
-    _registerStore(this);
   }
 
   // ══════════════════════════════════════════════════════════════════════════

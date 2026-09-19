@@ -68,6 +68,16 @@ const DEFAULT_COMPARTMENT = Object.freeze({
   entryFile:   null,
   uiFile:      null,
   state:       'created',
+  // §MCO04 2026-09-18 — James: "Migrate to cos. Expand cos if needed."
+  // Real, confirmed gap: `state` (created/running/stopped) tracks
+  // PROCESS lifecycle — whether the compartment is alive — not what
+  // KIND of work an agent is doing inside a running one. workPhase is
+  // that second, independent axis: EXPLORING (read-only investigation)
+  // -> ACTING (mutation-capable) -> VERIFYING (read-only again, checking
+  // ACTING's real result). null until an agent-driven run actually
+  // starts using phases — a compartment created for something else
+  // entirely (a plain dev sandbox) is never forced into this model.
+  workPhase:   null,
   network:     DEFAULT_NETWORK_CONFIG,
   fs:          DEFAULT_FS_CONFIG,
   compiler:    DEFAULT_COMPILER_CONFIG,
@@ -252,6 +262,25 @@ const COMPARTMENT_TRANSITIONS = Object.freeze({
   snapshotted: ['running', 'stopped'],
 });
 
+// §MCO04 2026-09-18 — the real work-phase state machine, same shape and
+// convention as COMPARTMENT_STATES/TRANSITIONS above. Forward-only —
+// there is no legal transition back to a prior phase; a compartment
+// that needs to redo exploration is a new run, not a phase regression.
+const WORK_PHASES = Object.freeze(['EXPLORING', 'ACTING', 'VERIFYING']);
+
+const WORK_PHASE_TRANSITIONS = Object.freeze({
+  null:      ['EXPLORING'],
+  EXPLORING: ['ACTING'],
+  ACTING:    ['VERIFYING'],
+  VERIFYING: [],
+});
+
+function isValidWorkPhaseTransition(from, to) {
+  const key = from === null || from === undefined ? 'null' : from;
+  const allowed = WORK_PHASE_TRANSITIONS[key];
+  return Array.isArray(allowed) && allowed.includes(to);
+}
+
 /**
  * Returns true if the transition from `from` to `to` is valid.
  * @param {string} from
@@ -286,4 +315,9 @@ module.exports = {
   COMPARTMENT_STATES,
   COMPARTMENT_TRANSITIONS,
   isValidTransition,
+
+  // Work-phase state machine (§MCO04)
+  WORK_PHASES,
+  WORK_PHASE_TRANSITIONS,
+  isValidWorkPhaseTransition,
 };

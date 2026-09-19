@@ -23,6 +23,9 @@ const HOST = Object.freeze({
   COMPARTMENT_DESTROYED: 'host:compartment:destroyed',
   COMPARTMENT_ERROR:     'host:compartment:error',
   COMPARTMENT_STATUS:    'host:compartment:status',
+  // §MCO04 2026-09-18 — real work-phase advance, same event-naming
+  // convention as the lifecycle events above.
+  COMPARTMENT_WORK_PHASE_ADVANCED: 'host:compartment:work-phase-advanced',
   COMPARTMENTS_LISTED:   'host:compartments:listed',
 
   // Snapshots

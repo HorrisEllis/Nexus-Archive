@@ -35,7 +35,7 @@ const { randomUUID } = require('crypto');
 const { Gate }              = require('../../siso/Gate.js');
 const { Event }             = require('../../siso/Event.js');
 const { makeCompartment }   = require('../../foundation/types.js');
-const { isValidTransition } = require('../../foundation/types.js');
+const { isValidTransition, isValidWorkPhaseTransition } = require('../../foundation/types.js');
 const { enforce }           = require('../../foundation/axioms.js');
 const { HOST }              = require('../../foundation/event-contracts.js');
 const { compartmentPaths, COS_VERSION } = require('../../foundation/constants.js');
@@ -305,10 +305,65 @@ class DestroyCompartmentGate extends Gate {
   }
 }
 
+// ─── AdvanceWorkPhaseGate ───────────────────────────────────────────────────
+//
+// §MCO04 2026-09-18 — real, forward-only work-phase advance for an
+// already-running compartment. Same real validate → update → persist →
+// emit shape as Start/Stop above; distinct from `state` entirely — a
+// compartment can be mid-VERIFYING and still just be `state: 'running'`.
+//
+// Handles: 'host:compartment:advance-work-phase'
+// Input payload: { name, nextPhase, store, sysmap }
+// Emits: 'host:compartment:work-phase-advanced' | 'host:compartment:error'
+class AdvanceWorkPhaseGate extends Gate {
+  constructor() {
+    super('host:compartment:advance-work-phase');
+  }
+
+  transform(event, stream) {
+    const { name, nextPhase, store, sysmap } = event.data;
+
+    const comp = store.getCompartmentByName(name) || store.getCompartment(name);
+    if (!comp) {
+      stream.emit(new Event(HOST.COMPARTMENT_ERROR, {
+        operation: 'advance-work-phase',
+        reason:    `compartment "${name}" not found`,
+      }));
+      return;
+    }
+
+    if (!isValidWorkPhaseTransition(comp.workPhase, nextPhase)) {
+      stream.emit(new Event(HOST.COMPARTMENT_ERROR, {
+        operation: 'advance-work-phase',
+        reason:    `cannot advance "${name}" from work-phase "${comp.workPhase}" to "${nextPhase}"`,
+      }));
+      return;
+    }
+
+    const now     = Date.now();
+    const updated = Object.assign({}, comp, {
+      workPhase: nextPhase,
+      updatedAt: now,
+    });
+
+    store.setCompartment(updated);
+    store.flushSync();
+    sysmap.upsertCompartment(updated);
+
+    stream.emit(new Event(HOST.COMPARTMENT_WORK_PHASE_ADVANCED, {
+      compartmentId: updated.id,
+      name:          updated.name,
+      workPhase:     nextPhase,
+      compartment:   updated,
+    }));
+  }
+}
+
 module.exports = {
   CreateCompartmentGate,
   StartCompartmentGate,
   StopCompartmentGate,
   DestroyCompartmentGate,
+  AdvanceWorkPhaseGate,
   toSlug,
 };

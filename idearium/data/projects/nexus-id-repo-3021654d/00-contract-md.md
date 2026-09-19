@@ -1,1 +1,0 @@
-(contract 82cf0e2f-f8cc-47ec-abb0-7864abd25c7c — no content field on the real row)
