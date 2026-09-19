@@ -1,0 +1,168 @@
+{
+  "id": "intelligence-v1",
+  "version": "1.0.0",
+  "namespace": "intelligence",
+  "_created_2026_09_19": "Created when the intelligence-domain routes moved out of cortex (docs/2026-09-19-cortex-to-intelligence-and-versionium-consolidation-phasemap.spec). Reconciled against intelligence/server.js + intelligence/routes.js + intelligence/index.js handleRequest(). ANY = no method guard in the handler (honest to the code, same convention as cortex's contract).",
+  "ports": {
+    "http": 3753
+  },
+  "uuid": "intelligence-contract-v1-0000-2026-0919-jamesbrooks-001",
+  "role": "Cognition + system-health layer: patterns, failure taxonomy, reuse index, intuition/mastermind/adversarial faculties, unified query, associative lattice, liminal-space, CFR ledger",
+  "health": {
+    "method": "GET",
+    "path": "/health",
+    "returns": {
+      "ok": true
+    }
+  },
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/health"
+    },
+    {
+      "method": "GET",
+      "path": "/sse"
+    },
+    {
+      "method": "ANY",
+      "path": "/cfr/health"
+    },
+    {
+      "method": "ANY",
+      "path": "/cfr/state"
+    },
+    {
+      "method": "ANY",
+      "path": "/cfr/field"
+    },
+    {
+      "method": "ANY",
+      "path": "/cfr/nodes"
+    },
+    {
+      "method": "ANY",
+      "path": "/cfr/deltas"
+    },
+    {
+      "method": "ANY",
+      "path": "/cfr/compound"
+    },
+    {
+      "method": "ANY",
+      "path": "/cfr/stream"
+    },
+    {
+      "method": "POST",
+      "path": "/cfr/emit"
+    },
+    {
+      "method": "ANY",
+      "path": "/cfr/replay"
+    },
+    {
+      "method": "GET",
+      "path": "/api/commands"
+    },
+    {
+      "method": "GET",
+      "path": "/api/commands/history"
+    },
+    {
+      "method": "GET",
+      "path": "/api/intelligence/topo-kernel/stats"
+    },
+    {
+      "method": "GET",
+      "path": "/api/intelligence/telemetry/status"
+    },
+    {
+      "method": "POST",
+      "path": "/api/framework/create"
+    },
+    {
+      "method": "POST",
+      "path": "/api/adversarial"
+    },
+    {
+      "method": "GET",
+      "path": "/api/intelligence/patterns"
+    },
+    {
+      "method": "GET",
+      "path": "/api/intelligence/failures"
+    },
+    {
+      "method": "GET",
+      "path": "/api/intelligence/reuse"
+    },
+    {
+      "method": "GET",
+      "path": "/api/intelligence/map"
+    },
+    {
+      "method": "GET",
+      "path": "/api/intelligence/component-failures"
+    },
+    {
+      "method": "GET",
+      "path": "/api/intelligence/meta"
+    },
+    {
+      "method": "GET",
+      "path": "/api/intelligence/status"
+    },
+    {
+      "method": "POST",
+      "path": "/api/intelligence/event"
+    },
+    {
+      "method": "ANY",
+      "path": "/api/intelligence/context"
+    },
+    {
+      "method": "ANY",
+      "path": "/api/intelligence/intuition"
+    },
+    {
+      "method": "ANY",
+      "path": "/api/intelligence/mastermind"
+    },
+    {
+      "method": "ANY",
+      "path": "/api/intelligence/mastermind/patterns"
+    },
+    {
+      "method": "ANY",
+      "path": "/api/intelligence/adversarial"
+    },
+    {
+      "method": "ANY",
+      "path": "/api/intelligence/rca"
+    },
+    {
+      "method": "ANY",
+      "path": "/api/intelligence/query"
+    },
+    {
+      "method": "ANY",
+      "path": "/api/intelligence/lattice"
+    },
+    {
+      "method": "ANY",
+      "path": "/api/intelligence/crystals"
+    },
+    {
+      "method": "GET",
+      "path": "/api/liminal-space/status"
+    },
+    {
+      "method": "GET",
+      "path": "/api/liminal-space/list"
+    },
+    {
+      "method": "POST",
+      "path": "/api/intelligence/bus"
+    }
+  ]
+}

@@ -23,20 +23,24 @@ const ROOT = path.join(__dirname, '../..');
 function run() {
   const src = fs.readFileSync(path.join(ROOT, 'cortex/boot.js'), 'utf8');
 
-  test('VSB1-001', 'the real SOVEREIGN_TABLE_OWNERS map exists and names all 3 real versionium tables', () => {
-    assert.ok(/SOVEREIGN_TABLE_OWNERS\s*=\s*{/.test(src));
-    const idx = src.indexOf('SOVEREIGN_TABLE_OWNERS = {');
-    const block = src.slice(idx, idx + 400);
-    for (const t of ['versionium_commits', 'versionium_branches', 'versionium_calendar']) {
-      assert.ok(block.includes(t), `expected ${t} in the sovereign owners map`);
-    }
+  // 2026-09-19: the ORIGINAL fix routed sovereign tables to versionium's store via a direct require() from
+  // cortex's process (SOVEREIGN_TABLE_OWNERS). The only in-repo reader (the cortex CLI) now asks versionium's
+  // own API, so cortex no longer reads another system's store at all. The INTENT of VSB1 is unchanged -- a
+  // sovereign table must NEVER silently read cortex's dead local copy -- and is enforced harder: a 410.
+  test('VSB1-001', 'the sovereign-table set exists and names all 3 real versionium tables', () => {
+    const m = src.match(/const SOVEREIGN_TABLES = new Set\(\[([^\]]*)\]\)/);
+    assert.ok(m, 'SOVEREIGN_TABLES not found in cortex/boot.js');
+    for (const t of ['versionium_commits', 'versionium_branches', 'versionium_calendar']) assert.ok(m[1].includes(t), `expected ${t}`);
+    assert.ok(!/SOVEREIGN_TABLE_OWNERS/.test(src) && !/require\(ownerModule\)/.test(src), 'cortex must not require() another system\'s store any more');
   });
 
-  test('VSB1-002', 'the /api/memory handler checks SOVEREIGN_TABLE_OWNERS before falling back to cortex\'s own local jaaDB', () => {
+  test('VSB1-002', 'the /api/memory handler refuses a sovereign table BEFORE it can fall back to cortex\'s own local jaaDB', () => {
     const idx = src.indexOf("if (p === '/api/memory')");
-    const block = src.slice(idx, idx + 800);
-    assert.ok(/ownerModule\s*=\s*SOVEREIGN_TABLE_OWNERS\[table\]/.test(block));
-    assert.ok(/require\(ownerModule\)/.test(block), 'must actually require the real owning module, not just check for it');
+    const block = src.slice(idx, idx + 1200);
+    const guard = block.indexOf('SOVEREIGN_TABLES.has(table)');
+    const local = block.indexOf('jaaDB.tail(table, n * 2)');
+    assert.ok(guard !== -1 && local !== -1 && guard < local, 'the sovereign check must come first');
+    assert.ok(/json\(res, 410,/.test(block.slice(guard, local)), 'sovereign tables must answer 410');
   });
 
   // Functional: replicate the exact real handler logic against real,
@@ -79,10 +83,10 @@ function run() {
     assert.ok(/rows = jaaDB\.tail\(table, n \* 2\);/.test(block), 'the original real fallback path for cortex\'s own tables must still exist');
   });
 
-  test('VSB1-005', 'an unreachable sovereign store fails honestly (502, real error), never silently returns an empty success', () => {
+  test('VSB1-005', 'a sovereign table never returns an empty success: it refuses, naming the owner', () => {
     const idx = src.indexOf("if (p === '/api/memory')");
-    const block = src.slice(idx, idx + 900);
-    assert.ok(/json\(res, 502,/.test(block), 'expected a real, honest 502 on a genuine sovereign-store failure');
+    const block = src.slice(idx, idx + 1200);
+    assert.ok(/movedTo: 'versionium'/.test(block) && /\/api\/versionium\/history/.test(block), 'the 410 must name versionium and its real route');
   });
 
   console.log(`\n${passed} passed, ${failed} failed`);

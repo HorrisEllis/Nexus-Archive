@@ -167,7 +167,7 @@ async function load(opts = {}) {
     record.monitorTimer = setTimeout(async () => {
       // Monitor window passed — check sigma
       try {
-        const cfr = await fetch('http://127.0.0.1:3748/cfr/health',
+        const cfr = await fetch((process.env.ORCHESTRATOR_URL || 'http://127.0.0.1:9000') + '/cfr/field',
           { signal: AbortSignal.timeout(2000) }).then(r => r.json()).catch(() => null);
         const sigma = cfr?.sigma ?? cfr?.field?.sigma ?? 0;
         if (rollback && sigma > 0.70 && record.backupPath) {

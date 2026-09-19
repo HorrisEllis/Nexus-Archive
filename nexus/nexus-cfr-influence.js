@@ -80,26 +80,28 @@ function influence(field) {
   const changes = [];
 
   // ── Tension → SNR floor ────────────────────────────────────────────────────
-  if (tension > THRESHOLDS.tension_critical) {
-    const newFloor = 0.70; // require higher SNR when critically tense
-    if (state.sigmaFloor !== newFloor) {
-      state.sigmaFloor = newFloor;
-      changes.push({ axis: 'tension', action: 'snr_floor', value: newFloor, reason: `tension=${tension.toFixed(2)} > ${THRESHOLDS.tension_critical}` });
-      _emit('cfr.influence.snr_floor_raised', { floor: newFloor, tension });
-      if (_bus) _bus.setSigmaFloor(newFloor);
+  if (typeof tension === 'number') {
+    if (tension > THRESHOLDS.tension_critical) {
+      const newFloor = 0.70; // require higher SNR when critically tense
+      if (state.sigmaFloor !== newFloor) {
+        state.sigmaFloor = newFloor;
+        changes.push({ axis: 'tension', action: 'snr_floor', value: newFloor, reason: `tension=${tension.toFixed(2)} > ${THRESHOLDS.tension_critical}` });
+        _emit('cfr.influence.snr_floor_raised', { floor: newFloor, tension });
+        if (_bus) _bus.setSigmaFloor(newFloor);
+      }
+    } else if (tension > THRESHOLDS.tension_high) {
+      const newFloor = 0.50;
+      if (state.sigmaFloor !== newFloor) {
+        state.sigmaFloor = newFloor;
+        changes.push({ axis: 'tension', action: 'snr_floor_moderate', value: newFloor });
+        _emit('cfr.influence.snr_floor_raised', { floor: newFloor, tension });
+        if (_bus) _bus.setSigmaFloor(newFloor);
+      }
+    } else if (state.sigmaFloor > 0) {
+      state.sigmaFloor = 0;
+      if (_bus) _bus.setSigmaFloor(0);
+      _emit('cfr.influence.snr_floor_cleared', { tension });
     }
-  } else if (tension > THRESHOLDS.tension_high) {
-    const newFloor = 0.50;
-    if (state.sigmaFloor !== newFloor) {
-      state.sigmaFloor = newFloor;
-      changes.push({ axis: 'tension', action: 'snr_floor_moderate', value: newFloor });
-      _emit('cfr.influence.snr_floor_raised', { floor: newFloor, tension });
-      if (_bus) _bus.setSigmaFloor(newFloor);
-    }
-  } else if (state.sigmaFloor > 0) {
-    state.sigmaFloor = 0;
-    if (_bus) _bus.setSigmaFloor(0);
-    _emit('cfr.influence.snr_floor_cleared', { tension });
   }
 
   // ── Coherence → diagnostic ─────────────────────────────────────────────────
@@ -194,7 +196,7 @@ function _pollCFR() {
   // in its default state (_field.tension = 0.1, cortex/boot.js). Not a
   // field-naming bug, not a cortex bug — a wrong port, the whole time.
   const req = http.request({
-    hostname: '127.0.0.1', port: 3748, path: '/cfr/field',
+    hostname: '127.0.0.1', port: parseInt(process.env.ORCHESTRATOR_PORT || '9000', 10), path: '/cfr/field',
     method: 'GET', headers: { 'Accept': 'application/json' },
   }, res => {
     let body = '';
@@ -211,7 +213,10 @@ function _pollCFR() {
       // §1.2 nothing silent — validate the whole shape influence() actually reads,
       // not just `tension`. A field missing coherence/friction/entropy/resonance
       // used to throw deep inside influence() and get swallowed by an empty catch.
-      const required = ['tension', 'coherence', 'friction', 'entropy', 'resonance'];
+      // 2026-09-19: `tension` is NOT required. No CFR field dimension is called tension (the ledger's
+      // field is coherence/friction/resonance/entropy); the value cortex used to relay was its own
+      // hardcoded default 0.1, so the tension branches below never fired. Absent = branches skipped.
+      const required = ['coherence', 'friction', 'entropy', 'resonance'];
       const missing = required.filter(k => typeof field?.[k] !== 'number');
       if (missing.length) {
         _logOnce('shape', `[cfr-influence] /cfr/field response missing/non-numeric field(s): ${missing.join(', ')} — skipping this poll`);

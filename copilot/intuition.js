@@ -15,6 +15,8 @@
 
 const http = require('http');
 const CX_URL = process.env.CORTEX_URL || 'http://127.0.0.1:3748';
+const INTEL_URL = process.env.INTELLIGENCE_URL || 'http://127.0.0.1:3753'; // intelligence is sovereign (moved out of cortex 2026-09-19)
+const ORCH_URL  = process.env.ORCHESTRATOR_URL || 'http://127.0.0.1:9000'; // the CFR field/ledger authority
 
 async function _fetch(url) {
   return new Promise((res, rej) => {
@@ -89,7 +91,7 @@ async function answer(prompt, session, stream = []) {
   // ── Crystal patterns from cortex ────────────────────────────────────────────
   if (lower.includes('crystal') || lower.includes('learned') || lower.includes('what do you know')) {
     try {
-      const d = await _fetch(`${CX_URL}/api/intelligence/patterns?limit=5`);
+      const d = await _fetch(`${INTEL_URL}/api/intelligence/crystals?limit=5`);
       const patterns = d?.patterns || [];
       if (!patterns.length) return null;
       return { text: `Crystallised patterns:\n${patterns.slice(0,5).map(p=>`  ${p.precursor} → ${p.outcome} (${p.count}×, ${Math.round((p.confidence||0)*100)}%)`).join('\n')}`,
@@ -110,7 +112,7 @@ async function answer(prompt, session, stream = []) {
   // ── Sigma / CFR field ───────────────────────────────────────────────────────
   if (SIGMA_RE.test(lower)) {
     try {
-      const d = await _fetch(`${CX_URL}/cfr/health`);
+      const d = await _fetch(`${ORCH_URL}/cfr/health`);
       const sigma = d?.cfr?.sigma?.toFixed(3) ?? '?';
       const regime = d?.cfr?.regime ?? '?';
       return { text: `CFR field: sigma=${sigma} regime=${regime}`,

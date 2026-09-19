@@ -28,7 +28,19 @@ require.cache[require.resolve('../../cortex/memory/jaa-db')] = {
   exports: { jaaDB: jaaDBFake, uid: () => require('crypto').randomUUID() },
 };
 
-const boot = require('../../cortex/boot.js');
+// 2026-09-19: the faculties moved from cortex/boot.js to intelligence/routes.js
+// (docs/2026-09-19-cortex-to-intelligence-and-versionium-consolidation-phasemap.spec).
+// Same fake jaaDB, same default field cortex used to hold; every assertion below is unchanged.
+const { createRoutes } = require('../../intelligence/routes.js');
+const _routes = createRoutes({
+  jaaDB: jaaDBFake,
+  getField: () => ({ coherence: 0.6, friction: 0.2, resonance: 0.3, entropy: 0.2, tension: 0.1, regime: 'stable', updatedAt: Date.now() }),
+  intelligence: {}, refreshMs: 0,
+});
+const boot = {
+  _intuitionAnswer:   (p)    => _routes.intuition.answer(p),
+  _mastermindAnalysis:(p, c) => _routes.mastermind.analyze(p, c),
+};
 
 test('T-001', 'no open gaps: honest "no open issues", unchanged from before', () => {
   _tables.gaps = [];

@@ -100,7 +100,7 @@ function createNCPMessageHandler(deps) {
 
   function _handleNCPMessage(msg) {
     const { type, jobId, provider, tabId, text, content, lang, hash,
-            gaps, error, gate, chatUrl, chatId, account } = msg;
+            gaps, error, gate, chatUrl, chatId, account, hatUsed } = msg;
 
     // ── §5.2 Cortex write — every significant userscript event reaches cortex ──
     // Fire-and-forget: timeout 2s, never block the NCP response.
@@ -339,10 +339,34 @@ function createNCPMessageHandler(deps) {
             try {
               const cl = require('../../lib/chat-logger');
               if (!cl.getSession()) cl.startSession({ meta: { source: 'guardian' } });
+              const agentIdentity = require('../../lib/agent-identity');
+              const resolvedIdentity = agentIdentity.resolveIdentity({ provider, hat: jobRec?.hat });
+
+              // §BUILT 2026-09-17 — James: "guardian is the source of
+              // truth for agents." Real, closed loop: guardian dispatches
+              // a hat, the userscript honestly reports whether it actually
+              // used it (see userscript-chatgpt.js's own §BUILT note —
+              // hatHdr can fall through to intel/legacy context on a real,
+              // common mismatch), and THAT divergence is exactly the kind
+              // of observational claim lib/agent-model.js exists
+              // to hold — not "the agent is bad," a real, specific, dated
+              // fact about one dispatch. Silent otherwise: a hat that was
+              // requested and actually used is not a claim worth logging
+              // on every single job, only the real exceptions are.
+              if (hatUsed && jobRec?.hat && hatUsed.usedPath !== 'hat') {
+                try {
+                  const agentModel = require('../../lib/agent-model');
+                  agentModel.observe(resolvedIdentity,
+                    `requested hat ${jobRec.hat.name || jobRec.hat} but fell back to ${hatUsed.usedPath} context`,
+                    'failure_mode', { jobId, source: 'userscript_hatUsed' }, 0.5);
+                } catch (_) {} // agent-model not initialized in this process is a real, non-fatal state
+              }
+
               // Log the prompt (user turn)
               if (jobRec?.prompt) {
                 cl.log({ role:'user', content: jobRec.prompt, provider: provider||'ollama',
-                  jobId, intent: jobRec.command, outcome:'complete' }).catch(()=>{});
+                  jobId, intent: jobRec.command, outcome:'complete', chatUrl, account,
+                  agentId: resolvedIdentity }).catch(()=>{});
               }
               // §FIXED 2026-09-06 — James: "all chats from the ncp need to
               // log to the chat log index." Real, confirmed gap: this
@@ -361,7 +385,8 @@ function createNCPMessageHandler(deps) {
               // real treatment the prompt already had.
               if (finalText) {
                 cl.log({ role:'assistant', content: finalText, provider: provider||'ollama',
-                  jobId, intent: jobRec?.command || null, outcome:'complete' }).catch(()=>{});
+                  jobId, intent: jobRec?.command || null, outcome:'complete', chatUrl, account,
+                  agentId: resolvedIdentity }).catch(()=>{});
               }
             } catch(_) {}
 

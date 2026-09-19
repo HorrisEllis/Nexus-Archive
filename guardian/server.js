@@ -1706,6 +1706,23 @@ function handleExtendedRoutes(req, res, url, method) {
     return true;
   }
 
+  // §BUILT 2026-09-17 — James: "the chat index for clear-glass." Real
+  // wiring, not a new mechanism: lib/chat-index.js already reads
+  // chat_log (this same process's own real jaa store) and groups
+  // provider -> agentId -> url, sorted by original ts — this route is
+  // the one HTTP door ClearGlass's download-manager UI needs to reach
+  // it, since chat_log lives in guardian's process, not clear-glass's.
+  if (method==='GET' && url.pathname==='/api/chat-index') {
+    try {
+      const { buildChatIndex } = require('../lib/chat-index');
+      const limit = parseInt(new URL(req.url, 'http://x').searchParams.get('limit') || '5000', 10);
+      pRes(res, 200, { ok: true, index: buildChatIndex({ jaa, limit }) });
+    } catch (e) {
+      pRes(res, 500, { ok: false, error: e.message });
+    }
+    return true;
+  }
+
   if (method==='GET' && url.pathname==='/version') {
     const fs2 = require('fs');
     const path2 = require('path');
@@ -2607,15 +2624,15 @@ function handleExtendedRoutes(req, res, url, method) {
   // two routes since before this session; neither existed anywhere on
   // guardian. pollCFR() swallowed the failure silently (.catch(()=>null)),
   // so the tension field has been running on stale defaults, not live CFR
-  // sigma. Plain proxy to cortex:3748, same shape cortex already returns —
+  // sigma. Plain proxy to the ORCHESTRATOR (the CFR field's authority; 2026-09-19 it used to go via cortex's relay), same flat shape —
   // checked directly, GET /cfr/field returns {ok, sigma, coherence,
   // friction, entropy, regime, ts}, exactly what pollCFR expects.
   if (method === 'GET' && url.pathname === '/api/guardian/cfr/state') {
-    const req2 = http.request({ hostname: '127.0.0.1', port: 3748, path: '/cfr/field', method: 'GET', timeout: 3000 }, r => {
+    const req2 = http.request({ hostname: '127.0.0.1', port: parseInt(process.env.ORCHESTRATOR_PORT || '9000', 10), path: '/cfr/field', method: 'GET', timeout: 3000 }, r => {
       let buf = ''; r.on('data', c => buf += c);
       r.on('end', () => { res.writeHead(r.statusCode || 200, { 'Content-Type': 'application/json' }); res.end(buf); });
     });
-    req2.on('error', () => { res.writeHead(502, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ ok: false, error: 'cortex unreachable' })); });
+    req2.on('error', () => { res.writeHead(502, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ ok: false, error: 'orchestrator unreachable' })); });
     req2.on('timeout', () => req2.destroy());
     req2.end();
     return;

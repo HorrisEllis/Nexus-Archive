@@ -30,24 +30,11 @@ module.exports = [
   // ── Events / CFR ───────────────────────────────────────────────────────
   _c('events.log',            'GET',  '/api/events',                   'Query event log'),
   _c('events.write',          'POST', '/api/event',                    'Write event to JAA event_log', {tags:['ledger']}),
-  _c('cfr.health',            'GET',  '/cfr/health',                   'CFR field health — sigma, regime, coherence'),
-  _c('cfr.field',             'GET',  '/cfr/field',                    'Live CFR field state'),
-  _c('cfr.graph',             'GET',  '/cfr/graph',                    'Causal graph nodes + edges'),
-  _c('cfr.deltas',            'GET',  '/cfr/deltas',                   'Recent delta records'),
-  _c('cfr.compounds',         'POST', '/cfr/compounds',                'Compound effect scan (ripple/wave/tidal)'),
-  // ── Intelligence ───────────────────────────────────────────────────────
-  _c('intelligence.status',   'GET',  '/api/intelligence/status',      'Intelligence core status'),
-  _c('intelligence.context',  'GET',  '/api/intelligence/context',     'Pre-request context for intent'),
-  _c('intelligence.patterns', 'GET',  '/api/intelligence/patterns',    'Crystallised BEP patterns'),
-  _c('intelligence.failures', 'GET',  '/api/intelligence/failures',    'Failure mode taxonomy'),
-  _c('intelligence.rca',      'GET',  '/api/intelligence/rca',         'Root cause analysis findings'),
-  _c('intelligence.reuse',    'GET',  '/api/intelligence/reuse',       'SEAM reuse candidates'),
-  _c('intelligence.event',    'POST', '/api/intelligence/event',       'Feed event for analysis'),
-  _c('intelligence.intuition','GET',  '/api/intelligence/intuition',   'INTUITION fast-path answer', {tags:['cognition'],
-    hooks:{out:[{id:'cortex.intelligence.intuition.answer',wires_to:['copilot.prompt.receive_result'],tags:['answer']}]}}),
-  _c('intelligence.mastermind','GET', '/api/intelligence/mastermind',  'MASTERMIND strategic analysis', {tags:['cognition']}),
-  _c('intelligence.predict',  'GET',  '/api/intelligence/predict',     'Predicted next gap from precursors', {tags:['cognition']}),
-  _c('intelligence.confidence','GET', '/api/intelligence/confidence',  'Confidence score for query'),
+  // Intelligence routes (status/context/patterns/failures/rca/reuse/event/intuition/mastermind)
+  // moved to the sovereign intelligence system 2026-09-19 — registered by
+  // intelligence/registry-components.js and announced to RAID by intelligence/server.js.
+  // (intelligence.predict and intelligence.confidence were registered here but NEVER had a
+  // handler in cortex/boot.js — phantom capabilities, dropped rather than moved.)
   // ── RAID ───────────────────────────────────────────────────────────────
   _c('raid.decide',           'POST', '/api/raid/decide',              'Route intent to best agent/component', {
     tags:['routing'],

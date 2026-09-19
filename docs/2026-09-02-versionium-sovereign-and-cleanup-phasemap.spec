@@ -3,7 +3,12 @@ spec:
     name:        2026-09-02-versionium-sovereign-and-cleanup-phasemap
     version:     1.0.0
     foundation:  nexus-system-foundation@1.1.0
-    status:      mapped-not-built
+    status:      "STALE HEADER, corrected 2026-09-19. VS1 (versionium as its own sovereign system, :3754, autopilot phase 3)
+      IS BUILT: cortex answers /api/versionium/* and now /api/memory?table=versionium_* with 410s, the cortex CLI reads
+      versionium's own API, and versionium reads the CFR field from the orchestrator. The per-item status lines below
+      predate that and were not individually re-audited; treat any that describe VS1's own scope as done. Remaining, by
+      decision: cortex/versionium/ is unexecuted archive (D6, 2026-09-15); V7 (two auto-commit triggers) is undecided; cortex/snapshot
+      is deferred (D3). See docs/2026-09-19-cortex-to-intelligence-and-versionium-consolidation-phasemap.spec."
     uuid:        nexus-phasemap-v1-0000-2026-0902-jamesbrooks-001
     purpose: >
       James's ask this session was, verbatim, dozens of distinct real

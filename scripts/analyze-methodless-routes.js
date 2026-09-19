@@ -77,11 +77,12 @@ function analyze(file, routes) {
   return out;
 }
 
-const CORTEX = ['/api/cli/exec','/api/cortex/query','/api/events','/api/failure-modes','/api/friction',
-  '/api/health','/api/intelligence/adversarial','/api/intelligence/intuition','/api/intelligence/mastermind',
-  '/api/intelligence/patterns','/api/intelligence/rca','/api/intelligence/status','/api/memory/forget'];
+// 2026-09-19: the intelligence-domain paths (/api/intelligence/*, /api/cortex/query) moved
+// to intelligence/routes.js and are 410 tombstones in cortex/boot.js, so they are no longer
+// analyzed here. Their hooks now live in hooks/intelligence.hooks.js.
+const CORTEX = ['/api/cli/exec','/api/events','/api/failure-modes','/api/friction',
+  '/api/health','/api/memory/forget'];
 
-console.log('cortex/boot.js — method-less routes, analyzed by full handler block\n');
 const rows = analyze('cortex/boot.js', CORTEX);
 const pad = (s, n) => String(s).padEnd(n);
 console.log(pad('route', 34), pad('guard?', 8), pad('inside?', 9), 'behavioral');

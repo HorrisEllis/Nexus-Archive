@@ -124,9 +124,9 @@ server.listen(PORT, () => {
     fieldReader: async () => {
       try {
         const nx = require('../lib/nexus-client.js');
-        return await nx.get('cortex', '/cfr/field', { timeout: 3000 });
+        return await nx.get('orchestrator', '/cfr/field', { timeout: 3000 });
       } catch (e) {
-        console.warn(`[versionium] cortex /cfr/field unreachable (non-fatal): ${e.message}`);
+        console.warn(`[versionium] orchestrator /cfr/field unreachable (non-fatal): ${e.message}`);
         return null;
       }
     },

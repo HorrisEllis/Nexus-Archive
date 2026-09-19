@@ -93,6 +93,10 @@ const crypto   = require('crypto');
 
 const PORT = parseInt(process.env.NEXUS_PORT || '3748');
 const BASE = `http://127.0.0.1:${PORT}`;
+// versionium is its own sovereign system (:3754). The CLI used to read its tables through cortex's
+// /api/memory, which returned {ok,table,rows} while the CLI expected a bare array, so `versionium
+// status|log` always said "No commits". It now asks versionium directly.
+const VERSIONIUM_BASE = `http://127.0.0.1:${parseInt(process.env.VERSIONIUM_PORT || '3754', 10)}`;
 
 // ── ANSI colours ──────────────────────────────────────────────────────────────
 const C = {
@@ -124,9 +128,9 @@ function dot(sev) {
 }
 
 // ── HTTP helpers ──────────────────────────────────────────────────────────────
-function get(path) {
+function get(path, base = BASE) {
   return new Promise((resolve, reject) => {
-    http.get(BASE + path, (res) => {
+    http.get(base + path, (res) => {
       let raw = '';
       res.on('data', d => { raw += d; });
       res.on('end', () => {
@@ -1019,10 +1023,23 @@ async function cmdCalltoDispatch(agent, prompt, flags = {}) {
 }
 
 // ── versionium ────────────────────────────────────────────────────────────────
+async function _versioniumCommits(n) {
+  try {
+    const r = await get('/api/versionium/history', VERSIONIUM_BASE);
+    // versionium stamps commits with `wall` (its causal clock), not `ts`; normalise so the printers work.
+    const rows = (Array.isArray(r && r.commits) ? r.commits : []).map(c => ({ ...c, ts: c.wall ?? c.ts }));
+    return rows.sort((x, y) => (y.ts || 0) - (x.ts || 0)).slice(0, n);   // newest first
+  } catch (e) {
+    console.error(err(`Cannot reach versionium on ${VERSIONIUM_BASE}  is it running?`));
+    console.error(dim(`  ${e.message}`));
+    return null;
+  }
+}
+
 async function cmdVersioniumStatus() {
-  const commits = await safeGet('/api/memory?table=versionium_commits&n=1');
-  const arr     = Array.isArray(commits) ? commits : [];
-  const head    = arr[0];
+  const arr  = await _versioniumCommits(1);
+  if (arr === null) return;
+  const head = arr[0];
   console.log(divider('Versionium'));
   if (!head) { console.log(warn('No commits yet\n')); return; }
   console.log(`  HEAD:     ${head.commitId}`);
@@ -1034,8 +1051,8 @@ async function cmdVersioniumStatus() {
 }
 
 async function cmdVersioniumLog(n = 10) {
-  const rows = await safeGet(`/api/memory?table=versionium_commits&n=${n}`);
-  const arr  = Array.isArray(rows) ? rows : [];
+  const arr = await _versioniumCommits(n);
+  if (arr === null) return;
   if (!arr.length) { console.log(warn('No commits found\n')); return; }
   console.log(divider(`Versionium log (${arr.length})`));
   for (const c of arr) {

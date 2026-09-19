@@ -18,7 +18,22 @@ const path = require('path');
 
 module.exports = {
   PORT: parseInt(process.env.INTELLIGENCE_PORT || '3753', 10),
-  DATA_DIR: path.join(__dirname, '..', 'data', 'intelligence'),
+  DATA_DIR: process.env.INTELLIGENCE_DATA_DIR || path.join(__dirname, '..', 'data', 'intelligence'),
+
+  // §BUILT 2026-09-19 — cortex->intelligence route consolidation (docs/
+  // 2026-09-19-cortex-to-intelligence-and-versionium-consolidation-
+  // phasemap.spec). The faculties this system now serves (intuition,
+  // mastermind, ...) read a CFR field. It used to be a mutable copy held
+  // inside cortex's process; sovereignty means intelligence owns its own
+  // read of it, from the AUTHORITY (the orchestrator), never via cortex.
+  ORCHESTRATOR_URL: process.env.ORCHESTRATOR_URL || 'http://127.0.0.1:9000',
+  FIELD_POLL_MS:    parseInt(process.env.INTELLIGENCE_FIELD_POLL_MS || '5000', 10),
+  // jaaDB tables are 'shared by convention, not single-writer' (see
+  // cortex/memory/jaa-db.js header). Faculties read tables other processes
+  // write, so each table is reloaded from disk at most this often.
+  RAID_RETRY_BASE_MS: parseInt(process.env.INTELLIGENCE_RAID_RETRY_BASE_MS || '15000', 10),
+  RAID_REANNOUNCE_MS: parseInt(process.env.INTELLIGENCE_RAID_REANNOUNCE_MS || '300000', 10),
+  DB_REFRESH_MS:    parseInt(process.env.INTELLIGENCE_DB_REFRESH_MS || '1000', 10),
   POLL_MS: parseInt(process.env.INTELLIGENCE_POLL_MS || '5000', 10),
   MAX_LEDGER_HISTORY: 500,
   RING_CAP: 500,

@@ -31,6 +31,7 @@
 
 const guardianHooks   = require('./guardian.hooks');
 const cortexHooks     = require('./cortex.hooks');
+const intelligenceHooks = require('./intelligence.hooks');
 const orchestratorHooks = require('./orchestrator.hooks');
 const idearium        = require('./idearium.hooks');
 const architect       = require('./architect.hooks');
@@ -49,6 +50,7 @@ const { structuredSideEffects } = require('./side-effect-parser.js');
 const SYSTEMS = {
   guardian:    guardianHooks,
   cortex:      cortexHooks,
+  intelligence: intelligenceHooks,
   orchestrator: orchestratorHooks,
   idearium,
   architect,

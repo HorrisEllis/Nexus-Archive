@@ -30,6 +30,7 @@ const VERSION   = '1.0.0';
 
 const GD_URL = process.env.GUARDIAN_URL || 'http://127.0.0.1:7820';
 const CX_URL = process.env.CORTEX_URL   || 'http://127.0.0.1:3748';
+const ORCH_URL = process.env.ORCHESTRATOR_URL || 'http://127.0.0.1:9000';
 
 let _bus = null, _jaa = null, _raid = null;
 
@@ -79,7 +80,7 @@ function _emit(type, payload) {
 
 async function _checkSigma() {
   try {
-    const r = await fetch(`${CX_URL}/cfr/health`, { signal: AbortSignal.timeout(2000) })
+    const r = await fetch(`${ORCH_URL}/cfr/field`, { signal: AbortSignal.timeout(2000) })
       .then(r => r.json()).catch(() => null);
     const s = r?.sigma ?? r?.field?.sigma ?? 0;
     return typeof s === 'number' ? s : 0;

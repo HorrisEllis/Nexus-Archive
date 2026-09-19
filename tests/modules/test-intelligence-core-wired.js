@@ -31,10 +31,12 @@ function test(id, desc, fn) {
 const ROOT = path.join(__dirname, '../..');
 const BOOT = fs.readFileSync(path.join(ROOT, 'cortex/boot.js'), 'utf8');
 
-test('ICW-001', 'the intelligence core is registered in cortex\'s organs array — the one line that had never existed', () => {
+test('ICW-001', 'the intelligence core runs in its OWN process now (2026-09-19), not as an organ inside cortex', () => {
   const organs = BOOT.slice(BOOT.indexOf('const organs = ['), BOOT.indexOf('for (const organ of organs)'));
-  assert.ok(/name: 'intelligence'/.test(organs), 'intelligence must be a registered organ');
-  assert.ok(/path: '\.\.\/intelligence'/.test(organs), 'and point at the real module (../intelligence, after the 2026-08-22 extraction to its own system)');
+  assert.ok(!/name: 'intelligence'/.test(organs), 'intelligence must no longer be a cortex organ (sovereignty: cortex down must not take it down)');
+  assert.ok(!/require\('\.\.\/intelligence'\)\.init\(/.test(BOOT), 'and cortex must not init a second in-process runtime');
+  const SERVER = fs.readFileSync(path.join(ROOT, 'intelligence/server.js'), 'utf8');
+  assert.ok(/intelligence\.init\(/.test(SERVER), 'intelligence/server.js is the one runtime');
 });
 
 test('ICW-002', 'it initialises through the SAME contract every other organ uses — init({bus}), isolated failure', () => {

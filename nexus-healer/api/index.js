@@ -13,7 +13,7 @@ const { URL } = require('url');
 const fs = require('fs');
 const path = require('path');
 
-const PORT = parseInt(process.env.NEXUS_HEALER_PORT || '3753', 10);
+const PORT = parseInt(process.env.NEXUS_HEALER_PORT || '3755', 10);
 
 function _matchPath(pattern, pathname, paramNames, args) {
   const patSegs = pattern.split('/').filter(Boolean);

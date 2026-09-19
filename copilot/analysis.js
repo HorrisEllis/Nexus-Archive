@@ -13,6 +13,7 @@
 
 const http = require('http');
 const CX_URL  = process.env.CORTEX_URL   || 'http://127.0.0.1:3748';
+const INTEL_URL = process.env.INTELLIGENCE_URL || 'http://127.0.0.1:3753'; // intelligence is sovereign (moved out of cortex 2026-09-19)
 const OL_URL  = process.env.OLLAMA_URL   || 'http://127.0.0.1:3749';
 const OR_URL  = process.env.ORCH_URL     || 'http://127.0.0.1:9000';
 const GD_URL  = process.env.GUARDIAN_URL || 'http://127.0.0.1:7820';
@@ -85,9 +86,9 @@ async function assembleContext(prompt, stream = [], session = {}) {
   // L4 — CFR causal field (sigma, delta, regime, coherence, friction, entropy)
   // §CFR: the CFR ledger is the truth substrate — sigma drives gap emission
   try {
-    // Try direct cortex CFR endpoint first, then orchestrator proxy
-    const cfr = await _get(`${CX_URL}/cfr/health`)
-      || await _get(`${OR_URL}/api/cortex/cfr/state`);
+    // 2026-09-19: the CFR ledger is served by the orchestrator (cortex only relayed a flat copy that
+    // lacked the `cfr` envelope this code reads). The old fallback (/api/cortex/cfr/state) was dead.
+    const cfr = await _get(`${OR_URL}/cfr/health`);
     const f   = cfr?.cfr || cfr?.field || cfr;
     if (f && (f.sigma !== undefined || f.regime)) {
       const sigma     = typeof f.sigma === 'object' ? f.sigma?.score : f.sigma;
@@ -118,7 +119,7 @@ async function assembleContext(prompt, stream = [], session = {}) {
 
   // L6 — Intelligence: crystallised patterns + RCA findings
   try {
-    const pat = await _get(`${CX_URL}/api/intelligence/patterns?limit=3`);
+    const pat = await _get(`${INTEL_URL}/api/intelligence/crystals?limit=3`);
     const patterns = pat?.patterns || [];
     if (patterns.length) {
       layers.push(`[L6:PATTERNS] ${patterns.slice(0,3).map(p=>`${p.precursor}→${p.outcome}(${p.count}×)`).join(', ')}`);

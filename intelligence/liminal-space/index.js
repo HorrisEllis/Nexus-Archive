@@ -115,6 +115,14 @@ const VELOCITY_RUNAWAY       = 0.8;    // L2/L4 runaway threshold
 const VELOCITY_DECAY         = 0.05;   // velocity decays each tick
 
 // ── State ─────────────────────────────────────────────────────────────────────
+// §BUILT 2026-09-19 — the events this organ listens to, declared once. It now runs
+// inside the intelligence server (moved out of cortex), where the local bus only
+// hears what is delivered to POST /api/intelligence/bus; that intake's allowlist
+// IS this list, and cortex's relay set is pinned to it by a test.
+const SUBSCRIBED_EVENTS = Object.freeze([
+  'cortex.gap.found', 'cortex.intelligence.pattern_crystallised', 'escalation.friction.increased',
+  'tc.drift.signal', 'guardian.job.complete', 'forge.patch.proposed', 'cortex.gap.resolved',
+]);
 let _bus    = null;
 let _cfg    = {};
 let _tick   = null;
@@ -566,6 +574,6 @@ function _logSpaceStatus() {
 }
 
 module.exports = {
-  init, stop, hold, resolve, dissolve, list, status,
+  init, stop, hold, resolve, dissolve, list, status, SUBSCRIBED_EVENTS,
   FOCAL_POINTS, MODULE_ID, VERSION,
 };

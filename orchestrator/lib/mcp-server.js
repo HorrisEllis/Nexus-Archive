@@ -26,6 +26,7 @@ const VERSION   = '1.0.0';
 const MCP_PORT   = parseInt(process.env.NEXUS_MCP_PORT || '7821', 10);
 const GD_URL     = process.env.GUARDIAN_URL  || 'http://127.0.0.1:7820';
 const CX_URL     = process.env.CORTEX_URL    || 'http://127.0.0.1:3748';
+const INTEL_URL  = process.env.INTELLIGENCE_URL || 'http://127.0.0.1:3753';
 const OR_URL     = process.env.ORCH_URL      || 'http://127.0.0.1:9000';
 const IDR_URL    = process.env.IDEARIUM_URL  || 'http://127.0.0.1:4800';
 
@@ -244,7 +245,7 @@ const TOOLS = [
       properties: { limit: { type: 'number', default: 15 } },
     },
     handler: async ({ limit = 15 }) => {
-      const d = await _get(`${CX_URL}/api/intelligence/patterns?limit=${limit}`);
+      const d = await _get(`${INTEL_URL}/api/intelligence/patterns?limit=${limit}`);
       const pats = (d?.patterns || []).filter(p => p.crystallised).slice(0, limit);
       if (!pats.length) return 'No patterns crystallised yet. System needs more uptime.';
       return `${pats.length} crystallised patterns:\n` +
@@ -258,11 +259,14 @@ const TOOLS = [
     description: 'Get root cause analysis findings. The intelligence engine reads crystallized patterns and produces structured diagnoses: what is wrong, why, and how to fix it.',
     inputSchema: { type: 'object', properties: {} },
     handler: async () => {
-      const d = await _get(`${CX_URL}/api/intelligence/rca?limit=5`);
-      const findings = d?.findings || [];
-      if (!findings.length) return 'No RCA findings yet. Run NEXUS for 2+ minutes to let patterns crystallise.';
+      const d = await _get(`${INTEL_URL}/api/intelligence/rca?limit=5`);
+      // FIXED 2026-09-19: this read d.findings with {severity,name,rootCause,fix}, a
+      // shape no route has ever returned (no engine produces it). The real
+      // /api/intelligence/rca contract is { rca:[{gapId,type,cause,since,sigma}] }.
+      const findings = d?.rca || [];
+      if (!findings.length) return 'No open gaps to diagnose. Nothing is currently unresolved.';
       return findings.map(f =>
-        `[${f.severity}] ${f.name}\n  Cause: ${f.rootCause?.slice(0,150)}\n  Fix: ${f.fix?.slice(0,100)}`
+        `[gap ${f.gapId}] ${f.type}\n  Cause: ${String(f.cause).slice(0,150)}\n  Open since: ${f.since ? new Date(f.since).toISOString() : 'unknown'}`
       ).join('\n\n');
     },
   },
@@ -273,14 +277,18 @@ const TOOLS = [
     description: 'Get the current CFR-Ω field state: sigma (anomaly score), regime, coherence, friction, entropy. Sigma > 0.7 means something is critically wrong.',
     inputSchema: { type: 'object', properties: {} },
     handler: async () => {
-      const d = await _get(`${CX_URL}/cfr/health`);
-      if (!d) return 'CFR field unavailable — is Cortex running?';
+      const d = await _get(`${OR_URL}/cfr/field`);
+      if (!d) return 'CFR field unavailable  is the orchestrator running?';
       const f = d.field || d;
-      const sigma = typeof f.sigma === 'number' ? f.sigma : (f.sigma?.score ?? 0);
-      const qual = sigma < 0.35 ? 'stable' : sigma < 0.7 ? 'elevated' : 'CRITICAL';
+      // 2026-09-19: the CFR field endpoint has never carried a `sigma` (sigma is a per-event score on
+      // ledger entries; no route exposes a current aggregate), so this always printed 0.000 / "stable".
+      // Say so instead of asserting stability: no sigma reported => qualifier is based on regime only.
+      const sigma = typeof f.sigma === 'number' ? f.sigma : (typeof f.sigma?.score === 'number' ? f.sigma.score : null);
+      const qual = sigma === null ? `sigma not reported, regime ${d.regime || f.regime || 'unknown'}`
+                 : sigma < 0.35 ? 'stable' : sigma < 0.7 ? 'elevated' : 'CRITICAL';
       return [
         `CFR field [${qual}]`,
-        `  Sigma:     ${sigma.toFixed(3)}`,
+        sigma === null ? `  Sigma:     n/a (not exposed by the field endpoint)` : `  Sigma:     ${sigma.toFixed(3)}`,
         `  Regime:    ${d.regime || f.regime || '?'}`,
         f.coherence !== undefined ? `  Coherence: ${f.coherence.toFixed(3)}` : null,
         f.friction  !== undefined ? `  Friction:  ${f.friction.toFixed(3)}`  : null,

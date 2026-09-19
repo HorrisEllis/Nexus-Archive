@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Guardian — Claude v10.0
 // @namespace    nexus.guardian.claude
-// @version      10.2.0
+// @version      10.3.0
 // @description  Guardian v10: IndexedDB kernel, SHA-256 dedup, pre-prompt intelligence
 //               injection, full system widget, connection info, log/ledger, options,
 //               SEAM, queue, tags — fully system aware, no localStorage for state.
@@ -438,6 +438,7 @@ const NCP_CHANNEL = `${NCP_URL}/channel`;
 const NCP_RESULT  = `${NCP_URL}/result`;
 const NCP_HB      = `${NCP_URL}/heartbeat`;
 const CORTEX_URL  = 'http://127.0.0.1:3748';
+const INTELLIGENCE_URL = 'http://127.0.0.1:3753'; // intelligence is its own sovereign system (moved out of cortex 2026-09-19)
 const ORCH_URL    = 'http://127.0.0.1:9000';
 const PROVIDER    = 'claude';
 const VERSION    = '10.1.0';
@@ -726,7 +727,7 @@ async function gate(name, fn, opts = {}) {
 // failure modes, and active patterns. Sends UUID refs, not full content.
 async function pullIntelligenceContext(intent, command) {
   try {
-    const url = `${CORTEX_URL}/api/intelligence/context` +
+    const url = `${INTELLIGENCE_URL}/api/intelligence/context` +
       `?intent=${encodeURIComponent((intent||'').slice(0,120))}` +
       `&command=${encodeURIComponent(command||'')}` +
       `&provider=${PROVIDER}`;
@@ -1681,7 +1682,7 @@ async function renderIntel() {
   const a = document.getElementById('__g10intel__'); if (!a) return;
   a.innerHTML = '<div style="color:#1e293b;font-size:9px;padding:10px 12px">Loading intelligence context…</div>';
   try {
-    const r = await fetch(`${CORTEX_URL}/api/intelligence/status`, { signal:AbortSignal.timeout(2000) });
+    const r = await fetch(`${INTELLIGENCE_URL}/api/intelligence/status`, { signal:AbortSignal.timeout(2000) });
     const status = r.ok ? await r.json() : null;
     const ctx    = _intelligenceCtx;
     let html = '';

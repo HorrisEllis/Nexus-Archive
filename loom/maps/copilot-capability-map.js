@@ -50,7 +50,7 @@ const FILES = [
     ['nexus.lib.triggers']],    // thin wrapper — same shape as schedule-task, reactive twin
 
   ['lib/agent-tools/tools/diagnostic/nexus-heal.js',            'nexus.lib.agent-tools.tools.nexus-heal',
-    []],   // HTTP-only to nexus-healer :3753 (propose/list/evaluate) — no internal require edge, real network wire not a code wire
+    []],   // HTTP-only to nexus-healer :3755 (propose/list/evaluate) — no internal require edge, real network wire not a code wire
 
   ['lib/agent-tools/tools/diagnostic/loom-scan.js',             'nexus.lib.agent-tools.tools.loom-scan',
     ['nexus.loom.scanners.phasemap-map']],   // in-process requires of capability-map/dangling-report/spec-map/source-map/closed-door
@@ -185,8 +185,11 @@ const FILES = [
   ['lib/agent-tools/tools/guardian/dispatch.js', 'nexus.lib.agent-tools.tools.guardian-dispatch', ['nexus.guardian.server']],
   ['lib/agent-tools/tools/ncp/status.js', 'nexus.lib.agent-tools.tools.ncp-status', ['nexus.guardian.server']],
   ['lib/agent-tools/tools/agent-mesh/route.js', 'nexus.lib.agent-tools.tools.agent-mesh-route', ['nexus.clear-glass.main']],
-  ['intelligence/server.js', 'nexus.intelligence.server', ['nexus.intelligence.index', 'nexus.intelligence.cfr', 'nexus.intelligence.framework-builder']],
+  ['intelligence/server.js', 'nexus.intelligence.server', ['nexus.intelligence.index', 'nexus.intelligence.cfr', 'nexus.intelligence.framework-builder', 'nexus.intelligence.routes', 'nexus.intelligence.field-provider']],
   ['intelligence/registry-components.js', 'nexus.intelligence.registry', []],
+  ['intelligence/routes.js', 'nexus.intelligence.routes', ['nexus.intelligence.index']],
+  ['intelligence/field-provider.js', 'nexus.intelligence.field-provider', ['nexus.intelligence.cfr']],
+  ['hooks/intelligence.hooks.js', 'nexus.hooks.intelligence', []],
   ['intelligence/consumer.js', 'nexus.intelligence.consumer', ['nexus.lib.contract-queue', 'nexus.intelligence.framework-builder']],
   ['intelligence/schemas.js', 'nexus.intelligence.schemas', []],
   ['intelligence/config.js', 'nexus.intelligence.config', []],

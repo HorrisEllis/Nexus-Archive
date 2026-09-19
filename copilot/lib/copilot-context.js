@@ -26,6 +26,8 @@ const VERSION   = '2.0.0';
 
 const GD_URL = process.env.GUARDIAN_URL  || 'http://127.0.0.1:7820';
 const CX_URL = process.env.CORTEX_URL    || 'http://127.0.0.1:3748';
+const INTEL_URL = process.env.INTELLIGENCE_URL || 'http://127.0.0.1:3753'; // intelligence is sovereign (moved out of cortex 2026-09-19)
+const ORCH_URL  = process.env.ORCHESTRATOR_URL || 'http://127.0.0.1:9000'; // the CFR field/ledger authority
 const OR_URL = process.env.ORCH_URL      || 'http://127.0.0.1:9000';
 
 // Token budget for each layer (rough word estimate)
@@ -198,8 +200,8 @@ async function _layer3_structure() {
 
 async function _layer4_cfr() {
   const [health, deltas] = await Promise.allSettled([
-    _get(`${CX_URL}/cfr/health`),
-    _get(`${CX_URL}/cfr/deltas?limit=5`),
+    _get(`${ORCH_URL}/cfr/health`),
+    _get(`${ORCH_URL}/cfr/deltas?limit=5`),
   ]);
 
   const lines = [];
@@ -284,7 +286,7 @@ async function _layer6_predict(eventBuffer = [], opts = {}) {
   const lines = [];
 
   // Pattern crystallization from intelligence
-  const patterns = await _get(`${CX_URL}/api/intelligence/patterns?limit=6`);
+  const patterns = await _get(`${INTEL_URL}/api/intelligence/crystals?limit=6`);
   const pList = patterns?.patterns || patterns?.rows || [];
   if (pList.length) {
     lines.push('  crystallized patterns:');

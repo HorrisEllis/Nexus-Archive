@@ -261,15 +261,16 @@ const IDEARIUM = Object.freeze({
 // CFR is baked into every kernel's event ledger. Not a separate service.
 // Each kernel exposes /cfr/* routes on its own port.
 const CFR = Object.freeze({
-  // Cortex kernel CFR
-  cortex: {
-    health:  `${BASE.cortex}/cfr/health`,
-    state:   `${BASE.cortex}/cfr/state`,
-    field:   `${BASE.cortex}/cfr/field`,
-    nodes:   `${BASE.cortex}/cfr/nodes`,
-    deltas:  `${BASE.cortex}/cfr/deltas`,
-    emit:    `${BASE.cortex}/cfr/emit`,
-    sse:     `${BASE.cortex}/cfr/stream`,
+  // Intelligence kernel CFR (cortex no longer hosts a CFR surface: it only ever served /cfr/health and
+  // /cfr/field as a relay of the orchestrator's field; that relay was removed 2026-09-19)
+  intelligence: {
+    health:  `http://127.0.0.1:3753/cfr/health`,
+    state:   `http://127.0.0.1:3753/cfr/state`,
+    field:   `http://127.0.0.1:3753/cfr/field`,
+    nodes:   `http://127.0.0.1:3753/cfr/nodes`,
+    deltas:  `http://127.0.0.1:3753/cfr/deltas`,
+    emit:    `http://127.0.0.1:3753/cfr/emit`,
+    sse:     `http://127.0.0.1:3753/cfr/stream`,
   },
   // Guardian kernel CFR
   guardian: {

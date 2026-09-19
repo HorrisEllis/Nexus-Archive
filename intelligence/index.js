@@ -149,6 +149,46 @@ function _humanPattern(p) {
   return p.patternType + ' — ' + p.signature;
 }
 
+// §BUILT 2026-09-19 — capability list hoisted to module scope so the intelligence
+// SERVER can announce it to RAID over HTTP (lib/self-register-remote.js), the
+// same way guardian does. Before, it was registered by an in-process call inside
+// init(), which only reached RAID's registry when this module was require()d
+// into cortex's own process — exactly the cortex dependency this removes.
+const CAPABILITIES = [
+      { name: 'context',  description: 'pre-request context for a given intent — what the system knows before acting',
+        route: { method: 'GET', path: '/api/intelligence/context' } },
+      { name: 'patterns', description: 'crystallised BEP patterns — recurring structures the system has learned',
+        route: { method: 'GET', path: '/api/intelligence/patterns' } },
+      { name: 'failures', description: 'failure mode taxonomy — known fault classes and their precursors',
+        route: { method: 'GET', path: '/api/intelligence/failures' } },
+      { name: 'reuse',    description: 'SEAM reuse candidates for a query — what already exists to reuse',
+        route: { method: 'GET', path: '/api/intelligence/reuse' } },
+      { name: 'mastermind', description: 'strategic causal pattern analysis over gaps and RFR2 delta',
+        route: { method: 'GET', path: '/api/intelligence/mastermind' } },
+      { name: 'relational-field', description: 'the Relational Field Reader — traces the causal CONDITIONS behind friction/tension via RFR2 causality (traceToRoot) + characterizes the deviation via RFR2 sigma. RFR2 wired into the intelligence.',
+        route: { method: 'GET', path: '/api/intelligence/relational-field' } },
+      { name: 'adversarial', description: 'adversarial critique — attack a proposal to find its weaknesses',
+        route: { method: 'GET', path: '/api/intelligence/adversarial' } },
+      { name: 'meta', description: 'meta-pattern self-assessment — lift-adjusted signal vs. structural noise sources within the crystallised pattern table itself',
+        route: { method: 'GET', path: '/api/intelligence/meta' } },
+      { name: 'map', description: 'live loom system/component/hook map, cached from lib/loom-map.js',
+        route: { method: 'GET', path: '/api/intelligence/map' } },
+      { name: 'component-failures', description: 'error/failure data grouped by loom component (not just system), flagging components loom has never registered',
+        route: { method: 'GET', path: '/api/intelligence/component-failures' } },
+      { name: 'intuition',  description: 'INTUITION fast-path answer from live field, gaps, taxonomy and lattice',
+        route: { method: 'POST', path: '/api/intelligence/intuition' } },
+      { name: 'rca',        description: 'root cause analysis entries over open gaps',
+        route: { method: 'GET', path: '/api/intelligence/rca' } },
+      { name: 'query',      description: 'unified query surface: what is happening with <about> (gaps, events, sigma, field, narrative)',
+        route: { method: 'GET', path: '/api/intelligence/query' } },
+      { name: 'lattice',    description: 'system associative lattice: which systems/components co-activate with a given one',
+        route: { method: 'GET', path: '/api/intelligence/lattice' } },
+      { name: 'crystals',   description: 'crystals-derived pattern list (precursor/outcome/count/confidence)',
+        route: { method: 'GET', path: '/api/intelligence/crystals' } },
+      { name: 'liminal-space', description: 'liminal-space status: unresolved in-between items per focal point',
+        route: { method: 'GET', path: '/api/liminal-space/status' } },
+];
+
 function init(cfg = {}) {
   _cfg = cfg;
 
@@ -225,32 +265,15 @@ function init(cfg = {}) {
   // Intelligence is the reference adopter: it announces its capabilities at boot,
   // they flow through the projection chain (component → capability → RAID
   // resolver), and RAID can route to the mind. Every system copies this (§16.5).
-  try {
-    require('../lib/self-register').registerSelf('intelligence', [
-      { name: 'context',  description: 'pre-request context for a given intent — what the system knows before acting',
-        route: { method: 'GET', path: '/api/intelligence/context' } },
-      { name: 'patterns', description: 'crystallised BEP patterns — recurring structures the system has learned',
-        route: { method: 'GET', path: '/api/intelligence/patterns' } },
-      { name: 'failures', description: 'failure mode taxonomy — known fault classes and their precursors',
-        route: { method: 'GET', path: '/api/intelligence/failures' } },
-      { name: 'reuse',    description: 'SEAM reuse candidates for a query — what already exists to reuse',
-        route: { method: 'GET', path: '/api/intelligence/reuse' } },
-      { name: 'mastermind', description: 'strategic causal pattern analysis over gaps and RFR2 delta',
-        route: { method: 'GET', path: '/api/intelligence/mastermind' } },
-      { name: 'relational-field', description: 'the Relational Field Reader — traces the causal CONDITIONS behind friction/tension via RFR2 causality (traceToRoot) + characterizes the deviation via RFR2 sigma. RFR2 wired into the intelligence.',
-        route: { method: 'GET', path: '/api/intelligence/relational-field' } },
-      { name: 'adversarial', description: 'adversarial critique — attack a proposal to find its weaknesses',
-        route: { method: 'GET', path: '/api/intelligence/adversarial' } },
-      { name: 'meta', description: 'meta-pattern self-assessment — lift-adjusted signal vs. structural noise sources within the crystallised pattern table itself',
-        route: { method: 'GET', path: '/api/intelligence/meta' } },
-      { name: 'map', description: 'live loom system/component/hook map, cached from lib/loom-map.js',
-        route: { method: 'GET', path: '/api/intelligence/map' } },
-      { name: 'component-failures', description: 'error/failure data grouped by loom component (not just system), flagging components loom has never registered',
-        route: { method: 'GET', path: '/api/intelligence/component-failures' } },
-    ], { version: VERSION, registeredBy: MODULE_ID });
-    _log('registered intelligence capabilities — RAID can now route to the mind');
-  } catch (e) {
-    console.warn(`[${MODULE_ID}] self-registration failed: ${e.message}`);
+  // In-process registration is OPT-IN now (cfg.registerInProcess). The sovereign
+  // path is server.js -> registerSelfRemote(). Nothing in-tree passes this flag.
+  if (cfg.registerInProcess) {
+    try {
+      require('../lib/self-register').registerSelf('intelligence', CAPABILITIES, { version: VERSION, registeredBy: MODULE_ID });
+      _log('registered intelligence capabilities in-process');
+    } catch (e) {
+      console.warn(`[${MODULE_ID}] self-registration failed: ${e.message}`);
+    }
   }
 
   _log(`v${VERSION} — intelligence core online`);
@@ -1544,6 +1567,7 @@ function _err(where, e) {
 
 module.exports = {
   init, stop,
+  CAPABILITIES,
   getContext,
   handleRequest,
   getPatterns:  () => _patternIndex,

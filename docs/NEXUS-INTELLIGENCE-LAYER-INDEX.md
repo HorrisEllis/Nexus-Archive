@@ -29,7 +29,7 @@
 - `lib/sigma-writer.js` + `lib/cfr/sigma.js` — sigma trajectory already computed
 - `lib/event-ledger.js` — baseline + deviation already tracked
 - `lib/cfr/graph.js` — causal graph with ancestors()/descendants() already real
-- `cortex/boot.js /api/memory` — conversation memory already in chat_log
+- `cortex/boot.js /api/memory` — conversation memory already in chat_log (cortex keeps memory; the intelligence routes moved to the intelligence system)
 - `idearium/` — idea pipeline seed→expanding→tensioned→specced→building→complete already real
 - `schedules`, `feedback_scores`, `conditioning_log`, `project_registry` — JAA tables already declared in NEXUS.md
 - `unintegrated/rfr2-nexus/delta/index.js` — computeEventDelta(), detectFractals() already implemented
@@ -37,7 +37,7 @@
 - `NEXUS-SELF.spec.md` — BEP engine, crystal patterns, RAID fitness already specced
 
 ### Genuinely new engineering
-- `GET /api/cortex/query` — the unified query route doesn't exist
+- `GET /api/intelligence/query` — the unified query route (built; served by intelligence/routes.js since 2026-09-19, previously /api/cortex/query on cortex/boot.js)
 - Keyword → JAA schema routing (intelligence engine extended with schema-nav prompt)
 - Co-pilot creating durable schedules and lab sessions (wiring exists, co-pilot can't compose it yet)
 - Redundant conversation ledger (event_log write alongside chat_log)
@@ -58,7 +58,7 @@ Phase 1 (done) — Nerve read layer: lib/nerve/index.js, getSnapshot/onChange/se
 
 Phase 2 — Unified query surface (nexus-query-surface.spec)
            → Single prerequisite everything else needs
-           → GET /api/cortex/query on cortex/boot.js
+           → GET /api/intelligence/query on intelligence/routes.js (moved out of cortex 2026-09-19)
            → Keyword resolution via intelligence engine
            → Narrative from mastermind()
            → Wire into co-pilot context before every response

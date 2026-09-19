@@ -40,6 +40,42 @@ const intelligence = require('./index.js');
 const { createCFRLedger } = require('./cfr');
 const frameworkBuilder = require('./framework-builder.js');
 
+// §BUILT 2026-09-19 — the intelligence-domain routes cortex used to host
+// (intuition/mastermind/adversarial/rca/query/lattice/liminal-space/context).
+// Sovereign: the field comes from the orchestrator (the authority), never
+// via cortex. See routes.js and field-provider.js headers.
+const { createFieldProvider } = require('./field-provider.js');
+const { createRoutes } = require('./routes.js');
+const fieldProvider = createFieldProvider({ url: config.ORCHESTRATOR_URL, intervalMs: config.FIELD_POLL_MS });
+const liminal = require('./liminal-space');
+const nexusBus = require('../nexus/nexus-bus');
+const { registerSelfRemote } = require('../lib/self-register-remote.js');
+
+// §BUILT 2026-09-19 — RAID: intelligence announces itself to RAID as a client
+// (RAID's router + capability registry live in cortex), exactly as guardian does
+// (RAID-FIX 2026-09-16). Idempotent (CR-002) and persisted, so re-announcing is
+// harmless and heals a wiped registry. Retries while cortex is not up yet.
+const raid = { ok: false, registered: 0, failed: 0, error: 'not attempted yet', at: null, attempts: 0 };
+let _raidTimer = null;
+async function announceToRaid() {
+  raid.attempts++;
+  let r;
+  try { r = await registerSelfRemote('intelligence', intelligence.CAPABILITIES, { registeredBy: 'intelligence/server.js', version: '1.0.0' }); }
+  catch (e) { r = { ok: false, error: e.message, registered: 0, failed: 0 }; }
+  raid.ok = !!r.ok; raid.registered = r.registered || 0; raid.failed = r.failed || 0; raid.error = r.ok ? null : (r.error || 'registration failed'); raid.at = Date.now();
+  if (r.ok) console.log(`[intelligence] registered ${raid.registered} capabilit${raid.registered === 1 ? 'y' : 'ies'} with RAID`);
+  else console.warn(`[intelligence] RAID registration incomplete (attempt ${raid.attempts}): ${raid.error} — will retry`);
+  _raidTimer = setTimeout(announceToRaid, r.ok ? config.RAID_REANNOUNCE_MS : Math.min(config.RAID_RETRY_BASE_MS * raid.attempts, config.RAID_RETRY_BASE_MS * 4));
+  if (_raidTimer.unref) _raidTimer.unref();
+}
+
+const routes = createRoutes({
+  jaaDB: require('../cortex/memory/jaa-db.js').jaaDB,
+  getField: () => fieldProvider.get(),
+  intelligence,
+  refreshMs: config.DB_REFRESH_MS,
+});
+
 const { Stream, Event } = require('../warp/core');
 
 // ── Real event ledger — reused directly, not rebuilt (§8.6). onGap is a
@@ -121,7 +157,7 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  if (pathname === '/health') { json(res, 200, { ok: true, system: 'intelligence', port: PORT, ts: Date.now() }); return; }
+  if (pathname === '/health') { const f = fieldProvider.get(); json(res, 200, { ok: true, system: 'intelligence', port: PORT, field: { source: f.source, stale: f.stale, regime: f.regime }, raid: { registered: raid.ok, capabilities: raid.registered, error: raid.error, lastAttemptAt: raid.at }, ts: Date.now() }); return; }
 
   if (pathname === '/sse') {
     res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive', 'Access-Control-Allow-Origin': '*' });
@@ -156,6 +192,16 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // §BUILT 2026-09-19 — owned faculty routes. Checked BEFORE handleRequest()
+  // so the extended /context (legacy fields, additive) takes precedence.
+  if (routes.owns(req.method, pathname)) {
+    const rbody = (req.method === 'POST' || req.method === 'PUT') ? await readBody(req) : null;
+    try {
+      await routes.handle(req.method, pathname, new URLSearchParams(u.query || {}), rbody, (status, data) => json(res, status, data));
+    } catch (e) { json(res, 500, { ok: false, error: e.message }); }
+    return;
+  }
+
   // The rest of the real routes already exist as intelligence/index.js's
   // own handleRequest() — reused directly, not reimplemented.
   const body = (req.method === 'POST') ? await readBody(req) : null;
@@ -171,6 +217,10 @@ const server = http.createServer(async (req, res) => {
 function start() {
   ledger.open();
   intelligence.init({});
+  fieldProvider.start();
+  liminal.init({ bus: nexusBus });
+  announceToRaid();
+  routes.startLatticeFeed();
   server.listen(PORT, () => {
     console.log(`[intelligence] :${PORT} — v1.0.0 — cognition + system-health layer online`);
   });
@@ -178,6 +228,10 @@ function start() {
 }
 
 function stop() {
+  try { fieldProvider.stop(); } catch (_) {}
+  try { liminal.stop(); } catch (_) {}
+  if (_raidTimer) { clearTimeout(_raidTimer); _raidTimer = null; }
+  try { routes.stopLatticeFeed(); } catch (_) {}
   try { ledger.close && ledger.close(); } catch (_) {}
   try { intelligence.stop && intelligence.stop(); } catch (_) {}
   server.close();

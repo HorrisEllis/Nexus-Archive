@@ -73,6 +73,26 @@ const GD_URL  = config.GD_URL;
 const OL_URL  = config.OL_URL;
 const IN_PORT = config.IN_PORT;
 
+// Old cortex path -> its home on the intelligence system (tombstone handler in
+// the request switch below).
+const MOVED_TO_INTELLIGENCE = {
+  '/api/intelligence/status':              '/api/intelligence/status',
+  '/api/intelligence/event':               '/api/intelligence/event',
+  '/api/intelligence/context':             '/api/intelligence/context',
+  '/api/intelligence/patterns':            '/api/intelligence/patterns',
+  '/api/intelligence/failures':            '/api/intelligence/failures',
+  '/api/intelligence/reuse':               '/api/intelligence/reuse',
+  '/api/intelligence/intuition':           '/api/intelligence/intuition',
+  '/api/intelligence/mastermind':          '/api/intelligence/mastermind',
+  '/api/intelligence/mastermind/patterns': '/api/intelligence/mastermind/patterns',
+  '/api/intelligence/adversarial':         '/api/intelligence/adversarial',
+  '/api/intelligence/rca':                 '/api/intelligence/rca',
+  '/api/cortex/query':                     '/api/intelligence/query',
+  '/api/cortex/lattice':                   '/api/intelligence/lattice',
+  '/api/liminal-space/status':             '/api/liminal-space/status',
+  '/api/liminal-space/list':               '/api/liminal-space/list',
+};
+
 const ROOT    = path.join(__dirname, '..');
 // §5.4 2026-08-14 — was a hardcoded '3.0.0', drifted from lib/version.js's
 // real services.cortex ('3.5.0') — the exact "version drift is a bug, not
@@ -98,6 +118,40 @@ const { createPulse } = require('../orchestrator/lib/pulse.js');
 // reached an in-process listener. Fixed at the two points below.
 const bus = require('../nexus/nexus-bus');
 
+// -- Event relay to the intelligence system (2026-09-19) ----------------------
+// liminal-space now runs inside intelligence/server.js on ITS OWN bus. The events
+// it listens for that originate in or through cortex are forwarded there,
+// fire-and-forget. This is cortex acting as an event PRODUCER: intelligence's
+// state and routes do not depend on cortex being up (cortex down => these
+// producers are down too, and liminal-space keeps serving what it persisted).
+// Deliberately excluded: cortex.intelligence.pattern_crystallised and
+// tc.drift.signal originate inside intelligence itself. Pinned against
+// liminal-space's own SUBSCRIBED_EVENTS by tests/modules/test-intelligence-organs-move.js.
+const RELAY_TO_INTELLIGENCE = new Set([
+  'cortex.gap.found', 'escalation.friction.increased', 'guardian.job.complete',
+  'forge.patch.proposed', 'cortex.gap.resolved',
+]);
+let _relayFail = { n: 0, lastWarn: 0 };
+bus.on('*', (event) => {
+  if (!event || !RELAY_TO_INTELLIGENCE.has(event.type)) return;
+  const data = JSON.stringify({ type: event.type, payload: event.payload || {}, source: event.source, causedBy: event.causedBy });
+  const rq = http.request({
+    hostname: '127.0.0.1', port: IN_PORT, path: '/api/intelligence/bus', method: 'POST', timeout: 2000,
+    headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(data) },
+  }, (r) => { r.resume(); });
+  const fail = (why) => {
+    _relayFail.n++;
+    if (Date.now() - _relayFail.lastWarn > 60000) {
+      _relayFail.lastWarn = Date.now();
+      console.warn(`[cortex] relay to intelligence:${IN_PORT} failing (${_relayFail.n} dropped so far): ${why}`);
+    }
+  };
+  rq.on('error', (e) => fail(e.code || e.message));
+  rq.on('timeout', () => { rq.destroy(); fail('timeout'); });
+  rq.write(data); rq.end();
+});
+
+
 // ── Cortex SSE — real broadcast channel, matches guardian's own
 // cockpitClients/cockpitBroadcast pattern (guardian/server.js) exactly.
 const _cortexSSEClients = new Set();
@@ -106,42 +160,7 @@ function _cortexSSEBroadcast(data) {
   const msg = `data: ${JSON.stringify(data)}\n\n`;
   for (const r of _cortexSSEClients) { try { r.write(msg); } catch (_) { _cortexSSEClients.delete(r); } }
 }
-let _openLoopTaxonomy = null;
-function _getTaxonomy() {
-  if (_openLoopTaxonomy !== null) return _openLoopTaxonomy;
-  try { _openLoopTaxonomy = require('../lib/open-loop-taxonomy'); } catch (_) { _openLoopTaxonomy = false; }
-  return _openLoopTaxonomy;
-}
-let _sysLattice = null;
-function _getSystemLattice() {
-  if (_sysLattice !== null) return _sysLattice;
-  try { _sysLattice = require('../intelligence/spatial/system-lattice'); } catch (_) { _sysLattice = false; }
-  return _sysLattice;
-}
-let _CausalGraph = null;
-function _getCausalGraphClass() {
-  if (_CausalGraph !== null) return _CausalGraph;
-  try { _CausalGraph = require('../intelligence/cfr/graph').CausalGraph; } catch (_) { _CausalGraph = false; }
-  return _CausalGraph;
-}
 
-// ── Intelligence: three real faculties, per docs/cortex-dual-cognition.spec ──
-// §SPLIT 2026-07-06 — _intuitionAnswer/_mastermindAnalysis used to be
-// inline functions here. Pulled into cortex/intelligence/{intuition,
-// mastermind}.js — the spec's own intended paths — with Adversarial as a
-// real third faculty (new, extends the spec's one-line "contradiction =
-// gap" with scoring + reconciliation). boot.js is the composition root:
-// it owns jaaDB/_field/the causal-graph class and wires them in, each
-// faculty file stays independently requirable and testable.
-const { createIntuition }  = require('../intelligence/intuition');
-const { createMastermind } = require('../intelligence/mastermind');
-const adversarial          = require('../intelligence/adversarial');
-
-const _intuition  = createIntuition({
-  jaaDB, getField: () => _field, getTaxonomy: _getTaxonomy,
-  getSystemLattice: _getSystemLattice, buildPatterns: (n) => _buildPatterns(n),
-});
-const _mastermind = createMastermind({ jaaDB, getField: () => _field, getCausalGraphClass: _getCausalGraphClass });
 
 // §GAP CLOSED 2026-07-06: the spec's "Unified API" (cortex.push/recall,
 // intent IR, 5-lane MQL) was 100% documentation, 0% code — confirmed by
@@ -186,7 +205,6 @@ let _field = {
   friction:   0.2,
   resonance:  0.3,
   entropy:    0.2,
-  tension:    0.1,
   regime:     'stable',
   updatedAt:  Date.now(),
 };
@@ -246,86 +264,6 @@ function _raidDecide(intent, cfrCtx = {}) {
   return decision;
 }
 
-// ── Patterns + RCA ───────────────────────────────────────────────────────────
-function _buildPatterns(limit = 5) {
-  // §GAP CLOSED 2026-07-06 — traced from the user's own description
-  // ("pattern engine migrated to intuition"): copilot/intuition.js has
-  // called this exact endpoint expecting {precursor, outcome, count,
-  // confidence} since it was written — but this function used to just
-  // tally event_log types, producing {type, count, lastSeen} instead.
-  // Every field intuition.js reads off a returned pattern (p.precursor,
-  // p.outcome, p.confidence) was undefined against the old shape,
-  // meaning "Crystallised patterns" output has always rendered as
-  // "undefined → undefined (NaN%)" whenever this path fired. The real
-  // pattern engine is meta/crystal-lattice.js — it writes real
-  // (domain, verb, outcome) crystals to the 'crystals' JAA table once a
-  // pattern repeats past PATTERN_FREQUENCY_THRESHOLD times, already
-  // wired into orchestrator.js via lib/compartment-engine.js. This reads
-  // that real table instead of re-deriving a shallower stand-in.
-  const crystals = jaaDB.tail('crystals', 50);
-  if (!crystals.length) return []; // honest empty, not a fabricated fallback
-  return crystals
-    .sort((a, b) => (b.usage_count || 0) - (a.usage_count || 0))
-    .slice(0, limit)
-    .map(c => ({
-      precursor:  `${c.entry_conditions?.domain || '?'}:${c.entry_conditions?.verb || '?'}`,
-      outcome:    c.exit_conditions?.outcome || 'unknown',
-      count:      c.usage_count || c.pattern_frequency_at_creation || 0,
-      confidence: c.success_probability ?? 0,
-      kind:       c.kind,
-      ts:         c.ts,
-    }));
-}
-
-function _buildRCA(limit = 5) {
-  const gaps = jaaDB.query('gaps', { status: 'open' }, { orderBy: 'ts', order: 'DESC', limit });
-  return gaps.map(g => ({
-    gapId:  g.id,
-    type:   g.type || 'unknown',
-    cause:  g.root_cause || 'unresolved',
-    since:  g.ts,
-    sigma:  _field.entropy,
-  }));
-}
-
-// ── Intelligence: intuition (fast pattern answer) ────────────────────────────
-// Real logic now lives in cortex/intelligence/intuition.js — kept as a
-// thin wrapper here so existing callers/exports/tests are unaffected.
-function _intuitionAnswer(prompt) {
-  return _intuition.answer(prompt);
-}
-
-// ── Intelligence: mastermind (causal analysis) ────────────────────────────────
-// Real logic now lives in cortex/intelligence/mastermind.js.
-function _mastermindAnalysis(prompt, contextSnippet) {
-  return _mastermind.analyze(prompt, contextSnippet);
-}
-
-// ── Intelligence: adversarial (inner critic) ─────────────────────────────────
-// Runs both faculties, then has Adversarial score and (where possible)
-// reconcile them, per this session's extension of the one-line spec.
-function _adversarialCompare(prompt, contextSnippet) {
-  const intuitionResult  = _intuition.answer(prompt);
-  const mastermindResult = _mastermind.analyze(prompt, contextSnippet);
-  const verdict = adversarial.compareCortexFaculties(intuitionResult, mastermindResult);
-  return { intuition: intuitionResult, mastermind: mastermindResult, adversarial: verdict };
-}
-
-// ── Assembled context snapshot (copilot Layer 2 reads this) ──────────────────
-function _contextSnapshot(intent) {
-  const recent = jaaDB.tail('event_log', 10).map(e => e.type).join(', ');
-  const gaps   = jaaDB.count('gaps', { status: 'open' }) || 0;
-  return {
-    ok:      true,
-    intent:  intent || 'general',
-    field:   { ..._field },
-    gaps:    { open: gaps },
-    events:  { recent: recent || 'none' },
-    rca:     _buildRCA(3),
-    ts:      Date.now(),
-  };
-}
-
 // ── Working memory ────────────────────────────────────────────────────────────
 // (working memory is now backed by the real `working_memory` JAA table —
 // see cortex/memory/decay.js and the /api/memory/working route below)
@@ -350,42 +288,6 @@ async function readBody(req) {
     req.on('end', () => { try { resolve(JSON.parse(d)); } catch { resolve({}); } });
     req.on('error', reject);
   });
-}
-
-// §MIGRATION 2026-08-22 — real front-door cutover, continuing the meta→
-// intelligence consolidation this branch already did for the file layer
-// (9 chunks). Ported from a sibling branch where this exact helper and
-// two of its real callers (/api/intelligence/status, /event) were built
-// and verified live — booted both cortex/boot.js and intelligence/server.js
-// as real, communicating processes and drove real HTTP requests through
-// each proxy before trusting it, not assumed safe from the pattern alone.
-// Re-verified against THIS branch's own current code before porting:
-// intelligence/index.js's real /status and /event handlers here are
-// identical to what was checked there, and guardian/userscript-claude.js's
-// real field reads (status.crystallised, .faultClasses, .reuseItems,
-// .driftLevel) are unchanged too — not assumed to still hold just because
-// they held on a different branch.
-function _proxyToIntelligence(req, res, u, targetPath) {
-  const opts = {
-    hostname: '127.0.0.1', port: IN_PORT, path: targetPath || (u.pathname + u.search),
-    method: req.method, headers: { 'Content-Type': 'application/json' },
-  };
-  const upstream = http.request(opts, (ur) => {
-    let d = '';
-    ur.on('data', c => d += c);
-    ur.on('end', () => {
-      res.writeHead(ur.statusCode || 502, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
-      res.end(d || JSON.stringify({ ok: false, error: 'empty upstream response' }));
-    });
-  });
-  upstream.on('error', (e) => json(res, 503, { ok: false, error: `intelligence:${IN_PORT} unreachable: ${e.message}` }));
-  upstream.on('timeout', () => { upstream.destroy(); json(res, 503, { ok: false, error: `intelligence:${IN_PORT} timeout` }); });
-  upstream.setTimeout(5000);
-  if (req.method === 'POST' || req.method === 'PUT') {
-    req.pipe(upstream);
-  } else {
-    upstream.end();
-  }
 }
 
 // ── HTTP server ───────────────────────────────────────────────────────────────
@@ -439,14 +341,16 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // -- CFR field relay: REMOVED (2026-09-19) ------------------------------------
+  // Cortex only ever mirrored the orchestrator's field (polling it, and accepting a
+  // POST nothing ever sent) and re-served it to ~8 consumers, so cortex being down took
+  // the field away from guardian, versionium, copilot, nerve and cfr-influence, and
+  // cortex kept serving a stale value if the orchestrator died. Consumers now read the
+  // authority directly. Cortex keeps a PRIVATE cache (_field) only for its own RAID
+  // decisions; it no longer serves it here.
   if (p === '/cfr/health' || p === '/cfr/field') {
-    if (method === 'POST') {
-      const body = await readBody(req);
-      _updateField(body);
-      json(res, 200, { ok: true, field: _field });
-    } else {
-      json(res, 200, { ok: true, ..._field, ts: Date.now() });
-    }
+    const orchPort = parseInt(new URL(OR_URL).port || '9000', 10);
+    json(res, 410, { ok: false, error: `the CFR field is served by the orchestrator (its authority) -- call http://127.0.0.1:${orchPort}/cfr/field instead`, movedTo: 'orchestrator', movedPort: orchPort, newPath: '/cfr/field' });
     return;
   }
 
@@ -631,200 +535,18 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // ── Intelligence ─────────────────────────────────────────────────────────
-  // §MIGRATION 2026-08-22 — real bug fix, not just a relocation. Checked
-  // both real handlers side by side before touching this: cortex's local
-  // version never had crystallised/faultClasses/reuseItems/driftLevel —
-  // fields guardian/userscript-claude.js's OWN Intelligence Core panel has
-  // been reading from this exact response since it was built. Every one
-  // of those has silently rendered as "0" or "unknown" the whole time.
-  // intelligence/index.js's real handler has all four. Proxying fixes a
-  // real, live, pre-existing bug — it doesn't just avoid introducing one.
-  if (p === '/api/intelligence/status') {
-    _proxyToIntelligence(req, res, url);
-    return;
-  }
-
-  // §BUILT 2026-07-13 — chunk_4 of docs/nexus-copilot-recall.spec. Checked
-  // before building: lib/agent-tools/tools/query/query-intelligence.js's
-  // `lattice` action has called this exact URL since 2026-07-10 —
-  // GET /api/cortex/lattice?about=<system>. It never existed; every call
-  // has been a 404. meta/spatial/system-lattice.js itself is real, tested,
-  // and has been continuously fed real co-activation data (from the same
-  // causal graph mastermind builds) every 60s since a 2026-07-06 fix —
-  // the data was there, nothing could reach it.
-  //
-  // §NON-REDUNDANCY CHECK — this spec's own chunk_4 note said "wire only
-  // if a real non-redundant query exists." Checked against the causal
-  // recall lane (cortex/memory/causal-lookup.js): that lane answers "is
-  // this specific tagged row connected to a specific event in the recent
-  // causal graph" — one row, one graph walk. This route answers "what
-  // OTHER systems/components co-activate with this one, structurally" —
-  // aggregate, standing, system-level association, not event-level.
-  // Different question, same underlying graph data — non-redundant.
-  if (p === '/api/cortex/lattice') {
-    const about = url.searchParams.get('about');
-    try {
-      const sysLattice = require('../intelligence/spatial/system-lattice');
-      if (about) {
-        const neighbors = sysLattice.neighbors(about);
-        json(res, 200, { ok: true, about, neighbors, size: sysLattice.size() });
-      } else {
-        json(res, 200, { ok: true, clusters: sysLattice.clusters(), size: sysLattice.size() });
-      }
-    } catch (e) {
-      // §1.2 — an unavailable lattice is reported, never a fabricated empty success.
-      json(res, 503, { ok: false, error: `system-lattice unavailable: ${e.message}` });
-    }
-    return;
-  }
-
-  if (p === '/api/intelligence/context') {
-    const intent = url.searchParams.get('intent') || '';
-    json(res, 200, _contextSnapshot(intent));
-    return;
-  }
-
-  if (p === '/api/intelligence/intuition') {
-    const body   = method === 'POST' ? await readBody(req) : {};
-    const prompt = body.prompt || url.searchParams.get('prompt') || '';
-    json(res, 200, _intuitionAnswer(prompt));
-    return;
-  }
-
-  if (p === '/api/intelligence/mastermind') {
-    const body = await readBody(req);
-    json(res, 200, _mastermindAnalysis(body.prompt, body.context));
-    return;
-  }
-
-  // §RFR2 CONSUMER 2026-07-11 — detectRecurringPatterns (mastermind.js,
-  // the delta engine wired 2026-07-09) had exactly one caller anywhere in
-  // the codebase: its own test (tests/modules/mastermind-fractals.test.js).
-  // Real, tested, reachable from nowhere a person or another system could
-  // actually ask it a question. This route is that path — no new logic,
-  // just the missing door. Honest degrade preserved: a null result (no
-  // graph, bridge unavailable, <3 nodes) reports patternsFound: 0, not an
-  // error — matches detectRecurringPatterns' own contract.
-  if (p === '/api/intelligence/mastermind/patterns') {
-    const body = method === 'POST' ? await readBody(req) : {};
-    const limit = Number(body.limit ?? url.searchParams.get('limit')) || 300;
-    const opts = { minChainLen: body.minChainLen, minOccurrences: body.minOccurrences };
-    const result = await _mastermind.detectRecurringPatterns(limit, opts);
-    json(res, 200, result || { ok: true, patternsFound: 0, patterns: [], reason: 'no causal graph available yet' });
-    return;
-  }
-
-  if (p === '/api/intelligence/adversarial') {
-    const body = await readBody(req);
-    json(res, 200, _adversarialCompare(body.prompt, body.context));
-    return;
-  }
-
-  // §GAP CLOSED 2026-07-07 — nexus-query-surface.spec, build_order items
-  // 1 ("implement the route... reads from JAA directly") and 3 ("narrative
-  // synthesis... call mastermind()"). Was status: proposed, zero
-  // implementation existed anywhere (confirmed by grep for the route path
-  // before this). copilot-system-programmer.spec build_order item 1 names
-  // this as "the read layer everything else needs" — this is that layer.
-  //
-  // §HONEST SCOPE, stated per the spec's own build_order rather than left
-  // implicit:
-  //  - item 2 (fuzzy keyword resolution via intuition()'s schema-routing
-  //    variant) is NOT built. This does exact/substring matching against
-  //    gaps/event_log/blueprint text fields only — real signal, not the
-  //    full "classify guardian vs chatgpt vs sigma" resolution the spec
-  //    envisions.
-  //  - `commits` (Versionium) and `labs` (LabSession) fields are always
-  //    empty arrays with an explicit `_note` — grepped for both before
-  //    writing this; no commit-tracking or lab-session-tracking
-  //    implementation exists anywhere in the tree to query. Returning
-  //    fabricated-looking empty arrays with no note would be worse than
-  //    this being visibly incomplete.
-  //  - `field` (CFR) is the live system-wide field snapshot, not scoped
-  //    to relationships involving `about` specifically — intelligence/cfr/field.js
-  //    doesn't track per-relationship shape, only one global field.
-  //  - reads use jaaDB.tail() (a recent-window scan), same tradeoff
-  //    orchestrator.js's /api/recall already makes — a match outside the
-  //    scanned window won't surface. Not a full table scan.
-  if (p === '/api/cortex/query') {
-    const about  = url.searchParams.get('about') || '';
-    const window = parseInt(url.searchParams.get('window') || '3600000');
-    const since  = Date.now() - window;
-    if (!about) { json(res, 400, { ok:false, error:'about param required' }); return; }
-
-    const needle = about.toLowerCase();
-    const hay = (v) => {
-      if (v == null) return '';
-      return (typeof v === 'string' ? v : JSON.stringify(v)).toLowerCase();
-    };
-    const matches = (row, fields) => fields.some(f => hay(row[f]).includes(needle));
-
-    let gaps = [];
-    try {
-      gaps = jaaDB.tail('gaps', 500)
-        .filter(g => (g.ts || 0) >= since)
-        .filter(g => matches(g, ['domain', 'type', 'description', 'reason', 'source']))
-        .slice(0, 50);
-    } catch (_) {}
-
-    let events = [];
-    try {
-      events = jaaDB.tail('event_log', 500)
-        .filter(e => (e.ts || 0) >= since)
-        .filter(e => matches(e, ['type', 'source', 'payload']))
-        .slice(0, 50);
-    } catch (_) {}
-
-    let sigma = { records: [], note: null };
-    try {
-      const rows = jaaDB.tail('sigma_records', 200).filter(s => (s.ts || 0) >= since);
-      if (!rows.length) {
-        sigma.note = 'sigma_records table empty in this window — sigma-writer may not be running against live traffic yet';
-      } else {
-        const subjectRows = rows.filter(s => matches(s, ['source', 'type', 'eventType']));
-        sigma.records = (subjectRows.length ? subjectRows : rows).slice(0, 20);
-        if (!subjectRows.length) sigma.note = `no sigma_records matched '${about}' directly — showing recent system-wide records instead`;
-      }
-    } catch (_) { sigma.note = 'sigma_records table not queryable'; }
-
-    let field = null;
-    try { field = { ..._field, _note: 'system-wide CFR field snapshot, not scoped to this subject specifically' }; } catch (_) {}
-
-    let blueprint = [];
-    try {
-      const bp = require('../lib/blueprint').load?.();
-      if (bp) {
-        const text = JSON.stringify(bp).toLowerCase();
-        if (text.includes(needle)) blueprint = [{ note: 'subject appears in current blueprint — full divergence diffing not implemented, this is presence-only', found: true }];
-      }
-    } catch (_) {}
-
-    const commits = [];
-    const commitsNote = 'not built — no Versionium commit-tracking implementation exists in this tree (confirmed by grep; only docs/specs/VERSIONIUM.spec.md, no .js source)';
-
-    const labs = [];
-    const labsNote = 'not built — no LabSession tracking matching this spec exists (cos/playground/llm-lab.js and eravos edm-lab are unrelated systems)';
-
-    // Narrative — factual summary of what THIS query found, plus
-    // mastermind's own causal-trace/regime analysis (which queries global
-    // open gaps, not filtered to `about` — a real mismatch worth stating
-    // rather than silently blending the two into one falsely-unified voice).
-    const factualLine = `Found ${gaps.length} gap(s) and ${events.length} event(s) matching '${about}' in the last ${Math.round(window/60000)} minutes.` +
-      (sigma.note ? ` ${sigma.note}.` : ` ${sigma.records.length} sigma record(s) in window.`);
-    let mastermindLine = '';
-    try { mastermindLine = _mastermind.analyze(about, factualLine)?.analysis || ''; } catch (_) {}
-
-    const result = {
-      about, window, since, ts: Date.now(),
-      gaps, sigma, field, events, blueprint,
-      commits, labs,
-      narrative: `${factualLine} ${mastermindLine}`.trim(),
-      _scope_note: 'Keyword resolution is exact/substring only (spec build_order item 2, fuzzy resolution, not built). commits/labs are stubbed empty — see commits._note/labs._note.',
-      commits_note: commitsNote,
-      labs_note: labsNote,
-    };
-    json(res, 200, { ok: true, ...result });
+  // -- Intelligence routes: MOVED (hard cut) -------------------------------
+  // 2026-09-19 -- James: "full move. each system needs to be sovereign. if
+  // cortex going down breaks something, it needs to be moved." Every
+  // intelligence-domain route this file used to host is now served by the
+  // sovereign intelligence system (intelligence/server.js). Same VS1
+  // precedent as /api/versionium/*: an honest 410 naming the new home, not a
+  // silent 404 and not a forwarder that would keep cortex in the call path.
+  // Map: docs/2026-09-19-cortex-to-intelligence-and-versionium-consolidation-
+  // liminal-space moved too (organ + routes): see docs spec B7 (resolved).
+  if (MOVED_TO_INTELLIGENCE[p]) {
+    const newPath = MOVED_TO_INTELLIGENCE[p];
+    json(res, 410, { ok: false, error: `moved to the sovereign intelligence system -- call http://127.0.0.1:${IN_PORT}${newPath} instead`, movedTo: 'intelligence', movedPort: IN_PORT, newPath, ...(p === '/api/intelligence/patterns' ? { note: 'crystal-shaped consumers (precursor/outcome/count) use /api/intelligence/crystals' } : {}) });
     return;
   }
 
@@ -923,83 +645,6 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  if (p === '/api/intelligence/patterns') {
-    const limit = parseInt(url.searchParams.get('limit') || '5');
-    json(res, 200, { ok: true, patterns: _buildPatterns(limit) });
-    return;
-  }
-
-  // §GAP CLOSED 2026-07-19 — liminal-space was init'd with a real bus above
-  // but had no HTTP surface at all; no way to see its state without
-  // reading JAA directly. Read-only, mirrors its own status()/list().
-  if (p === '/api/liminal-space/status' && method === 'GET') {
-    json(res, 200, require('../intelligence/liminal-space').status());
-    return;
-  }
-  if (p === '/api/liminal-space/list' && method === 'GET') {
-    const fp = url.searchParams.get('focalPoint') || undefined;
-    json(res, 200, { ok: true, items: require('../intelligence/liminal-space').list(fp) });
-    return;
-  }
-
-  if (p === '/api/intelligence/rca') {
-    const limit = parseInt(url.searchParams.get('limit') || '5');
-    json(res, 200, { ok: true, rca: _buildRCA(limit) });
-    return;
-  }
-
-  // §GAP CLOSED 2026-07-19 — three endpoints intelligence/index.js provides
-  // that nothing above already handles (checked: no existing /reuse,
-  // /failures, or POST /event route in this file). Called directly with
-  // this file's own json(res, status, obj) convention rather than through
-  // handleRequest() — that function expects a json(status, obj) callback
-  // shape (different arg order) built for a standalone router, and reusing
-  // it here would mean writing an adapter for one call site. Simpler and
-  // safer to call the three underlying exports directly.
-  if (p === '/api/intelligence/reuse' && method === 'GET') {
-    const q = url.searchParams.get('q') || '';
-    const intel = require('../intelligence');
-    const all = intel.getReuseIndex();
-    const results = q ? all.filter(r => r.intent?.includes(q) || r.keywords?.some(k => k.includes(q))) : all.slice(0, 50);
-    json(res, 200, { ok: true, results, total: results.length });
-    return;
-  }
-
-  if (p === '/api/intelligence/failures' && method === 'GET') {
-    const failures = require('../intelligence').getFailures();
-    json(res, 200, { ok: true, failures: Object.values(failures), total: Object.keys(failures).length });
-    return;
-  }
-
-  // §GAP CLOSED 2026-08-22 — James asked for these as real, reachable
-  // routes. Checked first: _intuition/_mastermind (above) have existed
-  // correctly since 2026-07-06 but were never once exposed via HTTP,
-  // anywhere in the system's history — not a regression from any
-  // refactor, a real, pre-existing gap. Uses the real, already-
-  // instantiated objects directly; this file is their documented
-  // composition root (see the comment above where they're built), so no
-  // new instance is created here.
-  if (p === '/api/intelligence/intuition' && method === 'GET') {
-    const prompt = url.searchParams.get('prompt') || '';
-    json(res, 200, _intuition.answer(prompt));
-    return;
-  }
-
-  if (p === '/api/intelligence/mastermind' && method === 'POST') {
-    const body = await readBody(req);
-    json(res, 200, { ok: true, ..._mastermind.analyze(body?.prompt || '', body?.contextSnippet || '') });
-    return;
-  }
-
-  // §MIGRATION 2026-08-22 — target confirmed real: intelligence/index.js's
-  // handler does the identical jaaDB.insert('event_log', ...) PLUS
-  // triggers an immediate failure scan when body.type indicates an error.
-  // A strict superset, confirmed by reading both handlers side by side.
-  if (p === '/api/intelligence/event' && method === 'POST') {
-    _proxyToIntelligence(req, res, url);
-    return;
-  }
-
   // ── JAA table direct reads ────────────────────────────────────────────────
   if (p.startsWith('/api/jaa/')) {
     const table = p.slice('/api/jaa/'.length);
@@ -1029,29 +674,21 @@ const server = http.createServer(async (req, res) => {
   // this session persisted to disk, not just an in-memory Map), so
   // this genuinely reads the other system's real, current, disk-
   // persisted state, not a guess.
-  const SOVEREIGN_TABLE_OWNERS = {
-    versionium_commits:  '../versionium/lib/store.js',
-    versionium_branches: '../versionium/lib/store.js',
-    versionium_calendar: '../versionium/lib/store.js',
-  };
+  // 2026-09-19: cortex no longer reads another system's store at all. The only in-repo reader of these
+  // tables through here was the cortex CLI (now on versionium's own API). A bare removal would let this
+  // route fall through to cortex's own dead, permanently-empty copy -- the exact VSB1 split-brain -- so
+  // sovereign tables answer with an explicit 410 naming the owner instead.
+  const SOVEREIGN_TABLES = new Set(['versionium_commits', 'versionium_branches', 'versionium_calendar']);
 
   if (p === '/api/memory') {
     const table     = url.searchParams.get('table') || 'chat_log';
     const n         = parseInt(url.searchParams.get('n') || '10');
     const sessionId = url.searchParams.get('sessionId');
-    let rows;
-    const ownerModule = SOVEREIGN_TABLE_OWNERS[table];
-    if (ownerModule) {
-      try {
-        const { jaaDB: ownerJaaDB } = require(ownerModule);
-        rows = ownerJaaDB.tail(table, n * 2);
-      } catch (e) {
-        json(res, 502, { ok: false, error: `${table} is owned by a sovereign system whose store is unreachable: ${e.message}` });
-        return;
-      }
-    } else {
-      rows = jaaDB.tail(table, n * 2);
+    if (SOVEREIGN_TABLES.has(table)) {
+      json(res, 410, { ok: false, error: `${table} belongs to the sovereign versionium system -- call http://127.0.0.1:3754/api/versionium/history instead`, movedTo: 'versionium', movedPort: 3754, newPath: '/api/versionium/history' });
+      return;
     }
+    let rows = jaaDB.tail(table, n * 2);
     if (sessionId) rows = rows.filter(r => r.sessionId === sessionId || r.session_id === sessionId);
     json(res, 200, { ok: true, table, rows: rows.slice(0, n), count: rows.length });
     return;
@@ -1694,36 +1331,11 @@ server.listen(PORT, '127.0.0.1', () => {
   // this shape since before any of these organs existed). Every organ shares
   // the same contract: init({ bus }), console log convention, isolated failure.
   const organs = [
-    { name: 'liminal-space',        path: '../intelligence/liminal-space',        note: 'live on nexus-bus' },
     { name: 'self-heal/escalation', path: './self-heal/escalation', note: 'friction ledger — closes liminal-space\'s escalation.friction.increased listener' },
     { name: 'self-heal',            path: './self-heal',            note: '5-level escalation ladder' },
     { name: 'gap-finder',           path: './gap-finder',           note: 'anomaly.detected + sigma.event.* → cortex.gap.found' },
     { name: 'orion',                path: './orion',                note: 'anomaly/sigma → cortex.orion.classified' },
     { name: 'raid',                 path: './core/raid',            note: 'cortex.orion.classified → cortex.raid.decided (direct-call route unaffected)' },
-    // §SWITCHED ON 2026-07-24 (James: "Yes to the core"). intelligence/index.js
-    // is 933 lines that had NEVER RUN: nothing outside its own directory
-    // required it, init() was never called, and neither bep_patterns.json nor
-    // failures.json had ever been created — _scanPatterns() had never once
-    // executed. Its three sibling modules (intuition/mastermind/adversarial)
-    // WERE live and reachable, which is exactly why the absence went unnoticed:
-    // the /api/intelligence/* routes answered, so the core behind them was
-    // assumed to be running.
-    //
-    // Why this is not a new competing pattern engine (§10.3): copilot —
-    // THE MIND — reads p.precursor/p.outcome/p.confidence, which is
-    // bep_patterns' shape, while cortex's _buildPatterns() serves
-    // /api/intelligence/patterns from the crystals table. So the mind has
-    // always been asking for THIS core's output and being handed a different
-    // engine's. Switching it on supplies what copilot was written to consume;
-    // it does not invent a rival. (Whether _buildPatterns then serves
-    // bep_patterns, both, or stays as-is remains James's call — recorded in
-    // docs/nexus-sentinel.spec, deliberately NOT decided here.)
-    //
-    // Dry-run before wiring confirmed init() is clean: four staggered unref'd
-    // scans plus a 10s-delayed initial build that hydrates _failureIndex from
-    // the persisted fault_taxonomy table, so there is no cold-start amnesia.
-    // Failure is isolated by the loop's own try/catch, same as every organ.
-    { name: 'intelligence',         path: '../intelligence',         note: 'pattern recognition + failure taxonomy → bep_patterns/failures (was never running)' },
   ];
   for (const organ of organs) {
     try {
@@ -1755,27 +1367,6 @@ server.listen(PORT, '127.0.0.1', () => {
     console.log('[cortex] raid/router active — universal entry point (any surface → raid.route.request → raid.route.decided)');
   } catch (e) {
     console.warn(`[cortex] raid/router failed to start: ${e.message}`);
-  }
-  try {
-    // §WIRED 2026-08-18 — real getField injection for cortex/intelligence's
-    // new crystallization enrichment (James: "make them more detailed,
-    // using rfr2 and cfr"). Same real _field this file already exports at
-    // module level (getField: () => _field) — reused, not duplicated.
-    //
-    // §BUGFIX 2026-08-27 — scans:['failures','reuse'] added. cortex's own
-    // /api/intelligence/failures and /reuse routes (below) are real, live
-    // endpoints orchestrator.js actually calls — confirmed by grep, not
-    // assumed — so this process still needs _scanFailures/_buildReuseIndex
-    // running locally. Pattern scan / meta-scan / loom-map sync / cross-
-    // ledger are NOT restricted here anymore: intelligence/server.js (its
-    // own real, standalone process since 2026-08-22) already owns those
-    // exclusively, and running them here too was pure duplicate work
-    // against the same shared JAA tables — see intelligence/index.js's
-    // own init() comment for the full trace.
-    require('../intelligence').init({ getField: () => _field, scans: ['failures', 'reuse'] });
-    console.log('[cortex] intelligence/index (consolidated context/reuse/failure layer) active — failures+reuse scans only, pattern/meta/loom-map owned by the standalone intelligence service');
-  } catch (e) {
-    console.warn(`[cortex] intelligence/index failed to start: ${e.message}`);
   }
 
   // §MERGE-CONSOLIDATE 2026-08-28 — James: "merge and consolidate" (the
@@ -1872,39 +1463,6 @@ server.listen(PORT, '127.0.0.1', () => {
     console.warn(`[cortex] could not register cos state provider (compartment backup/restore via .nex will be unavailable): ${e.message}`);
   }
 
-  // §GAP CLOSED 2026-07-06 — meta/spatial/system-lattice.js was real,
-  // tested, and persisted, but nothing fed it in production — the
-  // "standing, continuously-updated" half of nexus-relationship-shape.spec
-  // v0.2 was still dormant. Feeds it from the same on-demand causal graph
-  // mastermind now builds from recent event_log rows — one real source,
-  // two real consumers, not two separate graph-construction paths.
-  // 60s interval: coarser than RAID's 15s health poll or the 5s
-  // orchestrator poll on purpose — this aggregates cross-system structure,
-  // not live health, doesn't need sub-minute freshness.
-  try {
-    const sysLattice = require('../intelligence/spatial/system-lattice');
-    sysLattice.load(); // rehydrate from Cortex before the first feed tick
-    const _feedLattice = () => {
-      try {
-        // §BUG FIXED 2026-07-09 (from a live console log) — this called
-        // _buildRecentCausalGraph(), which was inline in this file until the
-        // 07-07 split moved it into cortex/intelligence/mastermind.js. The
-        // helper moved; this caller did not. It threw every 60s in
-        // production, caught by the warn below and never fixed. The function
-        // is already exposed on the mastermind instance — reuse it rather
-        // than reintroducing a second copy of the same graph builder.
-        const graph = _mastermind.buildRecentCausalGraph();
-        if (graph) sysLattice.ingestCFRGraph(graph);
-      } catch (e) { console.warn(`[cortex] system-lattice feed failed: ${e.message}`); }
-    };
-    _feedLattice(); // run once immediately, don't wait a full interval for first data
-    setInterval(_feedLattice, 60000);
-  } catch (e) {
-    console.warn(`[cortex] system-lattice not available: ${e.message}`);
-  }
 });
 
-module.exports = {
-  server, jaaDB, _intuitionAnswer, _mastermindAnalysis, _adversarialCompare,
-  _buildPatterns, _buildRCA, _intuition, _mastermind, adversarial,
-};
+module.exports = { server, jaaDB };

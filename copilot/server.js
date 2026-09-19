@@ -57,6 +57,8 @@ const config = require('./config.js');
 const PORT     = config.PORT;
 const GD_URL   = process.env.GUARDIAN_URL   || 'http://127.0.0.1:7820';
 const CX_URL   = process.env.CORTEX_URL     || 'http://127.0.0.1:3748';
+const INTEL_URL = process.env.INTELLIGENCE_URL || 'http://127.0.0.1:3753'; // intelligence is sovereign (moved out of cortex 2026-09-19)
+const ORCH_URL  = process.env.ORCHESTRATOR_URL || 'http://127.0.0.1:9000'; // the CFR field's authority
 
 // §ADDED 2026-07-06 — completes the loop the Spotlight bug fix (same
 // session) unblocked: ui/tv-shell/spotlight/spotlight.js's window.CP.exec
@@ -81,8 +83,8 @@ const SPOTLIGHT_TARGETS = ['guardian','cortex','idearium','orchestrator',
 
 async function _fetchCFRField() {
   return new Promise((resolve) => {
-    const u = new URL(`${CX_URL}/cfr/field`);
-    const req = http.request({ hostname: u.hostname, port: u.port || 3748, path: u.pathname, timeout: 1500 }, r => {
+    const u = new URL(`${ORCH_URL}/cfr/field`);
+    const req = http.request({ hostname: u.hostname, port: u.port || 9000, path: u.pathname, timeout: 1500 }, r => {
       let d = ''; r.on('data', c => d += c);
       r.on('end', () => { try { resolve(JSON.parse(d)); } catch(_) { resolve(null); } });
     });
@@ -331,7 +333,7 @@ _adversarial.start(() => _stream.slice(-30));
 // reading. Either can satisfy the prompt without a model call.
 async function _queryCortexIntuition(prompt, sessionId) {
   try {
-    const r = await _fetch(`${CX_URL}/api/intelligence/intuition`, {
+    const r = await _fetch(`${INTEL_URL}/api/intelligence/intuition`, {
       method: 'POST',
       body: { prompt, sessionId },
       timeout: 2000,
@@ -343,7 +345,7 @@ async function _queryCortexIntuition(prompt, sessionId) {
 
 async function _queryCortexMastermind(prompt, contextLayers, sessionId) {
   try {
-    const r = await _fetch(`${CX_URL}/api/intelligence/mastermind`, {
+    const r = await _fetch(`${INTEL_URL}/api/intelligence/mastermind`, {
       method: 'POST',
       body: { prompt, context: contextLayers, sessionId },
       timeout: 4000,
@@ -384,7 +386,7 @@ function _resolveIntuitionResponse(cortexIntuition, adversarialVerdict) {
 // verdict, so the caller falls back to plain intuition text unchanged.
 async function _queryCortexAdversarial(prompt, sessionId) {
   try {
-    const r = await _fetch(`${CX_URL}/api/intelligence/adversarial`, {
+    const r = await _fetch(`${INTEL_URL}/api/intelligence/adversarial`, {
       method: 'POST',
       body: { prompt, sessionId },
       timeout: 4000,

@@ -162,13 +162,16 @@ test('T-014', 'each focal point has a named invariant', () => {
   }
 });
 
-// T-015: one line in organs array
-test('T-015', 'liminal-space is ONE LINE in organs array', () => {
-  const boot = require('fs').readFileSync(require('path').join(__dirname, '../../cortex/boot.js'), 'utf8');
-  assert.ok(boot.includes("{ name: 'liminal-space'"));
-  // Verify no other organ file was changed
-  // Verify it appears in the organs array specifically
-  assert.ok(boot.includes("{ name: 'liminal-space'"), 'not in organs array');
+// T-015: 2026-09-19 — the organ MOVED out of cortex into the intelligence server.
+// It used to be one line in cortex/boot.js's organs array; that pinned "runs inside cortex".
+// It now runs on intelligence's own bus, fed by cortex's relay (see
+// tests/modules/test-intelligence-organs-move.js for the delivery + allowlist pins).
+test('T-015', 'liminal-space runs in intelligence/server.js, NOT in cortex\'s organs array', () => {
+  const fs = require('fs'), path = require('path');
+  const boot   = fs.readFileSync(path.join(__dirname, '../../cortex/boot.js'), 'utf8');
+  const server = fs.readFileSync(path.join(__dirname, '../../intelligence/server.js'), 'utf8');
+  assert.ok(!boot.includes("{ name: 'liminal-space'"), 'must no longer be an organ inside cortex');
+  assert.ok(/liminal\.init\(\{\s*bus:\s*nexusBus\s*\}\)/.test(server), 'intelligence/server.js must init it on its own bus');
 });
 
 // T-016: stop() cleans up without throwing

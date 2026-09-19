@@ -433,7 +433,11 @@ function createCFRLedger({
 
     // GET /cfr/field
     if (method === 'GET' && pathname === '/cfr/field') {
-      json(200, { ok: true, system: systemId, ..._field.get(), ts: Date.now() });
+      // 2026-09-19: include `regime`. This route is now THE way every consumer reads the system
+      // CFR field (cortex's relay, which added a regime of its own, is gone). /cfr/health already
+      // returned it; /cfr/field alone did not, which left consumers to invent one (copilot read
+      // `undefined !== 'stable'` as an alarm; nerve fell back to a frozen 'stable'). One definition.
+      json(200, { ok: true, system: systemId, ..._field.get(), regime: _field.snapshot().regime, ts: Date.now() });
       return true;
     }
 

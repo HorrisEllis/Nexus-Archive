@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Guardian — Gemini v10.0
 // @namespace    nexus.guardian.gemini
-// @version      10.1.0
+// @version      10.2.0
 // @description  Guardian v10 — Gemini: protocol parity with Claude/ChatGPT v10 (NCP
 //               handshake, IndexedDB kernel, SHA-256 dedup, tab-claim, SEAM jobs,
 //               intelligence injection, usage detection) built around Gemini's actual
@@ -26,6 +26,7 @@ const NCP_CHANNEL = `${NCP_URL}/channel`;
 const NCP_RESULT  = `${NCP_URL}/result`;
 const NCP_HB      = `${NCP_URL}/heartbeat`;
 const CORTEX_URL  = 'http://127.0.0.1:3748';
+const INTELLIGENCE_URL = 'http://127.0.0.1:3753'; // intelligence is its own sovereign system (moved out of cortex 2026-09-19)
 const ORCH_URL    = 'http://127.0.0.1:9000';
 const PROVIDER    = 'gemini';
 const VERSION     = '10.0.0';
@@ -314,7 +315,7 @@ async function gate(name, fn, opts = {}) {
 // ── Pre-prompt intelligence injection — identical contract, provider-agnostic ─
 async function pullIntelligenceContext(intent, command) {
   try {
-    const url = `${CORTEX_URL}/api/intelligence/context?intent=${encodeURIComponent((intent||'').slice(0,120))}&command=${encodeURIComponent(command||'')}&provider=${PROVIDER}`;
+    const url = `${INTELLIGENCE_URL}/api/intelligence/context?intent=${encodeURIComponent((intent||'').slice(0,120))}&command=${encodeURIComponent(command||'')}&provider=${PROVIDER}`;
     const r = await _gmFetch(url, { timeoutMs: 3000 });
     if (!r.ok) return null;
     _intelligenceCtx = await r.json();

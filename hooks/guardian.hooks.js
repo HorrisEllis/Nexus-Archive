@@ -801,7 +801,7 @@ const GUARDIAN_HOOKS = [
       action:  'Auto-fires before each job in userscript handleJob()',
     },
     config: {
-      endpoint:    'GET :3748/api/intelligence/context',
+      endpoint:    'GET :3753/api/intelligence/context',
       queryParams: ['intent', 'command', 'provider'],
       timeout:     3000,
       fallback:    'proceed without context (non-blocking)',

@@ -172,6 +172,7 @@ const UI_ROOT = path.join(ROOT, 'ui');
 const SYS = {
   bridge:     { port:9999,  host:'127.0.0.1', label:'Bridge',      color:'#00d4ff', healthPath:'/health' },
   cortex:     { port:3748,  host:'127.0.0.1', label:'Cortex',      color:'#2dd4bf' },
+  intelligence: { port:3753, host:'127.0.0.1', label:'Intelligence', color:'#f0abfc', healthPath:'/health' },
   guardian:   { port:7820,  host:'127.0.0.1', label:'Guardian',    color:'#9b7fe8' },
   idearium:   { port:4800,  host:'127.0.0.1', label:'Idearium',    color:'#4a9eff' },
   architect:  { port:3747,  host:'127.0.0.1', label:'Architect',   color:'#ef9f27' },
@@ -2354,8 +2355,8 @@ async function cliSNR() {
 
 async function cliIntel(sub='patterns', arg) {
   if (sub==='patterns') {
-    const d=await GET('cortex','/api/intelligence/patterns');
-    if(d.error){console.log(`${C.red}✗${C.r} Cortex offline: ${d.error}`);return;}
+    const d=await GET('intelligence','/api/intelligence/patterns');
+    if(d.error){console.log(`${C.red}✗${C.r} Intelligence offline: ${d.error}`);return;}
     const list=d.patterns||[];
     console.log(`\n${C.b}${C.c}PATTERNS (${list.length})${C.r}\n`);
     for (const p of list) {
@@ -2364,15 +2365,15 @@ async function cliIntel(sub='patterns', arg) {
     }
     console.log('');
   } else if (sub==='failures') {
-    const d=await GET('cortex','/api/intelligence/failures');
-    if(d.error){console.log(`${C.red}✗${C.r} Cortex offline: ${d.error}`);return;}
+    const d=await GET('intelligence','/api/intelligence/failures');
+    if(d.error){console.log(`${C.red}✗${C.r} Intelligence offline: ${d.error}`);return;}
     const list=d.failures||[];
     console.log(`\n${C.b}${C.c}FAULT TAXONOMY (${list.length})${C.r}\n`);
     for (const f of list) console.log(`  ${C.red}✗${C.r}  ${C.d}${(f.faultClass||'—').padEnd(24)}${C.r}  count:${f.count||0}  ${C.d}${(f.precursors||[]).slice(0,3).join(', ')}${C.r}`);
     console.log('');
   } else if (sub==='reuse') {
-    const d=await GET('cortex',`/api/intelligence/reuse${arg?`?q=${encodeURIComponent(arg)}`:''}`);
-    if(d.error){console.log(`${C.red}✗${C.r} Cortex offline: ${d.error}`);return;}
+    const d=await GET('intelligence',`/api/intelligence/reuse${arg?`?q=${encodeURIComponent(arg)}`:''}`);
+    if(d.error){console.log(`${C.red}✗${C.r} Intelligence offline: ${d.error}`);return;}
     const list=d.results||[];
     console.log(`\n${C.b}${C.c}REUSE INDEX (${list.length})${C.r}\n`);
     for (const r of list) console.log(`  ${C.d}${(r.type||'—').padEnd(12)}${C.r}  ${C.c}${(r.lang||'—').padEnd(10)}${C.r}  ${(r.intent||'—').slice(0,50)}`);

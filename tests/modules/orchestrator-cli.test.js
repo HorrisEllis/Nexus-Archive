@@ -31,6 +31,7 @@ async function runAll() {
     catch (e) { console.error(`  ✗ ${id} ${desc}\n    ${e.message}`); failed++; }
   }
   await new Promise(r => fakeCortex.close(r));
+  await new Promise(r => fakeIntel.close(r));
   process.stdout.write(`\n  orchestrator-cli.test.js\n  ${passed} passed  ${failed} failed\n`);
   if (failed > 0) process.exitCode = 1;
 }
@@ -65,11 +66,17 @@ function plain(s) { return s.replace(/\x1b\[[0-9;]*m/g, ''); }
 
 const _ready = new Promise(resolve => fakeCortex.listen(3748, '127.0.0.1', resolve));
 
+// 2026-09-19: `intel patterns|failures|reuse` moved off cortex. The orchestrator now asks the
+// sovereign intelligence system (its hardcoded SYS.intelligence port, 3753), so it gets its own fake.
+let currentIntelHandler = (req, res) => { res.writeHead(404); res.end('{}'); };
+const fakeIntel = http.createServer((req, res) => currentIntelHandler(req, res));
+const _readyIntel = new Promise(resolve => fakeIntel.listen(3753, '127.0.0.1', resolve));
+
 // ── §A: intel ──────────────────────────────────────────────────────────────────
 
 test('A1', '`intel patterns` lists crystallised patterns from the real route', async () => {
-  await _ready;
-  currentHandler = (req, res) => {
+  await _readyIntel;
+  currentIntelHandler = (req, res) => {
     if (req.url === '/api/intelligence/patterns') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ ok: true, patterns: [
@@ -85,8 +92,8 @@ test('A1', '`intel patterns` lists crystallised patterns from the real route', a
 });
 
 test('A2', '`intel failures` lists fault taxonomy', async () => {
-  await _ready;
-  currentHandler = (req, res) => {
+  await _readyIntel;
+  currentIntelHandler = (req, res) => {
     if (req.url === '/api/intelligence/failures') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ ok: true, failures: [{ faultClass: 'timeout', count: 4, precursors: ['retry'] }], total: 1 }));
@@ -98,13 +105,13 @@ test('A2', '`intel failures` lists fault taxonomy', async () => {
   assert(out.includes('timeout'));
 });
 
-test('A3', '`intel` with cortex offline reports the offline error, not a crash', async () => {
+test('A3', '`intel` with intelligence offline reports the offline error, not a crash', async () => {
   const r = await runCli(['intel', 'patterns', '--unused'], { timeoutMs: 5000 });
   // Point this one at the closed handler by temporarily stopping the server
   // is overkill — instead assert the command at least exits cleanly and
-  // never throws an unhandled exception when cortex returns something
+  // never throws an unhandled exception when intelligence returns something
   // unexpected.
-  currentHandler = (req, res) => { res.writeHead(500); res.end('not json'); };
+  currentIntelHandler = (req, res) => { res.writeHead(500); res.end('not json'); };
   const r2 = await runCli(['intel', 'patterns']);
   assert.strictEqual(r2.code, 0, `CLI should exit 0 even on a malformed upstream response, stderr: ${r2.stderr}`);
 });

@@ -22,6 +22,8 @@ const http   = require('http');
 const ROOT       = path.join(__dirname, '..');
 const OUT_DIR    = path.join(ROOT, 'data', 'copilot', 'diagnose');
 const CX_URL     = process.env.CORTEX_URL   || 'http://127.0.0.1:3748';
+const INTEL_URL = process.env.INTELLIGENCE_URL || 'http://127.0.0.1:3753'; // intelligence is sovereign (moved out of cortex 2026-09-19)
+const ORCH_URL  = process.env.ORCHESTRATOR_URL || 'http://127.0.0.1:9000'; // the CFR field/ledger authority
 const OR_URL     = process.env.ORCH_URL     || 'http://127.0.0.1:9000';
 const MAX_DEPTH  = parseInt(process.env.DIAGNOSE_MAX_DEPTH  || '4');
 const MAX_BRANCHES = parseInt(process.env.DIAGNOSE_MAX_BRANCHES || '3');
@@ -80,7 +82,7 @@ async function _diagnoseNode(file, topic, depth, visited, lifeline) {
 
   // 2. Check patterns
   try {
-    const pats = await _get(`${CX_URL}/api/intelligence/patterns?limit=5`);
+    const pats = await _get(`${INTEL_URL}/api/intelligence/crystals?limit=5`);
     const related = (pats?.patterns || []).filter(p =>
       (p.precursor || '').toLowerCase().includes(topic.toLowerCase().split(' ')[0])
     );
@@ -95,7 +97,7 @@ async function _diagnoseNode(file, topic, depth, visited, lifeline) {
 
   // 3. Check CFR sigma
   try {
-    const cfr = await _get(`${CX_URL}/cfr/health`);
+    const cfr = await _get(`${ORCH_URL}/cfr/health`);
     if (cfr?.cfr?.sigma > 0.3) {
       findings.push(`\n**CFR sigma: ${cfr.cfr.sigma.toFixed(3)}** (regime: ${cfr.cfr.regime})`);
       if (cfr.cfr.sigma > 0.5) subTopics.push('sigma divergence');
