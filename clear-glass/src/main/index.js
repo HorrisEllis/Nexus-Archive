@@ -204,17 +204,34 @@ const bgTabUrls       = new Map(); // agentId → the real url it was opened wit
 // back the actual guest instead of guessing by title.
 const agentGuestContents = new Map(); // agentId → guest WebContents (the <webview>'s own)
 
+// §FIX 2026-09-19 — James: "it shouldn't rely on the ui. clearglass is cli
+// first." Everything above exists because browser.html wraps the real
+// page in a <webview> — which is only a problem for pages that were
+// opened THROUGH that shell in the first place. A page nobody needs to
+// look at (a custom agent's site, mesh/automation work) has no reason to
+// load the shell at all: headlessPages holds hidden windows that load
+// the target URL directly, so the window's own webContents IS the real
+// page — no <webview>, no did-attach-webview, no renderer, no preload,
+// no ssePort/ipcPort handshake. See openHeadlessPage() below.
+const headlessPages = new Map(); // agentId → BrowserWindow (hidden; loads the target URL directly)
+
 /**
  * getAgentWebContents(agentId) — the one real resolver every caller that
  * needs to reach an agent's actual page (ClearDriver, dom/archaeology.js)
  * should use instead of re-deriving their own top-level-window guess.
- * Guest webContents first (the real target page); falls back to the
- * shell window's own webContents only if no webview has attached yet
- * (e.g. called in the brief window between window creation and
- * did-attach-webview firing) — same honest degrade as the old code's
- * fallback chain, just correctly ordered now.
+ *
+ * Order: (1) a headless page (openHeadlessPage) — the window's own
+ * webContents is already the real page, no UI involved; (2) a UI
+ * window's <webview> guest (the real target page inside browser.html);
+ * (3) the shell window's own webContents only if no webview has attached
+ * yet — same honest degrade as the old code's fallback chain. NOTE (3)
+ * is browser.html itself, not the page: a caller that must not act on
+ * the shell (custom-agent-driver.js) uses a headless page and never
+ * reaches it.
  */
 function getAgentWebContents(agentId) {
+  const page = headlessPages.get(agentId);
+  if (page && !page.isDestroyed()) return page.webContents;
   const guest = agentGuestContents.get(agentId);
   if (guest && !guest.isDestroyed()) return guest;
   const win = windows.get(agentId) || bgTabs.get(agentId);
@@ -2182,6 +2199,7 @@ function listOpenAgents() {
   return {
     windows: [...windows.keys()],
     bgTabs:  [...bgTabs.keys()],
+    headless: [...headlessPages.keys()],
   };
 }
 
@@ -2272,6 +2290,75 @@ function listBackgroundTabs() {
   }));
 }
 
+// ── Headless pages — the UI-free path ─────────────────────────────────────
+// §FIX 2026-09-19 — James: "it shouldn't rely on the ui. clearglass is cli
+// first." Same idea as ProviderHost's own NCP windows (providers/host.js:
+// hidden BrowserWindow, target URL loaded directly, driven from the main
+// process) — deliberately NOT openBackgroundTab(), which loads the whole
+// browser.html shell and puts the real page inside a <webview>. Nothing
+// here needs a renderer: no preload, no webviewTag, no SSE/IPC ports.
+// The window's own webContents is the page, so ClearDriver's exec()
+// (click/type/eval) and getAgentWebContents() reach it directly.
+//
+// `partition` should be stable per agent (custom-agent-driver.js uses the
+// mesh's own persist:mesh-<id>-<account> convention) so cookies survive
+// between dispatches. backgroundThrottling is off on purpose: this
+// window is never visible, and Chromium would otherwise throttle timers
+// and animation frames for a hidden page — exactly what a streaming
+// chat UI's response rendering runs on.
+async function openHeadlessPage({ agentId, url, partition } = {}) {
+  if (!url) throw new Error('openHeadlessPage: url required');
+  agentId = agentId || randomUUID();
+
+  const existing = headlessPages.get(agentId);
+  if (existing && !existing.isDestroyed()) {
+    return { agentId, url: existing.webContents.getURL() || url, reused: true };
+  }
+
+  const win = new BrowserWindow({
+    width: 1280, height: 800,
+    show: false,
+    skipTaskbar: true,
+    title: `Clear Glass — ${agentId} (headless)`,
+    webPreferences: {
+      partition:            partition || undefined,
+      nodeIntegration:      false,
+      contextIsolation:     true,
+      backgroundThrottling: false,
+    },
+  });
+
+  headlessPages.set(agentId, win);
+  win.on('closed', () => { if (headlessPages.get(agentId) === win) headlessPages.delete(agentId); });
+
+  try {
+    await win.loadURL(url);
+  } catch (err) {
+    // ERR_ABORTED = this navigation was superseded (a redirect, or the
+    // site's own client-side routing) — the page is still loading, not
+    // failed. Anything else is a real load failure: don't leave a dead
+    // window registered under this agentId.
+    if (err && err.code !== 'ERR_ABORTED') {
+      if (!win.isDestroyed()) win.destroy();
+      headlessPages.delete(agentId);
+      throw err;
+    }
+  }
+
+  // Best-effort: sendInputEvent (ClearDriver's click/type) delivers keys to
+  // the focused page, and a never-shown window doesn't get focus on its own.
+  try { win.webContents.focus(); } catch (_) {}
+
+  return { agentId, url: win.isDestroyed() ? url : (win.webContents.getURL() || url), session: win.webContents.session };
+}
+
+function closeHeadlessPage(agentId) {
+  const win = headlessPages.get(agentId);
+  if (win && !win.isDestroyed()) win.destroy();
+  headlessPages.delete(agentId);
+  return { agentId, closed: !!win };
+}
+
 // ── Settings window — single instance, reused/focused rather than
 //    re-created, with a real close path the renderer can call ────────────
 let settingsWin = null;
@@ -2334,4 +2421,5 @@ module.exports = {
   closeSettingsWindow, windows, bgTabs,
   freezeAgentWindow, thawAgentWindow,
   getAgentWebContents,
+  openHeadlessPage, closeHeadlessPage,
 };

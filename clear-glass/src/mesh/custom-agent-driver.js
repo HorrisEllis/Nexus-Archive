@@ -18,11 +18,22 @@
  * transport for this case, it's the only one. A failure here has no
  * NCP fallback to hand off to; the caller's own retry/queue (agent-
  * mesh.js's existing drain machinery) is the real fallback layer.
+ *
+ * §FIX 2026-09-19 — James: "it shouldn't rely on the ui. clearglass is
+ * cli first." The first version of this file opened its tab with
+ * openBackgroundTab(), which loads renderer/browser.html and puts the
+ * real page inside a <webview> — a dispatch path that only worked if
+ * the whole browser UI shell came up first, and whose "wait for the
+ * webview" check passed instantly anyway (getAgentWebContents() falls
+ * back to the shell's own webContents, so it was truthy before the
+ * guest ever attached). Now uses openHeadlessPage(): a hidden window
+ * loading the site directly, whose webContents is the page. No
+ * renderer, no preload, no webview — works the same under CG_HEADLESS.
  */
 
 const IDLE_MS  = 12000; // matches guardian-picker.js's own mutation-mode idle timer, same real convention
 const POLL_MS  = 400;
-const ATTACH_TIMEOUT_MS = 8000;
+const READY_TIMEOUT_MS = 15000; // page load + the site's own client-side render of the composer
 
 class CustomAgentDriver {
   constructor({ driver, options, sse }) {
@@ -50,25 +61,40 @@ class CustomAgentDriver {
     if (agent.enabled === false) throw new Error(`custom agent "${agent.agentName}" is disabled`);
 
     const tabAgentId = `custom-${agent.id}`;
-    const { openBackgroundTab, getAgentWebContents } = require('../main/index.js');
+    const inputSel   = agent.input.selector;
+    const { openHeadlessPage } = require('../main/index.js');
 
     try {
-      await openBackgroundTab({ agentId: tabAgentId, url: agent.url || agent.origin });
+      // Stable per-agent partition, same persist:mesh-<key>-<account>
+      // convention agent-mesh.js's spawn() uses — cookies survive between
+      // dispatches, and two custom agents never share a session.
+      await openHeadlessPage({
+        agentId: tabAgentId,
+        url: agent.url || agent.origin,
+        partition: `persist:mesh-${agent.id}-default`,
+      });
     } catch (err) {
-      throw new Error(`could not open a tab for custom agent "${agent.agentName}": ${err.message}`);
+      throw new Error(`could not open a page for custom agent "${agent.agentName}": ${err.message}`);
     }
 
-    // did-attach-webview fires asynchronously relative to openBackgroundTab's
-    // own resolve — give the guest a moment to actually attach before the
-    // driver goes looking for it, same honest wait _watchForResponse below
-    // already has to do for the response element itself.
+    // loadURL resolving means the document loaded, not that the site's own
+    // client-side code has rendered its composer yet — wait for the picked
+    // input element itself, the thing this dispatch actually needs. If it
+    // never shows up, the honest reasons are a login wall or a site that
+    // changed since the picker captured this selector; say so.
     await this._pollUntil(
-      () => !!getAgentWebContents(tabAgentId),
-      ATTACH_TIMEOUT_MS,
-      `webview for custom agent "${agent.agentName}" never attached`
+      async () => {
+        try {
+          const r = await this.driver.exec({
+            action: 'eval', agentId: tabAgentId,
+            code: `!!document.querySelector(${JSON.stringify(inputSel)})`,
+          });
+          return !!r?.result;
+        } catch (_) { return false; } // mid-navigation etc. — just try again
+      },
+      READY_TIMEOUT_MS,
+      `input element "${inputSel}" for custom agent "${agent.agentName}" never appeared (not logged in to this site, or the page changed since it was picked)`
     );
-
-    const inputSel = agent.input.selector;
 
     try {
       await this.driver.exec({ action: 'click', agentId: tabAgentId, selector: inputSel });
@@ -107,7 +133,7 @@ class CustomAgentDriver {
   async _pollUntil(check, timeoutMs, failMessage) {
     const start = Date.now();
     while (Date.now() - start < timeoutMs) {
-      if (check()) return true;
+      if (await check()) return true;
       await this._sleep(200);
     }
     throw new Error(`${failMessage} within ${timeoutMs}ms`);
