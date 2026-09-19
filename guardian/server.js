@@ -748,6 +748,36 @@ server.listen(HTTP_PORT, '127.0.0.1', async () => {
     console.warn('[guardian] self-build-loop install failed:', err.message);
   }
 
+  // §RAID-FIX 2026-09-16 — James: "raid also needs to stop failing, i
+  // dont think its using... the job dispatcher." Confirmed: guardian
+  // (the real job dispatcher — POST /command above, createJob/dispatchJob)
+  // had never once announced itself to RAID's capability registry, so
+  // every RAID envelope aimed at guardian resolved to NO_ROUTE, silently
+  // — not a dispatch bug, guardian was simply invisible to the router.
+  // See lib/self-register-remote.js's own header for the full cross-
+  // process reasoning (guardian is its own OS process — this can't be
+  // the in-process registerSelf() intelligence/index.js uses).
+  try {
+    const { registerSelfRemote } = require('../lib/self-register-remote.js');
+    registerSelfRemote('guardian', [
+      { name: 'dispatch', description: 'dispatch a prompt to an AI provider as a tracked, resumable job',
+        route: { method: 'POST', path: '/command' } },
+      { name: 'jobs',     description: 'list or filter real, tracked jobs — id, status, provider, hat, content',
+        route: { method: 'GET', path: '/jobs' } },
+      { name: 'job',      description: 'look up one real, tracked job by id — its current status and content',
+        route: { method: 'GET', path: '/jobs?id={id}' } },
+      { name: 'response', description: 'a completed job\'s real response/result, by job id — same record as .job, once status is done',
+        route: { method: 'GET', path: '/jobs?id={id}' } },
+      { name: 'intake',   description: 'real intake queue — proposed changes awaiting verdict, promote, or rollback',
+        route: { method: 'GET', path: '/api/intake' } },
+    ], { registeredBy: 'guardian/server.js' }).then((r) => {
+      if (r.ok) console.log(`[guardian] registered ${r.registered} capabilit${r.registered === 1 ? 'y' : 'ies'} with RAID`);
+      else console.warn(`[guardian] RAID self-registration incomplete: ${r.error || (r.failed + ' failed')}`);
+    });
+  } catch (err) {
+    console.warn('[guardian] RAID self-registration failed:', err.message);
+  }
+
   const { BootSequence } = require('../lib/boot-sequence');
   const nc2 = require('../nexus/nexus-connect');
 
@@ -3195,6 +3225,20 @@ function handleExtendedRoutes(req, res, url, method) {
   }
 
   if (method==='GET' && (url.pathname==='/jobs'||url.pathname==='/jobs/')) {
+    // §PERSISTENCE-NODES 2026-09-16 — James: "how about .job .dispatch and
+    // .response .artifact nodes for persistence?" Real gap found while
+    // answering: this route only ever supported a *list* (?status=), never
+    // a single job lookup — so 'guardian.job' (one record, its real
+    // status/result) and 'guardian.response' (that same record's result
+    // once complete) had no real endpoint to register against. ?id= is
+    // additive — list behavior below is completely unchanged when it's
+    // absent.
+    const id = url.searchParams.get('id');
+    if (id) {
+      const job = jobs.get(id);
+      if (!job) { pRes(res, 404, { ok:false, error:`no job "${id}"` }); return true; }
+      pRes(res, 200, { ok:true, job }); return true;
+    }
     const limit = parseInt(url.searchParams.get('limit')||'50');
     const status = url.searchParams.get('status');
     let list = [...jobs.values()];
