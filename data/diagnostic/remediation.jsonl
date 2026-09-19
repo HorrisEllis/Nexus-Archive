@@ -7,3 +7,4 @@
 {"action":"system_recovered","system":"copilot","downMs":30246,"ts":1789524241992}
 {"action":"forge_shell_unavailable","reason":"orchestrator offline","fix":"Start orchestrator","ts":1789526676559}
 {"action":"forge_shell_unavailable","reason":"ui/forge-shell.html missing","fix":"Deploy ui/forge-shell.html","ts":1789529862067}
+{"action":"forge_shell_unavailable","reason":"ui/forge-shell.html missing","fix":"Deploy ui/forge-shell.html","ts":1789824801894}

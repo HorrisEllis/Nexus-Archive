@@ -1,0 +1,1 @@
+{"uuid":"ab81cc23-1f71-479a-9a38-0be0329da154","system":"idearium","component":"idearium.health","action":"registered","status":"ok","tags":["idearium"],"detail":"Service liveness check","causedBy":"idearium","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:323","ts":1789824798417}

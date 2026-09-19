@@ -1,0 +1,1 @@
+{"uuid":"6dc9b331-bdcc-469f-86c8-abdf5a34b470","system":"copilot","component":"copilot.health","action":"registered","status":"ok","tags":["copilot"],"detail":"Co-pilot health","causedBy":"copilot","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:323","ts":1789824798518}

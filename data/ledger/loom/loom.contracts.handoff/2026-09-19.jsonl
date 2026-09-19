@@ -1,0 +1,1 @@
+{"uuid":"e164021a-034c-4524-85d3-a04d0bc1804c","system":"loom","component":"loom.contracts.handoff","action":"registered","status":"ok","tags":["loom","write"],"detail":"Hand off a contract","causedBy":"loom","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:323","ts":1789824798575}

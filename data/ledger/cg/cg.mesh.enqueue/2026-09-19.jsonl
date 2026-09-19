@@ -1,0 +1,1 @@
+{"uuid":"0aab9a59-7583-4bc0-8c15-194f804c436d","system":"cg","component":"cg.mesh.enqueue","action":"registered","status":"ok","tags":["cg","mesh"],"detail":"Queue task for mesh processing","causedBy":"clear-glass","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:323","ts":1789824798650}

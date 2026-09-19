@@ -1,0 +1,1 @@
+{"uuid":"b2d4f479-643a-472a-9be5-ccfa59624317","system":"cg","component":"cg.mesh.route","action":"registered","status":"ok","tags":["cg","mesh","raid"],"detail":"RAID-route prompt to healthiest agent","causedBy":"clear-glass","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:323","ts":1789824798649}

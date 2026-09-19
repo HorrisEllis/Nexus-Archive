@@ -1,0 +1,1 @@
+{"uuid":"bf94a8de-c7ca-44d5-8c21-dac508b00a4e","system":"cortex","component":"cortex.memory.forget","action":"registered","status":"ok","tags":["cortex","memory"],"detail":"Archive memory row (never delete)","causedBy":"cortex","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:323","ts":1789824798543}

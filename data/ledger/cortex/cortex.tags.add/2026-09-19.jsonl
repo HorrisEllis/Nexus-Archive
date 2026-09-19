@@ -1,0 +1,1 @@
+{"uuid":"39038e35-3932-4c44-922f-e24c39f00a41","system":"cortex","component":"cortex.tags.add","action":"registered","status":"ok","tags":["cortex"],"detail":"Add tag","causedBy":"cortex","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:323","ts":1789824798562}

@@ -1,0 +1,1 @@
+{"uuid":"8a190818-a061-4980-9fb8-4f1f79cd00cd","system":"cortex","component":"cortex.snapshot.rollback","action":"registered","status":"ok","tags":["cortex","snapshot"],"detail":"Rollback to snapshot","causedBy":"cortex","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:323","ts":1789824798554}

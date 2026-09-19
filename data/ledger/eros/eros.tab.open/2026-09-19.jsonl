@@ -1,0 +1,1 @@
+{"uuid":"9fd373df-4120-4069-b4af-d086be8d1590","system":"eros","component":"eros.tab.open","action":"registered","status":"ok","tags":["eros","tab"],"detail":"Open new CDP tab","causedBy":"erosmancer-os","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:323","ts":1789824798684}

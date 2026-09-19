@@ -1,0 +1,1 @@
+{"uuid":"63114790-50b3-489c-b4e1-cde758aa337a","system":"copilot","component":"copilot.stream.query","action":"registered","status":"ok","tags":["copilot"],"detail":"Query the continuous event stream","causedBy":"copilot","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:323","ts":1789824798505}

@@ -1,0 +1,1 @@
+{"uuid":"66934639-05e6-4fa0-ac32-bfb1e1d8d395","system":"cg","component":"cg.fingerprint.import","action":"registered","status":"ok","tags":["cg","fingerprint"],"detail":"Import Firefox profile for agent","causedBy":"clear-glass","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:323","ts":1789824798668}

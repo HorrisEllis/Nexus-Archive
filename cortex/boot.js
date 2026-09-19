@@ -193,9 +193,55 @@ const _pushRecall = new CortexPushRecall({
 // requires it anymore.
 
 // Ensure data dirs exist
-['data/cortex/memory', 'data/cortex/ledger', 'data/snapshots'].forEach(d => {
+// §D3 2026-09-19 — 'data/snapshots' removed from this list. James:
+// "cortex is not versionium... there should not be any .nex files
+// generating in cortex." The snapshot engine moved to versionium/lib/
+// snapshot.js and writes to versionium/data/snapshots; this line was
+// creating a root-level data/snapshots that the engine never wrote to
+// (it used cortex/data/snapshots, now relocated) — an empty directory
+// whose only effect was to keep implying cortex owns snapshots. The 17
+// real .nex files that WERE under cortex/data/snapshots were moved to
+// versionium and re-indexed (versionium/lib/migrate-cortex-snapshots.js);
+// nothing was deleted (§0.3).
+['data/cortex/memory', 'data/cortex/ledger'].forEach(d => {
   fs.mkdirSync(path.join(ROOT, d), { recursive: true });
 });
+
+// §PER-SYSTEM LEDGER 2026-09-19 — James: "the ledgers in cortex need to be
+// per system." lib/component-ledger.js now writes each row to the owning
+// system's own store (lib/ledger-store.js), but rows written BEFORE that
+// change are still in cortex's shared component_ledger table. New writes
+// landing in the right place while the history stays in the wrong one is a
+// half-migration, and the read surface would then report an empty past.
+//
+// Runs here, in cortex, for two real reasons rather than convenience:
+// cortex OWNS the source table (§5.9 — the system holding the data runs the
+// migration off it), and cortex is autopilot's phase-1 kernel, so this
+// completes before any phase-2 system writes its first ledger row.
+//
+// §IDEMPOTENT, §NON-DESTRUCTIVE — copies only rows the target store doesn't
+// already have, keyed on uuid; cortex's own rows are left in place (§0.3).
+// purgeSource is deliberately NOT passed: five readers (cli/sentinel.js,
+// lib/introspect.js, intelligence/index.js, cli/compact.js,
+// cli/purge-pollution.js) still read cortex's table directly, and purging
+// before they move would make them report "no rows" rather than "moved"
+// (§1.2 — a failure must never look like a success).
+try {
+  const { migrateLedgerPerSystem } = require('../lib/migrate-ledger-per-system.js');
+  const r = migrateLedgerPerSystem();
+  if (r && r.copied) {
+    const spread = Object.entries(r.bySystem).map(([s, n]) => `${s}:${n}`).join(' ');
+    console.log(`[cortex] ledger migrated to per-system stores — ${r.copied} row(s) [${spread}]`);
+  }
+  if (r && r.errors && r.errors.length) {
+    console.warn(`[cortex] §1.2 ledger migration — ${r.errors.length} row(s) failed to copy; cortex's copy is untouched, safe to re-run`);
+  }
+  if (r && r.ok === false) {
+    console.warn(`[cortex] §1.2 ledger migration did not run: ${r.reason}`);
+  }
+} catch (e) {
+  console.warn(`[cortex] per-system ledger migration failed (non-fatal): ${e.message}`);
+}
 
 // ── CFR field state — lightweight in-memory implementation ───────────────────
 // Full CFR (lib/cfr/) is wired in orchestrator. Cortex keeps a HTTP-readable

@@ -1,0 +1,1 @@
+{"uuid":"81120cf6-fb40-41c1-b58b-f7bde80c8a96","system":"idearium","component":"idearium.repo.show","action":"registered","status":"ok","tags":["idearium"],"detail":"Get a single repo by uuid","causedBy":"idearium","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:323","ts":1789824798462}

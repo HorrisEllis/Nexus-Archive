@@ -1,0 +1,1 @@
+{"uuid":"03217146-2562-41fa-a952-91f9f16ac5b6","system":"cortex","component":"cortex.memory.working","action":"registered","status":"ok","tags":["cortex"],"detail":"Working memory snapshot","causedBy":"cortex","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:323","ts":1789824798544}

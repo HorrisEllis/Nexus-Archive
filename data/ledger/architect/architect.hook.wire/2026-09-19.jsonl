@@ -1,0 +1,1 @@
+{"uuid":"53888d89-17f4-42f8-a358-e164bdf789ad","system":"architect","component":"architect.hook.wire","action":"registered","status":"ok","tags":["architect","wires"],"detail":"Wire two hooks together","causedBy":"architect","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:323","ts":1789824798599}

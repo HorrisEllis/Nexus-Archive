@@ -1,0 +1,1 @@
+{"uuid":"5969f74f-a721-4ec0-861c-f2fdb1514c14","system":"loom","component":"loom.hooks.create","action":"registered","status":"ok","tags":["loom","write"],"detail":"Create/update a hook (write authority)","causedBy":"loom","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:323","ts":1789824798566}

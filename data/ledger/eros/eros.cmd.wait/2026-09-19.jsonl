@@ -1,0 +1,1 @@
+{"uuid":"a506505c-4361-42f4-933e-8a560f057b2e","system":"eros","component":"eros.cmd.wait","action":"registered","status":"ok","tags":["eros","driver"],"detail":"Wait for selector to appear","causedBy":"erosmancer-os","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:323","ts":1789824798703}

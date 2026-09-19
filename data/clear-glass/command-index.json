@@ -1,8 +1,8 @@
 {
   "systemId": "clear-glass",
   "port": 7702,
-  "generatedAt": 1789529667792,
-  "commandCount": 68,
+  "generatedAt": 1789824795761,
+  "commandCount": 70,
   "commands": [
     {
       "method": "GET",
@@ -75,6 +75,10 @@
     {
       "method": "GET",
       "path": "/cli/commands"
+    },
+    {
+      "method": "POST",
+      "path": "/cli/downloads"
     },
     {
       "method": "GET",
@@ -203,6 +207,10 @@
     {
       "method": "POST",
       "path": "/cmd"
+    },
+    {
+      "method": "POST",
+      "path": "/compartment/active"
     },
     {
       "method": "GET",

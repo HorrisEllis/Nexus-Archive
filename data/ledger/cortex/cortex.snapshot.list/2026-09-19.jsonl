@@ -1,0 +1,1 @@
+{"uuid":"033907c3-8127-4eda-82af-26973d426dda","system":"cortex","component":"cortex.snapshot.list","action":"registered","status":"ok","tags":["cortex"],"detail":"Snapshot list","causedBy":"cortex","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:323","ts":1789824798552}

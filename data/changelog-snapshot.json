@@ -18,7 +18,7 @@
     "version": "0.1.0-phasemap"
   },
   "2026-09-01-living-model-and-autonomous-pipeline-phasemap": {
-    "version": "0.1.0-phasemap"
+    "version": "0.2.0-phasemap"
   },
   "2026-09-02-agent-mesh-full-map-phasemap": {
     "version": "1.0.0"
@@ -48,6 +48,12 @@
     "version": "0.1.0-phasemap"
   },
   "track-b-sovereignty": {
+    "version": "0.1.0-phasemap"
+  },
+  "architect-blueprint-forge-idearium-consolidation": {
+    "version": "0.1.0-phasemap"
+  },
+  "cortex-to-intelligence-and-versionium-consolidation": {
     "version": "0.1.0-phasemap"
   },
   "agent-intelligence-loop": {
@@ -101,8 +107,14 @@
   "chat-logger": {
     "version": "1.0.0"
   },
+  "clear-glass": {
+    "version": "3.1.0"
+  },
   "clearglass-agent-suite-and-cfr-loom": {
     "version": "0.1.0-phasemap"
+  },
+  "clearglass-snowflake-relay": {
+    "version": "1.0.0"
   },
   "cli-reasoning": {
     "version": "1.0.0"
@@ -153,7 +165,7 @@
     "version": "0.1.0"
   },
   "copilot": {
-    "version": "2.0.0"
+    "version": "3.5.0"
   },
   "cortex-dual-cognition": {
     "version": "1.0.0"
@@ -165,10 +177,10 @@
     "version": "0.1.0-phasemap"
   },
   "cortex": {
-    "version": "3.2.0"
+    "version": "3.5.0"
   },
-  "compartment-os": {
-    "version": "1.5.0"
+  "cos": {
+    "version": "0.1.7"
   },
   "diagnostic-engines": {
     "version": "1.0.0"
@@ -183,7 +195,7 @@
     "version": "1.1.0"
   },
   "emerge": {
-    "version": "1.0.0"
+    "version": "1.1.0"
   },
   "eravos-agnostic-canvas": {
     "version": "1.0.0"
@@ -219,7 +231,7 @@
     "version": "1.0.0"
   },
   "guardian": {
-    "version": "3.6.1"
+    "version": "3.6.2"
   },
   "handshake-ledger": {
     "version": "0.1.0-spec"
@@ -255,7 +267,7 @@
     "version": "1.0.0"
   },
   "idearium": {
-    "version": "3.0.0"
+    "version": "4.1.0"
   },
   "intelligence-bridge": {
     "version": "1.0.0"
@@ -280,6 +292,9 @@
   },
   "loom-phasemap-section": {
     "version": "0.1.0-phasemap"
+  },
+  "loom": {
+    "version": "1.5.0"
   },
   "loop-topology": {
     "version": "1.0.0"
@@ -350,6 +365,9 @@
   "nexus-repository-system-build": {
     "version": "0.1.0-phasemap"
   },
+  "nexus-repository-system": {
+    "version": "1.0.0"
+  },
   "nexus-self-build-pipeline": {
     "version": "0.1.0-phasemap"
   },
@@ -371,17 +389,20 @@
   "nexus-tablet": {
     "version": "0.4.0-spec"
   },
+  "nexus-uri-clearglass-mesh-integration": {
+    "version": "1.0.0"
+  },
   "nexus": {
     "version": "2.0.0"
   },
-  "ollama": {
+  "ollama-bridge": {
     "version": "1.0.0"
   },
   "open-loop-taxonomy": {
     "version": "1.0.0"
   },
   "orchestrator": {
-    "version": "2.0.0"
+    "version": "2.2.0"
   },
   "raid-routing-fidelity": {
     "version": "0.1.0-phasemap"
@@ -482,7 +503,13 @@
   "vector-memory": {
     "version": "1.0.0"
   },
+  "versionium": {
+    "version": "3.1.0"
+  },
   "warp-devkit-addendum": {
     "version": "1.4.1"
+  },
+  "warp": {
+    "version": "1.4.0"
   }
 }

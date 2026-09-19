@@ -1,0 +1,1 @@
+{"uuid":"f20bc262-c2bf-4883-a7c4-04d8a2fc85b4","system":"copilot","component":"copilot.lifeline","action":"escalated","status":"error","tags":["copilot","sse"],"detail":{"provider":"chatgpt"},"causedBy":null,"contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"copilot\\server.js:743","ts":1789824878608}

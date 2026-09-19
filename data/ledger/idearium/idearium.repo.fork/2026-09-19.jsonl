@@ -1,0 +1,1 @@
+{"uuid":"2600da24-2a7b-456a-bb82-89d2ad2e0c16","system":"idearium","component":"idearium.repo.fork","action":"registered","status":"ok","tags":["idearium"],"detail":"Fork a repo into a new lineage","causedBy":"idearium","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:323","ts":1789824798465}

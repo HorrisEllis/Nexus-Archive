@@ -1,0 +1,1 @@
+{"uuid":"28776fb3-e077-49d6-a7bd-1654f03deb3b","system":"cg","component":"cg.url.listen.list","action":"registered","status":"ok","tags":["cg","listener"],"detail":"List active URL listeners","causedBy":"clear-glass","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:323","ts":1789824798659}

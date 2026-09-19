@@ -1,21 +1,22 @@
 {
   "stats": {
     "orchestrator.boot.started": {
-      "count": 7,
-      "lastTs": 1789529666685,
+      "count": 8,
+      "lastTs": 1789824786223,
       "intervals": [
         2477955,
         3667985,
         865753,
         3525377,
         1751572,
-        184759
+        184759,
+        295119538
       ],
-      "totalMs": 12473401
+      "totalMs": 307592939
     },
     "orchestrator.phase.ok": {
-      "count": 49,
-      "lastTs": 1789529670619,
+      "count": 56,
+      "lastTs": 1789824798902,
       "intervals": [
         1,
         15,
@@ -64,24 +65,32 @@
         58,
         1,
         1,
-        3749
+        3749,
+        295115611,
+        1,
+        21,
+        56,
+        1,
+        1,
+        12592
       ],
-      "totalMs": 12477329
+      "totalMs": 307605612
     },
     "guardian.seam.watchdog.started": {
-      "count": 5,
-      "lastTs": 1789529666792,
+      "count": 6,
+      "lastTs": 1789824789142,
       "intervals": [
         2475256,
         8061954,
         1748711,
-        184654
+        184654,
+        295122350
       ],
-      "totalMs": 12470575
+      "totalMs": 307592925
     },
     "gate.failed": {
-      "count": 77,
-      "lastTs": 1789529673570,
+      "count": 86,
+      "lastTs": 1789824841761,
       "intervals": [
         459,
         99,
@@ -158,24 +167,34 @@
         203,
         1537,
         1018,
-        3
+        3,
+        295115573,
+        9764,
+        9,
+        1531,
+        942,
+        32325,
+        97,
+        5697,
+        2253
       ],
-      "totalMs": 12477353
+      "totalMs": 307645544
     },
     "guardian.boot.started": {
-      "count": 5,
-      "lastTs": 1789529666794,
+      "count": 6,
+      "lastTs": 1789824789144,
       "intervals": [
         2475255,
         8061956,
         1748710,
-        184655
+        184655,
+        295122350
       ],
-      "totalMs": 12470576
+      "totalMs": 307592926
     },
     "guardian.phase.ok": {
-      "count": 60,
-      "lastTs": 1789529666889,
+      "count": 72,
+      "lastTs": 1789824789185,
       "intervals": [
         17,
         1,
@@ -235,62 +254,26 @@
         0,
         0,
         26,
-        1
-      ],
-      "totalMs": 12470670
-    },
-    "system.registered": {
-      "count": 246,
-      "lastTs": 1789529673600,
-      "intervals": [
-        1629,
-        126,
-        23,
-        1863,
-        133,
-        12,
-        1236,
-        6,
-        1738595,
-        7,
-        1107,
+        1,
+        295122255,
         20,
-        2,
-        34,
-        2,
+        1,
+        0,
+        1,
+        0,
         6,
-        4,
-        4,
-        9,
-        55,
-        24,
-        315,
-        5,
-        2,
-        426,
-        1,
-        298,
-        7,
-        1151,
-        4,
-        3,
-        1,
-        1,
-        1,
-        24,
-        2,
-        2,
-        1,
-        6,
-        1,
         1,
         1,
         0,
-        76,
-        2,
-        2,
-        447,
-        110,
+        9,
+        2
+      ],
+      "totalMs": 307592966
+    },
+    "system.registered": {
+      "count": 294,
+      "lastTs": 1789824798928,
+      "intervals": [
         173,
         3,
         1181,
@@ -342,108 +325,74 @@
         1175,
         1,
         913,
+        2,
+        295115575,
+        5,
+        678,
+        110,
+        2,
+        1,
+        752,
+        0,
+        37,
+        7,
+        16,
+        7,
+        6,
+        5,
+        164,
+        6,
+        9,
+        5,
+        198,
+        1,
+        659,
+        0,
+        26,
+        110,
+        1,
+        1,
+        752,
+        1,
+        30,
+        15,
+        17,
+        1,
+        0,
+        13,
+        170,
+        2,
+        0,
+        14,
+        851,
+        0,
+        1882,
+        88,
+        13,
+        1912,
+        89,
+        4,
+        1091,
         2
       ],
-      "totalMs": 12477230
+      "totalMs": 307602558
     },
     "guardian.registered": {
-      "count": 5,
-      "lastTs": 1789529666876,
+      "count": 6,
+      "lastTs": 1789824789177,
       "intervals": [
         2475118,
         8061963,
         1748702,
-        184703
+        184703,
+        295122301
       ],
-      "totalMs": 12470486
+      "totalMs": 307592787
     },
     "orchestrator.pulse": {
-      "count": 11928,
-      "lastTs": 1789530142287,
+      "count": 12011,
+      "lastTs": 1789824845861,
       "intervals": [
-        2,
-        123,
-        18,
-        1,
-        217,
-        973,
-        240,
-        485,
-        1964,
-        1748,
-        3204,
-        914,
-        126,
-        2,
-        124,
-        14,
-        0,
-        218,
-        968,
-        238,
-        492,
-        1953,
-        1748,
-        3204,
-        916,
-        124,
-        2,
-        127,
-        14,
-        1,
-        223,
-        960,
-        248,
-        490,
-        1950,
-        1744,
-        3206,
-        912,
-        125,
-        8,
-        118,
-        16,
-        6,
-        212,
-        977,
-        237,
-        490,
-        1960,
-        2205,
-        2750,
-        912,
-        123,
-        2,
-        123,
-        18,
-        0,
-        204,
-        987,
-        236,
-        488,
-        1952,
-        2206,
-        2753,
-        919,
-        125,
-        2,
-        130,
-        5,
-        5,
-        205,
-        989,
-        235,
-        492,
-        1935,
-        2224,
-        2752,
-        915,
-        122,
-        4,
-        123,
-        1,
-        16,
-        203,
         987,
         236,
         485,
@@ -460,35 +409,120 @@
         981,
         236,
         491,
-        1942
+        1942,
+        294646896,
+        677,
+        109,
+        755,
+        44,
+        23,
+        10,
+        172,
+        12,
+        859,
+        3928,
+        64,
+        0,
+        3093,
+        266,
+        784,
+        135,
+        624,
+        32,
+        30,
+        6,
+        180,
+        2,
+        868,
+        3916,
+        79,
+        2,
+        3049,
+        297,
+        782,
+        140,
+        628,
+        32,
+        29,
+        1,
+        186,
+        3,
+        858,
+        3915,
+        79,
+        1,
+        3060,
+        297,
+        779,
+        139,
+        624,
+        32,
+        31,
+        1,
+        185,
+        1,
+        862,
+        3923,
+        68,
+        1,
+        3070,
+        298,
+        776,
+        141,
+        613,
+        30,
+        32,
+        0,
+        185,
+        6,
+        866,
+        3924,
+        61,
+        1,
+        3077,
+        293,
+        782,
+        141,
+        615,
+        31,
+        30,
+        0,
+        187,
+        3,
+        853,
+        3928,
+        61,
+        1
       ],
-      "totalMs": 12945890
+      "totalMs": 307649464
     },
     "guardian.boot": {
-      "count": 5,
-      "lastTs": 1789529666888,
+      "count": 6,
+      "lastTs": 1789824789184,
       "intervals": [
         2475114,
         8061967,
         1748703,
-        184706
+        184706,
+        295122296
       ],
-      "totalMs": 12470490
+      "totalMs": 307592786
     },
     "guardian.boot.complete": {
-      "count": 5,
-      "lastTs": 1789529666890,
+      "count": 6,
+      "lastTs": 1789824789185,
       "intervals": [
         2475113,
         8061968,
         1748703,
-        184706
+        184706,
+        295122295
       ],
-      "totalMs": 12470490
+      "totalMs": 307592785
     },
     "ncp.client.connected": {
-      "count": 12,
-      "lastTs": 1789529670617,
+      "count": 13,
+      "lastTs": 1789824798904,
       "intervals": [
         14099,
         320293,
@@ -500,13 +534,14 @@
         1739179,
         3959,
         183943,
-        5
+        5,
+        295128287
       ],
-      "totalMs": 12473942
+      "totalMs": 307602229
     },
     "guardian.provider.connected": {
-      "count": 12,
-      "lastTs": 1789529670618,
+      "count": 13,
+      "lastTs": 1789824798906,
       "intervals": [
         14099,
         320293,
@@ -518,23 +553,15 @@
         1739180,
         3960,
         183941,
-        5
+        5,
+        295128288
       ],
-      "totalMs": 12473942
+      "totalMs": 307602230
     },
     "ncp.message.received": {
-      "count": 112,
-      "lastTs": 1789529673567,
+      "count": 121,
+      "lastTs": 1789824841760,
       "intervals": [
-        278,
-        4,
-        360,
-        1302,
-        3457,
-        124,
-        200,
-        2,
-        2,
         29156,
         119,
         64,
@@ -625,13 +652,22 @@
         185,
         1562,
         1018,
-        2
+        2,
+        295125342,
+        1536,
+        942,
+        32322,
+        67,
+        33,
+        3865,
+        1832,
+        2254
       ],
-      "totalMs": 12476794
+      "totalMs": 307644987
     },
     "guardian.provider.registered": {
-      "count": 12,
-      "lastTs": 1789529671010,
+      "count": 13,
+      "lastTs": 1789824798910,
       "intervals": [
         14110,
         320327,
@@ -643,24 +679,26 @@
         1739345,
         3911,
         184010,
-        204
+        204,
+        295127900
       ],
-      "totalMs": 12474235
+      "totalMs": 307602135
     },
     "idearium.boot.started": {
-      "count": 5,
-      "lastTs": 1789529668808,
+      "count": 6,
+      "lastTs": 1789824789942,
       "intervals": [
         2475818,
         8062097,
         1748649,
-        185088
+        185088,
+        295121134
       ],
-      "totalMs": 12471652
+      "totalMs": 307592786
     },
     "idearium.phase.ok": {
-      "count": 45,
-      "lastTs": 1789529669446,
+      "count": 54,
+      "lastTs": 1789824789975,
       "intervals": [
         13,
         2,
@@ -705,46 +743,58 @@
         13,
         556,
         2,
-        9
+        9,
+        295120497,
+        13,
+        2,
+        9,
+        3,
+        2,
+        2,
+        1,
+        0
       ],
-      "totalMs": 12472289
+      "totalMs": 307592818
     },
     "idearium.booted": {
-      "count": 5,
-      "lastTs": 1789529668878,
+      "count": 6,
+      "lastTs": 1789824789971,
       "intervals": [
         2475820,
         8062095,
         1748666,
-        185111
+        185111,
+        295121093
       ],
-      "totalMs": 12471692
+      "totalMs": 307592785
     },
     "idearium.boot.complete": {
-      "count": 5,
-      "lastTs": 1789529669447,
+      "count": 6,
+      "lastTs": 1789824789978,
       "intervals": [
         2476059,
         8061913,
         1748760,
-        185214
+        185214,
+        295120531
       ],
-      "totalMs": 12471946
+      "totalMs": 307592477
     },
     "eravos.registered": {
-      "count": 5,
-      "lastTs": 1789529668050,
+      "count": 6,
+      "lastTs": 1789824790731,
       "intervals": [
         2475324,
         8061846,
         1748315,
-        184733
+        184733,
+        295122681
       ],
-      "totalMs": 12470218
+      "totalMs": 307592899
     },
     "guardian.tab.dom_map": {
-      "count": 28,
-      "lastTs": 1789529673568,
+      "count": 32,
+      "lastTs": 1789824841761,
       "intervals": [
         14093,
         919,
@@ -772,146 +822,161 @@
         958,
         182912,
         1017,
-        2
+        2,
+        295126878,
+        942,
+        38119,
+        2254
       ],
-      "totalMs": 12474805
+      "totalMs": 307642998
     },
     "architect.registered": {
-      "count": 6,
-      "lastTs": 1789529670717,
+      "count": 7,
+      "lastTs": 1789824791847,
       "intervals": [
         2476729,
         4530810,
         3530135,
         1749157,
-        185018
+        185018,
+        295121130
       ],
-      "totalMs": 12471849
+      "totalMs": 307592979
     },
     "provider.host.starting": {
-      "count": 7,
-      "lastTs": 1789529667748,
+      "count": 8,
+      "lastTs": 1789824795726,
       "intervals": [
         318686,
         14438,
         2132170,
         8067137,
         1743108,
-        184465
+        184465,
+        295127978
       ],
-      "totalMs": 12460004
+      "totalMs": 307587982
     },
     "clear-glass.bgtab.opened": {
-      "count": 5,
-      "lastTs": 1789529667864,
+      "count": 6,
+      "lastTs": 1789824795816,
       "intervals": [
         2465364,
         8067153,
         1743030,
-        184534
+        184534,
+        295127952
       ],
-      "totalMs": 12460081
+      "totalMs": 307588033
     },
     "clear-glass.registered": {
-      "count": 5,
-      "lastTs": 1789529667804,
+      "count": 6,
+      "lastTs": 1789824795771,
       "intervals": [
         2465288,
         8067148,
         1743117,
-        184454
+        184454,
+        295127967
       ],
-      "totalMs": 12460007
+      "totalMs": 307587974
     },
     "clear-glass.window.opened": {
-      "count": 6,
-      "lastTs": 1789529667871,
+      "count": 7,
+      "lastTs": 1789824795820,
       "intervals": [
         2465293,
         8067154,
         1574925,
         168195,
-        184445
+        184445,
+        295127949
       ],
-      "totalMs": 12460012
+      "totalMs": 307587961
     },
     "clear-glass.boot.complete": {
-      "count": 5,
-      "lastTs": 1789529667873,
+      "count": 6,
+      "lastTs": 1789824795822,
       "intervals": [
         2465293,
         8067154,
         1743120,
-        184446
+        184446,
+        295127949
       ],
-      "totalMs": 12460013
+      "totalMs": 307587962
     },
     "orchestrator.ui.opened": {
-      "count": 7,
-      "lastTs": 1789529669887,
+      "count": 8,
+      "lastTs": 1789824798368,
       "intervals": [
         2465921,
         3665036,
         865709,
         3537404,
         1742558,
-        184870
+        184870,
+        295128481
       ],
-      "totalMs": 12461498
+      "totalMs": 307589979
     },
     "orchestrator.booted": {
-      "count": 7,
-      "lastTs": 1789529670592,
+      "count": 8,
+      "lastTs": 1789824798883,
       "intervals": [
         2466038,
         3664149,
         865584,
         3538271,
         1742138,
-        184959
+        184959,
+        295128291
       ],
-      "totalMs": 12461139
+      "totalMs": 307589430
     },
     "orchestrator.boot.complete": {
-      "count": 7,
-      "lastTs": 1789529670619,
+      "count": 8,
+      "lastTs": 1789824798925,
       "intervals": [
         2466033,
         3664127,
         865587,
         3538336,
         1742080,
-        184971
+        184971,
+        295128306
       ],
-      "totalMs": 12461134
+      "totalMs": 307589440
     },
     "provider.host.wake-intro": {
-      "count": 7,
-      "lastTs": 1789529669462,
+      "count": 8,
+      "lastTs": 1789824797175,
       "intervals": [
         320569,
         12512,
         2132905,
         8066730,
         1742373,
-        184843
+        184843,
+        295127713
       ],
-      "totalMs": 12459932
+      "totalMs": 307587645
     },
     "clear-glass.providers.booted": {
-      "count": 5,
-      "lastTs": 1789529670893,
+      "count": 6,
+      "lastTs": 1789824798901,
       "intervals": [
         2465428,
         8067400,
         1742316,
-        184853
+        184853,
+        295128008
       ],
-      "totalMs": 12459997
+      "totalMs": 307588005
     },
     "guardian.ncp.pong": {
-      "count": 8,
-      "lastTs": 1789529134569,
+      "count": 9,
+      "lastTs": 1789824833713,
       "intervals": [
         70502,
         34885,
@@ -919,13 +984,14 @@
         40466,
         55454,
         985287,
-        10602619
+        10602619,
+        295699144
       ],
-      "totalMs": 11853305
+      "totalMs": 307552449
     },
     "guardian.job.dispatched": {
-      "count": 20,
-      "lastTs": 1789529134571,
+      "count": 22,
+      "lastTs": 1789824833715,
       "intervals": [
         0,
         70502,
@@ -945,13 +1011,15 @@
         7021622,
         1,
         265742,
-        0
+        0,
+        295699143,
+        1
       ],
-      "totalMs": 11853306
+      "totalMs": 307552450
     },
     "guardian.ledger.write": {
-      "count": 16,
-      "lastTs": 1789529149046,
+      "count": 17,
+      "lastTs": 1789824833777,
       "intervals": [
         70648,
         5119,
@@ -967,13 +1035,14 @@
         3290101,
         7021619,
         265787,
-        14363
+        14363,
+        295684731
       ],
-      "totalMs": 11867647
+      "totalMs": 307552378
     },
     "guardian.job.confirmed": {
-      "count": 10,
-      "lastTs": 1789529146254,
+      "count": 11,
+      "lastTs": 1789824837675,
       "intervals": [
         66000,
         36281,
@@ -983,9 +1052,10 @@
         1002600,
         3304823,
         7019465,
-        272483
+        272483,
+        295691421
       ],
-      "totalMs": 11859845
+      "totalMs": 307551266
     },
     "guardian.cfr.gap": {
       "count": 11,
@@ -1075,44 +1145,44 @@
   },
   "baseline": {
     "guardian.phase.ok": {
-      "avgIntervalMs": 211367,
-      "stddevMs": 1101436,
-      "consistency": 0,
-      "count": 60,
-      "sampleSize": 59,
-      "computedAt": 1789529666889
-    },
-    "system.registered": {
-      "avgIntervalMs": 19341,
-      "stddevMs": 173698,
-      "consistency": 0,
-      "count": 240,
-      "sampleSize": 100,
-      "computedAt": 1789529671202
-    },
-    "orchestrator.pulse": {
-      "avgIntervalMs": 797,
-      "stddevMs": 934,
-      "consistency": 0,
-      "count": 11920,
-      "sampleSize": 100,
-      "computedAt": 1789530138293
-    },
-    "gate.failed": {
-      "avgIntervalMs": 180733,
-      "stddevMs": 766161,
+      "avgIntervalMs": 4457869,
+      "stddevMs": 35263018,
       "consistency": 0,
       "count": 70,
       "sampleSize": 69,
-      "computedAt": 1789529666793
+      "computedAt": 1789824789174
+    },
+    "system.registered": {
+      "avgIntervalMs": 2953120,
+      "stddevMs": 29363437,
+      "consistency": 0,
+      "count": 290,
+      "sampleSize": 100,
+      "computedAt": 1789824797743
+    },
+    "orchestrator.pulse": {
+      "avgIntervalMs": 2947174,
+      "stddevMs": 29316925,
+      "consistency": 0,
+      "count": 12010,
+      "sampleSize": 100,
+      "computedAt": 1789824845860
+    },
+    "gate.failed": {
+      "avgIntervalMs": 3893705,
+      "stddevMs": 32982205,
+      "consistency": 0,
+      "count": 80,
+      "sampleSize": 79,
+      "computedAt": 1789824798916
     },
     "ncp.message.received": {
-      "avgIntervalMs": 123839,
-      "stddevMs": 643413,
+      "avgIntervalMs": 3074820,
+      "stddevMs": 29359231,
       "consistency": 0,
-      "count": 110,
+      "count": 120,
       "sampleSize": 100,
-      "computedAt": 1789529672548
+      "computedAt": 1789824839507
     },
     "guardian.job.dispatched": {
       "avgIntervalMs": 623858,
@@ -1123,12 +1193,12 @@
       "computedAt": 1789529134571
     },
     "guardian.tab.dom_map": {
-      "avgIntervalMs": 555192,
-      "stddevMs": 1414385,
+      "avgIntervalMs": 10606987,
+      "stddevMs": 53782024,
       "consistency": 0,
-      "count": 20,
-      "sampleSize": 19,
-      "computedAt": 1789527747414
+      "count": 30,
+      "sampleSize": 29,
+      "computedAt": 1789824801388
     },
     "guardian.ledger.write": {
       "avgIntervalMs": 29483,
@@ -1147,20 +1217,20 @@
       "computedAt": 1789518557175
     },
     "orchestrator.phase.ok": {
-      "avgIntervalMs": 315095,
-      "stddevMs": 903109,
+      "avgIntervalMs": 6277407,
+      "stddevMs": 41698150,
       "consistency": 0,
-      "count": 40,
-      "sampleSize": 39,
-      "computedAt": 1789529481998
+      "count": 50,
+      "sampleSize": 49,
+      "computedAt": 1789824786230
     },
     "idearium.phase.ok": {
-      "avgIntervalMs": 319787,
-      "stddevMs": 1341814,
+      "avgIntervalMs": 6277404,
+      "stddevMs": 41708275,
       "consistency": 0,
-      "count": 40,
-      "sampleSize": 39,
-      "computedAt": 1789529668863
+      "count": 50,
+      "sampleSize": 49,
+      "computedAt": 1789824789971
     },
     "guardian.job.confirmed": {
       "avgIntervalMs": 1317761,

@@ -1,0 +1,1 @@
+{"uuid":"dae1cb42-c525-4ae5-a951-78a8547b5567","system":"eros","component":"eros.cmd.navigate","action":"registered","status":"ok","tags":["eros","driver"],"detail":"CDP navigate to URL","causedBy":"erosmancer-os","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:323","ts":1789824798700}

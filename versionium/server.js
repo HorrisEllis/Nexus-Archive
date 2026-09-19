@@ -108,11 +108,29 @@ server.listen(PORT, () => {
   // migrate-legacy-data.js above (closes V6). Separate call, separate file:
   // see migrate-idearium-snapshots.js's own header for why V5 and V6 are
   // not the same migration despite the shared shape.
+  // §D3 CLOSED 2026-09-19 — third migration in the same family, same
+  // idempotent run-every-boot shape as V6 and V5 above. James: "cortex is
+  // not versionium... there should not be any .nex files generating in
+  // cortex." The .nex files that were under cortex/data/snapshots had NO
+  // backup_records rows anywhere — already orphaned before the move, so
+  // this rebuilds the index FROM the files rather than copying rows that
+  // never existed. Separate file for the same §5.7 reason V5 is separate
+  // from V6: a different source (a directory, not a table) and a
+  // different real recovery shape.
   try {
-    const { migrateIdeariumSnapshots } = require('./lib/migrate-idearium-snapshots.js');
-    migrateIdeariumSnapshots({ log: (msg) => console.log(msg) });
+    const { migrateCortexSnapshots } = require('./lib/migrate-cortex-snapshots.js');
+    const r = migrateCortexSnapshots();
+    if (r && r.indexed) {
+      // §1.2 — an empty capture is reported, not quietly indexed as if it
+      // were a usable rollback target.
+      console.log(`[versionium] re-indexed ${r.indexed} relocated snapshot(s)` +
+        (r.emptyCaptures ? ` — ${r.emptyCaptures} are EMPTY captures (pre-§BUGFIX-2026-08-25), rollback to those restores nothing` : ''));
+    }
+    if (r && r.unreadable && r.unreadable.length) {
+      console.warn(`[versionium] ${r.unreadable.length} snapshot file(s) unreadable — see backup_records`);
+    }
   } catch (e) {
-    console.warn(`[versionium] idearium snapshot migration failed (non-fatal): ${e.message}`);
+    console.warn(`[versionium] cortex snapshot re-index failed (non-fatal): ${e.message}`);
   }
 
   // §VS1 — real cross-process field reader (see this file's own header).

@@ -1,5 +1,26 @@
 # NEXUS Changelog
 
+## 2026-09-19 — auto-generated from spec version bumps
+
+- **2026-09-01-living-model-and-autonomous-pipeline-phasemap**: v0.1.0-phasemap → v0.2.0-phasemap. (no purpose line found — undocumented change, check the spec directly)
+- **architect-blueprint-forge-idearium-consolidation** — new spec, v0.1.0-phasemap. (no purpose line found — undocumented change, check the spec directly)
+- **cortex-to-intelligence-and-versionium-consolidation** — new spec, v0.1.0-phasemap. (no purpose line found — undocumented change, check the spec directly)
+- **clear-glass** — new spec, v3.1.0. Sovereign NEXUS browser — Electron + Chromium + Firefox fingerprint +
+- **clearglass-snowflake-relay** — new spec, v1.0.0. Answers thread_1_mesh_node's open "what transport?" question from
+- **copilot**: v2.0.0 → v3.5.0. Sovereign co-pilot system. Separated from Guardian.
+- **cortex**: v3.2.0 → v3.5.0. The memory and brain of NEXUS. Everything that needs to be
+- **cos** — new spec, v0.1.7. Compartment OS — isolated sandboxes with their own process/network/
+- **emerge**: v1.0.0 → v1.1.0. DSL runtime. Reads .eg / .emerge files — a purpose-built declarative
+- **guardian**: v3.6.1 → v3.6.2. The AI engine of NEXUS. Guardian is the only system that touches
+- **idearium**: v3.0.0 → v4.1.0. The idea manager and project repository. Every build starts here
+- **loom** — new spec, v1.5.0. Sovereign component/hook/wire/seam registry + contracts + phasemap
+- **nexus-repository-system** — new spec, v1.0.0. Makes an entire software repository addressable, traversable,
+- **nexus-uri-clearglass-mesh-integration** — new spec, v1.0.0. Maps and phases three integration threads James asked to bring
+- **ollama-bridge** — new spec, v1.0.0. Sovereign Ollama bridge. Local model dispatch, isolated from Guardian.
+- **orchestrator**: v2.0.0 → v2.2.0. The root coordinator. Single focal point for every UI, CLI,
+- **versionium** — new spec, v3.1.0. "Versionium" is referenced throughout this session's design
+- **warp** — new spec, v1.4.0. A standalone, zero-dependency devkit that makes correct LLM-generated
+
 ## 2026-09-16 — auto-generated from spec version bumps
 
 - **idearium-creative-repo-overhaul** — new spec, v0.1.0-phasemap. (no purpose line found — undocumented change, check the spec directly)

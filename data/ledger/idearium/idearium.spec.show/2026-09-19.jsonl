@@ -1,0 +1,1 @@
+{"uuid":"5e697818-27c0-4bfc-93b3-8f14cb669168","system":"idearium","component":"idearium.spec.show","action":"registered","status":"ok","tags":["idearium"],"detail":"Get a single spec by uuid","causedBy":"idearium","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:323","ts":1789824798444}

@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        versionium
-    version:     3.1.0
+    version:     3.2.0
     status:      active
     canonical_implementation: versionium/lib/engine.js
     canonical_http_surface:
@@ -331,4 +331,41 @@ spec:
     - version: 3.0.0
       date: 2026-09-02
       summary: "VS1 — promoted from a library embedded in cortex's process to its own sovereign system (versionium/server.js, port 3754, own data folder, own component registry, own event taxonomy). Every real caller repointed."
+      versioniumCommitId: null
+    - version: 3.1.0
+      date: 2026-09-15
+      summary: >
+        file_delta's home decided as versionium/ (D1) and
+        lib/migrate-idearium-snapshots.js built to close gap V5 (D2-D3),
+        plus the D4/D5 test-isolation fix. §RECONSTRUCTED 2026-09-19 —
+        this meta version was bumped to 3.1.0 at the time but no
+        version_history entry was written for it, and lib/version.js was
+        never bumped off 3.0.0, which is the spec-drift the precommit
+        gate has been reporting since. Summarised here from
+        docs/2026-09-15-versionium-cortex-snapshot-migration-decision.md's
+        own D1-D7 record, not reconstructed from memory (§0.1).
+      versioniumCommitId: null
+    - version: 3.2.0
+      date: 2026-09-19
+      summary: >
+        D3 closed — the snapshot/rollback engine is versionium's.
+        cortex/snapshot/index.js's implementation moved to
+        versionium/lib/snapshot.js with a deliberate ROLE SPLIT:
+        versionium owns the snapshot INDEX (backup_records,
+        snapshot_prune_log) in its own sovereign store, while the live
+        tables a snapshot captures and a rollback restores remain
+        cortex's, because those are the subject and not the bookkeeping
+        (§5.9). Same exception lib/store.js already documents for
+        event_log. cortex/snapshot/index.js kept as a re-export shim for
+        its five real call sites (§0.3) — two of which, cortex/boot.js
+        and guardian/server.js, do not guard their require. New
+        lib/migrate-cortex-snapshots.js rebuilds the index for the 17
+        relocated .nex files, which had no backup_records rows anywhere
+        and were therefore already unreachable; 14 of them are empty
+        captures from this engine's own §BUGFIX 2026-08-25 and are
+        flagged rather than dropped. cortex/versionium/ deleted as an
+        unexecuted archive, recoverable via git show
+        b60ab30:cortex/versionium/index.js. Full decision record:
+        docs/2026-09-19-versionium-snapshot-and-ledger-decision.md
+        (D8-D12).
       versioniumCommitId: null

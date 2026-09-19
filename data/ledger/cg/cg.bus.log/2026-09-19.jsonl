@@ -1,0 +1,1 @@
+{"uuid":"e1bd9a3a-0d1d-4bbe-9328-89098f0b361d","system":"cg","component":"cg.bus.log","action":"registered","status":"ok","tags":["cg","debug"],"detail":"SISO StreamLog entries","causedBy":"clear-glass","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:323","ts":1789824798615}

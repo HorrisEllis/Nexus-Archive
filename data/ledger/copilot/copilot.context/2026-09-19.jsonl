@@ -1,0 +1,1 @@
+{"uuid":"e3e7c2ee-b2e9-470e-a127-df918b1b58b9","system":"copilot","component":"copilot.context","action":"assembled","status":"info","tags":["copilot","sse"],"detail":{"layers":7,"tokens":260},"causedBy":null,"contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"copilot\\server.js:743","ts":1789824833554}

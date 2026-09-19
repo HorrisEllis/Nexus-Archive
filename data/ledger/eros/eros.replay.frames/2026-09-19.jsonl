@@ -1,0 +1,1 @@
+{"uuid":"a9bdc8f4-5dea-4a5c-a519-9792895a8dbb","system":"eros","component":"eros.replay.frames","action":"registered","status":"ok","tags":["eros","replay"],"detail":"List recorded script frames","causedBy":"erosmancer-os","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:323","ts":1789824798712}

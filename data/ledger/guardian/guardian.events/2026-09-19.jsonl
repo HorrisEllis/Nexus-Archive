@@ -1,0 +1,1 @@
+{"uuid":"ca4e8b2b-7108-46be-9861-673845f9a54b","system":"guardian","component":"guardian.events","action":"registered","status":"ok","tags":["guardian","stream"],"detail":"SSE — all guardian bus events","causedBy":"guardian","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:323","ts":1789824798385}
