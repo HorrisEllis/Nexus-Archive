@@ -36,7 +36,7 @@ const USER_STAGES     = new Set(['no_login', 'captcha']);
 const CONTENT_STAGES  = new Set(['attach_failed', 'inject_failed']);
 
 function createLadder({ registry, mesh, picker, mode = () => process.env.GUARDIAN_TRANSPORT || 'ncp-only',
-                        breakerThreshold = 3, breakerMs = 60000, now = Date.now, log = () => {}, onProgress = null,
+                        breakerThreshold = 3, breakerMs = 60000, now = Date.now, log = () => {}, onProgress = null, wakeHint = null,
                         // Whole code bases generate for many minutes: 90s was a guaranteed failure. Env-configurable, default 1h.
                         timeoutMs = parseInt(process.env.GUARDIAN_MESH_TIMEOUT_MS || '3600000', 10) } = {}) {
   let infraFails = 0, openUntil = 0;
@@ -66,9 +66,13 @@ function createLadder({ registry, mesh, picker, mode = () => process.env.GUARDIA
     catch (e) { return { kind: 'failed', reason: e.code || 'account_error', error: e.message, trail }; }
     const agentId = job.agentId || `mesh-${job.provider}-${accountId || 'default'}`;
 
-    const send = (selectors) => callMesh({ provider: job.provider, prompt: job.prompt, content: job.content, agentId, accountId, jobId: job.id, selectors, timeoutMs, onProgress: onProgress ? (p) => onProgress(job, p) : null });
+    // The mesh has no userscript, so the NEXUS agent hint (wake-hint.js) is added here, once, to the SENT prompt only.
+    const hint = wakeHint ? wakeHint.apply({ provider: job.provider, agentId, command: job.command, prompt: job.prompt }) : null;
+    const sentPrompt = hint ? hint.prompt : job.prompt;
+    const send = (selectors) => callMesh({ provider: job.provider, prompt: sentPrompt, content: job.content, agentId, accountId, jobId: job.id, selectors, timeoutMs, onProgress: onProgress ? (p) => onProgress(job, p) : null });
     let r = await send(agent.selectors);
-    step('mesh', r);
+    step('mesh', r, hint ? { wakeHint: { injected: hint.injected, mode: hint.mode } } : {});
+    if (hint && hint.injected && r.sent !== false) wakeHint.commit(hint.key);   // sent or possibly sent: the hint is spent
 
     // ── tier 2: archaeology + automatic DOM mapping, once, only for selector drift ──
     if (!r.ok && r.sent === false && SELECTOR_STAGES.has(r.stage)) {

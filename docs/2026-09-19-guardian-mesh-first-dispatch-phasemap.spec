@@ -106,3 +106,7 @@ spec:
     - "Auto DOM mapping proposes replacements for the failing selector only, never rewrites working ones; it cannot find a response container on a page with no assistant message yet."
     - "Streaming detection uses generic indicators (data-is-streaming, a visible Stop control, class *streaming*). A provider using none of these is caught by the quiet-period rule instead."
     - "Provider size limits are unknown: a paste over a site's limit would surface as inject_failed/attach_failed or a rate-limit message, not as silent truncation, but the mesh cannot know the limit in advance."
+  wake_wiring_0_39_156:
+    what: "The wake userscript's listener, agent hint and model-output wake detection do not exist on the mesh path. Hint injected by guardian/lib/wake-hint.js
+      (mesh transport only, sent prompt only, byte-identical, once per tab), agent-initiated wake answered by guardian/lib/wake-loop.js (mesh completions only,
+      depth-capped), wake replies for agent wakes seen in userscript tabs pinned to the userscript (transport ncp) with accountId. See HANDOFF-2026-09-19-mesh-first-dispatch.md addendum."

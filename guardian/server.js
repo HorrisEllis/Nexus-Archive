@@ -618,7 +618,7 @@ const pendingQueue = new Map(); // provider → job[] (legacy fallback for non-p
 const _agentRegistry = require('./lib/agent-registry').createAgentRegistry();
 const _meshClient    = require('./lib/mesh-client').createMeshClient();
 const _ladder = require('./lib/dispatch-ladder').createLadder({
-  registry: _agentRegistry, mesh: _meshClient,
+  registry: _agentRegistry, mesh: _meshClient, wakeHint: require('./lib/wake-hint').createHintInjector(),
   picker: { request: async (a) => {
     bus.emit('guardian.picker.needed', { jobId: a.job && a.job.id, provider: a.provider, reason: a.reason, note: a.note || null });
     cockpitBroadcast({ type: 'GUARDIAN_PICKER_NEEDED', jobId: a.job && a.job.id, provider: a.provider, reason: a.reason, note: a.note || null });
@@ -640,6 +640,16 @@ const {
   bus, ncp, pendingQueue, cockpitBroadcast, NEXUS_URL, postEvent: _postEvent,
   ladder: _ladder, completeFromMesh: _completeFromMesh,
 });
+
+// §BUILT 2026-09-19 — agent-initiated wake for MESH-delivered jobs (the userscript path answers its own): when a mesh job's
+// answer contains a line starting "hey nexus," ask the co-pilot and reply with a 'wake-reply' job in the same agent tab.
+// See guardian/lib/wake-loop.js. Depth-capped; never resends the original prompt.
+const _wakeLoopMod = require('./lib/wake-loop');
+const _wakeLoop = _wakeLoopMod.createWakeLoop({
+  askCopilot: _wakeLoopMod.createCopilotAsk(), createJob, dispatchJob, getJob: (id) => jobs.get(id), bus,
+  log: (m) => console.log(`[guardian/wake] ${m}`),
+});
+bus.on('guardian.job.complete', (d) => { _wakeLoop.handleComplete({ jobId: d && d.jobId }).catch((e) => console.warn(`[guardian/wake] ${e.message}`)); });
 
 // §BUILT 2026-09-11 — James: "persistent and doesn't leave until it's
 // delivered." createJobStore() (guardian/lib/jobs.js, this same pass)
@@ -3248,7 +3258,8 @@ function handleExtendedRoutes(req, res, url, method) {
       }
 
       // §LAW II — createJob writes to JAA
-      const job = createJob({ command, provider, prompt, content, source: body.source || null });
+      const job = createJob({ command, provider, prompt, content, source: body.source || null,
+        accountId: body.accountId, agentId: body.agentId, transport: body.transport === 'ncp' ? 'ncp' : undefined, wakeDepth: body.wakeDepth });
       dispatchJob(job);
       pRes(res, 200, { ok:true, jobId: job.id, status: job.status, provider });
 

@@ -56,7 +56,7 @@ function run() {
   });
 
   test('WR-008', 'the old overlay-only injectAnswer path is now a fallback, not the primary answer path', () => {
-    assert.ok(/dispatchToGuardian\(d\.agent, text\)/.test(wakeRelay) && /fallback/i.test(wakeRelay));
+    assert.ok(/dispatchToGuardian\(d\.agent, text(?:, \{[^)]*\})?\)/.test(wakeRelay) && /fallback/i.test(wakeRelay));
   });
 
   console.log(`\n${passed} passed, ${failed} failed`);

@@ -140,7 +140,7 @@ function startWakeRelay(providerHost, opts = {}) {
     // d.agent's actual chat composer and submitted — a real message the
     // provider itself receives and can respond to, not just something
     // shown to the person watching.
-    const dispatched = await dispatchToGuardian(d.agent, text);
+    const dispatched = await dispatchToGuardian(d.agent, text, { accountId: d.account, agentId: d.agentId });
     if (dispatched.ok) {
       log(`[wake-relay] guardian job ${dispatched.jobId} → ${d.agent}: answer dispatched as real chat input`);
       return;
@@ -164,9 +164,14 @@ function startWakeRelay(providerHost, opts = {}) {
   // eventual reply comes back through guardian's normal NCP flow (visible
   // via GET /jobs, cockpit, etc.), not through this function — this only
   // needs to know the job was accepted for dispatch, not how it resolves.
-  function dispatchToGuardian(provider, text) {
+  function dispatchToGuardian(provider, text, who = {}) {
     return new Promise((resolve) => {
-      const body = JSON.stringify({ provider, command: 'wake-reply', prompt: text, source: 'copilot' });
+      // 2026-09-19: only the AGENT says "hey nexus". The event came from a userscript tab, so the answer goes back into THAT tab
+      // (the userscript, by NCP). Under
+      // mesh-first a reply would otherwise open a different mesh tab. transport:'ncp' pins it; accountId/agentId identify the
+      // account so the right cookie-vault identity/tab is used.
+      const body = JSON.stringify({ provider, command: 'wake-reply', prompt: text, source: 'copilot', transport: 'ncp',
+        accountId: who.accountId || undefined, agentId: who.agentId || undefined });
       const req = http.request(
         { hostname: guardianHost, port: guardianPort, path: '/command', method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } },

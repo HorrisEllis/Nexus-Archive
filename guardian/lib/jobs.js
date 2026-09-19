@@ -128,7 +128,7 @@ function createJobStore() {
     }
   }
 
-  function createJob({ command, provider, prompt, content, source, tools }) {
+  function createJob({ command, provider, prompt, content, source, tools, accountId, agentId, transport, wakeDepth }) {
     const id = randomUUID();
     // §ACK-INJECTION-FIX — computed once at creation, not per-dispatch-
     // retry, so a job's persona stays stable across any real redelivery.
@@ -136,6 +136,9 @@ function createJobStore() {
     const job = {
       id, command, provider, prompt, content: content || null, source: source || null,
       tools: Array.isArray(tools) ? tools : null,
+      // 2026-09-19: which account/agent tab this job belongs to, an optional transport pin ('ncp' = the userscript, never the
+      // mesh: a wake reply to a HUMAN must land in the tab they typed in), and wake recursion depth (loop guard).
+      accountId: accountId || null, agentId: agentId || null, transport: transport || null, wakeDepth: wakeDepth || 0,
       hat,
       status: 'pending', response: '', ts: Date.now(), updatedAt: Date.now(),
     };
