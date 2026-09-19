@@ -45,7 +45,8 @@ const { randomUUID } = require('crypto');
  * cockpitBroadcast(data), dispatchToMistral(job) → Promise).
  */
 function createDispatcher(deps) {
-  const { updateJob, bus, ncp, pendingQueue, cockpitBroadcast, dispatchToMistral, dispatchToDeepseek, pingTimeoutMs, completionTimeoutMs } = deps;
+  const { updateJob, bus, ncp, pendingQueue, cockpitBroadcast, dispatchToMistral, dispatchToDeepseek, pingTimeoutMs, completionTimeoutMs,
+          ladder, completeFromMesh } = deps;   // 2026-09-19: optional mesh-first ladder (guardian/lib/dispatch-ladder.js)
   for (const [name, fn] of Object.entries({ updateJob, bus, ncp, cockpitBroadcast, dispatchToMistral, dispatchToDeepseek })) {
     if (!fn) throw new Error(`[dispatcher] missing required dependency: ${name}`);
   }
@@ -203,73 +204,6 @@ function createDispatcher(deps) {
       return true;
     }
 
-    // §BUILT 2026-09-19 — James: "guardian creates job, sends to clear
-    // glass' agent mesh job queue... tries clear driver, falls back to
-    // ncp/userscript." A job whose provider is `agent:<id>` targets one
-    // of options/store.js's registered custom agents (an arbitrary site
-    // + a picked input/output pair, no NCP/userscript coverage at all —
-    // confirmed directly, custom agents don't go through userscript-
-    // <provider>.js the way claude/chatgpt/etc do). Plain REST, not
-    // clear-glass-bridge.js's two-step POST+SSE round trip — mesh.enqueue()
-    // returns {taskId, position} immediately by design (see agent-mesh.js's
-    // own enqueue()), so this is the same one-request/one-response shape
-    // _dispatchViaGuardian already uses in the other direction (agent-
-    // mesh.js → guardian's :7820/api/copilot/prompt), not a new pattern.
-    //
-    // Deliberately NOT applied to guardian's own known providers (claude/
-    // chatgpt/gemini/etc, handled by the generic NCP path below) — agent-
-    // mesh.js's own route() already tries guardian's NCP path FIRST for
-    // those two via _dispatchViaGuardian; routing them through here too
-    // would have each side calling back into the other for the same job.
-    if (typeof job.provider === 'string' && job.provider.startsWith('agent:')) {
-      const agentRecordId = job.provider.slice('agent:'.length);
-      updateJob(job.id, { status: 'dispatched', dispatchedAt: Date.now() });
-      console.log(`[guardian] custom-agent job → Clear Glass agent mesh (${agentRecordId})`);
-      const http = require('http');
-      const body = Buffer.from(JSON.stringify({ prompt: job.prompt, preferAgent: agentRecordId, jobId: job.id }));
-      const req = http.request({
-        hostname: '127.0.0.1', port: parseInt(process.env.CLEARGL_IPC_PORT || '7702', 10),
-        path: '/agent-mesh/enqueue', method: 'POST', timeout: 10000,
-        headers: { 'Content-Type': 'application/json', 'Content-Length': body.length },
-      }, (res) => {
-        let d = ''; res.on('data', c => d += c);
-        res.on('end', () => {
-          let parsed;
-          try { parsed = JSON.parse(d); } catch (e) { parsed = null; }
-          if (!parsed || !parsed.ok) {
-            const errMsg = parsed?.error || `Clear Glass /agent-mesh/enqueue returned HTTP ${res.statusCode}`;
-            updateJob(job.id, { status: 'error', error: errMsg });
-            bus.emit('guardian.job.error', { jobId: job.id, error: errMsg, provider: job.provider });
-            return;
-          }
-          // enqueue() only confirms the task was accepted into agent-
-          // mesh's own queue (taskId/position) — the real completion
-          // (mesh.queue.complete / mesh.queue.escalated) arrives later
-          // over Clear Glass's own SSE stream, which this process does
-          // not currently subscribe to. §HONEST LIMIT, same shape as
-          // the pre-existing gap this file's own header names for NCP-
-          // path completion (arrives via a separate message, not this
-          // response): the job is genuinely, correctly dispatched, but
-          // this dispatcher has no real way yet to mark it 'complete'
-          // on its own. Left 'dispatched' rather than faking completion.
-          console.log(`[guardian] ${job.id} → agent mesh accepted (taskId ${parsed.taskId}, position ${parsed.position})`);
-        });
-      });
-      req.on('error', (e) => {
-        const errMsg = `Clear Glass unreachable on :${process.env.CLEARGL_IPC_PORT || '7702'}: ${e.message}`;
-        updateJob(job.id, { status: 'error', error: errMsg });
-        bus.emit('guardian.job.error', { jobId: job.id, error: errMsg, provider: job.provider });
-      });
-      req.on('timeout', () => {
-        req.destroy();
-        updateJob(job.id, { status: 'error', error: 'Clear Glass /agent-mesh/enqueue timed out' });
-        bus.emit('guardian.job.error', { jobId: job.id, error: 'enqueue_timeout', provider: job.provider });
-      });
-      req.write(body);
-      req.end();
-      return true;
-    }
-
     // Mistral routes directly to ollama-bridge — no NCP browser tab needed
     if (job.provider === 'mistral') {
       updateJob(job.id, { status: 'dispatched', dispatchedAt: Date.now() });
@@ -313,6 +247,28 @@ function createDispatcher(deps) {
     }
 
     // NCP: push job via SSE channel instead of WebSocket
+    // ── §BUILT 2026-09-19 — mesh-first ladder (docs/2026-09-19-guardian-mesh-first-dispatch-phasemap.spec).
+    // Guardian is the source of truth for agents: try the Clear Glass agent mesh (queue, spawn tab, inject,
+    // archaeology/DOM-mapping repair) BEFORE the userscript. Default policy is 'ncp-only' (today's behaviour),
+    // so nothing changes until GUARDIAN_TRANSPORT=mesh-first. 'ncp' below is the FALLBACK, not a rewrite.
+    if (ladder) {
+      const lr = await ladder.attempt(job);
+      if (lr.kind === 'complete') {
+        updateJob(job.id, { status: 'delivered', deliveredAt: Date.now(), transport: 'mesh', transportTrail: lr.trail, agentId: lr.agentId, accountId: lr.accountId });
+        try { completeFromMesh(job, lr); }
+        catch (e) { updateJob(job.id, { status: 'error', error: `mesh completed but guardian could not record it: ${e.message}` }); bus.emit('guardian.job.error', { jobId: job.id, error: e.message, provider: job.provider }); return true; }
+        bus.emit('guardian.job.dispatched', { jobId: job.id, provider: job.provider, transport: 'mesh' });
+        return true;
+      }
+      if (lr.kind === 'user' || lr.kind === 'failed') {
+        updateJob(job.id, { status: lr.kind === 'user' ? 'needs_user' : 'error', error: lr.note || lr.error || lr.reason, transport: 'mesh', transportTrail: lr.trail });
+        if (lr.kind === 'user') { try { await ladder.escalateToUser(job, lr.reason, { note: lr.note }); } catch (_) {} }
+        bus.emit('guardian.job.error', { jobId: job.id, error: lr.reason, provider: job.provider, needsUser: lr.kind === 'user' });
+        return true;
+      }
+      if (lr.reason && lr.reason !== 'policy_ncp_only') updateJob(job.id, { transport: 'ncp', transportFallbackReason: lr.reason, transportTrail: lr.trail });
+    }
+
     if (!ncp.isConnected(job.provider)) {
       if (!pendingQueue.has(job.provider)) pendingQueue.set(job.provider, []);
       pendingQueue.get(job.provider).push(job);

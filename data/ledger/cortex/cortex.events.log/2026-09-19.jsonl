@@ -1,1 +1,0 @@
-{"uuid":"c2cfc6a7-4f33-4579-a75e-de65497d57b7","system":"cortex","component":"cortex.events.log","action":"registered","status":"ok","tags":["cortex"],"detail":"Query event log","causedBy":"cortex","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:323","ts":1789824798547}

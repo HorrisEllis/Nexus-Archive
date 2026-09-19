@@ -182,71 +182,6 @@ const bgTabs         = new Map(); // agentId → BrowserWindow (hidden service t
 // (several real call sites already depend on that exact shape).
 const bgTabUrls       = new Map(); // agentId → the real url it was opened with
 
-// §FIX 2026-09-19 — James: "hook up agent mesh and cleardriver." Real,
-// confirmed bug found while tracing why ClearDriver's exec() never
-// actually reaches a spawned agent's page: both createAgentWindow() and
-// openBackgroundTab() below load renderer/browser.html, and the real
-// target page (claude.ai, a custom agent's site, etc.) lives inside
-// THAT shell's <webview> tag — a separate guest webContents, not the
-// shell window's own top-level one. ClearDriver._getWebContents() and
-// dom/archaeology.js's _getWebContents() both only ever matched
-// win.getTitle() against a top-level BrowserWindow, which resolves to
-// the *shell*'s webContents (browser.html itself), never the guest.
-// Confirmed directly: win.loadFile(...browser.html...) is a fixed
-// title `Clear Glass — ${agentId}[...]`, so the title match succeeds,
-// just against the wrong document — every driver.exec (type/click/eval)
-// was silently running against the wrong DOM the whole time.
-//
-// Real fix: Electron's did-attach-webview fires on the HOST window's
-// webContents with the guest's real webContents the moment the
-// <webview> tag attaches — captured here, keyed by the same agentId
-// both window-creation functions already use, so a resolver can hand
-// back the actual guest instead of guessing by title.
-const agentGuestContents = new Map(); // agentId → guest WebContents (the <webview>'s own)
-
-// §FIX 2026-09-19 — James: "it shouldn't rely on the ui. clearglass is cli
-// first." Everything above exists because browser.html wraps the real
-// page in a <webview> — which is only a problem for pages that were
-// opened THROUGH that shell in the first place. A page nobody needs to
-// look at (a custom agent's site, mesh/automation work) has no reason to
-// load the shell at all: headlessPages holds hidden windows that load
-// the target URL directly, so the window's own webContents IS the real
-// page — no <webview>, no did-attach-webview, no renderer, no preload,
-// no ssePort/ipcPort handshake. See openHeadlessPage() below.
-const headlessPages = new Map(); // agentId → BrowserWindow (hidden; loads the target URL directly)
-
-/**
- * getAgentWebContents(agentId) — the one real resolver every caller that
- * needs to reach an agent's actual page (ClearDriver, dom/archaeology.js)
- * should use instead of re-deriving their own top-level-window guess.
- *
- * Order: (1) a headless page (openHeadlessPage) — the window's own
- * webContents is already the real page, no UI involved; (2) a UI
- * window's <webview> guest (the real target page inside browser.html);
- * (3) the shell window's own webContents only if no webview has attached
- * yet — same honest degrade as the old code's fallback chain. NOTE (3)
- * is browser.html itself, not the page: a caller that must not act on
- * the shell (custom-agent-driver.js) uses a headless page and never
- * reaches it.
- */
-function getAgentWebContents(agentId) {
-  const page = headlessPages.get(agentId);
-  if (page && !page.isDestroyed()) return page.webContents;
-  const guest = agentGuestContents.get(agentId);
-  if (guest && !guest.isDestroyed()) return guest;
-  const win = windows.get(agentId) || bgTabs.get(agentId);
-  return win && !win.isDestroyed() ? win.webContents : null;
-}
-
-function _wireGuestContentsCapture(win, agentId) {
-  win.webContents.on('did-attach-webview', (_event, guestContents) => {
-    agentGuestContents.set(agentId, guestContents);
-    guestContents.once('destroyed', () => {
-      if (agentGuestContents.get(agentId) === guestContents) agentGuestContents.delete(agentId);
-    });
-  });
-}
-
 // ── Single instance ────────────────────────────────────────────────────────
 app.setName('Clear Glass');
 app.disableHardwareAcceleration();
@@ -835,41 +770,6 @@ async function _startWire() {
         if (!prompt) { res.writeHead(400); return res.end(JSON.stringify({ ok: false, error: 'prompt required' })); }
         try {
           const result = await mesh.route({ prompt, preferAgent, fallbackOrder });
-          res.writeHead(200);
-          return res.end(JSON.stringify({ ok: true, ...result }));
-        } catch (e) {
-          res.writeHead(502);
-          return res.end(JSON.stringify({ ok: false, error: e.message }));
-        }
-      }
-
-      // §NEW 2026-09-19 — James: "guardian creates job, sends to clear
-      // glass' agent mesh job queue." Real, confirmed gap: mesh.enqueue()
-      // (agent-mesh.js's own real drain/retry queue — RETRY/RESPAWN/
-      // FALLBACK/DIAGNOSTIC tiers, already built) was only ever called
-      // in-process (route-graph.js, automation-engine.js) — nothing
-      // outside this process could reach it. /agent-mesh/route above
-      // already proves the right shape for this: a plain, synchronous
-      // REST handler, not clear-glass-bridge.js's two-step POST+SSE
-      // round trip (that round trip exists for driver/DOM commands
-      // whose completion time is genuinely unpredictable; enqueue()
-      // itself returns immediately — {taskId, position} — by design,
-      // so a plain request/response is the correct, matching shape,
-      // not an unnecessary extra hop). Guardian's dispatcher calls this
-      // exactly like agent-mesh.js's own _dispatchViaGuardian() calls
-      // guardian's :7820/api/copilot/prompt — one http.request, no new
-      // bridge file needed on either side.
-      if (u === '/agent-mesh/enqueue' && req.method === 'POST') {
-        const { prompt, preferAgent, fallbackOrder, agentKey, jobId, accountId } = parsed;
-        if (!prompt) { res.writeHead(400); return res.end(JSON.stringify({ ok: false, error: 'prompt required' })); }
-        try {
-          // jobId/accountId ride along on the task object (enqueue()
-          // spreads `...task` before assigning its own real taskId —
-          // see agent-mesh.js's enqueue()) so a caller's own real job
-          // identity survives into every mesh.queue.* SSE event and
-          // into _escalateTask's real gap report, without agent-mesh.js
-          // needing to know Guardian's job shape at all.
-          const result = mesh.enqueue({ prompt, preferAgent: preferAgent || agentKey, fallbackOrder, jobId: jobId || null, accountId: accountId || null });
           res.writeHead(200);
           return res.end(JSON.stringify({ ok: true, ...result }));
         } catch (e) {
@@ -2052,8 +1952,6 @@ async function openAgentWindow({ agentId = randomUUID(), url = 'about:blank' } =
     });
   }
 
-  _wireGuestContentsCapture(win, agentId);
-
   win.loadFile(path.join(__dirname, '../../renderer/browser.html'), {
     query: {
       agentId, ssePort: SSE_PORT, ipcPort: IPC_PORT, url: url || '',
@@ -2090,7 +1988,7 @@ async function openAgentWindow({ agentId = randomUUID(), url = 'about:blank' } =
       win.hide();
     }
   });
-  win.on('closed', () => { windows.delete(agentId); agentGuestContents.delete(agentId); });
+  win.on('closed', () => windows.delete(agentId));
 
   windows.set(agentId, win);
   emit('window.opened', { agentId });
@@ -2199,7 +2097,6 @@ function listOpenAgents() {
   return {
     windows: [...windows.keys()],
     bgTabs:  [...bgTabs.keys()],
-    headless: [...headlessPages.keys()],
   };
 }
 
@@ -2244,8 +2141,6 @@ async function openBackgroundTab({ agentId, url = 'about:blank', partition } = {
     show: false,
   });
 
-  _wireGuestContentsCapture(win, agentId);
-
   win.loadFile(path.join(__dirname, '../../renderer/browser.html'), {
     query: {
       agentId, ssePort: SSE_PORT, ipcPort: IPC_PORT, url: url || '',
@@ -2253,7 +2148,7 @@ async function openBackgroundTab({ agentId, url = 'about:blank', partition } = {
     },
   });
 
-  win.on('closed', () => { bgTabs.delete(agentId); bgTabUrls.delete(agentId); agentGuestContents.delete(agentId); });
+  win.on('closed', () => { bgTabs.delete(agentId); bgTabUrls.delete(agentId); });
   bgTabs.set(agentId, win);
   bgTabUrls.set(agentId, url);
   emit('bgtab.opened', { agentId, url });
@@ -2288,75 +2183,6 @@ function listBackgroundTabs() {
     agentId,
     url: bgTabUrls.get(agentId) || null,
   }));
-}
-
-// ── Headless pages — the UI-free path ─────────────────────────────────────
-// §FIX 2026-09-19 — James: "it shouldn't rely on the ui. clearglass is cli
-// first." Same idea as ProviderHost's own NCP windows (providers/host.js:
-// hidden BrowserWindow, target URL loaded directly, driven from the main
-// process) — deliberately NOT openBackgroundTab(), which loads the whole
-// browser.html shell and puts the real page inside a <webview>. Nothing
-// here needs a renderer: no preload, no webviewTag, no SSE/IPC ports.
-// The window's own webContents is the page, so ClearDriver's exec()
-// (click/type/eval) and getAgentWebContents() reach it directly.
-//
-// `partition` should be stable per agent (custom-agent-driver.js uses the
-// mesh's own persist:mesh-<id>-<account> convention) so cookies survive
-// between dispatches. backgroundThrottling is off on purpose: this
-// window is never visible, and Chromium would otherwise throttle timers
-// and animation frames for a hidden page — exactly what a streaming
-// chat UI's response rendering runs on.
-async function openHeadlessPage({ agentId, url, partition } = {}) {
-  if (!url) throw new Error('openHeadlessPage: url required');
-  agentId = agentId || randomUUID();
-
-  const existing = headlessPages.get(agentId);
-  if (existing && !existing.isDestroyed()) {
-    return { agentId, url: existing.webContents.getURL() || url, reused: true };
-  }
-
-  const win = new BrowserWindow({
-    width: 1280, height: 800,
-    show: false,
-    skipTaskbar: true,
-    title: `Clear Glass — ${agentId} (headless)`,
-    webPreferences: {
-      partition:            partition || undefined,
-      nodeIntegration:      false,
-      contextIsolation:     true,
-      backgroundThrottling: false,
-    },
-  });
-
-  headlessPages.set(agentId, win);
-  win.on('closed', () => { if (headlessPages.get(agentId) === win) headlessPages.delete(agentId); });
-
-  try {
-    await win.loadURL(url);
-  } catch (err) {
-    // ERR_ABORTED = this navigation was superseded (a redirect, or the
-    // site's own client-side routing) — the page is still loading, not
-    // failed. Anything else is a real load failure: don't leave a dead
-    // window registered under this agentId.
-    if (err && err.code !== 'ERR_ABORTED') {
-      if (!win.isDestroyed()) win.destroy();
-      headlessPages.delete(agentId);
-      throw err;
-    }
-  }
-
-  // Best-effort: sendInputEvent (ClearDriver's click/type) delivers keys to
-  // the focused page, and a never-shown window doesn't get focus on its own.
-  try { win.webContents.focus(); } catch (_) {}
-
-  return { agentId, url: win.isDestroyed() ? url : (win.webContents.getURL() || url), session: win.webContents.session };
-}
-
-function closeHeadlessPage(agentId) {
-  const win = headlessPages.get(agentId);
-  if (win && !win.isDestroyed()) win.destroy();
-  headlessPages.delete(agentId);
-  return { agentId, closed: !!win };
 }
 
 // ── Settings window — single instance, reused/focused rather than
@@ -2420,6 +2246,4 @@ module.exports = {
   openBackgroundTab, closeBackgroundTab, listBackgroundTabs,
   closeSettingsWindow, windows, bgTabs,
   freezeAgentWindow, thawAgentWindow,
-  getAgentWebContents,
-  openHeadlessPage, closeHeadlessPage,
 };

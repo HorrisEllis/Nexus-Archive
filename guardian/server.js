@@ -613,11 +613,30 @@ const { requestSync } = createChatSync({ bus, ncp });
 // module-scope semantics. cockpitBroadcast is a hoisted function declaration
 // (defined further down) so it's already a valid reference here.
 const pendingQueue = new Map(); // provider → job[] (legacy fallback for non-pool paths)
+// §BUILT 2026-09-19 — guardian owns the agent registry and the mesh-first escalation ladder.
+// Mesh -> archaeology/DOM-mapping repair -> userscript (NCP) -> user (picker). Default GUARDIAN_TRANSPORT=ncp-only.
+const _agentRegistry = require('./lib/agent-registry').createAgentRegistry();
+const _meshClient    = require('./lib/mesh-client').createMeshClient();
+const _ladder = require('./lib/dispatch-ladder').createLadder({
+  registry: _agentRegistry, mesh: _meshClient,
+  picker: { request: async (a) => {
+    bus.emit('guardian.picker.needed', { jobId: a.job && a.job.id, provider: a.provider, reason: a.reason, note: a.note || null });
+    cockpitBroadcast({ type: 'GUARDIAN_PICKER_NEEDED', jobId: a.job && a.job.id, provider: a.provider, reason: a.reason, note: a.note || null });
+  } },
+  log: (m) => console.log(`[guardian/ladder] ${m}`),
+});
+// A mesh answer completes the job through the SAME handler an NCP GUARDIAN_COMPLETE goes through
+// (chat_log, response sink, bus events): no second completion implementation. Lazy: _handleNCPMessage is
+// defined further down and only referenced at call time.
+const _completeFromMesh = (job, lr) => _handleNCPMessage({ type: 'GUARDIAN_COMPLETE', jobId: job.id, provider: job.provider,
+  text: lr.text, chatUrl: lr.chatUrl, account: lr.accountId, agentId: lr.agentId });
+
 const {
   jobs, createJob, updateJob, _suggestJobHat, _findActiveJobForProvider,
   chooseProvider, normaliseProvider, parseCommand, dispatchJob,
 } = wireGuardianCore({
   bus, ncp, pendingQueue, cockpitBroadcast, NEXUS_URL, postEvent: _postEvent,
+  ladder: _ladder, completeFromMesh: _completeFromMesh,
 });
 
 // §BUILT 2026-09-11 — James: "persistent and doesn't leave until it's
@@ -1444,17 +1463,11 @@ bus.register(new SISOGate('guardian.gaps', (data) => {
 // RAID registered for the existing /api/raid/decide + /status routes.
 // Fire-and-forget on purpose: a feedback hiccup must never affect or delay
 // the job itself — this is pure learning signal, not part of the job path.
-function _feedRaid(provider, ok, ms) {
-  try {
-    const body = JSON.stringify({ provider, ok: !!ok, ms: Number(ms) || 0, cluster: 'seam' });
-    const req = http.request({
-      hostname: '127.0.0.1', port: 3748, path: '/api/raid/feedback',
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, timeout: 2000,
-    }, r => r.resume());
-    req.on('error', () => {}); // cortex may be down/restarting — fine, just skip
-    req.on('timeout', () => req.destroy());
-    req.write(body); req.end();
-  } catch (_) {}
+// 2026-09-19: body + POST live in guardian/lib/raid-feedback.js. The old inline version sent {provider,ok,ms,cluster}
+// while cortex read {agent,outcome}, so RAID never received a single outcome. Now carries transport/tier/account too.
+const { buildFeedback: _buildRaidFeedback, postFeedback: _postRaidFeedback } = require('./lib/raid-feedback');
+function _feedRaid(provider, ok, ms, extra = {}) {
+  _postRaidFeedback(_buildRaidFeedback({ provider, ok, ms, ...extra }));
 }
 
 bus.register(new SISOGate('guardian.job.complete', (data) => {
@@ -1473,11 +1486,11 @@ bus.register(new SISOGate('guardian.job.complete', (data) => {
     });
   }
   const startedTs = existing?.started_ts || data.startedTs || ts;
-  _feedRaid(data.provider || existing?.provider || 'claude', true, ts - startedTs);
+  _feedRaid(data.provider || existing?.provider || 'claude', true, ts - startedTs, { job: (typeof jobs !== 'undefined' && jobs.get) ? jobs.get(jobId) : null });
 }));
 
 bus.register(new SISOGate('guardian.job.error', (data) => {
-  _feedRaid(data.provider || 'claude', false, 0);
+  _feedRaid(data.provider || 'claude', false, 0, { job: (typeof jobs !== 'undefined' && jobs.get && data.jobId) ? jobs.get(data.jobId) : null, error: data.error, needsUser: !!data.needsUser });
 }));
 
 bus.register(new SISOGate('guardian.pa.session', (data) => {

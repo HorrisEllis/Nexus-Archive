@@ -431,18 +431,7 @@ class DomArchaeology {
     return result;
   }
 
-  // §FIX 2026-09-19 — same real bug, same real fix as ClearDriver's
-  // _getWebContents (clear-glass/src/driver/index.js) — this matched a
-  // top-level window by title, which is browser.html's own shell, never
-  // the real page inside its <webview>. Now shares main/index.js's real
-  // getAgentWebContents(agentId) resolver so the two can't silently
-  // drift back apart the way they already had once.
   _getWebContents(agentId) {
-    try {
-      const wc = require('../main/index.js').getAgentWebContents(agentId);
-      if (wc) return wc;
-    } catch (_) { /* fall through to the old honest-degrade chain */ }
-
     const all = webContents.getAllWebContents();
     for (const wc of all) {
       try {

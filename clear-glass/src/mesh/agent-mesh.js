@@ -199,47 +199,6 @@ class AgentMesh {
       meshViewFn: () => this.listMeshView(),
     });
     this._automation.start();
-
-    // §BUILT 2026-09-19 — James: "hook up agent mesh and cleardriver."
-    // Real dispatch for options/store.js's registerAgent() records (an
-    // arbitrary site + a picked input/output element pair — guardian-
-    // picker.js's own 'new-agent' pairing flow). Built here, not in
-    // main/index.js, because everything it needs (this.driver, and
-    // this.accounts — the same NexusOptions instance that already has
-    // getAgent()) already lives on this class; no new external wiring.
-    // this.accounts may be null (tests, the old headless path) — the
-    // driver's own dispatch() throws a clear, honest error in that case
-    // rather than silently no-op'ing.
-    const { CustomAgentDriver } = require('./custom-agent-driver.js');
-    this._customAgentDriver = new CustomAgentDriver({ driver: this.driver, options: this.accounts, sse: this.sse });
-  }
-
-  /**
-   * _isCustomAgentKey(key) — true when `key` is NOT one of AGENT_REGISTRY's
-   * hardcoded providers but IS a real, registered custom-agent id
-   * (options/store.js's registerAgent()). A key that's neither is just an
-   * unknown/typo'd agent — this returns false for that too, same as it
-   * would for a registry miss; callers fall through to their existing
-   * "unknown agent" handling rather than this function inventing a third
-   * outcome.
-   */
-  _isCustomAgentKey(key) {
-    if (!key || AGENT_REGISTRY[key]) return false;
-    try { return !!this.accounts?.getAgent?.(key); } catch (_) { return false; }
-  }
-
-  /**
-   * _dispatchCustomAgent(prompt, agentRecordId) — real dispatch via
-   * ClearDriver against a registered custom agent's picked input/output
-   * pair. No NCP/userscript fallback exists for an arbitrary site (only
-   * AGENT_REGISTRY's known providers have guardian userscripts) — a
-   * failure here is a real failure, left to the caller's own retry/
-   * drain machinery (enqueue()/_handleTaskFailure() below), not silently
-   * absorbed the way _dispatchViaGuardian degrades on purpose.
-   */
-  async _dispatchCustomAgent(prompt, agentRecordId) {
-    const result = await this._customAgentDriver.dispatch({ agentRecordId, prompt });
-    return { agentKey: agentRecordId, text: result.text, via: 'cleardriver', agentName: result.agentName };
   }
 
   /**
@@ -746,17 +705,6 @@ class AgentMesh {
 
   // ── RAID-style routing — best healthy agent ───────────────────────────
   async route({ prompt, preferAgent, fallbackOrder }) {
-    // §BUILT 2026-09-19 — a custom agent (options/store.js's
-    // registerAgent(), an arbitrary site + picked input/output pair)
-    // isn't in AGENT_REGISTRY and has no RAID intent, no guardian
-    // provider coverage, and no fallbackOrder of other registry agents
-    // that would make sense to try instead. Checked first, before any
-    // of that machinery runs, and returns/throws directly — none of
-    // RAID/guardian-first/AGENT_REGISTRY iteration below applies to it.
-    if (preferAgent && this._isCustomAgentKey(preferAgent)) {
-      return this._dispatchCustomAgent(prompt, preferAgent);
-    }
-
     // §BUILD 2026-08-30 — James: "raid engine and agent mesh" (a real gap
     // confirmed by reading this function directly, not assumed): despite
     // the header comment above and this method's own name, nothing here
@@ -1018,18 +966,7 @@ class AgentMesh {
       this.sse.emit('mesh.queue.diagnostic.respawn', { taskId: task.taskId, targets, ts: Date.now() });
     }
 
-    // §FIX 2026-09-19 — a custom-agent task (see _isCustomAgentKey) has
-    // no other registry agent that makes sense to fall back to — it's a
-    // specific, arbitrary site the person picked, not one member of an
-    // interchangeable pool. Populating fallbackOrder from AGENT_REGISTRY
-    // here would silently redirect a failed custom-agent job to claude/
-    // chatgpt/etc on its 3rd/4th retry, which is not a fallback, it's a
-    // different job. Skipped entirely for a custom-agent task — RETRY/
-    // RESPAWN still apply above (a genuinely transient failure or a
-    // stale tab are both still worth retrying against the SAME site),
-    // it just never escalates into "try a different agent."
-    const isCustom = this._isCustomAgentKey(task.preferAgent || task.agentKey);
-    if ((strategy === DRAIN_STRATEGY.FALLBACK || strategy === DRAIN_STRATEGY.DIAGNOSTIC) && !isCustom) {
+    if (strategy === DRAIN_STRATEGY.FALLBACK || strategy === DRAIN_STRATEGY.DIAGNOSTIC) {
       // Force a real, different agent order, excluding whatever has
       // already failed this task so far — route()'s own explicit-order
       // param wins over its preferAgent/RAID inference (see route()'s

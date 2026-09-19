@@ -280,6 +280,7 @@ const _raidHealth = {
   ollama: 100, guardian: 100, claude: 80, chatgpt: 75,
   gemini: 70, perplexity: 70, mistral: 70, deepseek: 70, grok: 70,
 };
+const _raidTransport = {};   // 'agent@transport' -> {calls, ok, failed, needsUser, lastFallbackReason}
 const _raidDecisions = [];
 
 function _raidDecide(intent, cfrCtx = {}) {
@@ -961,15 +962,29 @@ const server = http.createServer(async (req, res) => {
 
   if (p === '/api/raid/feedback' && method === 'POST') {
     const body   = await readBody(req);
-    const { agent, outcome } = body;
+    // 2026-09-19: accept guardian's real shape ({provider, ok, outcome?, transport, ...}) as well as the original
+    // {agent, outcome}. Before, guardian's body never matched, so this updated nothing while answering ok:true.
+    const agent   = body.agent || body.provider;
+    const outcome = body.outcome || (body.ok === true ? 'success' : body.ok === false ? 'failure' : null);
     if (agent && outcome === 'success') _raidHealth[agent] = Math.min(100, (_raidHealth[agent] || 50) + 5);
     if (agent && outcome === 'failure') _raidHealth[agent] = Math.max(0,   (_raidHealth[agent] || 50) - 20);
-    json(res, 200, { ok: true, health: _raidHealth });
+    // 'needs_user' (login wall, captcha) is not the agent's fault: recorded for visibility, never lowers health.
+    if (agent && (outcome === 'success' || outcome === 'failure')) {
+      try { require('./core/raid').recordOutcome(agent, body.cluster || 'seam', outcome === 'success'); } catch (_) {}
+    }
+    if (agent && outcome) {                                    // per-transport learning: which way of reaching an agent works
+      const k = `${agent}@${body.transport || 'ncp'}`;
+      const t = _raidTransport[k] = _raidTransport[k] || { calls: 0, ok: 0, failed: 0, needsUser: 0, lastFallbackReason: null };
+      t.calls++;
+      if (outcome === 'success') t.ok++; else if (outcome === 'failure') t.failed++; else if (outcome === 'needs_user') t.needsUser++;
+      if (body.fallbackReason) t.lastFallbackReason = body.fallbackReason;
+    }
+    json(res, 200, { ok: true, health: _raidHealth, recorded: !!(agent && outcome) });
     return;
   }
 
   if (p === '/api/raid/health') {
-    json(res, 200, { ok: true, health: _raidHealth, regime: _field.regime });
+    json(res, 200, { ok: true, health: _raidHealth, transports: _raidTransport, regime: _field.regime });
     return;
   }
 

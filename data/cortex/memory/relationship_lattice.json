@@ -1,1 +1,0 @@
-[{"id":"nexus::orchestrator","uuid":"9971aeda-a9b0-49e0-b9a5-ba0cac559cfa","_system":"lattice","from":"nexus","to":"orchestrator","field":{"coherence":0.5688,"friction":0.2937,"resonance":0.3624,"entropy":0.2937},"sigma":0.45402,"regime":"resonant","updated_at":1789824839508,"fractal":{"detected":false,"period_ms":null,"occurrences":0},"ts":1789824839510}]
