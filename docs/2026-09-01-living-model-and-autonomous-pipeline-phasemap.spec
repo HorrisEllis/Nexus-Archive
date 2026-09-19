@@ -1,7 +1,7 @@
 spec:
   meta:
     name:    2026-09-01-living-model-and-autonomous-pipeline-phasemap
-    version: 0.1.0-phasemap
+    version: 0.2.0-phasemap
     status: >
       PHASEMAP 2026-09-01. James, across two messages: the registry as a
       live hub other systems wire to (watchdog-propagated, dynamic,
@@ -23,6 +23,15 @@ spec:
       assumed. Deliberately excludes the separate "Warris/Mastermind"
       personal system James described in the same conversation — that is
       not part of this codebase.
+
+      ADDENDUM 2026-09-19. James asked for a living atlas per system: a
+      dynamic, recursive, human-readable map of each of guardian, ollama,
+      cortex, intelligence, diagnostic, clear-glass, loom and copilot
+      (ollama was listed twice), built deterministic-first with the
+      readable prose written against that schema, ending in explicit
+      completeness conditions and a new axiom draft. Mapped as phases
+      LM18-LM26 against a fresh measurement of the v0.39.150 tree. Nothing
+      built.
     uuid:    nexus-2026-0901-living-model-autonomous-pipeline-phasemap-v1-0000-001
 
   phases:
@@ -337,6 +346,362 @@ spec:
         reuse the exact same real capture pipeline downloads already
         use, instead of a second, separate mechanism.
 
+    LM18_atlas_map_each_system_first:
+      status: "OPEN — the mapping pass that has to precede every other
+        atlas phase (AX-014 draft, 'Map Before You Touch', applied to the
+        atlas itself). James: 'We need a dynamic and system specific atlas
+        per system. This isn't deterministic, map each system before
+        making it and expand if needed.' Systems named: guardian, ollama,
+        cortex, intelligence, diagnostic, clear-glass, loom, copilot
+        (ollama was listed twice, so 8 unique); every other system is
+        explicitly out of scope for now. Checked directly on the v0.39.150
+        tree, 2026-09-19: the eight are not the same shape, which is
+        exactly why one flat template will not do. guardian.spec has
+        sections no other spec has (ncp_providers, raid_routing,
+        seam_pipeline, command_index, ui); cortex.spec has organs;
+        intelligence.spec has current_locations, storage, queue and
+        rollout; copilot.spec has what_leaves_guardian. And 'diagnostic'
+        is not one folder: diagnostic/ holds 3 files (nexus-diagnostic.js,
+        nexus-heal-loop.js, interaction-contract.json), but its real
+        footprint also spans clear-glass/src/diagnostic/,
+        copilot/diagnostics.js and diagnostic-sweep.js, and
+        data/diagnostic/ — while DOD2 in
+        docs/2026-08-28-definition-of-complete-phasemap.spec cites
+        service/nexus-diagnostic.js, which does not exist (service/ holds
+        only the cortex, guardian and idearium service files). A system's
+        boundary has to be established before it can be mapped."
+      depends_on: []
+      does: >
+        A real survey ledger, one entry per system: its true boundary
+        (every path that genuinely belongs to it, including data
+        directories and files that live in other systems' folders), the
+        shape of its existing spec, what already exists to build from,
+        what is missing, and what the atlas will need to add or expand for
+        that system. Nothing in LM19-LM26 is built for a system until its
+        LM18 entry exists. When the atlas later finds a system deeper than
+        the survey said, the survey entry is amended — 'expand if needed'
+        — not ignored.
+
+    LM19_atlas_spec_coverage_prerequisite:
+      status: "OPEN — real, measured, and small relative to what depends
+        on it. Checked directly (2026-09-19, loom's own spec-map.js run
+        against this tree): 229 .spec files are tracked, and loom's
+        listSpecs() sees 182 of them (177 in docs/, plus warp, cortex,
+        idearium and copilot) because SPEC_DIRS is a hardcoded allowlist
+        of six directories — docs, warp/spec, cortex/spec, idearium/spec,
+        copilot/spec and bridge/spec, the last of which does not exist in
+        this repo. Of the eight atlas systems only cortex and copilot are
+        visible to loom; guardian, ollama, intelligence, clear-glass and
+        loom's own spec are invisible (gap SM2, open since 2026-09-01),
+        and diagnostic has no spec at all. phasemap-map.js's own SYSTEMS
+        list is a second hardcoded list with the same kind of hole: it
+        names seven of the eight atlas systems and has no ollama, so no
+        phase can ever be filed under it. Separately, only ollama,
+        clear-glass and loom carry AX-013's history, gaps and
+        version_history sections; guardian, cortex, intelligence and
+        copilot do not (intelligence has rollout, still_open and
+        not_yet_done lists that say the same kind of thing in a different
+        shape). An atlas that reads specs cannot be trusted while loom
+        cannot see them."
+      depends_on: [LM1_spec_as_living_model, LM18_atlas_map_each_system_first]
+      does: >
+        Every spec becomes discoverable without a hand-kept list (walk for
+        */spec/*.spec plus docs/, so a new system is visible the moment it
+        has a spec). Diagnostic gets its real spec once LM18 has fixed its
+        boundary, and the stale service/nexus-diagnostic.js reference in
+        DOD2 is corrected. AX-013 says its three sections are a SHOULD to
+        be migrated opportunistically; for the eight atlas systems the
+        atlas raises that to required, so guardian, cortex, intelligence
+        and copilot gain history, gaps and version_history (intelligence's
+        existing ad-hoc lists are migrated into them, not duplicated).
+        Ollama is added to phasemap-map.js's SYSTEMS list, and both
+        hardcoded lists are derived from the registry rather than kept by
+        hand.
+
+    LM20_atlas_schema_and_deterministic_seed:
+      status: "OPEN — the schema every atlas is built from, defined by
+        first building one atlas deterministically. James: 'Start with
+        deterministic and use that as a schema, then the rest
+        probabilistic using the schemas to build from.' Read as two layers
+        with one hard rule between them (interpretation — James to
+        confirm). FACTS layer: everything a script can read off the repo
+        with no judgement — file tree, hashes, routes, commands, tools,
+        events, node types, wires, dates. Regenerable, byte-stable, every
+        entry carrying its source path and hash. PROSE layer: everything
+        that needs understanding — summaries, purposes, edge cases, goals,
+        how-to-use. Written by an agent (LM24), always grounded in and
+        citing FACTS entries, never the other way round. The schema is
+        derived from a real FACTS layer, not designed in the abstract, so
+        its first instance must be a system whose facts can already be
+        extracted reliably. Proposed seed: loom — it is the mapper, its
+        own scanners (capability-map, event-taxonomy-map, phasemap-map,
+        source-map, spec-map, wiring-gaps, dangling-report) already emit
+        most FACTS categories, and its spec is one of the three that
+        already carry AX-013 sections. Proposal only."
+      depends_on: [LM18_atlas_map_each_system_first]
+      does: >
+        The atlas schema, plus one real seed atlas (FACTS layer) built
+        against it. The schema is then stress-tested by expressing a
+        second, very different system in it (proposed: guardian, the one
+        with the most system-specific sections). Where it does not fit,
+        the schema grows a new child section — it never gets a
+        special-case exception and never gets flattened to make the fit
+        easy.
+      atlas_shape:
+        prose_layer:   # probabilistic, written against the schema (LM24)
+          - "Name of the system; a summary of what it does; what it is for"
+          - "Intended purpose versus current purpose, and the edge cases
+            between them"
+          - "Each module: a summary, what it is for, what it currently
+            does, what its goals are"
+          - "How to use the system, capability by capability — plain
+            language, readable by anyone, no jargon"
+          - "Where it is at: phases and what is open, at systems-thinker
+            level of detail"
+        facts_layer:   # deterministic, regenerable, hash-anchored (LM21, LM22)
+          - "File tree; data directories; contracts; schemas"
+          - "Axioms; primitives; phases"
+          - "API routes; CLI commands; agent tools; capabilities; events;
+            node types"
+          - "System components, then module ids, then each component of
+            each module with id, directory, dates, hooks and wires"
+          - "Each node, command and file: name, directory, date created,
+            last modified, hash, node type, seams, and the full range of
+            tags"
+        history_layer:   # LM23
+          - "History, versions, snapshots, revision history, and a
+            calendar"
+        release_layer:   # LM26
+          - "Conditions for the atlas to be considered fully mapped, or at
+            least acceptable for release, and the axiom that nothing the
+            system can map is missing"
+      recursion: >
+        Same shape at every level (§5.6, structural self-similarity):
+        system, module, component, node, tag. Each level carries its own
+        id, path, facts, prose, history and children, and each parent's
+        hash rolls up from its children's hashes. Nothing is a flat list
+        where a child level exists, and nothing is static: a level can
+        grow new child sections when the survey (LM18) finds a system is
+        deeper than the schema said. 'Expand if needed' is a schema rule,
+        not an exception.
+
+    LM21_atlas_fact_extractors:
+      status: "OPEN — mostly reuse, not invention. Checked directly: loom
+        already ships the scanners this layer needs — capability-map.js
+        (capabilities), event-taxonomy-map.js (events), phasemap-map.js
+        (phases, with system tagging and status), source-map.js (source
+        files), spec-map.js (specs), wiring-gaps.js and dangling-report.js
+        (broken wires) — plus loom/schema/{component,hook,wire,seam}.js
+        and its registry, and lib/agent-tools/ holds the agent tool
+        folders. What does not exist is per-fact provenance: across the
+        repo's node stores there are 791 node files and none carries a
+        hash, a created or a modified field (only exported_at), and every
+        one has an empty top-level tags list. Eight node-file kinds are
+        stored on disk (command, capability, injection, component,
+        command-seam, capability-seam, system, failure_mode) against the
+        32 shared node types NODE-TAXONOMY.md defines; how those two lists
+        relate must be reconciled in the atlas, not assumed. No loom
+        scanner covers CLI commands as a per-system list, or data
+        directories with their contracts. Dates need a rule: file mtime is
+        useless here (3,857 of 3,859 files share one extraction timestamp)
+        and git holds 11 commits from two baselines, so a git 'created'
+        date only means 'first appeared in the baseline'."
+      depends_on: [LM19_atlas_spec_coverage_prerequisite, LM20_atlas_schema_and_deterministic_seed]
+      does: >
+        Extractors, one per FACTS category, emitting content-hashed files
+        into each system's atlas data directory. Running them twice on an
+        unchanged tree gives byte-identical output (the determinism test).
+        Every date carries its source and a confidence (git-first-add,
+        spec-history, ledger, changelog, or unknown) and unknown is
+        written as unknown, never guessed (§1.2). Each category also gets
+        an independent second scan, used only to measure coverage for
+        LM26.
+
+    LM22_atlas_structure_ledger:
+      status: "OPEN — the deepest, most recursive layer, and the one
+        loom's registry already half-holds. James: system components, then
+        module ids, then each component of each module with id, directory,
+        dates, hooks and wires; then every node and command with file
+        name, directory, date created, last modified, hash, node type,
+        seams, and the full range of tags. Checked directly: loom's
+        registry (loom/registry-components.js,
+        loom/schema/{component,hook,wire,seam}.js,
+        loom/data/registry.json) already models component, hook, wire and
+        seam — a seam being a named boundary a component exposes or
+        crosses, a hook being how you cross it. Module ids already exist
+        in the modules section of every atlas system's spec except
+        guardian's, which has none. 'Seam' means two different things here
+        and the atlas must keep them apart: loom's seam (a crossing point)
+        and SEAM the intent-compression and chunk pipeline (lib/seam/,
+        guardian.spec's seam_pipeline, and the 39 command-seam and 39
+        capability-seam node files). Tags: every node's top-level tag list
+        is empty today, so 'the full range of tags' has to be defined
+        (payload tags, system, module, node type, seam, status, phase)
+        before it can be recorded."
+      depends_on: [LM21_atlas_fact_extractors]
+      does: >
+        One ledger per system in the same recursive shape: system, then
+        modules (ids from the spec, reconciled with the loom registry and
+        with what is actually on disk), then components (id, directory,
+        created, last modified, hash, hooks, wires), then nodes, commands
+        and files (name, directory, node type, dates with source, hash,
+        seams, tags). Every parent's hash is derived from its children's
+        hashes, so a change anywhere shows all the way to the top — that
+        is what makes 'updated with any changes' checkable instead of
+        asserted.
+
+    LM23_atlas_history_versions_calendar:
+      status: "OPEN — the sources exist but are scattered and shallow, and
+        nothing joins them. James: history, versions, snapshots, revision
+        history, with a calendar. Checked directly: git holds 11 commits
+        over two dates (2026-09-17 and 2026-09-19) from two baselines
+        (v0.39.146 and v0.39.147), so everything earlier is not in this
+        repo's git; data/ledger holds 295 tracked daily files, all dated
+        2026-09-16; per-version 'what shipped' lives in lib/version.js's
+        inline comments, loom/lib/changelog.js (append-only, GET/POST
+        /api/changelog), data/changelog-snapshot.json, docs/CHANGELOG.md
+        and docs/SESSION-CHANGELOG.md; per-component movement lives in
+        loom's /api/history; ingest revisions with sha256 identity and
+        parent-diff lineage live in loom's /api/revisions; three of the
+        eight specs carry their own AX-013 history; and version snapshots
+        arrive as zip archives (nexus-v0_39_149, nexus-v0_39_150) whose
+        git lineages were only joined into one graph on 2026-09-19 (merge
+        6a8faac)."
+      depends_on: [LM21_atlas_fact_extractors, LM22_atlas_structure_ledger]
+      does: >
+        One per-system history that merges all of those sources into a
+        single dated, append-only timeline, and a calendar index keyed by
+        date: what changed (per system, module and component), which
+        version it shipped in, and which snapshot holds it. Snapshots are
+        first-class entries (identity hash, parent, date, source archive)
+        using loom's ingest lineage rather than a second mechanism (§5.4,
+        versions persist across the entire project). Gaps in the record
+        are written as explicit 'no record before X' rows — a calendar
+        that silently begins on 2026-09-17 would imply nothing happened
+        earlier.
+
+    LM24_atlas_prose_layer:
+      status: "OPEN — the probabilistic half, and the half James wants
+        anyone to be able to read. James: name, what it does, what it is
+        for, intended purpose versus current purpose and edge cases; each
+        module's summary, purpose, what it does now, and goals; how to use
+        every capability; 'not jargon, something anyone can read', at
+        systems-thinker level of detail. Checked directly: guardian.spec's
+        own purpose line says guardian is the only system that touches AI
+        providers and everything else requests work through it — so this
+        layer is written by dispatching through guardian's existing
+        agent-dispatch and agent-mesh path, not by a new AI-calling
+        mechanism, and LM4/LM5 (per-system tool index, co-pilot zoom)
+        point at the same sources. Intended versus current purpose is not
+        a matter of taste: intended comes from the spec's purpose and
+        history, current comes from the FACTS layer, and the difference
+        between them is the edge-case and gap list (which feeds AX-013
+        gaps)."
+      depends_on: [LM20_atlas_schema_and_deterministic_seed, LM21_atlas_fact_extractors, LM22_atlas_structure_ledger]
+      does: >
+        Every prose statement is written against the schema, cites the
+        FACTS entry ids it rests on, and carries provenance (agent, date,
+        hash of the facts it read) and a status of inferred or verified. A
+        statement whose cited facts change hash is flagged stale, never
+        silently rewritten. 'Not jargon' becomes testable: a glossary for
+        the system terms (seam, hook, wire, compartment, NCP, RAID and so
+        on) and one worked how-to example per capability, run against the
+        live system wherever that is safe (§1.1, nothing exists until
+        proven).
+
+    LM25_atlas_living_update:
+      status: "OPEN — this is what makes the atlas a living spec instead
+        of a document. James: 'This atlas is the repository's map, updates
+        with any changes, a living spec of the system.' Checked directly:
+        this depends on LM2 (registry as a hub with a file-watching
+        watchdog), which is itself still open — loom's 7 hand-edited files
+        in loom/maps/ are exactly the manual process LM2 says it would
+        replace. The atlas does not get a second watcher: it subscribes to
+        whatever LM2 lands, and until then runs on demand and in the
+        precommit path (scripts/precommit-check.js already blocks commits
+        that add a component with no registry wire or a spec that is never
+        registered — the natural gate for 'atlas out of date')."
+      depends_on: [LM2_registry_as_hub_with_watchdog, LM21_atlas_fact_extractors, LM23_atlas_history_versions_calendar, LM24_atlas_prose_layer]
+      does: >
+        A change to any file under a mapped system re-runs that system's
+        extractors, updates the FACTS layer and its hashes up the tree,
+        flags dependent prose as stale, appends a dated entry to that
+        system's history and calendar (append-only, as
+        loom/lib/changelog.js already is), and records the atlas's own
+        revision. Nothing is regenerated silently over a human edit: prose
+        has an owner and a diff.
+
+    LM26_atlas_completeness_and_release_gate:
+      status: "OPEN — the finish line, written as measurable conditions
+        instead of a feeling, in the spirit of
+        docs/2026-08-28-definition-of-complete-phasemap.spec. James:
+        'Conditions for it to be considered complete or at least
+        acceptable for release', plus the axiom 'Nothing missing that the
+        system can map.' Two tiers, because James asked for both:
+        release-acceptable (the first list) and fully mapped (the first
+        list plus the second). The axiom is drafted below as AX-015,
+        beside the still-unapplied AX-014."
+      depends_on: [LM19_atlas_spec_coverage_prerequisite, LM20_atlas_schema_and_deterministic_seed, LM21_atlas_fact_extractors, LM22_atlas_structure_ledger, LM23_atlas_history_versions_calendar, LM24_atlas_prose_layer, LM25_atlas_living_update]
+      does: >
+        'Is the atlas done' gets a real answer computed by a check, not a
+        review: one command reports each condition pass or fail with its
+        evidence. The same check gates a release and is what LM25 re-runs
+        after every change.
+      candidate_axiom: >
+        AX-015 (draft) — Nothing Missing That the System Can Map. Every
+        system's atlas accounts for everything that system's own scanners
+        can find. An item is either in the atlas, or it is listed in that
+        atlas's unmapped section with the reason it could not be mapped
+        and the date it was last tried. An atlas may never be silent about
+        something that exists: a gap that is written down is a finding, a
+        gap that is not written down is a false statement about the system
+        (§1.2). The atlas is the repository's map and every change that
+        touches what it maps updates it; a change that lands without the
+        atlas reflecting it is an incomplete change. AX-014 says read the
+        map before touching; AX-015 is its other half — the map has to be
+        worth reading. Drafted only, not applied to any axiom set; like
+        AX-014 it needs a real yes/no from James.
+      release_acceptable:
+        - "All 8 systems have an atlas that validates against the LM20
+          schema: every required section present, or marked not-applicable
+          with a reason. None blank."
+        - "FACTS coverage: for each category (file tree, axioms,
+          primitives, API routes, CLI commands, agent tools, capabilities,
+          events, node types, schemas, data directories, contracts) the
+          mapped count equals what the independent second scan finds.
+          Anything not mappable is in the unmapped section with a reason."
+        - "Determinism: the extractors run twice on an unchanged tree
+          produce byte-identical FACTS."
+        - "Every prose claim cites at least one FACTS entry. No orphan
+          claims, and zero stale claims at release time."
+        - "Loom's spec discovery sees all 8 system specs: SM2 is closed
+          and diagnostic has a spec."
+        - "History has no silent beginning: the calendar opens with
+          explicit 'no record before' rows, and every version snapshot
+          present in the repo appears in it."
+        - "The atlas names the commit and version it describes (HEAD hash
+          and package version) and lands as a real commit — no atlas
+          change skips the commit or the .git."
+      fully_mapped_additionally:
+        - "Recursion is real: system, module, component, node and tag
+          levels are present for every system, with no flat list where a
+          child level exists."
+        - "Living update proven end to end: a deliberate change to a
+          mapped file updates FACTS, rolls hashes up to the root, flags
+          the stale prose and adds a calendar entry, with no manual step."
+        - "Root hash verifies: recomputing the root from the tree matches
+          the recorded one."
+        - "Cold-reader test: someone who has never used NEXUS reads one
+          system's atlas and correctly answers a fixed set of questions
+          (what it is for, how to do a given task, what is broken) — the
+          same bar LM4 sets for the tool index."
+        - "Executable how-to: every documented capability's example was
+          run against the live system, or is marked unrunnable with the
+          reason."
+        - "The atlas maps itself: loom's atlas includes the atlas
+          machinery (schema, extractors, watcher) as components — the
+          mapmaker is on the map."
+
   recommended_start: >
     LM1 (spec-as-living-model) first — every other phase either directly
     depends on it or is naturally easier once it exists (LM4's tool index
@@ -353,3 +718,13 @@ spec:
     autonomous contract creation before deciding who's allowed to do it
     would invert the real safety ordering this codebase's own RAID
     governance already enforces everywhere else.
+
+    ATLAS PHASES (LM18-LM26, added 2026-09-19 — mapped only, nothing
+    built): LM18 (map each system first) and LM19 (make every spec visible
+    to loom, give diagnostic a spec) are buildable now and gate everything
+    else. LM20 fixes the schema by building one deterministic atlas first
+    (proposed seed: loom, James to confirm); LM21-LM23 build the FACTS and
+    history layers from it; LM24 writes the readable PROSE layer against
+    that schema through guardian; LM25 makes it live and depends on LM2's
+    watchdog; LM26 is the release gate and carries the AX-015 draft.
+    AX-014 and AX-015 are both still drafts awaiting a yes/no from James.
