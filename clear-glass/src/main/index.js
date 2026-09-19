@@ -182,6 +182,54 @@ const bgTabs         = new Map(); // agentId → BrowserWindow (hidden service t
 // (several real call sites already depend on that exact shape).
 const bgTabUrls       = new Map(); // agentId → the real url it was opened with
 
+// §FIX 2026-09-19 — James: "hook up agent mesh and cleardriver." Real,
+// confirmed bug found while tracing why ClearDriver's exec() never
+// actually reaches a spawned agent's page: both createAgentWindow() and
+// openBackgroundTab() below load renderer/browser.html, and the real
+// target page (claude.ai, a custom agent's site, etc.) lives inside
+// THAT shell's <webview> tag — a separate guest webContents, not the
+// shell window's own top-level one. ClearDriver._getWebContents() and
+// dom/archaeology.js's _getWebContents() both only ever matched
+// win.getTitle() against a top-level BrowserWindow, which resolves to
+// the *shell*'s webContents (browser.html itself), never the guest.
+// Confirmed directly: win.loadFile(...browser.html...) is a fixed
+// title `Clear Glass — ${agentId}[...]`, so the title match succeeds,
+// just against the wrong document — every driver.exec (type/click/eval)
+// was silently running against the wrong DOM the whole time.
+//
+// Real fix: Electron's did-attach-webview fires on the HOST window's
+// webContents with the guest's real webContents the moment the
+// <webview> tag attaches — captured here, keyed by the same agentId
+// both window-creation functions already use, so a resolver can hand
+// back the actual guest instead of guessing by title.
+const agentGuestContents = new Map(); // agentId → guest WebContents (the <webview>'s own)
+
+/**
+ * getAgentWebContents(agentId) — the one real resolver every caller that
+ * needs to reach an agent's actual page (ClearDriver, dom/archaeology.js)
+ * should use instead of re-deriving their own top-level-window guess.
+ * Guest webContents first (the real target page); falls back to the
+ * shell window's own webContents only if no webview has attached yet
+ * (e.g. called in the brief window between window creation and
+ * did-attach-webview firing) — same honest degrade as the old code's
+ * fallback chain, just correctly ordered now.
+ */
+function getAgentWebContents(agentId) {
+  const guest = agentGuestContents.get(agentId);
+  if (guest && !guest.isDestroyed()) return guest;
+  const win = windows.get(agentId) || bgTabs.get(agentId);
+  return win && !win.isDestroyed() ? win.webContents : null;
+}
+
+function _wireGuestContentsCapture(win, agentId) {
+  win.webContents.on('did-attach-webview', (_event, guestContents) => {
+    agentGuestContents.set(agentId, guestContents);
+    guestContents.once('destroyed', () => {
+      if (agentGuestContents.get(agentId) === guestContents) agentGuestContents.delete(agentId);
+    });
+  });
+}
+
 // ── Single instance ────────────────────────────────────────────────────────
 app.setName('Clear Glass');
 app.disableHardwareAcceleration();
@@ -770,6 +818,41 @@ async function _startWire() {
         if (!prompt) { res.writeHead(400); return res.end(JSON.stringify({ ok: false, error: 'prompt required' })); }
         try {
           const result = await mesh.route({ prompt, preferAgent, fallbackOrder });
+          res.writeHead(200);
+          return res.end(JSON.stringify({ ok: true, ...result }));
+        } catch (e) {
+          res.writeHead(502);
+          return res.end(JSON.stringify({ ok: false, error: e.message }));
+        }
+      }
+
+      // §NEW 2026-09-19 — James: "guardian creates job, sends to clear
+      // glass' agent mesh job queue." Real, confirmed gap: mesh.enqueue()
+      // (agent-mesh.js's own real drain/retry queue — RETRY/RESPAWN/
+      // FALLBACK/DIAGNOSTIC tiers, already built) was only ever called
+      // in-process (route-graph.js, automation-engine.js) — nothing
+      // outside this process could reach it. /agent-mesh/route above
+      // already proves the right shape for this: a plain, synchronous
+      // REST handler, not clear-glass-bridge.js's two-step POST+SSE
+      // round trip (that round trip exists for driver/DOM commands
+      // whose completion time is genuinely unpredictable; enqueue()
+      // itself returns immediately — {taskId, position} — by design,
+      // so a plain request/response is the correct, matching shape,
+      // not an unnecessary extra hop). Guardian's dispatcher calls this
+      // exactly like agent-mesh.js's own _dispatchViaGuardian() calls
+      // guardian's :7820/api/copilot/prompt — one http.request, no new
+      // bridge file needed on either side.
+      if (u === '/agent-mesh/enqueue' && req.method === 'POST') {
+        const { prompt, preferAgent, fallbackOrder, agentKey, jobId, accountId } = parsed;
+        if (!prompt) { res.writeHead(400); return res.end(JSON.stringify({ ok: false, error: 'prompt required' })); }
+        try {
+          // jobId/accountId ride along on the task object (enqueue()
+          // spreads `...task` before assigning its own real taskId —
+          // see agent-mesh.js's enqueue()) so a caller's own real job
+          // identity survives into every mesh.queue.* SSE event and
+          // into _escalateTask's real gap report, without agent-mesh.js
+          // needing to know Guardian's job shape at all.
+          const result = mesh.enqueue({ prompt, preferAgent: preferAgent || agentKey, fallbackOrder, jobId: jobId || null, accountId: accountId || null });
           res.writeHead(200);
           return res.end(JSON.stringify({ ok: true, ...result }));
         } catch (e) {
@@ -1952,6 +2035,8 @@ async function openAgentWindow({ agentId = randomUUID(), url = 'about:blank' } =
     });
   }
 
+  _wireGuestContentsCapture(win, agentId);
+
   win.loadFile(path.join(__dirname, '../../renderer/browser.html'), {
     query: {
       agentId, ssePort: SSE_PORT, ipcPort: IPC_PORT, url: url || '',
@@ -1988,7 +2073,7 @@ async function openAgentWindow({ agentId = randomUUID(), url = 'about:blank' } =
       win.hide();
     }
   });
-  win.on('closed', () => windows.delete(agentId));
+  win.on('closed', () => { windows.delete(agentId); agentGuestContents.delete(agentId); });
 
   windows.set(agentId, win);
   emit('window.opened', { agentId });
@@ -2141,6 +2226,8 @@ async function openBackgroundTab({ agentId, url = 'about:blank', partition } = {
     show: false,
   });
 
+  _wireGuestContentsCapture(win, agentId);
+
   win.loadFile(path.join(__dirname, '../../renderer/browser.html'), {
     query: {
       agentId, ssePort: SSE_PORT, ipcPort: IPC_PORT, url: url || '',
@@ -2148,7 +2235,7 @@ async function openBackgroundTab({ agentId, url = 'about:blank', partition } = {
     },
   });
 
-  win.on('closed', () => { bgTabs.delete(agentId); bgTabUrls.delete(agentId); });
+  win.on('closed', () => { bgTabs.delete(agentId); bgTabUrls.delete(agentId); agentGuestContents.delete(agentId); });
   bgTabs.set(agentId, win);
   bgTabUrls.set(agentId, url);
   emit('bgtab.opened', { agentId, url });
@@ -2246,4 +2333,5 @@ module.exports = {
   openBackgroundTab, closeBackgroundTab, listBackgroundTabs,
   closeSettingsWindow, windows, bgTabs,
   freezeAgentWindow, thawAgentWindow,
+  getAgentWebContents,
 };

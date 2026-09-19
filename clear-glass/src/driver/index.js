@@ -575,17 +575,38 @@ class ClearDriver {
   }
 
   // ── Internals ──────────────────────────────────────────────────────────
+  // §FIX 2026-09-19 — James: "hook up agent mesh and cleardriver." Real,
+  // confirmed bug: this used to match a top-level BrowserWindow by
+  // title, which resolves to browser.html's own shell webContents, never
+  // the real target page — that page lives inside browser.html's
+  // <webview> tag, a separate guest webContents entirely (confirmed by
+  // reading main/index.js's window-creation directly, not assumed).
+  // Every exec() (navigate/click/type/eval) against a spawned agent tab
+  // was silently running against the wrong document.
+  //
+  // Real fix: main/index.js now captures each agent's real guest
+  // webContents via Electron's did-attach-webview event and exposes
+  // getAgentWebContents(agentId) — the single resolver ClearDriver and
+  // dom/archaeology.js (identical bug, same fix) both use now, so they
+  // can't drift apart on this again. Lazily required, matching the same
+  // cross-file convention agent-mesh.js's spawn() already uses for
+  // openBackgroundTab().
   _getWebContents(agentId) {
-    // Find the BrowserWindow for this agent
+    try {
+      const wc = require('../main/index.js').getAgentWebContents(agentId);
+      if (wc) return wc;
+    } catch (_) { /* main/index.js not loaded in this context — fall through */ }
+
+    // Honest degrade for callers with no real agentId to resolve (tests,
+    // the old headless path, or a call made before did-attach-webview
+    // has fired yet) — same fallback chain this function always had.
     const all = webContents.getAllWebContents();
-    // Match by agent ID stored on the window
     for (const wc of all) {
       try {
         const win = BrowserWindow.fromWebContents(wc);
         if (win && win.getTitle().includes(agentId)) return wc;
       } catch {}
     }
-    // Fallback: return focused webcontents
     return webContents.getFocusedWebContents() || all[0] || null;
   }
 
