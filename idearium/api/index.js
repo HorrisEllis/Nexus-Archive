@@ -1650,14 +1650,19 @@ async function handle(req, res, route, query, body) {
       // compartment — but this HTTP layer never forwarded it. Not a naming
       // collision after all; a real, designed connection that was one
       // destructured field short of working end to end.
-      const { name, files, source, ideaUuid, specUuid, compartmentId } = body;
+      // §BUILT 2026-09-20 — bare:true, James: idearium's repo page needs a
+      // real "Create repo" button (start empty) distinct from "Import
+      // repo" (specUuid or files[], unchanged below). See RepoLayer.ingest()
+      // for why this is safe — a bare repo is just a spec with nothing
+      // built yet, same dedup-skip behavior as any other new spec.
+      const { name, files, source, ideaUuid, specUuid, compartmentId, bare } = body;
       if (!name) return err(res, 400, 'name required');
-      if (!specUuid && (!Array.isArray(files) || files.length === 0)) {
-        return err(res, 400, 'specUuid or files[] required');
+      if (!specUuid && !bare && (!Array.isArray(files) || files.length === 0)) {
+        return err(res, 400, 'specUuid, files[], or bare:true required');
       }
       const result = getRepoLayer().ingest({
-        name, specUuid: specUuid || undefined, files: files || [],
-        source: source || (specUuid ? 'repo-first' : 'drop'),
+        name, specUuid: specUuid || undefined, files: files || [], bare: !!bare,
+        source: source || (specUuid ? 'repo-first' : (bare ? 'create' : 'drop')),
         ideaUuid: ideaUuid || null,
         compartmentId: compartmentId || null,
       });

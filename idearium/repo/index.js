@@ -343,7 +343,7 @@ export class RepoLayer {
   // idearium/data/projects/<repoUuid> — persisted on the repo record so
   // every later materialize() (including quiet ones after an edit) keeps
   // using it. null for every existing caller — purely additive.
-  ingest({ name, specUuid = null, files = [], source = 'drop', parent = null, promotedFromSpec = null, compartmentId = null, materializeBaseDir = null } = {}) {
+  ingest({ name, specUuid = null, files = [], source = 'drop', parent = null, promotedFromSpec = null, compartmentId = null, materializeBaseDir = null, bare = false } = {}) {
     if (!name) return { error: 'repo name required' };
     if (!this.se) return { error: 'repo layer has no spec-engine — cannot store content' };
 
@@ -365,8 +365,18 @@ export class RepoLayer {
         manifest = this.se.loadSpec(specUuid);
       } else if (files.length) {
         manifest = this.se.ingestFilesAsSpec({ name, files, author: source || 'drop', repoUuid });
+      } else if (bare) {
+        // §BUILT 2026-09-20 — James: idearium's repo page needs a "Create
+        // repo" button distinct from importing one. Every existing path
+        // required either an existing spec or real file content — there
+        // was no way to start a genuinely empty repo. createSpec() is the
+        // same real spec-creation function the idea->spec flow already
+        // uses; a bare repo IS just a spec with nothing built yet — every
+        // chunk starts PENDING, same as any brand-new spec, nothing special
+        // faked here to make it look populated.
+        manifest = this.se.createSpec({ name, type: 'component', description: `bare repo: ${name}`, author: source || 'create' });
       } else {
-        return { error: 'ingest requires either specUuid (existing manifest) or files (to create one)' };
+        return { error: 'ingest requires specUuid (existing manifest), files (to create one), or bare:true (to start empty)' };
       }
     } catch (e) { return { error: `content ingest failed: ${e.message}` }; }
 

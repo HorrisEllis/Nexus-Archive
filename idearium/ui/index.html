@@ -412,7 +412,16 @@ body{display:flex;flex-direction:column;position:relative}
 .repo-card-body{flex:1;min-width:0}
 .repo-card-name{font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3}
 .repo-card-meta{font-family:var(--mono);font-size:9px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.repo-rail-empty{padding:20px 14px;font-family:var(--mono);font-size:10.5px;color:var(--text3);line-height:1.7;text-align:center}
+/* §FIXED 2026-09-20 — James: "the formatting is floaty. make it full
+   size." Was: padding + text-align:center only — a grid ITEM aligns to
+   its container's top-left by default (CSS Grid's align-content:start),
+   so this sat as a small block near the top with the rest of the real,
+   full-height container empty around it. Now fills and centers like
+   .repo-empty (same file, same problem, already solved there) instead of
+   being a second, inconsistent empty-state treatment. grid-column:1/-1 so
+   it spans the full block-grid width rather than sizing to one column's
+   minmax(240px,...) track. */
+.repo-rail-empty{grid-column:1/-1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;height:100%;min-height:320px;font-family:var(--mono);font-size:12px;color:var(--text3);line-height:1.7;text-align:center}
 
 /* ── Pane 2: file tree of the selected repo ── */
 .file-tree{flex:0 0 260px;overflow-y:auto;padding:8px 6px;border-right:1px solid var(--b0)}
@@ -714,8 +723,18 @@ body{display:flex;flex-direction:column;position:relative}
         <button class="tb-btn repo-back-btn" id="repo-back-btn" style="display:none" onclick="exitRepoDetail()">← All repos</button>
         <span class="ph-title" id="repo-view-title">Repository Library</span>
         <span class="ph-badge" id="repo-context" style="margin-left:10px"></span>
-        <button class="tb-btn" style="margin-left:auto" onclick="pickLocalRepo()">open local nexus folder…</button>
-        <button class="tb-btn" style="margin-left:6px" onclick="document.getElementById('repo-drop-input').click()">drop repo files…</button>
+        <!-- §FIXED 2026-09-20 — James: "the repo page needs an import repo
+             and create repo buttons instead of the two current ones."
+             Was: "open local nexus folder…" (pickLocalRepo() — client-side
+             preview only, never created a real repo record, a real
+             inconsistency with the button next to it) and "drop repo
+             files…" (a second, different way to do the SAME import). Now
+             one real Import (openUploadProjectModal() — the same complete,
+             already-working zip-import + real compartment flow used
+             elsewhere in this UI) and one real Create (openCreateRepoModal()
+             — genuinely new, see repo.ingest's bare:true path). -->
+        <button class="tb-btn" style="margin-left:auto" onclick="openUploadProjectModal()">Import repo</button>
+        <button class="tb-btn" style="margin-left:6px" onclick="openCreateRepoModal()">Create repo</button>
         <input type="file" id="repo-drop-input" multiple style="display:none" onchange="ingestDroppedFiles(this.files)">
       </div>
       <div class="repo-wrap" id="repo-wrap">
@@ -1800,6 +1819,23 @@ async function saveToIdearium(){
         <button class="modal-btn" onclick="cancelUploadProject()">cancel</button>
         <button class="modal-btn confirm" id="up-import-btn" disabled onclick="submitUploadProjectImport()">import repository</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- §BUILT 2026-09-20 — Create repo modal. Real, distinct from Import
+     above: no source content, POSTs bare:true to /api/repos. -->
+<div class="modal-overlay" id="create-repo-modal">
+  <div class="modal-box">
+    <div class="modal-title">Create repo</div>
+    <div class="field-group">
+      <div class="field-label">name <span class="req">*</span></div>
+      <input class="field-input" id="cr-name" placeholder="e.g. checkout-service" onkeydown="if(event.key==='Enter')submitCreateRepo()">
+      <div class="field-hint" style="font-size:10px;color:var(--text3);margin-top:4px">starts empty — a real repo with nothing built yet, not a template or placeholder content</div>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn" onclick="closeCreateRepoModal()">cancel</button>
+      <button class="modal-btn confirm" id="cr-create-btn" onclick="submitCreateRepo()">create repo</button>
     </div>
   </div>
 </div>

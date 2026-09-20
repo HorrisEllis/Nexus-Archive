@@ -1104,6 +1104,33 @@ function closeUploadProjectModal() {
   document.getElementById('upload-project-modal').classList.remove('open');
 }
 
+// §BUILT 2026-09-20 — James: "Create repo" button on the repo page. Real,
+// distinct from Import: no source content required, calls repo.ingest's
+// new bare:true path (a bare repo is a spec with nothing built yet — same
+// honest PENDING-chunks state as any other brand-new spec).
+function openCreateRepoModal() {
+  if (!CONNECTED) { toast('not connected to nexus', 'err'); return; }
+  document.getElementById('cr-name').value = '';
+  document.getElementById('create-repo-modal').classList.add('open');
+}
+function closeCreateRepoModal() {
+  document.getElementById('create-repo-modal').classList.remove('open');
+}
+async function submitCreateRepo() {
+  const name = document.getElementById('cr-name').value.trim();
+  if (!name) { toast('name required', 'err'); return; }
+  const btn = document.getElementById('cr-create-btn');
+  btn.disabled = true;
+  try {
+    const res = await api('/api/repos', { method: 'POST', body: JSON.stringify({ name, bare: true, source: 'create' }) });
+    toast(`created repo "${name}"`, 'ok');
+    closeCreateRepoModal();
+    await loadApiRepos();
+    if (res.repo?.uuid) enterRepoDetail(res.repo.uuid);
+  } catch (e) { toast(`create failed: ${e.message}`, 'err'); }
+  finally { btn.disabled = false; }
+}
+
 async function cancelUploadProject() {
   if (UP_CONTAINER_UUID) {
     try { await api(`/api/project-import/${UP_CONTAINER_UUID}/cancel`, { method: 'POST', body: '{}' }); }
@@ -1455,7 +1482,15 @@ function renderRepoLibrary() {
   if (badge) badge.textContent = API_REPOS.length ? String(API_REPOS.length) : '';
   body.classList.toggle('block-grid', !REPO_DETAIL_OPEN);
   if (!API_REPOS.length) {
-    body.innerHTML = `<div class="repo-rail-empty">no repos yet<br><br>drop files or promote a spec to create one</div>`;
+    // §FIXED 2026-09-20 — real actions, not just passive text, matching
+    // the toolbar's own Import repo / Create repo buttons above.
+    body.innerHTML = `<div class="repo-rail-empty">
+      <div>no repos yet</div>
+      <div style="display:flex;gap:8px">
+        <button class="modal-btn confirm" onclick="openUploadProjectModal()">Import repo</button>
+        <button class="modal-btn" onclick="openCreateRepoModal()">Create repo</button>
+      </div>
+    </div>`;
     return;
   }
   const q = (document.getElementById('repo-rail-filter')?.value || '').toLowerCase().trim();
