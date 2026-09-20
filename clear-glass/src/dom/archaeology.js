@@ -199,7 +199,31 @@ const DOM_OBSERVER_SCRIPT = `
 
       if (mutation.text    !== undefined) el.innerText    = mutation.text;
       if (mutation.html    !== undefined) el.innerHTML    = mutation.html;
-      if (mutation.value   !== undefined) el.value        = mutation.value;
+      if (mutation.value   !== undefined) {
+        // §FIXED 2026-09-19 — James: "autofill... follow axioms." Found
+        // while building real form-fill: el.value = mutation.value
+        // silently did nothing observable on a React/Vue-controlled
+        // input (they override the native value property's setter with
+        // their own internal tracking; assigning through the instance
+        // property bypasses it entirely — real, well-known, and a real
+        // correctness bug here, not an autofill-specific workaround).
+        // It also never dispatched input/change, so even a plain
+        // vanilla-JS onChange listener never fired. The real fix: call
+        // the NATIVE prototype's value setter directly (bypassing
+        // whatever the framework overrode it with, the same technique
+        // real browser-automation tools use for exactly this reason),
+        // then dispatch real, bubbling input and change events so
+        // anything listening — React, Vue, or plain JS — actually
+        // observes the change. Fixes every real caller of dom_mutate's
+        // value mutation, not just autofill.
+        const proto = el.tagName === 'TEXTAREA' ? window.HTMLTextAreaElement.prototype
+                    : el.tagName === 'SELECT'   ? window.HTMLSelectElement.prototype
+                    : window.HTMLInputElement.prototype;
+        const nativeSetter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+        if (nativeSetter) nativeSetter.call(el, mutation.value); else el.value = mutation.value;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+      }
       if (mutation.style   !== undefined) Object.assign(el.style, mutation.style);
       if (mutation.attrs) {
         for (const [k, v] of Object.entries(mutation.attrs)) {

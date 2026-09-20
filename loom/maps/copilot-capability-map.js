@@ -65,6 +65,41 @@ const FILES = [
   ['lib/agent-tools/tools/browser/browser-action.js',        'nexus.lib.agent-tools.tools.browser-action',
     ['nexus.guardian.clear-glass-bridge', 'nexus.clear-glass.src.driver.url-listener']],
 
+  // §BUILT 2026-09-19 — James: "update loom component registry." Four
+  // real files built this session, registered here; one directly-
+  // adjacent orphan (idearium/spec-engine/index.js — compiler-t0.js's
+  // own real dependency, never itself declared) closed alongside them,
+  // matching this session's own established practice for mastermind.js/
+  // lib/node-index.js earlier.
+  ['lib/agent-tools/tools/mesh/agent-mesh-route.js', 'nexus.lib.agent-tools.tools.agent-mesh-route',
+    ['nexus.guardian.clear-glass-bridge']],
+  // §BUILT 2026-09-19 (second batch) — bookmarks/accounts/history/site-
+  // settings/autofill agent-tools, all built same session, same real
+  // Guardian-job dispatch pattern as agent-mesh-route.js above.
+  ['lib/agent-tools/tools/bookmarks/bookmarks-manage.js', 'nexus.lib.agent-tools.tools.bookmarks-manage',
+    ['nexus.guardian.clear-glass-bridge']],
+  ['lib/agent-tools/tools/accounts/account-manage.js', 'nexus.lib.agent-tools.tools.account-manage',
+    ['nexus.guardian.clear-glass-bridge']],
+  ['lib/agent-tools/tools/history/history-manage.js', 'nexus.lib.agent-tools.tools.history-manage',
+    ['nexus.guardian.clear-glass-bridge']],
+  ['lib/agent-tools/tools/site-settings/site-settings-manage.js', 'nexus.lib.agent-tools.tools.site-settings-manage',
+    ['nexus.guardian.clear-glass-bridge']],
+  ['lib/agent-tools/tools/autofill/autofill-manage.js', 'nexus.lib.agent-tools.tools.autofill-manage',
+    ['nexus.guardian.clear-glass-bridge', 'nexus.clear-glass.src.autofill.matcher']],
+  ['lib/agent-tools/tools/clear-glass/stream-bridge.js', 'nexus.lib.agent-tools.tools.clear-glass-stream-bridge',
+    ['nexus.lib.clear-glass-stream-bridge']],
+  ['lib/agent-tools/tools/clear-glass/search-engine.js', 'nexus.lib.agent-tools.tools.clearglass-search-engine', []],
+  ['lib/clear-glass-stream-bridge.js', 'nexus.lib.clear-glass-stream-bridge', []],
+  ['clear-glass/src/autofill/store.js', 'nexus.clear-glass.src.autofill.store', []],
+  ['clear-glass/src/autofill/matcher.js', 'nexus.clear-glass.src.autofill.matcher',
+    ['nexus.clear-glass.src.autofill.store']],
+  ['lib/extract-code.js', 'nexus.lib.extract-code', []],
+  ['idearium/spec-engine/index.js', 'nexus.idearium.spec-engine', []],
+  ['idearium/spec-engine/compiler-t0.js', 'nexus.idearium.spec-engine.compiler-t0',
+    ['nexus.idearium.spec-engine']],
+  ['copilot/lib/inject-config.js', 'nexus.copilot.lib.inject-config',
+    ['nexus.lib.node-export', 'nexus.lib.node-index', 'nexus.lib.node-schemas', 'nexus.guardian.jaa-store']],
+
   // §2026-08-23 — real, on top of both the tools above, not parallel to them.
   // §MOVED 2026-08-24 — path corrected: this file itself moved from tools/
   // automation/ to tools/clear-glass/ earlier this same session (matching
@@ -82,7 +117,8 @@ const FILES = [
   ['copilot/config.js', 'nexus.copilot.config', ['nexus.lib.version']],
   ['copilot/server.js',                              'nexus.copilot.server',
     ['nexus.copilot.adaptive-fulfillment', 'nexus.copilot.capability-extend', 'nexus.lib.scheduler', 'nexus.lib.triggers',
-     'nexus.copilot.nexus-awareness', 'nexus.copilot.self-model', 'nexus.copilot.tool-runtime', 'nexus.cortex.jaa-db', 'nexus.copilot.config']],
+     'nexus.copilot.nexus-awareness', 'nexus.copilot.self-model', 'nexus.copilot.tool-runtime', 'nexus.cortex.jaa-db', 'nexus.copilot.config',
+     'nexus.copilot.lib.inject-config']],
      // §2026-08-12 — two edges added to the ALREADY-registered nexus.copilot.server this session:
      // capability-extend (P2, wired as adaptive-fulfillment's true last resort) and scheduler/triggers
      // (boot-time .start() call, commit e4fbebd — the fix for tasks/triggers persisting but never firing).

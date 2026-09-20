@@ -76,6 +76,26 @@ module.exports = Object.freeze({
     severity: 'failure',
   },
 
+  // ── Code artifacts — guardian/lib/code-artifact.js — real, governed,
+  //    emitted from the ncp-handler completion path only when the job
+  //    itself declared a fileName (see guardian/spec/guardian.code-artifact.spec)
+  GUARDIAN_ARTIFACT_CAPTURED: {
+    description: "A real fenced code block from a completed job's reply was written to the file name that job declared, and staged through lib/intake.js. Never applied into the tree — staged only.",
+    payloadShape: ['jobId', 'provider', 'fileName', 'syntax', 'fenceSyntax', 'matchedBy', 'blockIndex', 'blockCount', 'path', 'bytes', 'sha256', 'dropId'],
+    severity: 'info',
+  },
+  GUARDIAN_ARTIFACT_REFUSED: {
+    description: "A job declared a fileName but no artifact was written, and why: no-code-block (no fence in the reply), syntax-mismatch (fences exist, none in the declared/implied language — deliberately NOT falling back to another block), unsafe-filename, or a real write failure. A refusal never fails the job.",
+    payloadShape: ['jobId', 'provider', 'fileName', 'reason', 'syntax', 'blockCount', 'found'],
+    severity: 'notable',
+  },
+
+  GUARDIAN_RESPONSE_CAPTURED: {
+    description: "Every completed agent response is recorded as a real .response node in the ClearGlass downloads index (a COS compartment), with its fenced code blocks and their resolved syntax. indexed:false means the .response file — the source of truth — was written and fsync'd but the disposable SQLite index was unavailable; rebuildIndexFromResponses() recovers it.",
+    payloadShape: ['jobId', 'provider', 'responseId', 'responsePath', 'indexed', 'codeBlocks'],
+    severity: 'info',
+  },
+
   // ── §HONEST GAP — gate.checked / gate.failed, named in ET2's own
   //    phasemap entry for ET6's sigma work, deliberately not included.
   //    Confirmed directly (grepped guardian/server.js for both strings):

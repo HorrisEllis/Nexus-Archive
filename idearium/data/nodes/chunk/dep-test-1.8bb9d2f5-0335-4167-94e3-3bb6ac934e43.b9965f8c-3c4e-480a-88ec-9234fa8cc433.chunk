@@ -1,0 +1,39 @@
+envelope: 1
+uuid: nexus-export-chunk-dep-test-1.8bb9d2f5-0335-4167-94e3-3bb6ac934e43.b9965f8c-3c4e-480a-88ec-9234fa8cc433
+type: chunk
+id: dep-test-1.8bb9d2f5-0335-4167-94e3-3bb6ac934e43.b9965f8c-3c4e-480a-88ec-9234fa8cc433
+context: idearium spec-engine chunk of spec 8bb9d2f5-0335-4167-94e3-3bb6ac934e43
+intent: null
+summary: meta (complete)
+system: idearium
+tags:
+  - spec:8bb9d2f5-0335-4167-94e3-3bb6ac934e43
+  - status:complete
+  - section:meta
+  - specName:dep-test-1
+  - agent:ollama
+exported_at: 1789871579203
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1789871579203
+lastSeenAt: 1789871579203
+fingerprint: null
+payload:
+  uuid: b9965f8c-3c4e-480a-88ec-9234fa8cc433
+  specUuid: 8bb9d2f5-0335-4167-94e3-3bb6ac934e43
+  sectionId: meta
+  sectionTitle: Meta & Identity
+  chunkIdx: 0
+  status: complete
+  realPath: null
+  fileName: 00-meta.md
+  filePath: /tmp/idearium-chunk-deps-RZS5LV/specs/8bb9d2f5-0335-4167-94e3-3bb6ac934e43/00-meta-b9965f8c.md
+  agent: ollama
+  agentModel: null
+  attempts: 0
+  failureMode: null
+  byteSize: 373
+  contentHash: 359b365773dbfb3e21cc1196062f477ad27f83bc04aa9dcd4178d924127a5f17
+  createdAt: 1789871579196
+  updatedAt: 1789871579199
+  completedAt: 1789871579199

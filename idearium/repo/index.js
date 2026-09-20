@@ -171,20 +171,34 @@ export class RepoLayer {
 
       let written = 0;
       let deferred = 0;
+      let failedPaths = [];
       const files = this.get(repoUuid).files || [];
       for (const f of files) {
         // Rule 2 — the real file wins. Counted as deferred, not skipped:
         // the content IS on disk, just not from this layer.
         if (srcPaths.has(f.path)) { deferred++; continue; }
         const content = this.readFile(repoUuid, f.path);
-        if (content.error) continue; // §1.2 — logged by readFile itself; a real, individual missing chunk must not abort the whole materialize
+        if (content.error) { failedPaths.push(f.path); continue; } // §1.2 — logged by readFile itself; a real, individual missing chunk must not abort the whole materialize
         const dest = path.join(outDir, f.path);
         fs.mkdirSync(path.dirname(dest), { recursive: true });
         fs.writeFileSync(dest, content.content, 'utf8');
         written++;
       }
+      // §FIXED 2026-09-19 — James: "needs to fail when it doesn't
+      // actually generate." Before this, a manifest whose every chunk
+      // failed/was unreadable still returned ok:true with written:0 —
+      // the same silent-success shape as the ingestFilesAsSpec bug fixed
+      // alongside this one. A materialize that produced zero real files
+      // out of a non-empty manifest, and didn't defer every one of them
+      // to a real source file, is a real failure of this call, not an
+      // empty-but-fine result.
+      const producedNothing = files.length > 0 && written === 0 && deferred < files.length;
       return {
-        ok: true, dir: outDir, written, total: files.length,
+        ok: !producedNothing,
+        error: producedNothing
+          ? `materialize produced 0 real files out of ${files.length} — every chunk failed or was unreadable: ${failedPaths.slice(0, 10).join(', ')}${failedPaths.length > 10 ? ` (+${failedPaths.length - 10} more)` : ''}`
+          : undefined,
+        dir: outDir, written, total: files.length, failed: failedPaths.length,
         // Honest accounting of the two layers, so a caller can tell
         // "nothing was written because the repo is empty" from "nothing
         // was written because the real files already cover every path".

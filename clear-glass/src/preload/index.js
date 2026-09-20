@@ -148,6 +148,7 @@ contextBridge.exposeInMainWorld('ClearGlass', {
     set:          (url, key, value) => ipcRenderer.invoke('site-settings:set', { url, key, value }),
     deleteKey:    (url, key) => ipcRenderer.invoke('site-settings:deleteKey', { url, key }),
     clear:        (url)      => ipcRenderer.invoke('site-settings:clear', { url }),
+    clearAll:     ()         => ipcRenderer.invoke('site-settings:clearAll'),
     listOrigins:  ()         => ipcRenderer.invoke('site-settings:listOrigins'),
   },
 
@@ -160,6 +161,12 @@ contextBridge.exposeInMainWorld('ClearGlass', {
     delete:      (id)                  => ipcRenderer.invoke('accounts:delete', { id }),
     linkAgent:   (id, agentKey)        => ipcRenderer.invoke('accounts:linkAgent',   { id, agentKey }),
     unlinkAgent: (id, agentKey)        => ipcRenderer.invoke('accounts:unlinkAgent', { id, agentKey }),
+    // §BUILT 2026-09-19 — real per-provider identity, see ipc/bridge.js's own header for the full reasoning
+    linkProvider:   (id, provider, { accountId, email, displayName } = {}) => ipcRenderer.invoke('accounts:linkProvider',   { id, provider, accountId, email, displayName }),
+    unlinkProvider: (id, provider)                                        => ipcRenderer.invoke('accounts:unlinkProvider', { id, provider }),
+    verifyProvider: (id, provider)                                        => ipcRenderer.invoke('accounts:verifyProvider', { id, provider }),
+    getProvider:    (id, provider)                                        => ipcRenderer.invoke('accounts:getProvider',    { id, provider }),
+    findByProvider: (provider, accountId)                                 => ipcRenderer.invoke('accounts:findByProvider', { provider, accountId }),
   },
 
   // §TX16 2026-08-28 — was wired in ipc/bridge.js (listeners:list/get/
@@ -236,6 +243,17 @@ contextBridge.exposeInMainWorld('ClearGlass', {
     record: (payload) => ipcRenderer.invoke('history:record', payload),
     delete: (id)      => ipcRenderer.invoke('history:delete', { id }),
     clear:  (agentId) => ipcRenderer.invoke('history:clear', { agentId }),
+  },
+
+  // §BUILT 2026-09-19 — real AutofillProfile CRUD + detect/fill orchestration
+  autofill: {
+    listProfiles:  ()             => ipcRenderer.invoke('autofill:profile:list'),
+    getProfile:    (id)           => ipcRenderer.invoke('autofill:profile:get', { id }),
+    createProfile: (payload)      => ipcRenderer.invoke('autofill:profile:create', payload),
+    updateProfile: (id, updates)  => ipcRenderer.invoke('autofill:profile:update', { id, updates }),
+    deleteProfile: (id)           => ipcRenderer.invoke('autofill:profile:delete', { id }),
+    detect: (profileId, agentId)  => ipcRenderer.invoke('autofill:detect', { profileId, agentId }),
+    fill:   (profileId, agentId, minConfidence) => ipcRenderer.invoke('autofill:fill', { profileId, agentId, minConfidence }),
   },
 
   // ── Rewind ────────────────────────────────────────────────────────────

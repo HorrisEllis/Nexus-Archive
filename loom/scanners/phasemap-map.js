@@ -22,7 +22,11 @@
 const fs = require('fs');
 const path = require('path');
 const ROOT = path.resolve(__dirname, '../..');
-const DOCS = path.join(ROOT, 'docs');
+// §TESTABILITY 2026-09-19 — overridable so the status parser can be tested
+// against real fixture phasemaps on disk rather than only against the live
+// tree, whose contents change every session. The default is unchanged, so
+// no real caller is affected.
+const DOCS = process.env.NEXUS_PHASEMAP_DIR || path.join(ROOT, 'docs');
 
 // Systems phases get tagged to (matched against phase text, case-insensitive).
 const SYSTEMS = ['cortex', 'guardian', 'bridge', 'orchestrator', 'loom', 'copilot',
@@ -81,8 +85,51 @@ function loadAll() {
       if (!m) continue;
       const id = m[1];
       const rest = m[2] || '';
-      // status: a "DONE" marker on the phase line or the next few lines.
-      const near = [rest, lines[i + 1] || '', lines[i + 2] || ''].join(' ');
+      // §FIXED 2026-09-19 (same pass as the two inversions below) — `near`
+      // was a fixed [rest, i+1, i+2] window, so a phase whose `status:` key
+      // sits on its THIRD line or later had its status read from lines that
+      // do not contain it. Found live: MCO1_graph_layer, written
+      //     MCO1_graph_layer:
+      //       depends_on: [MCO0]
+      //       status: >
+      //         DONE 2026-09-19 ...
+      // reported 'pending' with the word DONE sitting right there, because
+      // `status:` is line 3 and the value line 4. This is the SAME fixed-
+      // window fragility the 2026-08-23 bugfix below already found and fixed
+      // for depends_on — it was simply never applied to the status read.
+      // Real fix, same shape as that one: find the phase's ACTUAL boundary
+      // first, locate its REAL status: key inside that, and read the value
+      // from there (including a block scalar, whose value begins on the
+      // following line) rather than from an arbitrary offset.
+      let bodyEnd = i + 1;
+      while (bodyEnd < lines.length && bodyEnd < i + 60 && !PHASE_RE.test(lines[bodyEnd])) bodyEnd++;
+      const phaseLines = lines.slice(i, bodyEnd);
+      const sIdx = phaseLines.findIndex(l => /^\s+status:/.test(l));
+      const near = sIdx === -1
+        ? [rest, lines[i + 1] || '', lines[i + 2] || ''].join(' ')   // no status: key — fall back
+        : phaseLines.slice(sIdx, sIdx + 4).join(' ');
+      // §FIXED 2026-09-19 — TWO measured inversions, both of which pointed
+      // the wrong way for deciding what to work on. Counted across all 528
+      // real phases in docs/*phasemap*.spec before touching this:
+      //
+      //   23 phases whose status LITERALLY READS "NOT STARTED" were
+      //      reported 'in-progress', because /STARTED/i matches inside
+      //      "NOT STARTED". Unstarted work looked started, so it gets
+      //      skipped.
+      //    8 phases whose status value BEGINS with a bare "DONE" (the
+      //      ordinary convention in these files — `status: "DONE
+      //      2026-09-15."`) were reported 'pending', because the 2026-08-13
+      //      fix below only accepts DONE when a glyph or # precedes it.
+      //      Finished work looked pending, so it gets redone.
+      //
+      // Found live this session: this scanner reported MCO1_graph_layer as
+      // 'in-progress' while the file it was reading said "NOT STARTED".
+      // The status VOCABULARY was then counted rather than guessed at —
+      // DONE(10), NOT(23), OPEN(10), ✓(4), PARTIAL(3), DRAFT(3) — and only
+      // the two genuinely broken cases are changed here. OPEN/DRAFT already
+      // fall through to pending correctly and are left alone (§16.4 — no
+      // generalizing past what was measured).
+      //
       // §FIXED 2026-08-13 — this test was /←\s*DONE|COMPLETE|✓\s*DONE/i:
       // case-INSENSITIVE and unanchored, so the ordinary word "complete" or
       // "completely" appearing anywhere in a phase's first three lines marked
@@ -92,10 +139,18 @@ function loadAll() {
       // prose as a completion marker will mark pending work done and nobody
       // will see it (§1.2). Real markers in these files are uppercase and
       // carry a glyph or a comment prefix, so match them case-SENSITIVELY as
-      // markers rather than as words.
-      const status = /←\s*DONE\b|✓\s*DONE\b|#\s*DONE\b|\bCOMPLETE\b/.test(near) ? 'done'
-                   : /IN PROGRESS|STARTED|\bpartial\b/i.test(near) ? 'in-progress'
-                   : 'pending';
+      // markers rather than as words. That reasoning still holds and is why
+      // the DONE case added above is anchored to the START of the status
+      // VALUE rather than allowed to match DONE anywhere in prose.
+      const status =
+        // "NOT STARTED" is pending, and must be tested before STARTED.
+        /\bNOT STARTED\b/i.test(near) ? 'pending'
+        : /←\s*DONE\b|✓\s*DONE\b|#\s*DONE\b|\bCOMPLETE\b/.test(near) ? 'done'
+        // a status value that OPENS with DONE — `status: "DONE ..."`,
+        // `status: >` then DONE — not the word DONE loose in prose.
+        : /status:\s*[>|]?-?\s*["']?\s*DONE\b/.test(near) ? 'done'
+        : /IN PROGRESS|STARTED|\bpartial\b/i.test(near) ? 'in-progress'
+        : 'pending';
 
       // gather the phase's REAL full body for system tagging + depends_on —
       // §BUGFIX 2026-08-23, found while asking "what's next" against a
@@ -111,9 +166,9 @@ function loadAll() {
       // the real boundary. Capped at 60 lines as an honest safety limit
       // (a single phase entry this long is itself worth a real look, not
       // silently unbounded scanning) rather than removed entirely.
-      let bodyEnd = i + 1;
-      while (bodyEnd < lines.length && bodyEnd < i + 60 && !PHASE_RE.test(lines[bodyEnd])) bodyEnd++;
-      const body = lines.slice(i, bodyEnd).join(' ');
+      // bodyEnd is computed above, where the status read now also needs it —
+      // one boundary calculation, not two that could drift apart (§10.3).
+      const body = phaseLines.join(' ');
       // §FIXED 2026-08-13 — the regex below stops at a newline ([^\]\n]+),
       // which was correct, but `body` above joins with a SPACE, so there were
       // no newlines left to stop at and the match ran on greedily through the
@@ -122,7 +177,7 @@ function loadAll() {
       // dependency graph this feeds was reading whole paragraphs as dependency
       // names. Match against a newline-preserving join; `body` keeps its
       // space-join because _tagSystem() genuinely wants one flat string.
-      const bodyLines = lines.slice(i, bodyEnd).join('\n');
+      const bodyLines = phaseLines.join('\n');
       const dep = (bodyLines.match(/depends_on:\s*\[?([^\]\n]+)/) || [])[1] || '';
       phases.push({
         id, map: name,

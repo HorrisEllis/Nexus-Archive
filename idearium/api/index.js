@@ -186,7 +186,32 @@ import { fileURLToPath as _fileURLToPath, pathToFileURL as _pathToFileURL } from
 // env var lets a test point this somewhere real-but-disposable instead.
 const IDEARIUM_DATA_DIR = process.env.IDEARIUM_DATA_DIR || path.join(path.dirname(_fileURLToPath(import.meta.url)), '..', 'data');
 import { dispatchChunkWithVerification } from '../spec-engine/chunk-dispatch.js';
-import { COMPONENTS as IDEARIUM_COMPONENTS } from '../registry-components.js';
+import { LANG_TO_EXT } from '../../lib/extract-code.js';
+// §BUILT 2026-09-19 — real source-code extensions this dispatch path
+// will assume "expect exactly one clean fenced code block back" for.
+//
+// §CORRECTED 2026-09-20 — this was Object.values(LANG_TO_EXT) minus a
+// hardcoded ['.json','.yaml','.md']. That was right for the 19-extension
+// map it was written against, but it encoded the RULE as a list of three
+// exceptions. When lib/languages.js consolidated four drifting language
+// tables and the map grew to 62 extensions, .toml/.xml/.txt/.csv/
+// .markdown all fell through the filter and would have been treated as
+// "one clean fenced block" — precisely what the original comment below
+// says is unsafe for a data file or a doc. Caught by checking the filter
+// against the grown table rather than by assuming a bigger map was
+// strictly better.
+//
+// Now it asks lib/languages.js for kind==='code' directly, so the rule
+// is a real property of each language and a newly-added data format is
+// excluded automatically instead of needing this list edited. The
+// original reasoning, unchanged and still the reason:
+//
+//   .json/.yaml/.md are real entries a chunk can legitimately target,
+//   but "the agent's whole reply is one clean fenced block" isn't a safe
+//   assumption for them the way it is for a source-code file (a data
+//   file or doc is far more likely to arrive as plain, unfenced content,
+//   or wrapped in prose explaining it).
+const CODE_EXTENSIONS = require('../../lib/languages.js').codeExtensions();import { COMPONENTS as IDEARIUM_COMPONENTS } from '../registry-components.js';
 import path from 'path';
 import fs from 'fs';
 import { loadTable, appendRow, deleteRow, syncTable } from '../lib/db.js';
@@ -701,6 +726,10 @@ function matchRoute(method, url) {
     ['GET',    ['api','repos',    ':uuid','chunks'],        'repo.chunks.list'],
     ['GET',    ['api','repos',    ':uuid','chunks',':chunkId'], 'repo.chunks.get'],
     ['GET',    ['api','repos',    ':uuid','symbols'],       'repo.symbols'],
+    // §24-26 graph (MCO1) — idearium/spec/idearium.repo-graph.spec
+    ['GET',    ['api','repos',    ':uuid','graph'],          'repo.graph'],
+    ['GET',    ['api','repos',    ':uuid','graph','traverse'], 'repo.graph.traverse'],
+    ['GET',    ['api','repos',    ':uuid','graph','cone'],   'repo.graph.cone'],
     ['GET',    ['api','repos',    ':uuid','verification'],  'repo.verification'],
     ['POST',   ['api','repos',    ':uuid','reindex'],       'repo.reindex'],
   ];
@@ -1901,6 +1930,63 @@ async function handle(req, res, route, query, body) {
       return ok(res, JSON.parse(fs.readFileSync(p, 'utf8')));
     }
 
+    // ── §24-26 GRAPH (MCO1) — reads graph.json, the GRAPHING step's own
+    //    on-disk output. Contract: idearium/spec/idearium.repo-graph.spec.
+    //    Read-only, same shape as repo.map above; never rebuilds on the
+    //    fly (POST .../reindex is the one real rebuild path, §10.1).
+    case 'repo.graph': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const dir = _repoDiskDir(params.uuid);
+      if (!dir) return err(res, 500, 'could not resolve repo directory');
+      const p = path.join(dir, 'graph.json');
+      if (!fs.existsSync(p)) return err(res, 404, 'no graph yet — repo has not been through the import pipeline (see POST .../reindex)');
+      const graph = JSON.parse(fs.readFileSync(p, 'utf8'));
+      // Default to the summary. A 10k-edge graph is not a useful HTTP
+      // response body and the whole point of this layer is that an agent
+      // asks a QUESTION (traverse/cone) rather than loading everything —
+      // ?full=1 is still available and honest about what it costs.
+      if (query.full === '1' || query.full === 'true') return ok(res, graph);
+      const { nodes, edges, ...summary } = graph;
+      return ok(res, { ...summary, note: 'summary only — add ?full=1 for all nodes and edges, or use /graph/traverse and /graph/cone to ask a question instead' });
+    }
+
+    case 'repo.graph.traverse': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const dir = _repoDiskDir(params.uuid);
+      if (!dir) return err(res, 500, 'could not resolve repo directory');
+      if (!query.start) return err(res, 400, 'start is required (a node id such as file:src/x.js or chunk:<id>)');
+      const { readGraph, traverse } = await import('../repo/graph.js');
+      const graph = readGraph(dir);
+      if (!graph) return err(res, 404, 'no graph yet — see POST .../reindex');
+      try {
+        return ok(res, traverse(graph, {
+          start: query.start,
+          relation: query.relation || 'depends_on',
+          direction: query.direction === 'in' ? 'in' : 'out',
+          depth: Math.max(1, Math.min(20, parseInt(query.depth || '1', 10) || 1)),
+          includeUnresolved: query.includeUnresolved !== '0',
+          filters: { kind: query.kind || null, language: query.language || null },
+        }));
+      } catch (e) { return err(res, 400, e.message); }
+    }
+
+    case 'repo.graph.cone': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const dir = _repoDiskDir(params.uuid);
+      if (!dir) return err(res, 500, 'could not resolve repo directory');
+      if (!query.start) return err(res, 400, 'start is required (a file path, file:<path> or chunk:<id>)');
+      const { readGraph, dependencyCone } = await import('../repo/graph.js');
+      const graph = readGraph(dir);
+      if (!graph) return err(res, 404, 'no graph yet — see POST .../reindex');
+      return ok(res, dependencyCone(graph, {
+        start: query.start,
+        depth: Math.max(1, Math.min(20, parseInt(query.depth || '5', 10) || 5)),
+      }));
+    }
+
     case 'repo.chunks.list': {
       const repo = getRepoLayer().get(params.uuid);
       if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
@@ -2282,8 +2368,19 @@ async function handle(req, res, route, query, body) {
         // exact prompt has been built before. Falls back to the direct agent
         // path when WARP is not (yet) loaded — never a hard dependency.
         const warpFn = await getWarpChunkDispatch();   // §awaited: the FIRST build must also populate the cache
+        // §BUILT 2026-09-19 — James: "smallest executable code that
+        // doesn't remove capability." expectCode is derived from the one
+        // real, already-existing field that distinguishes a real target
+        // file from a descriptive section: chunk.realPath. All 10 of
+        // blocks.yaml's sections (purpose/axioms/schema/api/events/
+        // integration/failure_modes/build_order/tests/meta) have
+        // realPath: null — completely unaffected, expectCode stays
+        // false, identical to every dispatch before this. Only a chunk
+        // that IS a real file (addChunk's realPath, e.g. "lib/foo.js")
+        // and whose extension is a real source-code extension opts in.
+        const expectCode = !!(chunk.realPath && CODE_EXTENSIONS.has(path.extname(chunk.realPath).toLowerCase()));
         const dispatchFn = warpFn
-          ? (prompt, dispatchOpts) => warpFn(prompt, { ...dispatchOpts, chunkTitle: chunk.title || chunk.sectionId })
+          ? (prompt, dispatchOpts) => warpFn(prompt, { ...dispatchOpts, chunkTitle: chunk.title || chunk.sectionId, expectCode })
           : (prompt, dispatchOpts) => as.buildChunkWithAgent(prompt, dispatchOpts);
 
         dispatchChunkWithVerification(chunkPrompt, chunk, dispatchFn,

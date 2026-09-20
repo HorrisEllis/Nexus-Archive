@@ -39,6 +39,9 @@ spec:
       - "guardian.seam.chunk_sent"
       - "guardian.seam.chunk_passed"
       - "guardian.seam.chunk_failed"
+      - "guardian.artifact.captured"
+      - "guardian.artifact.refused"
+      - "guardian.response.captured"
     handles:
       - "cortex.raid.decided → dispatch to chosen provider"
       - "HEAL_REQUESTED      → forge.patch if applicable"
@@ -177,3 +180,18 @@ spec:
       - "JOBS — live job queue, status, provider used, duration"
       - "SEAM — chunk pipeline status, gate scores, retry history"
       - "DISPATCH — manual dispatch panel with provider selector"
+
+  built_2026_09_19_agent_tool_expansion:
+    what: >-
+      No guardian-owned code changed — real work landed in lib/agent-tools/tools/mesh/agent-mesh-route.js
+      (built from a confirmed dangling-hook gap to 17/17 real AgentMesh actions) and browser-action.js
+      (ClearDriver coverage 5 -> 30 real actions). Noted here because both dispatch exclusively through
+      guardian's real POST /command + GET /jobs poll (this file's own real job surface, unchanged) — that
+      surface is now exercised by 47 real distinct actions across the two tools, not the original 9.
+    audit_finding: >-
+      cockpit/cli.js's real INTERACTION_CONTRACT (29 commands, extracted live) has zero mesh/driver/brainos
+      coverage. The real gaps were closed through copilot's agent-tool loop, not new cockpit commands.
+      Whether cockpit should ALSO gain its own "forge mesh ..."/"forge driver ..." commands — a second real
+      path to the same capability — is a real, still-open decision, not made here (§16.5: one truth, a
+      second path needs a real reason beyond parity). See docs/2026-09-19-agents-clearglass-guardian-
+      idearium-copilot-phasemap.spec's phase_5.

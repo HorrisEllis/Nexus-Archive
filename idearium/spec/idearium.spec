@@ -123,3 +123,32 @@ spec:
       - "PROJECTS — phase board (seed→complete), spec drop zone"
       - "IDEAS — idea list with weight and lattice connections"
       - "LATTICE — resonance graph visualisation"
+
+  built_2026_09_19_compiler_t0_and_bottom_up_build:
+    what: >-
+      idearium/spec-engine/compiler-t0.js — docs/spec-compiler.spec's T0 tier (directory tree + placeholder
+      emission, zero LLM tokens), reusing addChunk()'s existing real chunk-creation path rather than a new
+      one. addChunk() gained real dependsOn support (validated against the manifest's real sectionIds,
+      fails loudly on a bad reference). New _topoOrder() — real Kahn's-algorithm bottom-up sort over
+      build_order's own per-file dependsOn edges; throws on a genuine cycle rather than emitting an
+      unbuildable graph in file-list order. isPrimitive derived directly from the real dependency graph
+      (no dependencies of its own, but something else depends on it), not a separate, driftable flag.
+    two_real_bugs_fixed: >-
+      ingestFilesAsSpec() used to mark an empty/uncaptured file COMPLETE with a fabricated markdown-comment
+      placeholder instead of failing — now calls failChunk() instead. RepoLayer.materialize() (repo/
+      index.js) returned ok:true even when every chunk failed and zero real files were written — now
+      ok:false when a non-empty manifest produces zero real output with nothing legitimately deferred to a
+      real source file.
+    also: >-
+      lib/extract-code.js (real fenced-code-block extraction from an agent's raw chat reply, fails loudly
+      on zero/unclosed/empty/ambiguous-multiple blocks) wired opt-in into warp-build-dispatch.js's
+      generate() via chunk.realPath's extension (record.expectCode) — none of the 10 real blocks.yaml
+      section types (all realPath:null) are affected; only a real target-file chunk with a real code
+      extension opts in.
+    proven: >-
+      parseBuildOrder's dependency validation, _topoOrder against a chain/diamond/real-cycle (cycle fails
+      loudly naming the exact stuck files), extractCode against 10 real cases including every failure path.
+    honest_gap: >-
+      No real caller in this system's own dispatch orchestration (index.js/api/index.js) yet builds a
+      build_order chunk or calls emitStructure() as part of a real spec's own lifecycle — proven standalone,
+      not yet wired end-to-end without a human calling it directly.

@@ -328,10 +328,30 @@ function createNCPMessageHandler(deps) {
             status: 'complete', response: finalText, completedAt: Date.now(),
             gaps: gaps.length, gapDrift, detection,
           });
+          // §CODE-ARTIFACT — the listener. Now one shared implementation
+          // (guardian/lib/code-artifact.js onJobComplete) called from
+          // every real completion point, instead of living inline here
+          // and nowhere else.
+          let codeArtifact = null;
+          try {
+            const { onJobComplete } = require('./code-artifact.js');
+            const jobRec = jobs.get(jobId) || { id: jobId, provider };
+            codeArtifact = onJobComplete({ job: jobRec, text: finalText, bus });
+          } catch (e) {
+            console.warn(`[guardian] code-artifact listener failed for job ${jobId} (non-fatal): ${e.message}`);
+          }
+
           jaa.insert('artifacts', {
             uuid: require('crypto').randomUUID(), jobId, provider: provider || 'unknown',
             content: finalText.slice(0, 10000), ts: Date.now(), chatUrl, account,
             gaps: gaps.length, gapDrift,
+            // null when the job never declared a file — the row shape is
+            // additive, existing readers are unaffected.
+            fileName: codeArtifact && codeArtifact.ok ? codeArtifact.fileName : null,
+            syntax:   codeArtifact && codeArtifact.ok ? codeArtifact.syntax   : null,
+            filePath: codeArtifact && codeArtifact.ok ? codeArtifact.path     : null,
+            fileSha256: codeArtifact && codeArtifact.ok ? codeArtifact.sha256 : null,
+            dropId:   codeArtifact && codeArtifact.ok ? codeArtifact.dropId   : null,
           });
 
           // §CHAT-LOG: persist every exchange for context injection and querying

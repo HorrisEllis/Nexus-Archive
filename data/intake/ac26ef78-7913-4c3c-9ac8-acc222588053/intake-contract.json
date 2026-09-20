@@ -1,0 +1,38 @@
+{
+  "id": "intake-ac26ef78-7913-4c3c-9ac8-acc222588053",
+  "dropId": "ac26ef78-7913-4c3c-9ac8-acc222588053",
+  "version": "1.0.0",
+  "module": "nexus.lib.intake",
+  "state": "STAGED",
+  "stagedAt": 1789872683594,
+  "provenance": {
+    "provider": "claude",
+    "chatUrl": null,
+    "filename": "x.swift",
+    "downloadedAt": 1789872683593,
+    "jobId": "resp-test-2",
+    "raidQueueId": null,
+    "sourcePath": "/home/claude/work/merged/data/guardian/code-artifacts/resp-test-2/x.swift"
+  },
+  "claims": [
+    {
+      "source": "x.swift",
+      "target": "x.swift",
+      "mapped": false,
+      "bytes": 9,
+      "sha256": "fbd4480f3bf1d131a5e0f31cc1476321fde88b94188ae1d2d42f9fe76b8d0417",
+      "effect": "UNPLACED"
+    }
+  ],
+  "summary": {
+    "files": 1,
+    "create": 0,
+    "overwrite": 0,
+    "identical": 0,
+    "unplaced": 1,
+    "archives": 0,
+    "unexpandedArchives": []
+  },
+  "verdict": null,
+  "promoted": null
+}

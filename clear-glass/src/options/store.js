@@ -25,6 +25,17 @@ const OPTIONS_PATH = path.join(
   process.env.APPDATA || process.env.HOME || '.', '.clear-glass', 'nexus-options.json'
 );
 
+// §BUILT 2026-09-19 — the real subset of lib/hat-forge.js's own
+// VALID_BASE_AGENTS that have an external account to link at all.
+// Deliberately excludes 'ollama' (a local model — no account exists)
+// and 'copilot' (NEXUS itself, not an external service with its own
+// login). A hardcoded literal list here, not a runtime require of
+// hat-forge.js — this file has no reason to depend on that module at
+// runtime, and the two sets are documented against each other so a
+// real drift (hat-forge.js adding a real new provider) is at least
+// visible in one grep, not silently missed.
+const VALID_PROVIDERS = new Set(['claude', 'chatgpt', 'gemini', 'mistral', 'perplexity', 'deepseek']);
+
 const DEFAULTS = {
   // Window behavior
   hideToTrayOnClose:    true,   // close (✕) button / OS close → hide to tray instead of destroying
@@ -295,6 +306,135 @@ class NexusOptions {
     if (linked.length) return linked[0].id;
     const created = this.createAccount({ label: `Default — ${agentKey}`, agentKeys: [agentKey] });
     return created.id;
+  }
+
+  // ── Provider account identity — §BUILT 2026-09-19 ────────────────────────
+  // James: "account manager with account ids for providers." agentKeys
+  // above only ever tracked which agent TYPES an account is linked to
+  // ('chatgpt', 'claude') — not WHICH real chatgpt.com login it is. Two
+  // real NEXUS accounts could both link agentKey:'chatgpt' while being
+  // two entirely different real people's chatgpt.com sessions, and
+  // nothing distinguished them. This is additive, not a replacement:
+  // agentKeys/resolveDefaultAccountForAgent above are completely
+  // unchanged and still govern which account a fresh agent-mesh dispatch
+  // defaults to; providerAccounts adds real, verifiable identity ON TOP
+  // of that linkage for the providers that actually have one (VALID_
+  // PROVIDERS below deliberately excludes 'ollama' — a local model, no
+  // account exists — and 'copilot' — NEXUS itself, not an external
+  // service with its own login).
+  //
+  // Real shape per account, at data.accounts[id].providerAccounts[provider]:
+  //   { accountId, email, displayName, status, linkedAt, lastVerifiedAt }
+  // accountId is the one REQUIRED, real field — the provider's own
+  // identifier for this login (its account UUID if the provider exposes
+  // one, its email otherwise). Everything else is real metadata about
+  // that identity, not a second source of truth for it.
+
+  /**
+   * linkProviderAccount(id, provider, {accountId, email?, displayName?})
+   * — real, validated link. Refuses loudly (§1.2), never partially
+   * links, on:
+   *   - an unknown account id
+   *   - a provider outside VALID_PROVIDERS
+   *   - a missing/empty accountId (the one field this can't be honest
+   *     without)
+   *   - accountId already linked to a DIFFERENT real NEXUS account for
+   *     the SAME provider — the genuine invariant this whole feature
+   *     exists to protect: two accounts silently sharing one real login
+   *     is exactly the ambiguity "account ids for providers" was asked
+   *     for to prevent, not a case to allow and sort out later.
+   * Re-linking the SAME accountId to the SAME account (e.g. after a
+   * re-auth) is allowed and refreshes status/lastVerifiedAt — this is
+   * update-in-place, not a duplicate.
+   */
+  linkProviderAccount(id, provider, { accountId, email = null, displayName = null } = {}) {
+    const existing = this.data.accounts?.[id];
+    if (!existing) return { error: `no account "${id}"` };
+    if (!VALID_PROVIDERS.has(provider)) {
+      return { error: `"${provider}" is not a real provider with its own account — one of: ${[...VALID_PROVIDERS].join(', ')}` };
+    }
+    if (!accountId || typeof accountId !== 'string' || !accountId.trim()) {
+      return { error: 'accountId is required — the provider\'s own real identifier for this login (its account id/uuid, or its email if that\'s all the provider exposes)' };
+    }
+    const clean = accountId.trim();
+    const collision = this.findAccountByProviderAccountId(provider, clean);
+    if (collision && collision.id !== id) {
+      return { error: `"${clean}" on ${provider} is already linked to a different NEXUS account ("${collision.label}", ${collision.id}) — unlink it there first if this is really a re-assignment, not two people sharing one real login` };
+    }
+    const now = Date.now();
+    const prior = existing.providerAccounts?.[provider];
+    const entry = {
+      accountId: clean,
+      email,
+      displayName,
+      status: 'active',
+      linkedAt: prior?.linkedAt ?? now, // real first-link time survives a re-link/refresh
+      lastVerifiedAt: now,
+    };
+    const updated = {
+      ...existing,
+      providerAccounts: { ...(existing.providerAccounts || {}), [provider]: entry },
+      updatedAt: now,
+    };
+    this.data = { ...this.data, accounts: { ...this.data.accounts, [id]: updated } };
+    this._persist();
+    return { ...updated };
+  }
+
+  /** unlinkProviderAccount(id, provider) — real removal of just that provider's identity; agentKeys/other providers on this account are untouched. */
+  unlinkProviderAccount(id, provider) {
+    const existing = this.data.accounts?.[id];
+    if (!existing) return { error: `no account "${id}"` };
+    if (!existing.providerAccounts?.[provider]) return { error: `account "${id}" has no linked ${provider} account` };
+    const { [provider]: _removed, ...rest } = existing.providerAccounts;
+    const updated = { ...existing, providerAccounts: rest, updatedAt: Date.now() };
+    this.data = { ...this.data, accounts: { ...this.data.accounts, [id]: updated } };
+    this._persist();
+    return { ...updated };
+  }
+
+  /**
+   * verifyProviderAccount(id, provider) — real, explicit "this login is
+   * still good" timestamp update. Does not itself check the provider
+   * (this store has no network access, by design — every ClearGlass-
+   * facing check this session runs through a real gate/tool, not a
+   * silent fetch from inside a data store); a caller that DID confirm
+   * the session (a successful real dispatch through it, an explicit
+   * re-auth) calls this to record that fact. status stays 'active' on
+   * success; a caller that instead found the login dead should call
+   * linkProviderAccount again on re-auth, not this.
+   */
+  verifyProviderAccount(id, provider) {
+    const existing = this.data.accounts?.[id];
+    if (!existing) return { error: `no account "${id}"` };
+    const entry = existing.providerAccounts?.[provider];
+    if (!entry) return { error: `account "${id}" has no linked ${provider} account` };
+    const updated = {
+      ...existing,
+      providerAccounts: { ...existing.providerAccounts, [provider]: { ...entry, status: 'active', lastVerifiedAt: Date.now() } },
+      updatedAt: Date.now(),
+    };
+    this.data = { ...this.data, accounts: { ...this.data.accounts, [id]: updated } };
+    this._persist();
+    return { ...updated };
+  }
+
+  /** getProviderAccount(id, provider) — real, single-entry read; null (not an error) when nothing is linked yet, matching getAccount's own honest-null convention. */
+  getProviderAccount(id, provider) {
+    return this.data.accounts?.[id]?.providerAccounts?.[provider] || null;
+  }
+
+  /**
+   * findAccountByProviderAccountId(provider, accountId) — the real
+   * reverse lookup linkProviderAccount's own collision check uses, also
+   * useful on its own ("which of my NEXUS accounts is
+   * user@example.com on chatgpt"). Returns the full account record, or
+   * null — never throws on a miss, a miss is a real, valid answer.
+   */
+  findAccountByProviderAccountId(provider, accountId) {
+    const clean = String(accountId || '').trim();
+    if (!clean) return null;
+    return this.listAccounts().find(a => a.providerAccounts?.[provider]?.accountId === clean) || null;
   }
 
   // ── Listeners — TX16 real slice, real CRUD, never through set() ─────────

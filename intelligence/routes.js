@@ -79,6 +79,112 @@ function createRoutes({ jaaDB, getField, intelligence, refreshMs = 1000, now = D
   const { createMastermind } = require('./mastermind');
   const adversarial          = require('./adversarial');
 
+  // §BUILT — wiring the previously-unwired intelligence submodules onto
+  // routes, same lazy-require-and-degrade pattern as getTaxonomy/
+  // getSystemLattice/getCausalGraphClass above. Nothing here is a new
+  // engine — these modules already exist and work; this is their first
+  // HTTP surface.
+  const liminalGaps  = require('./liminal');           // 12 domain-agnostic gap detectors
+  const gap          = require('./gap');               // { hunter, predicate, ledger } lazy getters
+  const { BDAKernel }= require('./bda');
+  const causalAnomaly= require('./causal/anomaly');
+  const { createCompoundEngine } = require('./causal/compound');
+  const alk          = require('./alk');
+  const alkPerception= require('./alk-perception');
+  const telemetryCodec = require('./telemetry-codec');
+  const path         = require('path');
+
+  // BDA — one kernel per process, same shape as system-lattice's singleton.
+  // Ledger persists to intelligence's own data dir, not cortex's.
+  let _bda = null;
+  function getBDA() {
+    if (_bda) return _bda;
+    _bda = new BDAKernel({ ledgerPath: path.join(require('./config').DATA_DIR, 'bda-ledger.jsonl') });
+    return _bda;
+  }
+
+  // ALK — decisions.jsonl needs hydrating into the in-memory index once
+  // per process before query()/ancestors()/descendants() see history from
+  // before this boot. Lazy on first touch, not at require-time, so a
+  // process that never calls an /alk route never pays the read.
+  let _alkLoaded = false;
+  function ensureAlkLoaded() {
+    if (_alkLoaded) return;
+    try { alk.load(); } catch (e) { console.warn(`[${MODULE_ID}] alk.load() failed: ${e.message}`); }
+    _alkLoaded = true;
+  }
+
+  // causal/anomaly — module-level init(), same one-time-lazy shape.
+  let _anomalyInit = false;
+  function ensureAnomalyInit() {
+    if (_anomalyInit) return;
+    try { causalAnomaly.init({ jaaDB: db, bus: nexusBus }); } catch (e) { console.warn(`[${MODULE_ID}] anomaly.init() failed: ${e.message}`); }
+    _anomalyInit = true;
+  }
+
+  // alk-perception — windowed kernel so /api/intelligence/perception can
+  // report oscillation between composite states across calls, not just a
+  // single-frame classification.
+  let _perceptionKernel = null;
+  function getPerceptionKernel() {
+    if (!_perceptionKernel) _perceptionKernel = new alkPerception.ALKPerceptionKernel({ windowSize: 20 });
+    return _perceptionKernel;
+  }
+
+  // telemetry-codec — feeds the CFR field's own 4 dimensions through the
+  // Slope/Stability/Oscillation/Drift engines. Honest about what this is:
+  // it's re-deriving trend/stability signal FROM the field CFR already
+  // computes, not a second, independent measurement.
+  let _telemetryRuntime = null;
+  function getTelemetryRuntime() {
+    if (!_telemetryRuntime) _telemetryRuntime = new telemetryCodec.TelemetryRuntime({ serviceId: 'intelligence.cfr-field' });
+    return _telemetryRuntime;
+  }
+
+  // RFR2 — a live kernel instance for THIS process's own event stream.
+  // Deliberately NOT backfilled from jaaDB's event_log: kernel.ingest()
+  // mints a fresh internal id per event (I-1, never reused/deterministic),
+  // so a historical event_log uuid has no corresponding kernel id to link
+  // causedBy against — attempting to backfill would silently produce
+  // wrong or orphaned causal edges. Instead this kernel starts empty at
+  // first use and subscribes to nexus-bus '*' going forward, same
+  // boot-boundary honesty CFR's ring buffers and ALK's per-session index
+  // already have (see routes.js/alk history above) — it only knows what
+  // happened since it started listening, and says so via `live`/`since`.
+  let _rfr2Kernel  = null;
+  let _rfr2IdMap   = null;   // external bus-event id → this kernel's internal event id
+  let _rfr2Live    = false;
+  let _rfr2Since   = null;
+  function getRFR2Kernel() {
+    if (_rfr2Kernel) return _rfr2Kernel;
+    const { createKernel } = require('./rfr2/kernel');
+    _rfr2Kernel = createKernel({ ringCap: 20000 });
+    _rfr2IdMap  = new Map();
+    return _rfr2Kernel;
+  }
+  function ensureRFR2Live() {
+    if (_rfr2Live) return;
+    const kernel = getRFR2Kernel();
+    try {
+      nexusBus.on('*', (event) => {
+        try {
+          const extCausedBy = event.causedBy || null;
+          const mapped = extCausedBy && _rfr2IdMap.has(extCausedBy) ? _rfr2IdMap.get(extCausedBy) : null;
+          const ev = kernel.ingest(event.type, event.payload, {
+            causedBy: mapped, edgeType: mapped ? 'causal/explicit' : null,
+            source: event.source, sessionId: event.payload?.sessionId || null,
+          });
+          _rfr2IdMap.set(event.id, ev.id);
+          // Bound the id map the same way the kernel bounds its own ring —
+          // otherwise this map would be the one unbounded structure here.
+          if (_rfr2IdMap.size > 20000) _rfr2IdMap.delete(_rfr2IdMap.keys().next().value);
+        } catch (e) { /* a single malformed bus event must not break the live feed */ }
+      });
+      _rfr2Since = Date.now();
+      _rfr2Live  = true;
+    } catch (e) { console.warn(`[${MODULE_ID}] RFR2 live feed failed to attach: ${e.message}`); }
+  }
+
   let _taxonomy = null;
   const getTaxonomy = () => {
     if (_taxonomy !== null) return _taxonomy;
@@ -139,6 +245,19 @@ function createRoutes({ jaaDB, getField, intelligence, refreshMs = 1000, now = D
     '/api/intelligence/context', '/api/intelligence/intuition', '/api/intelligence/mastermind',
     '/api/intelligence/mastermind/patterns', '/api/intelligence/adversarial', '/api/intelligence/rca',
     '/api/intelligence/query', '/api/intelligence/lattice', '/api/intelligence/crystals',
+    // §BUILT — newly-wired submodule routes
+    '/api/intelligence/liminal/analyze',
+    '/api/intelligence/gap/status', '/api/intelligence/gap/hunt',
+    '/api/intelligence/gap/enrich', '/api/intelligence/gap/verify',
+    '/api/intelligence/bda/status', '/api/intelligence/bda/observe', '/api/intelligence/bda/reset',
+    '/api/intelligence/causal/anomalies', '/api/intelligence/causal/compound',
+    '/api/intelligence/alk/stats', '/api/intelligence/alk/decisions',
+    '/api/intelligence/alk/ancestors', '/api/intelligence/alk/descendants',
+    '/api/intelligence/alk/record', '/api/intelligence/alk/resolve', '/api/intelligence/alk/rewind',
+    '/api/intelligence/perception', '/api/intelligence/telemetry/frame',
+    '/api/intelligence/rfr2/stats', '/api/intelligence/rfr2/query',
+    '/api/intelligence/rfr2/trace', '/api/intelligence/rfr2/descendants',
+    '/api/intelligence/rfr2/children',
   ]);
   const liminal = require('./liminal-space');
   const nexusBus = require('../nexus/nexus-bus');
@@ -313,6 +432,235 @@ function createRoutes({ jaaDB, getField, intelligence, refreshMs = 1000, now = D
         labs_note: labsNote,
       };
       json(200, { ok: true, ...result });
+      return true;
+    }
+
+    // ── Liminal — 12 domain-agnostic gap detectors ──────────────────────────
+    if (pathname === '/api/intelligence/liminal/analyze') {
+      const input = body.input ?? body.text;
+      if (input === undefined) { json(400, { ok: false, error: 'input (string or numeric array) required' }); return true; }
+      try {
+        const mode = body.mode || sp.get('mode') || 'auto';
+        const signals = liminalGaps.analyze(input, { mode });
+        json(200, { ok: true, count: signals.length, signals });
+      } catch (e) { json(500, { ok: false, error: e.message }); }
+      return true;
+    }
+
+    // ── Gap lifecycle — hunter (detect) / predicate (closure) / ledger (durability) ──
+    if (pathname === '/api/intelligence/gap/status') {
+      let ledgerStats = { exists: false, bytes: 0, lines: 0 };
+      try { ledgerStats = gap.ledger.stats(); } catch (e) { /* honest empty on read failure */ }
+      json(200, { ok: true, ledger: ledgerStats, predicateTypes: Object.keys(gap.predicate.PREDICATE_LIBRARY || {}) });
+      return true;
+    }
+    if (pathname === '/api/intelligence/gap/hunt') {
+      const text = body.text;
+      if (!text) { json(400, { ok: false, error: 'text required' }); return true; }
+      try {
+        const gaps = gap.hunter.analyze(text, { minScore: body.minScore });
+        json(200, { ok: true, count: gaps.length, gaps });
+      } catch (e) { json(500, { ok: false, error: e.message }); }
+      return true;
+    }
+    if (pathname === '/api/intelligence/gap/enrich') {
+      if (!body.raw) { json(400, { ok: false, error: 'raw gap object required' }); return true; }
+      try { json(200, { ok: true, gap: gap.predicate.enrichGap(body.raw) }); }
+      catch (e) { json(500, { ok: false, error: e.message }); }
+      return true;
+    }
+    if (pathname === '/api/intelligence/gap/verify') {
+      if (!body.gap) { json(400, { ok: false, error: 'gap object required' }); return true; }
+      try {
+        const result = gap.predicate.verifyClosure(body.gap, { strategy: body.strategy || 'unknown', jobId: body.jobId || null });
+        json(200, { ok: true, result });
+      } catch (e) { json(500, { ok: false, error: e.message }); }
+      return true;
+    }
+
+    // ── BDA — behavioral drift analyzer ─────────────────────────────────────
+    if (pathname === '/api/intelligence/bda/status') {
+      json(200, { ok: true, ...getBDA().state() });
+      return true;
+    }
+    if (pathname === '/api/intelligence/bda/observe') {
+      const { role, text } = body;
+      if (!role || !text) { json(400, { ok: false, error: 'role and text required' }); return true; }
+      const result = getBDA().observe({ role, text });
+      if (!result) { json(400, { ok: false, error: 'observation rejected — role must be user/assistant and text non-empty' }); return true; }
+      json(200, { ok: true, ...result });
+      return true;
+    }
+    if (pathname === '/api/intelligence/bda/reset') {
+      getBDA().reset();
+      json(200, { ok: true });
+      return true;
+    }
+
+    // ── Causal — anomaly classification + compounding-effect analysis ──────
+    if (pathname === '/api/intelligence/causal/anomalies') {
+      ensureAnomalyInit();
+      try {
+        const scope = sp.get('scope') || 'recent';
+        const limit = parseInt(sp.get('limit') || '20', 10);
+        const anomalies = scope === 'open' ? causalAnomaly.openAnomalies() : causalAnomaly.recentAnomalies(limit);
+        json(200, { ok: true, ...causalAnomaly.status(), anomalies });
+      } catch (e) { json(500, { ok: false, error: e.message }); }
+      return true;
+    }
+    if (pathname === '/api/intelligence/causal/compound') {
+      try {
+        const graph = mastermind.buildRecentCausalGraph(500);
+        if (!graph) { json(503, { ok: false, error: 'no causal graph available yet (CausalGraph class unreachable)' }); return true; }
+        const engine = createCompoundEngine({ graph, jaaDB: db });
+        const out = body.entryUuid
+          ? await engine.analyzeChain(body.entryUuid)
+          : body.rootEntry
+            ? { ok: true, record: await engine.analyze(body.rootEntry) }
+            : null;
+        if (!out) { json(400, { ok: false, error: 'entryUuid or rootEntry required' }); return true; }
+        json(200, out);
+      } catch (e) { json(500, { ok: false, error: e.message }); }
+      return true;
+    }
+
+    // ── ALK — associative lattice kernel (decision ledger + rewind) ────────
+    if (pathname === '/api/intelligence/alk/stats') {
+      ensureAlkLoaded();
+      json(200, { ok: true, ...alk.stats() });
+      return true;
+    }
+    if (pathname === '/api/intelligence/alk/decisions') {
+      ensureAlkLoaded();
+      const q = {
+        actor:  sp.get('actor')  || undefined,
+        intent: sp.get('intent') || undefined,
+        since:  sp.get('since')  ? parseInt(sp.get('since'), 10)  : undefined,
+        until:  sp.get('until')  ? parseInt(sp.get('until'), 10)  : undefined,
+        limit:  sp.get('limit')  ? parseInt(sp.get('limit'), 10)  : 50,
+      };
+      json(200, { ok: true, decisions: alk.query(q) });
+      return true;
+    }
+    if (pathname === '/api/intelligence/alk/ancestors') {
+      ensureAlkLoaded();
+      const uuid = sp.get('uuid');
+      if (!uuid) { json(400, { ok: false, error: 'uuid required' }); return true; }
+      json(200, { ok: true, uuid, ancestors: alk.ancestors(uuid) });
+      return true;
+    }
+    if (pathname === '/api/intelligence/alk/descendants') {
+      ensureAlkLoaded();
+      const uuid = sp.get('uuid');
+      if (!uuid) { json(400, { ok: false, error: 'uuid required' }); return true; }
+      json(200, { ok: true, uuid, descendants: alk.descendants(uuid) });
+      return true;
+    }
+    if (pathname === '/api/intelligence/alk/record') {
+      ensureAlkLoaded();
+      const { actor, intent, payload, causedBy, sigma } = body;
+      if (!actor || !intent) { json(400, { ok: false, error: 'actor and intent required' }); return true; }
+      try { json(200, { ok: true, decision: alk.record({ actor, intent, payload, causedBy, sigma: sigma ?? getField().entropy }) }); }
+      catch (e) { json(400, { ok: false, error: e.message }); }
+      return true;
+    }
+    if (pathname === '/api/intelligence/alk/resolve') {
+      ensureAlkLoaded();
+      if (!body.uuid) { json(400, { ok: false, error: 'uuid required' }); return true; }
+      const node = alk.resolve(body.uuid, body.outcome || {});
+      if (!node) { json(404, { ok: false, error: `decision not found in this process's session: ${body.uuid}` }); return true; }
+      json(200, { ok: true, decision: node });
+      return true;
+    }
+    if (pathname === '/api/intelligence/alk/rewind') {
+      ensureAlkLoaded();
+      if (!body.uuid) { json(400, { ok: false, error: 'uuid required' }); return true; }
+      const node = alk.rewind(body.uuid, { reason: body.reason || 'user-initiated rewind' });
+      if (!node) { json(409, { ok: false, error: `rewind refused — not found or already reversed: ${body.uuid}` }); return true; }
+      json(200, { ok: true, rewind: node });
+      return true;
+    }
+
+    // ── ALK-Perception — composite behavioral state from live telemetry ────
+    // Honest partial input: only fields this process actually has (CFR field
+    // dims + open-gap count) are supplied; everything else (artifact rate,
+    // dispatch rate, truncation, systemsOnline/Total) falls back to
+    // extractSignals()'s own defaults rather than being fabricated here.
+    if (pathname === '/api/intelligence/perception') {
+      try {
+        const f = getField();
+        const telemetry = {
+          gapCount: db.count('gaps', { status: 'open' }) || 0,
+          friction: f.friction,
+          coherence: f.coherence,
+          sigmaScore: 1 - f.entropy,
+          ...(body.telemetry || {}), // caller may supply real artifact/dispatch/truncation signals
+        };
+        const result = getPerceptionKernel().feed(telemetry);
+        json(200, { ok: true, ...result, _note: 'partial telemetry — only gapCount/friction/coherence/sigmaScore are this process\'s own live data; other STATES signals use extractSignals() defaults unless supplied in body.telemetry' });
+      } catch (e) { json(500, { ok: false, error: e.message }); }
+      return true;
+    }
+
+    // ── Telemetry-codec — Slope/Stability/Oscillation/Drift over the CFR field ──
+    if (pathname === '/api/intelligence/telemetry/frame') {
+      try {
+        const f = getField();
+        const rt = getTelemetryRuntime();
+        rt.observe('coherence', f.coherence);
+        rt.observe('friction', f.friction);
+        rt.observe('resonance', f.resonance);
+        rt.observe('entropy', f.entropy);
+        const frame = rt.tick();
+        json(200, { ok: true, frame, _note: 'derived from CFR field\'s own 4 dimensions, not an independent measurement' });
+      } catch (e) { json(500, { ok: false, error: e.message }); }
+      return true;
+    }
+
+    // ── RFR2 — live per-process causal kernel + relationship traversal ─────
+    if (pathname === '/api/intelligence/rfr2/stats') {
+      ensureRFR2Live();
+      const k = getRFR2Kernel();
+      json(200, {
+        ok: true, live: _rfr2Live, since: _rfr2Since,
+        length: k.length, edgeCount: k.edgeCount, version: k.version,
+        droppedCount: k.droppedCount, macroCount: k.macros.length,
+        _note: 'this kernel only knows events emitted on nexus-bus since `since` — not backfilled from event_log (see comment above ensureRFR2Live)',
+      });
+      return true;
+    }
+    if (pathname === '/api/intelligence/rfr2/query') {
+      ensureRFR2Live();
+      const cql = sp.get('cql') || body.cql;
+      if (!cql) { json(400, { ok: false, error: 'cql query string required, e.g. FIND events WHERE type = \'guardian.job.error\' ORDER BY ts DESC LIMIT 10' }); return true; }
+      try {
+        const { query: runCQL } = require('./rfr2/query');
+        const result = runCQL(cql, getRFR2Kernel());
+        json(result.ok === false ? 400 : 200, result);
+      } catch (e) { json(500, { ok: false, error: e.message }); }
+      return true;
+    }
+    if (pathname === '/api/intelligence/rfr2/trace') {
+      ensureRFR2Live();
+      const id = sp.get('id');
+      if (!id) { json(400, { ok: false, error: 'id required — an internal RFR2 event id, from /rfr2/query results' }); return true; }
+      const depth = parseInt(sp.get('depth') || '50', 10);
+      json(200, { ok: true, ...getRFR2Kernel().traceToRoot(id, depth) });
+      return true;
+    }
+    if (pathname === '/api/intelligence/rfr2/descendants') {
+      ensureRFR2Live();
+      const id = sp.get('id');
+      if (!id) { json(400, { ok: false, error: 'id required' }); return true; }
+      const depth = parseInt(sp.get('depth') || '30', 10);
+      json(200, { ok: true, id, descendants: getRFR2Kernel().descendants(id, depth) });
+      return true;
+    }
+    if (pathname === '/api/intelligence/rfr2/children') {
+      ensureRFR2Live();
+      const id = sp.get('id');
+      if (!id) { json(400, { ok: false, error: 'id required' }); return true; }
+      json(200, { ok: true, id, children: [...getRFR2Kernel().getChildren(id)] });
       return true;
     }
 

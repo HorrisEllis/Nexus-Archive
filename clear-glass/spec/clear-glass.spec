@@ -112,3 +112,15 @@ spec:
       date: 2026-09-01
       summary: "First real .spec authored, matching live code@3.1.0 exactly (no version bump required)."
       versioniumCommitId: null
+    - version: 3.1.0
+      date: 2026-09-19
+      summary: >-
+        clear-glass/src/gates/index.js gained 13 new real gates (mesh.workflow.list/get/create/update/
+        remove/run/step.add/step.update/step.remove/step.move, mesh.list.nodes/meshView/agents), same
+        convention as the 4 pre-existing mesh gates. Closes a real gap: AgentMesh's own 10-method
+        automation engine (this._automation, already backing BrainOS's UI via /automation/workflows) and
+        its 3 list methods had zero gate coverage — completely unreachable from the agent-tool loop despite
+        being the same real object spawn/send/route/enqueue already dispatched to. No version bump — same
+        real object, same real methods, just now also reachable as gates; not a behavior change to anything
+        that already worked.
+      versioniumCommitId: null

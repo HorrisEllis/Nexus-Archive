@@ -299,6 +299,14 @@ const SUITES = [
   'test-ncp-handler-sr3.js',
   'test-self-build-loop.js',
   'test-sr11-import-pipeline.js',
+  // §2026-09-19 — MCO1 graph layer + the brace-balance false-positive it
+  // surfaced (6 of 407 real files wrongly excluded from the map).
+  'test-repo-graph.js',
+  'test-extract-code.js',
+  'test-languages.js',
+  'test-loom-phasemap-status.js',
+  'test-import-pipeline-syntax.js',
+  'test-code-artifact.js',
   'test-b1-synthesize-contract.js',
   // §2026-08-23 — real screenshot tool + the driver.exec payload-injection
   // bugfix it surfaced (navigate was also affected).

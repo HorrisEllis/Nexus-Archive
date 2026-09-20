@@ -112,6 +112,7 @@ const ProviderHost      = require('../providers/host');
 const UserscriptManager = require('../userscripts/manager');
 const { SiteSettingsStore } = require('../site-settings/store');
 const { HistoryStore } = require('../history/store');
+const { AutofillStore } = require('../autofill/store');
 const { DownloadsStore } = require('../downloads/store');
 const { PasswordVault } = require('../passwords/vault');
 // §BUILD 2026-08-29 — James: "hook the macros in also, integrate
@@ -160,7 +161,7 @@ const EROS_PORT = parseInt(process.env.EROS_PORT || '7432');
 const WIRE_PORT = parseInt(process.env.WIRE_PORT || '7704');
 
 // ── State ──────────────────────────────────────────────────────────────────
-let tray, sse, ipcBridge, nexusOptions, bookmarks, rewind, providerHost, userscripts, siteSettings, downloads, passwordVault, pluginHost, errorCapture, processMetrics, history, mesh;
+let tray, sse, ipcBridge, nexusOptions, bookmarks, rewind, providerHost, userscripts, siteSettings, downloads, passwordVault, pluginHost, errorCapture, processMetrics, history, mesh, autofillStore;
 let fp          = null;   // FingerprintEngine  — set in bootstrap()
 let ctxMgr      = null;   // ContextMgr         — set in bootstrap()
 let driver      = null;   // ClearDriver        — set in bootstrap()
@@ -1338,6 +1339,13 @@ async function bootstrap() {
   history = new HistoryStore();
   history.load();
 
+  // 8.957. Autofill — §BUILT 2026-09-19, James: "autofill." Real,
+  // separate store from Accounts/passwords — see that file's own
+  // header for why an AutofillProfile is a distinct real entity, not
+  // a field bolted onto Account.
+  autofillStore = new AutofillStore();
+  autofillStore.load();
+
   // 8.96. Downloads — §NEW 2026-08-24, real gap named in the same map's §3.
   downloads = new DownloadsStore();
   downloads.load();
@@ -1418,6 +1426,8 @@ async function bootstrap() {
     postEvent:   _postEvent,
     options:     nexusOptions,
     bookmarks,
+    history,
+    autofillStore,
     rewind,
     providerHost,
     userscripts,
@@ -1553,6 +1563,8 @@ async function bootstrap() {
     siteSettings,
     downloads,
     history,
+    autofillStore,
+    dom,
     passwordVault,
     speech,
     macroTool,

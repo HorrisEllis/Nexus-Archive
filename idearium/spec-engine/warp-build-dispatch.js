@@ -45,6 +45,7 @@ import { createWarpDispatch } from '../../lib/seam/adapters/warp-cascade.js';
 import { FlatFileCrystallizer } from '../../warp/plugins/crystallizer-flatfile.js';
 import { PopulationStore } from '../../warp/dispatch/population.js';
 import { pollGuardianJob } from './chunk-dispatch.js';
+import { extractCode } from '../../lib/extract-code.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -96,20 +97,46 @@ export function createWarpChunkDispatch(as, { raid = null, axioms = [], pollTime
     // provider attempt — this is where Guardian's queued/async chatgpt
     // and claude path gets resolved to a real value before returning,
     // since WARP's cascade has no concept of "queued, check back later."
+    //
+    // §BUILT 2026-09-19 — James: "we need to extract code from the
+    // agents. that's the gap." Before this, whatever an agent's reply
+    // was — full prose explanation, a fenced code block, or both mixed
+    // together — became the chunk's real content verbatim. See
+    // lib/extract-code.js's own header for the full trace of why this
+    // was never done. opts.expectCode (passed through from dispatch()'s
+    // own opts, below) is the real, explicit opt-in — this dispatch path
+    // serves idearium's 10 real section types (blocks.yaml), and most of
+    // them (purpose, axioms, failure_modes...) are legitimately prose;
+    // forcing extraction here unconditionally would fail every one of
+    // those working paths for having "no fenced code block", which
+    // would be true and also completely wrong to reject on.
     generate: async (provider, record, lastFailure) => {
       const dispatchOpts = { preferAgent: provider, retryContext: lastFailure || null };
       const result = await as.buildChunkWithAgent(record.prompt, dispatchOpts);
       if (!result?.ok) throw new Error(result?.error || `${provider} dispatch failed`);
+      let text;
       if (result.queued) {
         const pollOpts = {};
         if (pollTimeoutMs != null) pollOpts.timeoutMs = pollTimeoutMs;
         if (pollIntervalMs != null) pollOpts.intervalMs = pollIntervalMs;
         const polled = await pollGuardianJob(result.jobId, pollOpts);
         if (!polled.ok) throw new Error(polled.error || `${provider} job ${result.jobId} did not resolve`);
-        return polled.text;
+        text = polled.text;
+      } else {
+        if (!result.text) throw new Error(`${provider} returned no text`);
+        text = result.text;
       }
-      if (!result.text) throw new Error(`${provider} returned no text`);
-      return result.text;
+      if (!record.expectCode) return text;
+      const extracted = extractCode(text, { allowMultiple: !!record.allowMultipleFiles });
+      if (!extracted.ok) {
+        // §FAIL LOUD, NOT A SILENT FALLBACK TO RAW TEXT — a caller that
+        // asked for real code and got prose (or an unclosed fence, or
+        // fenced nothing) needs to know that, the same way materialize()
+        // and compiler-t0.js now do for their own real failure modes,
+        // not receive the agent's chatty explanation disguised as code.
+        throw new Error(`${provider} did not return usable code: ${extracted.error}`);
+      }
+      return extracted.code;
     },
   });
 
@@ -152,6 +179,13 @@ export function createWarpChunkDispatch(as, { raid = null, axioms = [], pollTime
       // lib/seam/adapters/warp-cascade.js's providersFor() for the other
       // half of this same real fix — that's what actually reads this field.
       preferredProvider: opts.preferAgent || null,
+      // §BUILT 2026-09-19 — same threading pattern as preferredProvider
+      // right above: the outer dispatch(prompt, opts) caller's own real
+      // intent (does this chunk expect real code back, and if so is more
+      // than one fenced block genuinely expected) has to survive into
+      // this record, since generate() above only sees record, not opts.
+      expectCode: !!opts.expectCode,
+      allowMultipleFiles: !!opts.allowMultipleFiles,
     };
     try {
       const result = await warpDispatch(record, opts.axioms || axioms);

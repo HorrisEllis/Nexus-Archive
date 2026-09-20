@@ -1,0 +1,1 @@
+{"uuid":"51eb48b5-9ae6-4cd2-b20a-99699d6afe08","system":"forge","component":"forge.patch","action":"registered","status":"ok","tags":["build","repair"],"detail":"Apply a targeted patch to a module","causedBy":null,"contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib/component-registry.js:323","ts":1789871642433}

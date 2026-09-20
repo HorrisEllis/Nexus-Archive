@@ -312,6 +312,74 @@ spec:
       Unknown relationships MUST remain explicitly unknown. The system
       MUST NOT invent edges merely to make the graph complete.
 
+    # §AMENDED 2026-09-19 — two real additions to this section, not a
+    # rewrite of it. Both came out of comparing this already-real §24
+    # (relation_types + the unknown-stays-unknown constraint, both
+    # already locked before this pass) against two external proposals
+    # for a "graph field system." The comparison found the proposals'
+    # best ideas were either already true here (the unknown-stays-
+    # unknown constraint is word-for-word the same principle) or a real
+    # generalization of something real but narrow elsewhere in this
+    # codebase (intelligence/relational-field.js's RFR2 already attaches
+    # contextual conditions to an event — just not generalized past
+    # causal-friction tracing). What follows makes the general version
+    # of that a real, buildable part of this spec — MCO1 stays NOT
+    # STARTED, this is the target it builds toward, not new work done
+    # now.
+    edge_provenance_envelope:
+      status: "SPEC ONLY — not yet implemented. MCO1's own gate
+        condition (this file's phasemap) does not require this yet;
+        it requires resolution:unresolved-vs-omitted, which is a
+        subset of this envelope. This is the fuller shape MCO1 should
+        grow into, not a new gate condition added today."
+      rationale: >
+        A bare {from, to, type} edge can't distinguish "the parser
+        found this" from "another process inferred this," and can't
+        answer why an edge exists or when it appeared. Versionium's
+        own real commit/version machinery already gives this codebase
+        everything needed to answer "did this edge disappear because
+        the code changed, or because the extractor changed" — the
+        envelope below is what lets an edge actually use it.
+      fields:
+        resolution:  "resolved | unresolved — MCO1's own real gate condition, unchanged"
+        status:      "observed | inferred | derived | conflicting | stale"
+        confidence:  "structural | inferred | asserted"
+        source:
+          file:              "the real file this edge was extracted from"
+          range:             "[startLine, endLine] in that file"
+          extractor:         "which real extractor produced this edge, e.g. javascript-import"
+          extractor_version: "real version string — lets a later run distinguish \"the code changed\" from \"the extractor changed\" for the exact same edge"
+        graph_version:     "the real repository-graph schema version this edge was written under"
+        first_seen:        "epoch ms — real, not backfilled for edges predating this envelope"
+        last_seen:         "epoch ms — updated on every real re-observation, not just creation"
+      conflicting_graphs_are_data_not_error: >
+        Two graphs may disagree about the same edge (e.g. the code
+        graph says an import exists; a runtime/execution-observation
+        graph has never seen that path actually exercised). Do not
+        force agreement. Recording both, each with its own real
+        provenance, is itself a diagnostic — "the spec requires this
+        dependency but runtime has never observed it" is a real,
+        useful question the graph should be able to represent, not
+        collapse.
+
+    field_attachment_extension_point:
+      status: "DEFERRED — explicitly an extension point, not a
+        commitment to build a general field system now. Named here so
+        MCO1's own real schema leaves room for it, per this session's
+        own §16.4 (simple stays simple, generalize after real
+        repetition) — RFR2 is the one real instance that exists; this
+        is not generalized until a second real, different field need
+        shows up."
+      shape_if_and_when_built: >
+        A node or edge could carry a real fields:{} map alongside its
+        core identity — e.g. a risk field (blast_radius, unresolved_
+        dependency_count) or a temporal field (created, modified,
+        observed_at) — each field independently sourced and versioned,
+        the way relational-field.js's own causal conditions already
+        are for friction events specifically. Not built now; the real
+        edge_provenance_envelope above is the one piece of this that
+        MCO1 actually needs, and it ships first, alone.
+
   # ── Graph traversal (§25) ────────────────────────────────────────────────
   graph_traversal:
     accepts: [starting node, relationship type, direction, depth, filters, verification requirement]

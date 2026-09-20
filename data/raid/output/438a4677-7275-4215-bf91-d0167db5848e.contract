@@ -1,0 +1,108 @@
+envelope: 1
+uuid: nexus-export-contract-438a4677-7275-4215-bf91-d0167db5848e
+type: contract
+id: 438a4677-7275-4215-bf91-d0167db5848e
+context: null
+intent: null
+summary: null
+system: null
+tags: []
+exported_at: 1789872384911
+source: test
+occurrences: 1
+firstSeenAt: 1789872384911
+lastSeenAt: 1789872384911
+fingerprint: null
+payload:
+  queueId: 438a4677-7275-4215-bf91-d0167db5848e
+  status: fail
+  verdict: FAIL
+  trace_log:
+    - event: SPAWN
+      data:
+        intent_uuid: ffab7b94-38c3-4989-9a45-646d4a6b948e
+        snapId: 8e036ee5-e9ef-4a66-896b-ab48f0f8be08
+      ts: 1789872384878
+    - event: EXECUTE_START
+      data: {}
+      ts: 1789872384909
+    - event: EXECUTE_COMPLETE
+      data:
+        hasResult: true
+      ts: 1789872384909
+    - event: ADVERSARY_SUITE
+      data:
+        ran: true
+        intensity:
+          stressIterations: 1
+          strictBoundary: false
+        riskCeiling: null
+        violations: []
+        attackResults:
+          - class: syntax
+            violated: false
+          - class: logic
+            violated: false
+          - class: edge-case
+            violated: false
+          - class: state
+            violated: false
+          - class: cross-domain
+            violated: false
+          - class: stress
+            violated: false
+      ts: 1789872384909
+    - event: QA_QC
+      data:
+        ran: true
+        checks:
+          syntax: true
+          schema: true
+          type: true
+          invariant: true
+          deterministic_replay: true
+          contract_end_state_pass: false
+        verdict: FAIL
+      ts: 1789872384910
+    - event: FAIL
+      data:
+        reason: QA/QC check failed
+        violations: null
+        checks:
+          syntax: true
+          schema: true
+          type: true
+          invariant: true
+          deterministic_replay: true
+          contract_end_state_pass: false
+      ts: 1789872384910
+    - event: REWOUND
+      data:
+        snapId: 8e036ee5-e9ef-4a66-896b-ab48f0f8be08
+      ts: 1789872384910
+    - event: CRYSTAL_LATTICE_UPDATE
+      data:
+        ran: true
+        lattice:
+          updated: true
+          edge:
+            uuid: af3e5e70-4476-4327-93b4-137424ddd874
+            edgeKey: CompartmentType:contract.implement->State:Resolution
+            from: CompartmentType:contract.implement
+            to: State:Resolution
+            weight: 0.4
+            success_rate: 0
+            failure_rate: 1
+            successCount: 0
+            failureCount: 1
+            totalCount: 1
+            decay_rate: 0.02
+            lastTransitionAt: 1789872384910
+            lastTransitionOutcome: FAIL
+            createdAt: 1789872384910
+            updatedAt: 1789872384910
+        crystal:
+          crystallized: false
+          frequency: 1
+          threshold: 3
+      ts: 1789872384911

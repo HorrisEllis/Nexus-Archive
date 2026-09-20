@@ -1,0 +1,147 @@
+{
+  "format": "NEX-SNAP/1.0",
+  "snapId": "cd270e07-d735-4441-9c03-a3410af5024e",
+  "type": "manual",
+  "tables": {
+    "working_memory": [],
+    "active_traces": [],
+    "cortex_memory": [],
+    "gaps": [],
+    "event_log": [],
+    "sigma_records": [],
+    "sigma_rollups": [],
+    "meta_observations": [],
+    "sigma_live": [],
+    "component_ledger": [],
+    "cfr_tension_history": [],
+    "constitution_decisions": [],
+    "chat_log": [],
+    "schema_drift": [],
+    "crystals": [],
+    "bep_patterns": [],
+    "trust_scores": [],
+    "fix_map": [],
+    "memory_unified": [],
+    "interstitial_spaces": [],
+    "hooks": [],
+    "tool_index": [],
+    "raid_contract_queue": [],
+    "intake_drops": [],
+    "fault_taxonomy": [],
+    "forge_patches": [],
+    "raid_tunables": [],
+    "decay_log": [],
+    "settings": [
+      {
+        "id": "508031f1-7a0f-466e-89c1-46d969100768",
+        "key": "session_greeting_enabled",
+        "value": "true",
+        "updated_ts": 1789871541645
+      },
+      {
+        "id": "3fafb59a-6a10-4a12-b9d9-6c613847e9e3",
+        "key": "session_greeting_text",
+        "value": "Guardian session initialising. Please ask me: \"What are we calling this session?\" — then wait for my answer before we begin.",
+        "updated_ts": 1789871541645
+      },
+      {
+        "id": "19452f9b-e702-4f38-819a-1d21fa9b5e54",
+        "key": "scan_debounce_ms",
+        "value": "1500",
+        "updated_ts": 1789871541645
+      },
+      {
+        "id": "5f625506-686b-4d26-bab3-f6ba1f9beed5",
+        "key": "artifact_max",
+        "value": "500",
+        "updated_ts": 1789871541645
+      },
+      {
+        "id": "21ad79d6-302e-4c22-a8ed-9b242ab5419b",
+        "key": "gap_min_score",
+        "value": "0.25",
+        "updated_ts": 1789871541645
+      },
+      {
+        "id": "c8088c3f-c32e-47f1-996d-621d9e44dfc2",
+        "key": "gap_taxonomy_version",
+        "value": "3.0.0",
+        "updated_ts": 1789871541645
+      },
+      {
+        "id": "e764ebd3-1dfb-4be4-b6cb-e15e540567d6",
+        "key": "pa_enabled",
+        "value": "true",
+        "updated_ts": 1789871541645
+      },
+      {
+        "id": "a0e28e6a-7e97-45cd-8247-ff1804a9f127",
+        "key": "memory_auto_push",
+        "value": "true",
+        "updated_ts": 1789871541645
+      },
+      {
+        "id": "5652402a-d015-4f57-bf71-b9b0b39d307e",
+        "key": "dropzone_auto_upload",
+        "value": "true",
+        "updated_ts": 1789871541645
+      },
+      {
+        "id": "823ca61e-b851-4319-908f-35954432f4c0",
+        "key": "stream_log_level",
+        "value": "EVENTS",
+        "updated_ts": 1789871541645
+      },
+      {
+        "id": "b20b3b54-1780-490d-9ed4-b1a54e8b191f",
+        "key": "lan_host",
+        "value": "0.0.0.0",
+        "updated_ts": 1789871541646
+      },
+      {
+        "id": "8cab0daa-e3cf-4133-b5eb-42a7c77d5cde",
+        "key": "greeting_delay_ms",
+        "value": "1200",
+        "updated_ts": 1789871541646
+      },
+      {
+        "id": "eadc6d94-9f15-4573-ab8f-fe373b2ac856",
+        "key": "poll_interval_ms",
+        "value": "500",
+        "updated_ts": 1789871541646
+      },
+      {
+        "id": "b1941ecc-4658-49c0-a08e-6107dec2ea9a",
+        "key": "stable_count_threshold",
+        "value": "5",
+        "updated_ts": 1789871541646
+      }
+    ],
+    "components": [],
+    "compaction_log": [],
+    "dedup_log": []
+  },
+  "hashVersion": 2,
+  "systemStates": {
+    "guardian": {
+      "ok": true,
+      "state": {
+        "cfr_state": {
+          "coherence": 0.9,
+          "friction": 0.1,
+          "resonance": 0.5,
+          "entropy": 0.05
+        },
+        "event_stats": {
+          "stats": {
+            "real": 1
+          },
+          "baseline": {}
+        }
+      }
+    }
+  },
+  "cortex_state_hash": "94545e267de30128f8f1fa220a260383ed602aa0877e53a3e446c32dba3725e2",
+  "prev_snapshot_hash": "94545e267de30128f8f1fa220a260383ed602aa0877e53a3e446c32dba3725e2",
+  "createdAt": 1789871541655
+}

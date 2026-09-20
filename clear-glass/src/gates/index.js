@@ -30,6 +30,7 @@
  */
 
 const { Gate, Event } = require('../../siso/index');
+const { detectFields, fillFields } = require('../autofill/matcher.js');
 
 // ── Gate factory — cleaner than subclassing for simple transforms ──────────
 function gate(signature, transformFn) {
@@ -169,6 +170,100 @@ const meshRouteGate = (mesh) => gate('mesh.route', (event, stream) => {
 const meshEnqueueGate = (mesh) => gate('mesh.enqueue', (event, stream) => {
   const result = mesh.enqueue(event.data);
   stream.emit(new Event('mesh.queued', result));
+});
+
+// ── Mesh workflow gates ──────────────────────────────────────────────────────
+// §BUILT 2026-09-19 — James: "do the structural fix." Real audit found
+// AgentMesh's own automation engine (listWorkflows/getWorkflow/
+// createWorkflow/updateWorkflow/removeWorkflow/runWorkflow/
+// addWorkflowStep/updateWorkflowStep/removeWorkflowStep/
+// moveWorkflowStep — 10 real delegate methods to this._automation,
+// checked directly in agent-mesh.js) already backs BrainOS's UI via
+// clear-glass/src/main/index.js's real /automation/workflows HTTP
+// routes, but had zero gate coverage — completely unreachable from the
+// same real bus/gate path mesh.spawn/send/route/enqueue above already
+// prove works. This closes that: same real object, same real methods,
+// now also reachable as gates for lib/agent-tools/tools/mesh/
+// agent-mesh-route.js to dispatch to, exactly like the four above.
+// The CRUD methods are synchronous (checked: no `async` on any of
+// list/get/create/update/remove/addStep/updateStep/removeStep/
+// moveStep in agent-mesh.js) — wrapped in try/catch here regardless,
+// since a sync method can still throw and meshEnqueueGate right above
+// this section has no such guard; not fixing that pre-existing gate,
+// but not repeating its exposure in new code either. runWorkflow is
+// wrapped with Promise.resolve().then() rather than assumed sync or
+// async — its real steps (agent/http/delay) make a synchronous
+// implementation unlikely, and Promise.resolve() is safe either way.
+const meshWorkflowListGate = (mesh) => gate('mesh.workflow.list', (event, stream) => {
+  try { stream.emit(new Event('mesh.workflow.list.result', { workflows: mesh.listWorkflows() })); }
+  catch (err) { stream.emit(new Event('mesh.error', { op: 'workflow.list', error: err.message })); }
+});
+
+const meshWorkflowGetGate = (mesh) => gate('mesh.workflow.get', (event, stream) => {
+  try { stream.emit(new Event('mesh.workflow.get.result', { workflow: mesh.getWorkflow(event.data.id) })); }
+  catch (err) { stream.emit(new Event('mesh.error', { op: 'workflow.get', error: err.message })); }
+});
+
+const meshWorkflowCreateGate = (mesh) => gate('mesh.workflow.create', (event, stream) => {
+  try { stream.emit(new Event('mesh.workflow.created', mesh.createWorkflow(event.data))); }
+  catch (err) { stream.emit(new Event('mesh.error', { op: 'workflow.create', error: err.message })); }
+});
+
+const meshWorkflowUpdateGate = (mesh) => gate('mesh.workflow.update', (event, stream) => {
+  try { stream.emit(new Event('mesh.workflow.updated', mesh.updateWorkflow(event.data.id, event.data.patch))); }
+  catch (err) { stream.emit(new Event('mesh.error', { op: 'workflow.update', error: err.message })); }
+});
+
+const meshWorkflowRemoveGate = (mesh) => gate('mesh.workflow.remove', (event, stream) => {
+  try { stream.emit(new Event('mesh.workflow.removed', mesh.removeWorkflow(event.data.id))); }
+  catch (err) { stream.emit(new Event('mesh.error', { op: 'workflow.remove', error: err.message })); }
+});
+
+const meshWorkflowRunGate = (mesh) => gate('mesh.workflow.run', (event, stream) => {
+  Promise.resolve(mesh.runWorkflow(event.data.id, event.data.reason))
+    .then(r  => stream.emit(new Event('mesh.workflow.run.result', r)))
+    .catch(err => stream.emit(new Event('mesh.error', { op: 'workflow.run', error: err.message })));
+});
+
+const meshWorkflowStepAddGate = (mesh) => gate('mesh.workflow.step.add', (event, stream) => {
+  try { stream.emit(new Event('mesh.workflow.step.added', mesh.addWorkflowStep(event.data.id, event.data.step))); }
+  catch (err) { stream.emit(new Event('mesh.error', { op: 'workflow.step.add', error: err.message })); }
+});
+
+const meshWorkflowStepUpdateGate = (mesh) => gate('mesh.workflow.step.update', (event, stream) => {
+  try { stream.emit(new Event('mesh.workflow.step.updated', mesh.updateWorkflowStep(event.data.id, event.data.stepId, event.data.patch))); }
+  catch (err) { stream.emit(new Event('mesh.error', { op: 'workflow.step.update', error: err.message })); }
+});
+
+const meshWorkflowStepRemoveGate = (mesh) => gate('mesh.workflow.step.remove', (event, stream) => {
+  try { stream.emit(new Event('mesh.workflow.step.removed', mesh.removeWorkflowStep(event.data.id, event.data.stepId))); }
+  catch (err) { stream.emit(new Event('mesh.error', { op: 'workflow.step.remove', error: err.message })); }
+});
+
+const meshWorkflowStepMoveGate = (mesh) => gate('mesh.workflow.step.move', (event, stream) => {
+  try { stream.emit(new Event('mesh.workflow.step.moved', mesh.moveWorkflowStep(event.data.id, event.data.stepId, event.data.dir))); }
+  catch (err) { stream.emit(new Event('mesh.error', { op: 'workflow.step.move', error: err.message })); }
+});
+
+// §BUILT 2026-09-19 — James: "finish it." The three real gaps named and
+// deliberately left open in the prior two passes: AgentMesh.listNodes/
+// listMeshView/listAgents (checked directly, all three synchronous, no
+// args, same shape as enqueue above) had no gate at all. Closing them
+// the same way, not differently — no reason for the last three methods
+// on this same real object to follow a new convention.
+const meshListNodesGate = (mesh) => gate('mesh.list.nodes', (event, stream) => {
+  try { stream.emit(new Event('mesh.list.nodes.result', { nodes: mesh.listNodes() })); }
+  catch (err) { stream.emit(new Event('mesh.error', { op: 'list.nodes', error: err.message })); }
+});
+
+const meshListMeshViewGate = (mesh) => gate('mesh.list.meshView', (event, stream) => {
+  try { stream.emit(new Event('mesh.list.meshView.result', { view: mesh.listMeshView() })); }
+  catch (err) { stream.emit(new Event('mesh.error', { op: 'list.meshView', error: err.message })); }
+});
+
+const meshListAgentsGate = (mesh) => gate('mesh.list.agents', (event, stream) => {
+  try { stream.emit(new Event('mesh.list.agents.result', { agents: mesh.listAgents() })); }
+  catch (err) { stream.emit(new Event('mesh.error', { op: 'list.agents', error: err.message })); }
 });
 
 // ── Diagnostic gates ──────────────────────────────────────────────────────
@@ -314,6 +409,175 @@ const optionsSetGate = (options) => gate('options.set', (event, stream) => {
     .catch(err  => stream.emit(new Event('options.error', { error: err.message })));
 });
 
+// ── Account gates ─────────────────────────────────────────────────────────
+// §BUILT 2026-09-19 — James (via docs/2026-08-27-event-taxonomy-and-
+// brainstorm-phasemap.spec's BR8, still real and open): "clear-glass
+// needs commands for all the new features, tools for co-pilot and
+// agents." Checked directly: clear-glass/src/options/store.js has a
+// real, dedicated account CRUD surface (listAccounts/getAccount/
+// createAccount/updateAccount/deleteAccount — real stable-uuid
+// entities, real agentKeys linking) with ZERO gate coverage at all —
+// a deeper gap than bookmarks (which at least had gates already).
+// Same real, synchronous try/catch convention as the mesh workflow
+// gates from earlier this session.
+const accountListGate = (options) => gate('account.list', (event, stream) => {
+  try { stream.emit(new Event('account.list.result', { accounts: options.listAccounts() })); }
+  catch (err) { stream.emit(new Event('account.error', { op: 'list', error: err.message })); }
+});
+
+const accountGetGate = (options) => gate('account.get', (event, stream) => {
+  try { stream.emit(new Event('account.get.result', { account: options.getAccount(event.data.id) })); }
+  catch (err) { stream.emit(new Event('account.error', { op: 'get', error: err.message })); }
+});
+
+const accountCreateGate = (options) => gate('account.create', (event, stream) => {
+  try { stream.emit(new Event('account.created', options.createAccount(event.data))); }
+  catch (err) { stream.emit(new Event('account.error', { op: 'create', error: err.message })); }
+});
+
+const accountUpdateGate = (options) => gate('account.update', (event, stream) => {
+  try { stream.emit(new Event('account.updated', options.updateAccount(event.data.id, event.data.updates))); }
+  catch (err) { stream.emit(new Event('account.error', { op: 'update', error: err.message })); }
+});
+
+const accountDeleteGate = (options) => gate('account.delete', (event, stream) => {
+  try { stream.emit(new Event('account.deleted', options.deleteAccount(event.data.id))); }
+  catch (err) { stream.emit(new Event('account.error', { op: 'delete', error: err.message })); }
+});
+
+// ── Autofill gates ────────────────────────────────────────────────────────
+// §BUILT 2026-09-19 — James: "autofill." Real, separate CRUD for
+// AutofillProfile (distinct entity from Account — see autofill/
+// store.js's own header), plus two real orchestration gates that
+// reuse the already-real dom.handleQuery/handleMutate directly (same
+// `dom` instance, no second bus round-trip per matched field).
+const autofillProfileListGate = (af) => gate('autofill.profile.list', (event, stream) => {
+  try { stream.emit(new Event('autofill.profile.list.result', { profiles: af.listProfiles() })); }
+  catch (err) { stream.emit(new Event('autofill.error', { op: 'profile.list', error: err.message })); }
+});
+
+const autofillProfileGetGate = (af) => gate('autofill.profile.get', (event, stream) => {
+  try { stream.emit(new Event('autofill.profile.get.result', { profile: af.getProfile(event.data.id) })); }
+  catch (err) { stream.emit(new Event('autofill.error', { op: 'profile.get', error: err.message })); }
+});
+
+const autofillProfileCreateGate = (af) => gate('autofill.profile.create', (event, stream) => {
+  try {
+    const result = af.createProfile(event.data);
+    if (result.error) { stream.emit(new Event('autofill.error', { op: 'profile.create', error: result.error })); return; }
+    stream.emit(new Event('autofill.profile.created', result));
+  } catch (err) { stream.emit(new Event('autofill.error', { op: 'profile.create', error: err.message })); }
+});
+
+const autofillProfileUpdateGate = (af) => gate('autofill.profile.update', (event, stream) => {
+  try {
+    const result = af.updateProfile(event.data.id, event.data.updates);
+    if (result.error) { stream.emit(new Event('autofill.error', { op: 'profile.update', error: result.error })); return; }
+    stream.emit(new Event('autofill.profile.updated', result));
+  } catch (err) { stream.emit(new Event('autofill.error', { op: 'profile.update', error: err.message })); }
+});
+
+const autofillProfileDeleteGate = (af) => gate('autofill.profile.delete', (event, stream) => {
+  try {
+    const result = af.deleteProfile(event.data.id);
+    if (result.error) { stream.emit(new Event('autofill.error', { op: 'profile.delete', error: result.error })); return; }
+    stream.emit(new Event('autofill.profile.deleted', result));
+  } catch (err) { stream.emit(new Event('autofill.error', { op: 'profile.delete', error: err.message })); }
+});
+
+// (Confidence filtering now lives in autofill/matcher.js's own fillFields — shared with ipc/bridge.js's real, separate channel, not duplicated here.)
+
+const autofillDetectGate = (dom, af) => gate('autofill.detect', (event, stream) => {
+  detectFields(dom, af, event.data)
+    .then(result => {
+      if (result.error) stream.emit(new Event('autofill.error', { op: 'detect', error: result.error }));
+      else stream.emit(new Event('autofill.detect.result', result));
+    })
+    .catch(err => stream.emit(new Event('autofill.error', { op: 'detect', error: err.message })));
+});
+
+const autofillFillGate = (dom, af) => gate('autofill.fill', (event, stream) => {
+  fillFields(dom, af, event.data)
+    .then(result => {
+      if (result.error) stream.emit(new Event('autofill.error', { op: 'fill', error: result.error }));
+      else stream.emit(new Event('autofill.fill.result', result));
+    })
+    .catch(err => stream.emit(new Event('autofill.error', { op: 'fill', error: err.message })));
+});
+
+// §BUILT 2026-09-19 — James: "account manager with account ids for
+// providers." 5 new real methods on the same NexusOptions instance,
+// checked directly against clear-glass/src/options/store.js's own
+// real implementation (schema, collision enforcement, and every
+// failure path proven with a real test run before these gates were
+// written) — not a second account model, additive to the existing
+// agentKeys linkage.
+const accountLinkProviderGate = (options) => gate('account.provider.link', (event, stream) => {
+  try {
+    const { id, provider, accountId, email, displayName } = event.data;
+    const result = options.linkProviderAccount(id, provider, { accountId, email, displayName });
+    if (result.error) { stream.emit(new Event('account.error', { op: 'provider.link', error: result.error })); return; }
+    stream.emit(new Event('account.provider.linked', result));
+  } catch (err) { stream.emit(new Event('account.error', { op: 'provider.link', error: err.message })); }
+});
+
+const accountUnlinkProviderGate = (options) => gate('account.provider.unlink', (event, stream) => {
+  try {
+    const { id, provider } = event.data;
+    const result = options.unlinkProviderAccount(id, provider);
+    if (result.error) { stream.emit(new Event('account.error', { op: 'provider.unlink', error: result.error })); return; }
+    stream.emit(new Event('account.provider.unlinked', result));
+  } catch (err) { stream.emit(new Event('account.error', { op: 'provider.unlink', error: err.message })); }
+});
+
+const accountVerifyProviderGate = (options) => gate('account.provider.verify', (event, stream) => {
+  try {
+    const { id, provider } = event.data;
+    const result = options.verifyProviderAccount(id, provider);
+    if (result.error) { stream.emit(new Event('account.error', { op: 'provider.verify', error: result.error })); return; }
+    stream.emit(new Event('account.provider.verified', result));
+  } catch (err) { stream.emit(new Event('account.error', { op: 'provider.verify', error: err.message })); }
+});
+
+const accountGetProviderGate = (options) => gate('account.provider.get', (event, stream) => {
+  try {
+    const { id, provider } = event.data;
+    stream.emit(new Event('account.provider.get.result', { id, provider, entry: options.getProviderAccount(id, provider) }));
+  } catch (err) { stream.emit(new Event('account.error', { op: 'provider.get', error: err.message })); }
+});
+
+const accountFindByProviderGate = (options) => gate('account.provider.find', (event, stream) => {
+  try {
+    const { provider, accountId } = event.data;
+    stream.emit(new Event('account.provider.find.result', { provider, accountId, account: options.findAccountByProviderAccountId(provider, accountId) }));
+  } catch (err) { stream.emit(new Event('account.error', { op: 'provider.find', error: err.message })); }
+});
+
+// ── History gates ────────────────────────────────────────────────────────
+// §BUILT 2026-09-19 — James: "history manager." clear-glass/src/history/
+// store.js's real methods (record/list/delete/clear — checked directly,
+// not guessed), zero gate coverage at all, same deeper-gap class as
+// accounts just above.
+const historyRecordGate = (history) => gate('history.record', (event, stream) => {
+  try { stream.emit(new Event('history.recorded', history.record(event.data))); }
+  catch (err) { stream.emit(new Event('history.error', { op: 'record', error: err.message })); }
+});
+
+const historyListGate = (history) => gate('history.list', (event, stream) => {
+  try { stream.emit(new Event('history.list.result', { entries: history.list(event.data) })); }
+  catch (err) { stream.emit(new Event('history.error', { op: 'list', error: err.message })); }
+});
+
+const historyDeleteGate = (history) => gate('history.delete', (event, stream) => {
+  try { stream.emit(new Event('history.deleted', history.delete(event.data.id))); }
+  catch (err) { stream.emit(new Event('history.error', { op: 'delete', error: err.message })); }
+});
+
+const historyClearGate = (history) => gate('history.clear', (event, stream) => {
+  try { stream.emit(new Event('history.cleared', history.clear(event.data?.agentId))); }
+  catch (err) { stream.emit(new Event('history.error', { op: 'clear', error: err.message })); }
+});
+
 // ── SEAM gates ────────────────────────────────────────────────────────────
 const seamRegisterGate = (seam) => gate('seam.register', (event, stream) => {
   seam.register()
@@ -386,6 +650,25 @@ const siteSettingsDeleteKeyGate = (ss) => gate('site-settings.deleteKey', (event
   } catch (err) { stream.emit(new Event('site-settings.error', { error: err.message })); }
 });
 
+// §BUILT 2026-09-19 — James: "site specific settings." SiteSettingsStore's
+// own real methods clear(url)/clearAll()/listOrigins() had zero gate
+// coverage — get/set/deleteKey covered 3 of 7 real methods. Same
+// partial-coverage class as browser_action's original 5-of-30.
+const siteSettingsClearGate = (ss) => gate('site-settings.clear', (event, stream) => {
+  try { stream.emit(new Event('site-settings.cleared', { url: event.data.url, ok: ss.clear(event.data.url) })); }
+  catch (err) { stream.emit(new Event('site-settings.error', { op: 'clear', error: err.message })); }
+});
+
+const siteSettingsClearAllGate = (ss) => gate('site-settings.clearAll', (event, stream) => {
+  try { stream.emit(new Event('site-settings.clearedAll', { ok: ss.clearAll() })); }
+  catch (err) { stream.emit(new Event('site-settings.error', { op: 'clearAll', error: err.message })); }
+});
+
+const siteSettingsListOriginsGate = (ss) => gate('site-settings.listOrigins', (event, stream) => {
+  try { stream.emit(new Event('site-settings.list.result', { origins: ss.listOrigins() })); }
+  catch (err) { stream.emit(new Event('site-settings.error', { op: 'listOrigins', error: err.message })); }
+});
+
 // ── Passwords — §NEW 2026-08-24 ─────────────────────────────────────────────
 const passwordSaveGate = (pv) => gate('passwords.save', (event, stream) => {
   try {
@@ -425,6 +708,7 @@ function registerAll(bus, deps) {
     driver, dom, ctxMgr, vault, copilot, mesh, diag, urlListener, seam,
     openFn, closeFn, minimizeFn, hideFn, maximizeFn, getStatusFn, options,
     bookmarks, rewind, providerHost, userscripts, siteSettings, passwordVault, speech,
+    history, autofillStore,
   } = deps;
 
   // §NEW 2026-08-24 — real, structural gap fix: every userscript
@@ -460,6 +744,19 @@ function registerAll(bus, deps) {
     mesh       && meshSendGate(mesh),
     mesh       && meshRouteGate(mesh),
     mesh       && meshEnqueueGate(mesh),
+    mesh       && meshWorkflowListGate(mesh),
+    mesh       && meshWorkflowGetGate(mesh),
+    mesh       && meshWorkflowCreateGate(mesh),
+    mesh       && meshWorkflowUpdateGate(mesh),
+    mesh       && meshWorkflowRemoveGate(mesh),
+    mesh       && meshWorkflowRunGate(mesh),
+    mesh       && meshWorkflowStepAddGate(mesh),
+    mesh       && meshWorkflowStepUpdateGate(mesh),
+    mesh       && meshWorkflowStepRemoveGate(mesh),
+    mesh       && meshWorkflowStepMoveGate(mesh),
+    mesh       && meshListNodesGate(mesh),
+    mesh       && meshListMeshViewGate(mesh),
+    mesh       && meshListAgentsGate(mesh),
     // Diagnostics
     diag       && diagRunGate(diag),
     diag       && diagNexusGate(diag),
@@ -476,6 +773,27 @@ function registerAll(bus, deps) {
     // Options
     options    && optionsGetGate(options),
     options    && optionsSetGate(options),
+    options    && accountListGate(options),
+    options    && accountGetGate(options),
+    options    && accountCreateGate(options),
+    options    && accountUpdateGate(options),
+    options    && accountDeleteGate(options),
+    autofillStore && autofillProfileListGate(autofillStore),
+    autofillStore && autofillProfileGetGate(autofillStore),
+    autofillStore && autofillProfileCreateGate(autofillStore),
+    autofillStore && autofillProfileUpdateGate(autofillStore),
+    autofillStore && autofillProfileDeleteGate(autofillStore),
+    (dom && autofillStore) && autofillDetectGate(dom, autofillStore),
+    (dom && autofillStore) && autofillFillGate(dom, autofillStore),
+    options    && accountLinkProviderGate(options),
+    options    && accountUnlinkProviderGate(options),
+    options    && accountVerifyProviderGate(options),
+    options    && accountGetProviderGate(options),
+    options    && accountFindByProviderGate(options),
+    history    && historyRecordGate(history),
+    history    && historyListGate(history),
+    history    && historyDeleteGate(history),
+    history    && historyClearGate(history),
     // Bookmarks
     bookmarks  && bookmarkAddGate(bookmarks),
     bookmarks  && bookmarkRemoveGate(bookmarks),
@@ -504,6 +822,9 @@ function registerAll(bus, deps) {
     siteSettings && siteSettingsGetGate(siteSettings),
     siteSettings && siteSettingsSetGate(siteSettings),
     siteSettings && siteSettingsDeleteKeyGate(siteSettings),
+    siteSettings && siteSettingsClearGate(siteSettings),
+    siteSettings && siteSettingsClearAllGate(siteSettings),
+    siteSettings && siteSettingsListOriginsGate(siteSettings),
     // Passwords
     passwordVault && passwordSaveGate(passwordVault),
     passwordVault && passwordGetGate(passwordVault),

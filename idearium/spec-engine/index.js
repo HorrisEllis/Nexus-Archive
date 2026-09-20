@@ -1182,11 +1182,23 @@ export function findByRootHash(rootHash) {
 // content store of its own to add a file TO except through spec-engine.
 // Same disk-write/rootHash-recompute path as every other chunk — this is
 // not a second mechanism, just a chunk list that can grow after creation.
-export function addChunk(specUuid, { sectionId, title = null, content = '', realPath = null, repoUuid = null } = {}) {
+export function addChunk(specUuid, { sectionId, title = null, content = '', realPath = null, repoUuid = null, dependsOn = [] } = {}) {
   if (!sectionId) throw new Error('addChunk: sectionId required');
   const manifest = loadSpec(specUuid);
   if (manifest.chunks.some(c => c.sectionId === sectionId)) {
     throw new Error(`addChunk: section '${sectionId}' already exists on this spec — use completeChunk to edit it`);
+  }
+  // §BUILT 2026-09-19 — James: "file tree with needed files,
+  // dependencies, and primitives... build from the bottom up." A
+  // dependsOn referencing a sectionId that doesn't exist on this
+  // manifest can never be satisfied — _chunkDependenciesSatisfied()
+  // would just leave that chunk PENDING forever with no error anywhere
+  // to explain why. Fail loudly here instead, at the one point that
+  // actually knows the full real sectionId set.
+  const realIds = new Set(manifest.chunks.map(c => c.sectionId));
+  const badDeps = dependsOn.filter(d => !realIds.has(d));
+  if (badDeps.length) {
+    throw new Error(`addChunk: dependsOn references section(s) that don't exist on this spec yet — ${badDeps.join(', ')}. Add them first, or fix the reference.`);
   }
   const chunkUuid = crypto.randomUUID();
   const chunkIdx  = manifest.chunks.length;
@@ -1205,6 +1217,12 @@ export function addChunk(specUuid, { sectionId, title = null, content = '', real
     // dropped file — not the numbered fileName. null for every other
     // addChunk caller (none currently pass it), unaffected.
     realPath,
+    // §BOTTOM-UP — the same real field _buildManifest's own initial 10
+    // sections already carry and _chunkDependenciesSatisfied()/
+    // findNextPendingChunk() already read to decide what's buildable
+    // next. Default [] — every existing addChunk caller is unaffected,
+    // byte-identical to before this change.
+    dependsOn,
     status: CHUNK_STATES.PENDING, agent: 'user', agentModel: null,
     attempts: 0, failureMode: null, content: null, byteSize: 0,
     createdAt: now, updatedAt: now, completedAt: null,
@@ -1281,9 +1299,23 @@ export function ingestFilesAsSpec({ name, files = [], author = 'ingest', repoUui
   const manifest = _buildManifest({ name, type: 'codebase', description: 'ingested from dropped files', author, sections });
   files.forEach((f, i) => {
     const chunk = manifest.chunks[i];
-    const content = (f.content && f.content.trim()) ? f.content : `<!-- ${f.path}: no text content captured -->`;
+    const hasContent = f.content && f.content.trim().length > 0;
     markChunkBuilding(manifest.uuid, chunk.uuid, { agent: 'ingest', model: 'ingest:drop' });
-    completeChunk(manifest.uuid, chunk.uuid, content, { repoUuid });
+    // §FIXED 2026-09-19 — James: "it sometimes just makes a chunk with
+    // nothing in it." Root cause, found by reading this exact line: a
+    // file with no captured content used to fall through to a fabricated
+    // markdown-comment placeholder (`<!-- ${f.path}: no text content
+    // captured -->`) and got marked COMPLETE anyway — §1.2's own rule
+    // ("nothing silently fails") was being violated by the one function
+    // whose header cites it. An empty/uncaptured file is a real failure
+    // of this ingest, not content — it fails loudly via the same
+    // failChunk() lifecycle every other real failure in this module uses,
+    // never a fake markdown comment standing in for missing bytes.
+    if (!hasContent) {
+      failChunk(manifest.uuid, chunk.uuid, `no text content captured for ${f.path} — binary, empty, or unreadable at ingest time`, { repoUuid });
+      return;
+    }
+    completeChunk(manifest.uuid, chunk.uuid, f.content, { repoUuid });
     const fresh = loadSpec(manifest.uuid);
     const fc = fresh.chunks.find(c => c.uuid === chunk.uuid);
     if (fc) {

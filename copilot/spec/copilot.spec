@@ -284,3 +284,23 @@ spec:
 #   - tool intent routes action-shaped prompts through ollama's real agent-tools loop (read_file/run_command/diagnose/move_data/run_pipeline)
 #   - adversarial faculty wired with a narrow trigger; AX-008 bridge+diagnostic SSE streams into copilot's live buffer
 #   - fluid agent routing (extractExplicitAgent) + lifeline /command transport fix (was posting to a removed route, every escalation silently 404ing)
+
+  built_2026_09_19_inject_rule:
+    what: >-
+      New inject_rule node type (lib/node-schemas/schema.inject_rule + copilot/schemas/ local sovereign
+      mirror) — real, editable configuration for copilot's 5 real context-injection sites in
+      copilot/server.js (_injectUserModel, _injectSessionHistory, _injectRecallContext, the inline CORTEX
+      MASTERMIND append, tool-guide.js's toolGuide()). Deliberately NOT the pre-existing `injection` type
+      (a real, different, per-call audit record of priming behavior — checked directly before naming the
+      new type, avoiding the exact pat/bep_pattern collision class from earlier the same session).
+      enabled:false on a real node skips that site's own network call entirely, not just its output.
+      copilot.node-taxonomy.md gained rows for both inject_rule and the pre-existing, previously-
+      undocumented injection type.
+    proven: >-
+      Seed (5 created), idempotent re-seed (never overwrites a real edit), a real direct YAML edit
+      (enabled:false, changed a limit) read back correctly including partial-merge of limits, unknown id
+      fails loudly. Real require of the fully-edited copilot/server.js: clean.
+    honest_gap: >-
+      One link in the original injection-pipeline trace was never fully closed: how tool-runtime.js's own
+      tool-guide text and analysis.js's contextText actually join for a live NCP session — both build real
+      text, no direct call from one into the other was found. Named open, not guessed at.

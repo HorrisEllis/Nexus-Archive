@@ -181,6 +181,12 @@ function createProviderRouter(deps) {
                     const pd = JSON.parse(rb);
                     if (pd.status === 'complete' || pd.progress === 'complete') {
                       updateJob(job.id, { status: 'complete', response: pd.result || pd.text || '', completedAt: Date.now() });
+                      // §CODE-ARTIFACT 2026-09-20 — same listener the NCP
+                      // path uses. A job that declared a fileName gets its
+                      // file here too; one that didn't costs nothing.
+                      try {
+                        require('./code-artifact.js').onJobComplete({ job, text: pd.result || pd.text || '', bus });
+                      } catch (e) { console.warn(`[guardian] code-artifact listener (bridge poll) failed: ${e.message}`); }
                       bus.emit('guardian.job.complete', { jobId: job.id, provider: 'mistral', chars: (pd.result || '').length });
                       resolve({ ok: true, text: pd.result || pd.text || '' });
                     } else if (pd.status === 'failed' || pd.progress === 'failed') {
@@ -248,6 +254,12 @@ function createProviderRouter(deps) {
                     const pd = JSON.parse(rb);
                     if (pd.status === 'complete' || pd.progress === 'complete') {
                       updateJob(job.id, { status: 'complete', response: pd.result || pd.text || '', completedAt: Date.now() });
+                      // §CODE-ARTIFACT 2026-09-20 — same listener the NCP
+                      // path uses. A job that declared a fileName gets its
+                      // file here too; one that didn't costs nothing.
+                      try {
+                        require('./code-artifact.js').onJobComplete({ job, text: pd.result || pd.text || '', bus });
+                      } catch (e) { console.warn(`[guardian] code-artifact listener (bridge poll) failed: ${e.message}`); }
                       bus.emit('guardian.job.complete', { jobId: job.id, provider: 'deepseek', chars: (pd.result || '').length });
                       resolve({ ok: true, text: pd.result || pd.text || '' });
                     } else if (pd.status === 'failed' || pd.progress === 'failed') {

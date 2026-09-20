@@ -3,8 +3,7 @@ spec:
     name:        nexus-repository-system-build
     version:     0.1.0-phasemap
     status:      "PHASEMAP 2026-09-15. MCO0 (audit) is DONE — real code
-      found and grep-confirmed before any gap was assumed. MCO1 onward
-      are NOT STARTED. Cross-references
+      found and grep-confirmed before any gap was assumed. MCO1 is DONE (2026-09-19 — the graph layer is real, tested, and adopted §24's edge_provenance_envelope); MCO2-MCO6 are NOT STARTED; MCO7 (Nexus's own systems as repo compartments) is PARTIAL - manifests done 2026-09-19. Cross-references
       idearium-creative-repo-overhaul-phasemap.spec — MCO5 here and that
       spec's MCO-G are the same real work; see build_order_note."
     uuid:        nexus-repository-system-build-v0-0000-2026-0915-001
@@ -102,14 +101,31 @@ spec:
   # ── MCO1: graph layer ─────────────────────────────────────────────────
   MCO1_graph_layer:
     depends_on: [MCO0]
-    status: "NOT STARTED"
-    does: >
-      Derive relationship edges from data import-pipeline.js already
-      produces (symbols, imports it may already be scanning for
-      language-family boundary detection) rather than re-parsing.
-      Ships incrementally per §24's own constraint — unknown
-      relationships MUST remain explicitly unknown, not invented to
-      complete the graph.
+    status: >
+      DONE 2026-09-19 (v0.39.158). Built: idearium/repo/graph.js, spec at
+      idearium/spec/idearium.repo-graph.spec (written first, §8.5), a
+      real GRAPHING step in import-pipeline.js's state machine writing
+      graph.json, and three read routes (repo.graph / .traverse / .cone).
+      GATE MET — see gate_evidence below. Tests: tests/modules/
+      test-repo-graph.js 49/49 against a real repo run through the real
+      pipeline, no fixture graph.
+    built:
+      relations: "contains, belongs_to, imports, exports, depends_on, depended_on_by — the first three tiers of `order` below. `calls`/`called_by` deliberately NOT built and DECLARED unsupported in every graph, so a consumer can tell 'this graph has no call edges' from 'this code makes no calls'."
+      capabilities: 'traverse() (§25), dependencyCone() (§26), affected() — the union cone MCO2 scopes its lazy tiers to.'
+    gate_evidence: >
+      traverse(start='file:src/index.js', relation='depends_on', depth=2)
+      returns src/lib/helper.js at depth 1 and src/util.js transitively at
+      depth 2 on a real materialized repo (GR-GATE, test-repo-graph.js).
+      An import of 'express' that resolves to nothing in the repo comes
+      back as a real edge with to:null, resolution:'unresolved',
+      reason:'external-or-unresolved' — marked, never omitted (§24
+      constraint, REPO-009), asserted by its own GR-GATE case.
+    found_while_building:
+      - "import-pipeline.js's brace-balance check had a 100% false-positive rate: 6 of 407 real .js files marked parse-failed, node --check passing on all six, including guardian/server.js. A failed file is chunkable:false, so each was silently excluded from chunking AND the graph. Fixed (braceDepth), 12/12 regression tests, 0 false positives after."
+      - "import-pipeline.js's LANGUAGES table detects no Go/Rust/Ruby/Java/C#/C/C++, so 7 of the graph's extractors can never fire. Reported by the graph (languagesUndetectedUpstream), NOT fixed here — detection has one owner and changing it also changes chunking. Real next item."
+    open:
+      - "`exports` means 'top-level symbol this file declares', from the existing SYMBOL_PATTERNS — not export-statement analysis. A private top-level helper is included; a re-export is not followed. Stated in the spec, not over-claimed."
+      - 'Extend import-pipeline.js LANGUAGES (needs its own spec — it changes chunking too).'
     order:
       - imports / exports (cheapest — likely near-free extension of
         existing SYMBOL_PATTERNS regex work in import-pipeline.js)
@@ -127,6 +143,24 @@ spec:
       depth=N) returns a real edge set for an actual materialized repo,
       and any relationship the extractor can't determine is marked
       "unresolved" rather than omitted (§24 constraint, REPO-009).
+    edge_provenance_envelope:
+      status: >
+        ADOPTED in this build. The §AMENDED note below was written by the
+        parallel line specifically so a future MCO1 build would give its
+        edges the full envelope shape from day one rather than need a
+        second migration later — this IS that build, so it was adopted
+        rather than deferred. field_attachment_extension_point stays
+        DEFERRED exactly as that note instructs.
+        Shape: idearium/spec/idearium.repo-graph.spec.
+    # §AMENDED 2026-09-19 — §24 (nexus-repository-system.spec) gained a
+    # real edge_provenance_envelope schema and a deliberately-deferred
+    # field_attachment_extension_point. This gate is unchanged — MCO1
+    # still only needs resolution:unresolved-vs-omitted to ship — but
+    # when MCO1's own edges get written, giving them the full envelope
+    # shape from day one costs nothing extra and avoids a real, second
+    # migration later. Do not build field_attachment_extension_point as
+    # part of MCO1; it stays deferred until a second real field need
+    # exists, per that section's own reasoning.
 
   # ── MCO2: verification tiers L4-L8 ────────────────────────────────────
   MCO2_verification_deepening:
@@ -232,7 +266,64 @@ spec:
       exists anywhere in idearium's repo layer (grep-confirmed absence,
       same bar as MCO0).
 
-  build_order: [MCO1, MCO2, MCO4, MCO3, MCO6, MCO5]
+  # -- MCO7: Nexus's own systems as repo compartments (added 2026-09-19) -----
+  MCO7_nexus_systems_as_repo_compartments:
+    depends_on: [MCO0, MCO6]
+    status: "PARTIAL 2026-09-19. 7a (audit) and 7b (manifests) DONE - commit 4890f29. 7c-7h NOT STARTED."
+    does: >
+      James: "make every system a repo compartment" - all Nexus systems. Dogfoods this
+      spec on Nexus itself: each system is ONE repo record (source/structure, idearium
+      repo layer) bound to ONE cos Compartment (execution/state) per ?5/?32, with its own
+      data folder and its own version line. Named so far: intelligence, versionium, loom,
+      guardian, ollama, cortex, clear-glass, copilot, idearium (list is open). Repos are
+      VIRTUAL first (one git repo, each system a repo record with a path scope); a physically
+      separate git repo per system is a later decision (7h). MCO0's note that the nexus
+      meta-repo's own git is a separate concern still holds - 7 does not touch MCO5's git work.
+      Reason for per-system version lines, from real evidence: the 0.39.156/0.39.154 merge
+      had two parallel lines that both used 0.39.153 and 0.39.154 for different work,
+      because there is one shared counter.
+    steps:
+      7a_audit: >
+        DONE. Existing: idearium/repo RepoLayer, cos/kernel.js Compartment (flat, no
+        parent/child), lib/system-registry.js (read-only aggregator of autopilot + diagnostic
+        + lib/version.js). 106 static cross-system require/import edges among the 9 named
+        systems (copilot 30, guardian 24, idearium 13, versionium 12, intelligence 11,
+        cortex 11, loom 4, clear-glass 1, ollama 0) - a floor: path.join(ROOT,'<sys>')
+        reach-across and HTTP calls are not counted. intelligence has no registered version.
+      7b_manifests: >
+        DONE. <system>/compartment.json for the 9 systems (id, repo scope + versionLine,
+        cos compartmentId with empty axioms, runtime entry/port/phase, data dirs, dependsOn,
+        boundaryFindings) and cli/compartments.js (list | sync [--write] | check). Manifests
+        are DERIVED from the registry + a code scan, never hand-authored facts. Adding a
+        system = one row in its SYSTEMS table. Gate MET: check passes for all 9.
+      7c_register_in_repolayer: >
+        NOT STARTED. Register each manifest as a repo record (manifest = source of truth);
+        this is MCO6's compartment_id wiring applied to Nexus. Open: RepoLayer is ESM,
+        cli/compartments.js is CJS - decide the loading path first.
+      7d_bind_cos_compartment: >
+        NOT STARTED. One cos Compartment per system (cos.nexus.<system>). Axioms are James's
+        to define (manifests carry an empty list). cos Compartment is flat and identity-tight
+        (max 5 axioms); nesting is NOT assumed.
+      7e_per_compartment_versioning: >
+        NOT STARTED. Each compartment owns its version line; VERSION.system becomes derived.
+        Independent of 7c/7d. Needs a first registered version for intelligence.
+      7f_boundary_enforcement: >
+        NOT STARTED. Turn cross-system requires into contract calls (event-driven interaction
+        contracts + handshake verification, per the sovereign-node-architecture phasemap), one
+        system at a time in weight order: copilot, guardian, idearium, versionium,
+        intelligence/cortex, loom, clear-glass. Independent of 7c/7d.
+      7g_remaining_systems: >
+        NOT STARTED. Add every other system as James names them (registry candidates not yet
+        named: cos, eravos, architect, diagnostic, orchestrator, emerge, siso, warp,
+        erosmancer, sentinel) - one SYSTEMS row + sync --write each.
+      7h_physical_split_decision: "DEFERRED - a decision, not a build; only after 7f."
+    gate: >
+      MET when every system in James's list has exactly one repo record and one cos
+      Compartment confirming ownership both directions (MCO6's gate, for Nexus's own
+      systems), its own version line, and cli/compartments.js check passes with zero static
+      cross-system requires per system (lib/ shared kernel excluded).
+
+  build_order: [MCO1, MCO2, MCO4, MCO3, MCO6, MCO7, MCO5]
   build_order_note: >
     MCO5 (git+credentials) is intentionally last here, same reasoning
     as idearium-creative-repo-overhaul-phasemap's MCO-G: highest

@@ -15,9 +15,10 @@ const express = require('express');
 const { ipcMain, session } = require('electron');
 const { emit, on, Event, getBus } = require('../core/bus');
 const { randomUUID: uuidv4 } = require('crypto'); // §BUGFIX 2026-08-23 — the real 'uuid' npm package was never installed (checked node_modules and package.json directly); this crashed every real file that required it, including boot-critical ones. Node's own built-in produces the identical UUID format, zero dependency.
+const { detectFields: _autofillDetect, fillFields: _autofillFill } = require('../autofill/matcher.js');
 
 class IpcBridge {
-  constructor({ port, sse, ctxMgr, vault, apiSettings, urlListener, mesh, diag, fp, options, minimizeFn, hideFn, openFn, maximizeFn, openSettingsFn, closeSettingsFn, bookmarks, rewind, providerHost, userscripts, siteSettings, downloads, passwordVault, speech, macroTool, errorCapture, copilot, postEvent, pluginHost, history }) {
+  constructor({ port, sse, ctxMgr, vault, apiSettings, urlListener, mesh, diag, fp, options, minimizeFn, hideFn, openFn, maximizeFn, openSettingsFn, closeSettingsFn, bookmarks, rewind, providerHost, userscripts, siteSettings, downloads, passwordVault, speech, macroTool, errorCapture, copilot, postEvent, pluginHost, history, autofillStore, dom }) {
     this.port        = port;
     this.sse         = sse;
     this.errorCapture = errorCapture;
@@ -42,6 +43,8 @@ class IpcBridge {
     this.userscripts   = userscripts;
     this.siteSettings  = siteSettings;
     this.history       = history;
+    this.autofillStore = autofillStore;
+    this.dom           = dom;
     this.downloads     = downloads;
     // §BUGFIX 2026-08-24 — found while wiring speech, not by inspection:
     // main/index.js already passed passwordVault into this constructor
@@ -244,6 +247,12 @@ class IpcBridge {
       try { res.json({ ok: true, record: this.downloads.add(req.body || {}) }); }
       catch (e) { res.status(500).json({ error: e.message }); }
     });
+    // §BUILT 2026-09-19 — the one real gap: POST above adds a download
+    // record (used internally when one starts), but nothing listed the
+    // real ones already recorded — checked directly, DownloadStore's
+    // own list({agentId, state}) had no route at all.
+    this.app.get('/cli/downloads', (req, res) => res.json({ downloads: this.downloads?.list(req.query) || [] }));
+    this.app.delete('/cli/downloads/:id', (req, res) => res.json(this.downloads?.clearItem(req.params.id) || { error: 'downloads unavailable' }));
     this.app.get('/cli/site-settings',      (req, res) => res.json({ settings: this.siteSettings?.getAllForOrigin(req.query.url) || null }));
     this.app.get('/cli/rewind',             (req, res) => res.json({ snapshots: this.rewind?.list(req.query.agentId, req.query.limit ? +req.query.limit : undefined) || [] }));
     this.app.get('/cli/passwords',          (req, res) => res.json({ passwords: this.passwordVault?.list() || [] }));
@@ -321,6 +330,27 @@ class IpcBridge {
     this.app.get('/cli/history', (req, res) => res.json({ entries: this.history?.list(req.query) || [] }));
     this.app.delete('/cli/history/:id', (req, res) => res.json(this.history?.delete(req.params.id) || { error: 'history unavailable' }));
     this.app.delete('/cli/history', (req, res) => res.json(this.history?.clear(req.query.agentId) || { error: 'history unavailable' }));
+
+    // §BUILT 2026-09-19 — James: "library ui... its own file. no
+    // monoliths." A standalone UI page (matching ui/brainos/'s own
+    // real precedent — a static page opened via openAgentWindow,
+    // reached by plain fetch(), NOT the IPC bridge, which is only
+    // privileged inside ClearGlass's own main renderer) needs a real
+    // REST surface for exactly the data bookmarks/accounts already
+    // have gates and IPC handlers for, but no CLI route at all yet —
+    // checked directly, zero /cli/bookmarks or /cli/accounts matches
+    // anywhere in this file before this.
+    this.app.get('/cli/bookmarks', (req, res) => res.json({ bookmarks: this.bookmarks?.list(req.query) || [] }));
+    this.app.post('/cli/bookmarks', (req, res) => res.json(this.bookmarks?.add(req.body) || { error: 'bookmarks unavailable' }));
+    this.app.delete('/cli/bookmarks/:id', (req, res) => res.json(this.bookmarks?.remove({ id: req.params.id }) || { error: 'bookmarks unavailable' }));
+
+    this.app.get('/cli/accounts', (req, res) => res.json({ accounts: this.options?.listAccounts() || [] }));
+    this.app.get('/cli/accounts/:id', (req, res) => res.json({ account: this.options?.getAccount(req.params.id) || null }));
+    this.app.post('/cli/accounts', (req, res) => res.json(this.options?.createAccount(req.body) || { error: 'accounts unavailable' }));
+    this.app.put('/cli/accounts/:id', (req, res) => res.json(this.options?.updateAccount(req.params.id, req.body?.updates) || { error: 'accounts unavailable' }));
+    this.app.delete('/cli/accounts/:id', (req, res) => res.json(this.options?.deleteAccount(req.params.id) || { error: 'accounts unavailable' }));
+    this.app.post('/cli/accounts/:id/provider', (req, res) => res.json(this.options?.linkProviderAccount(req.params.id, req.body?.provider, req.body) || { error: 'accounts unavailable' }));
+    this.app.delete('/cli/accounts/:id/provider/:provider', (req, res) => res.json(this.options?.unlinkProviderAccount(req.params.id, req.params.provider) || { error: 'accounts unavailable' }));
 
     // ── rewind — real per-agent snapshot/restore/clear ───────────────
     // §REAL RISK NOTE — restore() is genuinely destructive (replaces an
@@ -649,6 +679,7 @@ class IpcBridge {
     ipcMain.handle('site-settings:deleteKey', async (e, d) => this.siteSettings?.deleteKey(d.url, d.key));
     ipcMain.handle('site-settings:clear',  async (e, d) => this.siteSettings?.clear(d.url));
     ipcMain.handle('site-settings:listOrigins', async () => this.siteSettings?.listOrigins());
+    ipcMain.handle('site-settings:clearAll', async () => this.siteSettings?.clearAll());
 
     // §GAP CLOSED 2026-08-30 — real IPC handlers for the freshly-built
     // HistoryStore, the same real gap this session found (registry
@@ -834,6 +865,40 @@ class IpcBridge {
     ipcMain.handle('accounts:delete',     async (e, d) => this.options?.deleteAccount(d.id));
     ipcMain.handle('accounts:linkAgent',  async (e, d) => this.options?.linkAgent(d.id, d.agentKey));
     ipcMain.handle('accounts:unlinkAgent',async (e, d) => this.options?.unlinkAgent(d.id, d.agentKey));
+    // §BUILT 2026-09-19 — James: "account manager with account ids for
+    // providers," then "library ui." Real backend (options/store.js)
+    // and Guardian-facing gates existed; this real IPC surface — what
+    // the actual renderer UI calls through, checked directly against
+    // this file's own established accounts: pattern above — did not.
+    // Found while preparing to build the Library UI: building it
+    // against a channel with no handlers would have been building on
+    // a void.
+    ipcMain.handle('accounts:linkProvider',   async (e, d) => this.options?.linkProviderAccount(d.id, d.provider, { accountId: d.accountId, email: d.email, displayName: d.displayName }));
+    ipcMain.handle('accounts:unlinkProvider', async (e, d) => this.options?.unlinkProviderAccount(d.id, d.provider));
+    ipcMain.handle('accounts:verifyProvider', async (e, d) => this.options?.verifyProviderAccount(d.id, d.provider));
+    ipcMain.handle('accounts:getProvider',    async (e, d) => this.options?.getProviderAccount(d.id, d.provider));
+    ipcMain.handle('accounts:findByProvider', async (e, d) => this.options?.findAccountByProviderAccountId(d.provider, d.accountId));
+
+    // Autofill — §BUILT 2026-09-19, real IPC surface for the UI. Same
+    // real logic as gates/index.js's autofillDetectGate/autofillFillGate
+    // (matchFields + dom.handleQuery/handleMutate) — this is a genuinely
+    // separate real channel from the Guardian/SSE gate path (checked
+    // directly: this file's own accounts:/site-settings: handlers prove
+    // the UI has never gone through gates/index.js at all), not a
+    // duplicate route to the same one.
+    ipcMain.handle('autofill:profile:list',   async ()     => this.autofillStore?.listProfiles());
+    ipcMain.handle('autofill:profile:get',    async (e, d) => this.autofillStore?.getProfile(d.id));
+    ipcMain.handle('autofill:profile:create', async (e, d) => this.autofillStore?.createProfile(d));
+    ipcMain.handle('autofill:profile:update', async (e, d) => this.autofillStore?.updateProfile(d.id, d.updates));
+    ipcMain.handle('autofill:profile:delete', async (e, d) => this.autofillStore?.deleteProfile(d.id));
+    ipcMain.handle('autofill:detect', async (e, { agentId = 'default', profileId } = {}) => {
+      if (!this.dom || !this.autofillStore) return { error: 'autofill unavailable' };
+      return _autofillDetect(this.dom, this.autofillStore, { agentId, profileId });
+    });
+    ipcMain.handle('autofill:fill', async (e, { agentId = 'default', profileId, minConfidence = 'medium' } = {}) => {
+      if (!this.dom || !this.autofillStore) return { error: 'autofill unavailable' };
+      return _autofillFill(this.dom, this.autofillStore, { agentId, profileId, minConfidence });
+    });
 
     // §TX16 2026-08-28 — real, persistent listener config. Same pattern as
     // accounts above (this.options owns the real CRUD; bridge.js exposes

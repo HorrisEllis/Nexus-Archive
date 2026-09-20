@@ -1,0 +1,1 @@
+{"uuid":"bf1f620d-541c-4ab8-aa5a-26ca116dc6ad","system":"test","component":"test.widget.panel","action":"registered","status":"ok","tags":[],"detail":"test-only component for mutation-contract verification","causedBy":null,"contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib/component-registry.js:323","ts":1789861310159}

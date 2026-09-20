@@ -47,6 +47,16 @@ spec:
   # ── The real registry — 146 entries, mechanically extracted from the
   # original markdown table, not retyped ──
   registry:
+    - spec:             'idearium/spec/idearium.repo-graph.spec'
+      version:          '1.0.0'
+      last_drift_check: 'written 2026-09-19, BEFORE the code (§8.5 honored this time)'
+      status: >
+        Real spec for idearium/repo/graph.js — nexus-repository-system.spec §24 relationship_graph, §25 graph_traversal, §26 dependency_cone; closes MCO1_graph_layer in nexus-repository-system-build-phasemap. Ships contains/belongs_to/imports/exports/depends_on/depended_on_by and DECLARES the relations it does not produce (calls, implements, emits, tested_by...) so empty is distinguishable from none. Unresolvable imports stay as unresolved edges rather than being omitted (§24 constraint, REPO-009). Verified 49/49 against a real repo run through the real pipeline. Two findings measured during the build are recorded in the spec: import-pipeline.js's LANGUAGES table detects no Go/Rust/Ruby/Java/C#/C/C++ (reported, not fixed here — one owner), and its brace-balance check had a 100% false-positive rate on 6 of 407 real files including guardian/server.js (fixed, 12/12 regression tests).
+    - spec:             'guardian/spec/guardian.code-artifact.spec'
+      version:          '1.0.0'
+      last_drift_check: 'written 2026-09-19 — spec written AFTER the code, recorded as a §8.5 violation in the spec itself'
+      status: >
+        Real spec for guardian/lib/code-artifact.js — a job declares fileName + syntax at createJob time, and the ncp-handler completion listener writes the returned fenced code to that name and stages it through lib/intake.js's existing gate. Verified 27/27 including a real intake.stage() round trip. Two real gaps named in the spec rather than implied away: the mesh completion path is not wired (ncp path only), and no live run against a real provider tab has happened.
     - spec:             'docs/contracts/synthesis-contract.spec'
       version:          '1.0.0'
       last_drift_check: 'written 2026-09-02'
@@ -208,10 +218,12 @@ spec:
       status: >
         ✓ filed session 6 — MIG-01 resolved, MIG-02 resolved differently than proposed, MIG-03 unverifiable (file not in tree), capability_cli_authoring built session 6.
     - spec:             'copilot.spec'
-      version:          '2.0.0'
-      last_drift_check: '—'
+      version:          '3.5.0'
+      last_drift_check: '2026-09-19'
       status: >
-        not yet checked against live code this pass
+        ✓ CHECKED — version field corrected (was '2.0.0' here, real file says 3.5.0). Extended, not
+        rewritten: added built_2026_09_19_inject_rule documenting the new inject_rule node type and its 5
+        real injection sites. Full route/handshake drift audit not repeated this pass.
     - spec:             'cortex-dual-cognition.spec'
       version:          '1.0.0'
       last_drift_check: '—'
@@ -287,11 +299,23 @@ spec:
       last_drift_check: '—'
       status: >
         not yet checked against live code this pass
-    - spec:             'guardian.spec'
-      version:          '3.6.1'
-      last_drift_check: '2026-06-28'
+    - spec:             'clear-glass.spec'
+      version:          '3.1.0'
+      last_drift_check: '2026-09-19'
       status: >
-        ✓ mechanical version sync only, no further drift found.
+        ✓ CHECKED — no prior registry entry existed for this spec at all (real, pre-existing gap, closed
+        here). Extended: version_history gained a 2026-09-19 entry for the 13 new real mesh gates
+        (workflow CRUD/run/step-move + 3 list gates) in clear-glass/src/gates/index.js — no version bump,
+        same real object/methods, just newly reachable.
+    - spec:             'guardian.spec'
+      version:          '3.6.2'
+      last_drift_check: '2026-09-19'
+      status: >
+        ✓ CHECKED — version field corrected (was '3.6.1' here, real file says 3.6.2). Extended: added
+        built_2026_09_19_agent_tool_expansion — no guardian-owned code changed, but its real job-dispatch
+        surface (POST /command + GET /jobs) is now exercised by 47 real actions across two agent-tools
+        (agent_mesh_route, browser_action), up from 9. Named one real, still-open decision: whether
+        cockpit's own command contract should also expose these, a second path to the same capability.
     - spec:             'healer.spec'
       version:          '1.0.0'
       last_drift_check: '—'
@@ -318,10 +342,14 @@ spec:
       status: >
         not yet checked against live code this pass
     - spec:             'idearium.spec'
-      version:          '3.0.0'
-      last_drift_check: '2026-06-29'
+      version:          '4.1.0'
+      last_drift_check: '2026-09-19'
       status: >
-        ✓ AX-008 closed session 5/7 (idearium→copilot wire built and verified) — this spec's axioms list updated to match.
+        ✓ CHECKED — version field corrected (was '3.0.0' here, real file says 4.1.0, itself already noted
+        in-file as a 2026-09-13 drift fix from a stale 3.2.0). Extended: added
+        built_2026_09_19_compiler_t0_and_bottom_up_build — spec-compiler's T0 tier, real dependsOn/topo-sort/
+        cycle-detection on addChunk(), two real bugs fixed (ingestFilesAsSpec's fabricated empty-file
+        placeholder, RepoLayer.materialize()'s false ok:true), lib/extract-code.js wired opt-in.
     - spec:             'intelligence-bridge.spec'
       version:          '1.0.0'
       last_drift_check: '—'

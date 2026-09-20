@@ -1,0 +1,1 @@
+{"uuid":"6808d139-6d4d-4e78-aff4-62b00d7a43b7","system":"testfaculty","component":"testfaculty.route","action":"registered","status":"ok","tags":["self-registered"],"detail":"route a request somewhere","causedBy":"testfaculty","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib/component-registry.js:323","ts":1789871670732}

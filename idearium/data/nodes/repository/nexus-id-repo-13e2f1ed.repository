@@ -1,0 +1,39 @@
+envelope: 1
+uuid: nexus-export-repository-nexus-id-repo-13e2f1ed
+type: repository
+id: nexus-id-repo-13e2f1ed
+context: idearium repo materialize-test-3
+intent: null
+summary: 9 files, 9 chunks, READY
+system: idearium
+tags:
+  - spec:56eb9d08-a87d-478c-a3ec-0678aafe43b1
+  - state:READY
+  - verification:passed
+exported_at: 1789871574948
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1789871574948
+lastSeenAt: 1789871574948
+fingerprint: null
+payload:
+  uuid: nexus-id-repo-13e2f1ed
+  name: materialize-test-3
+  specUuid: 56eb9d08-a87d-478c-a3ec-0678aafe43b1
+  rootHash: 66914f509edb4cdc3fa2ad21d03f20dd88b513e963d25145a02dc4ec8a5cefd1
+  parent: null
+  state: READY
+  fileCount: 9
+  byLanguage:
+    markdown: 9
+  failedCount: 0
+  chunkCount: 9
+  symbolCount: 0
+  verificationStatus: passed
+  verificationLevel: L3
+  paths:
+    atlas: /tmp/idearium-materialize-VN06TS/projects/nexus-id-repo-13e2f1ed/atlas.json
+    chunks: /tmp/idearium-materialize-VN06TS/projects/nexus-id-repo-13e2f1ed/chunks
+    indexes: /tmp/idearium-materialize-VN06TS/projects/nexus-id-repo-13e2f1ed/indexes
+    verification: /tmp/idearium-materialize-VN06TS/projects/nexus-id-repo-13e2f1ed/verification.json
+  generatedAt: 1789871574948

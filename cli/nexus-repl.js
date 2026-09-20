@@ -645,7 +645,148 @@ async function dispatch(line) {
           console.log(d.ok ? ok(`real framework written → ${d.outPath}`) : err(d.error));
           return;
         }
-        console.log('Usage: intel [commands|patterns|cfr|status|framework <name>]');
+        // §BUILT — CLI surface for the previously-unwired submodule routes.
+        if (sub === 'liminal') {
+          const text = args.slice(1).join(' ');
+          if (!text) { console.log('Usage: intel liminal <text>'); return; }
+          const r = await fetch(`${base}/api/intelligence/liminal/analyze`, {
+            method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ input: text }),
+          });
+          const d = await r.json();
+          console.log(`${d.count || 0} gap signal(s):`);
+          (d.signals || []).slice(0, 20).forEach(s => console.log(`  ${$(C.dim, s.type)} ${s.label || s.description || ''} ${$(C.dim, '('+ (s.criticality||0).toFixed(2) +')')}`));
+          return;
+        }
+        if (sub === 'gap') {
+          const gsub = args[1];
+          if (gsub === 'hunt') {
+            const text = args.slice(2).join(' ');
+            if (!text) { console.log('Usage: intel gap hunt <text>'); return; }
+            const r = await fetch(`${base}/api/intelligence/gap/hunt`, {
+              method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ text }),
+            });
+            const d = await r.json();
+            console.log(`${d.count || 0} gap(s) found:`);
+            (d.gaps || []).forEach(g => console.log(`  ${$(C.cyan, g.type)}/${g.domain} — ${g.reason}`));
+            return;
+          }
+          const r = await fetch(`${base}/api/intelligence/gap/status`); const d = await r.json();
+          console.log($(C.bold, 'gap ledger:'), JSON.stringify(d.ledger));
+          console.log(`predicate types: ${(d.predicateTypes||[]).join(', ')}`);
+          console.log('Usage: intel gap [status|hunt <text>]');
+          return;
+        }
+        if (sub === 'bda') {
+          const bsub = args[1];
+          if (bsub === 'observe') {
+            const role = args[2];
+            const text = args.slice(3).join(' ');
+            if (!['user','assistant'].includes(role) || !text) { console.log('Usage: intel bda observe <user|assistant> <text>'); return; }
+            const r = await fetch(`${base}/api/intelligence/bda/observe`, {
+              method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ role, text }),
+            });
+            const d = await r.json();
+            console.log(d.ok ? `regime=${d.pendulum?.regime} sigma=${d.pendulum?.sigma?.toFixed?.(2)} gaps=${d.gaps?.length||0}` : err(d.error));
+            return;
+          }
+          const r = await fetch(`${base}/api/intelligence/bda/status`); const d = await r.json();
+          console.log($(C.bold, 'BDA state:'));
+          console.log(`  user:      regime=${d.user?.pendulum?.regime || 'n/a'} n=${d.user?.n||0}`);
+          console.log(`  assistant: regime=${d.assistant?.pendulum?.regime || 'n/a'} n=${d.assistant?.n||0}`);
+          return;
+        }
+        if (sub === 'causal') {
+          const csub = args[1];
+          if (csub === 'compound') {
+            const entryUuid = args[2];
+            if (!entryUuid) { console.log('Usage: intel causal compound <entryUuid>'); return; }
+            const r = await fetch(`${base}/api/intelligence/causal/compound`, {
+              method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ entryUuid }),
+            });
+            const d = await r.json();
+            console.log(d.record ? `class=${d.record.class} spread=${d.record.spread} depth=${d.record.depth}` : (d.error || 'ripple — no compounding effect'));
+            return;
+          }
+          const r = await fetch(`${base}/api/intelligence/causal/anomalies?scope=${args[1]==='open'?'open':'recent'}`); const d = await r.json();
+          console.log(`${d.total||0} total, ${d.open||0} open`);
+          (d.anomalies || []).slice(0, 15).forEach(a => console.log(`  ${$(C.cyan, a.type)} ${$(C.dim, a.severity)} ${a.sessionId||''}`));
+          console.log('Usage: intel causal [open|compound <entryUuid>]');
+          return;
+        }
+        if (sub === 'alk') {
+          const asub = args[1];
+          if (asub === 'record') {
+            const [actor, intent, ...rest] = args.slice(2);
+            if (!actor || !intent) { console.log('Usage: intel alk record <actor> <intent> [payload text]'); return; }
+            const r = await fetch(`${base}/api/intelligence/alk/record`, {
+              method: 'POST', headers: {'Content-Type':'application/json'},
+              body: JSON.stringify({ actor, intent, payload: { note: rest.join(' ') || undefined } }),
+            });
+            const d = await r.json();
+            console.log(d.ok ? ok(`recorded ${d.decision.uuid.slice(0,8)}`) : err(d.error));
+            return;
+          }
+          if (asub === 'rewind') {
+            const uuid = args[2];
+            if (!uuid) { console.log('Usage: intel alk rewind <uuid>'); return; }
+            const r = await fetch(`${base}/api/intelligence/alk/rewind`, {
+              method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ uuid }),
+            });
+            const d = await r.json();
+            console.log(d.ok ? ok(`rewound via ${d.rewind.uuid.slice(0,8)}`) : err(d.error));
+            return;
+          }
+          if (asub === 'ancestors' || asub === 'descendants') {
+            const uuid = args[2];
+            if (!uuid) { console.log(`Usage: intel alk ${asub} <uuid>`); return; }
+            const r = await fetch(`${base}/api/intelligence/alk/${asub}?uuid=${encodeURIComponent(uuid)}`); const d = await r.json();
+            console.log((d[asub] || []).map(x => typeof x === 'string' ? x.slice(0,8) : x.uuid?.slice(0,8)).join(' → ') || 'none');
+            return;
+          }
+          const r = await fetch(`${base}/api/intelligence/alk/stats`); const d = await r.json();
+          console.log($(C.bold, 'ALK:'), `${d.total} decisions, ${d.reversed} reversed`);
+          console.log('  by actor:', JSON.stringify(d.byActor));
+          console.log('Usage: intel alk [stats|record <actor> <intent>|rewind <uuid>|ancestors|descendants <uuid>]');
+          return;
+        }
+        if (sub === 'perception') {
+          const r = await fetch(`${base}/api/intelligence/perception`); const d = await r.json();
+          console.log(d.dominant ? `${$(C.bold, d.dominant.state)} (${(d.dominant.confidence*100).toFixed(0)}%) — ${d.dominant.description}` : 'no dominant composite state');
+          if (d.oscillation?.detected) console.log($(C.yellow, `⚠ oscillating: ${d.oscillation.description}`));
+          return;
+        }
+        if (sub === 'telemetry-frame') {
+          const r = await fetch(`${base}/api/intelligence/telemetry/frame`); const d = await r.json();
+          const fr = d.frame || {};
+          console.log(`health=${fr.health} slope=${fr.slope?.direction} stability=${fr.stability?.classification} osc=${fr.oscillation?.isOscillating}`);
+          return;
+        }
+        if (sub === 'rfr2') {
+          const rsub = args[1];
+          if (rsub === 'query') {
+            const cql = args.slice(2).join(' ');
+            if (!cql) { console.log("Usage: intel rfr2 query FIND events WHERE type = 'x' LIMIT 10"); return; }
+            const r = await fetch(`${base}/api/intelligence/rfr2/query?cql=${encodeURIComponent(cql)}`); const d = await r.json();
+            if (!d.ok) { console.log(err(d.error)); return; }
+            console.log(`${d.results?.length || 0} result(s) (${d.strategy || ''}, ${d.durationMs}ms):`);
+            (d.results || []).slice(0, 20).forEach(ev => console.log(`  ${$(C.dim, ev.id?.slice(0,8))} ${$(C.cyan, ev.type)} ${ev.source||''}`));
+            return;
+          }
+          if (rsub === 'trace' || rsub === 'descendants' || rsub === 'children') {
+            const id = args[2];
+            if (!id) { console.log(`Usage: intel rfr2 ${rsub} <id>`); return; }
+            const r = await fetch(`${base}/api/intelligence/rfr2/${rsub}?id=${encodeURIComponent(id)}`); const d = await r.json();
+            if (rsub === 'trace') console.log(`depth=${d.depth} truncated=${d.truncated}  ${d.path?.map(p=>p.slice(0,8)).join(' → ')}`);
+            else console.log((d[rsub] || []).map(x => x.slice ? x.slice(0,8) : x).join(', ') || 'none');
+            return;
+          }
+          const r = await fetch(`${base}/api/intelligence/rfr2/stats`); const d = await r.json();
+          console.log($(C.bold, 'RFR2 live kernel:'), d.live ? `listening since ${new Date(d.since).toLocaleTimeString()}` : 'not yet live');
+          console.log(`  events=${d.length} edges=${d.edgeCount} macros=${d.macroCount} dropped=${d.droppedCount}`);
+          console.log('Usage: intel rfr2 [stats|query <CQL>|trace <id>|descendants <id>|children <id>]');
+          return;
+        }
+        console.log('Usage: intel [commands|patterns|cfr|status|framework <name>|liminal <text>|gap [status|hunt]|bda [status|observe]|causal [open|compound]|alk [stats|record|rewind|ancestors|descendants]|perception|telemetry-frame|rfr2 [stats|query|trace|descendants|children]]');
       } catch (e) {
         console.log(err(`intelligence system unreachable: ${e.message}`));
       }

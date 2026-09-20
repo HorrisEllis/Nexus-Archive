@@ -54,6 +54,17 @@ function extractDispatchText(r) {
 // copilot/config.js's own header for the full real scope and
 // reasoning, matching guardian/config.js and intelligence/config.js.
 const config = require('./config.js');
+// §BUILT 2026-09-19 — real, editable .inject_rule nodes for the five
+// context-injection sites below. Seeded once, lazily, on first real
+// call rather than requiring a separate boot-sequence hook — matches
+// this file's own existing lazy-require pattern for optional modules
+// (see _getCopilotContext elsewhere in this file).
+const _injectConfig = require('./lib/inject-config.js');
+let _injectSeeded = false;
+function _getInjectRule(id) {
+  if (!_injectSeeded) { try { _injectConfig.seedDefaultInjectRules(); } catch (_) {} _injectSeeded = true; }
+  return _injectConfig.getInjectRule(id);
+}
 const PORT     = config.PORT;
 const GD_URL   = process.env.GUARDIAN_URL   || 'http://127.0.0.1:7820';
 const CX_URL   = process.env.CORTEX_URL     || 'http://127.0.0.1:3748';
@@ -397,18 +408,23 @@ async function _queryCortexAdversarial(prompt, sessionId) {
 
 async function _injectSessionHistory(session, contextText) {
   if (!session?.sessionId || session.exchanges > 1) return contextText;
+  const rule = _getInjectRule('session-history');
+  if (!rule.enabled) return contextText; // §CONFIGURABLE — skips the network call, not just the output
   try {
+    const { fetchN = 8, useLastN = 5, promptMaxChars = 80, responseMaxChars = 120 } = rule.limits || {};
     const mem = await _fetch(
-      `${CX_URL}/api/memory?table=chat_log&n=8&sessionId=${encodeURIComponent(session.sessionId)}`,
+      `${CX_URL}/api/memory?table=chat_log&n=${fetchN}&sessionId=${encodeURIComponent(session.sessionId)}`,
       { timeout: 2000 }
     );
     const rows = mem?.rows || [];
     if (!rows.length) return contextText;
     const history = rows
-      .slice(-5)
-      .map(r => `  U: ${(r.prompt || '').slice(0, 80)}\n  A: ${(r.response || '').slice(0, 120)}`)
+      .slice(-useLastN)
+      .map(r => `  U: ${(r.prompt || '').slice(0, promptMaxChars)}\n  A: ${(r.response || '').slice(0, responseMaxChars)}`)
       .join('\n');
-    return contextText + `\n\n=== SESSION HISTORY (last ${rows.length} exchanges) ===\n${history}`;
+    const block = (rule.template || '\n\n=== SESSION HISTORY (last {count} exchanges) ===\n{history}')
+      .replace('{count}', rows.length).replace('{history}', history);
+    return contextText + block;
   } catch(_) { return contextText; }
 }
 
@@ -518,16 +534,23 @@ async function _introspectRetry({ prompt, sessionId, requestId, intent, dispatch
 }
 
 function _injectUserModel(contextText) {
+  const rule = _getInjectRule('user-model');
+  if (!rule.enabled) return contextText;
   try {
     const um = require('./lib/user-model');
     const model = um.buildUserContext ? um.buildUserContext() : '';
-    if (model && model.trim()) return `${model}\n\n${contextText}`;
+    if (model && model.trim()) {
+      const out = (rule.template || '{model}\n\n{contextText}').replace('{model}', model).replace('{contextText}', contextText);
+      return out;
+    }
   } catch (_) { /* user-model unavailable — respond without it */ }
   return contextText;
 }
 
 async function _injectRecallContext(prompt, contextText) {
-  if (!prompt || prompt.length < 8) return contextText; // too short to search meaningfully
+  const rule = _getInjectRule('recall-context');
+  const minPromptLength = rule.limits?.minPromptLength ?? 8;
+  if (!rule.enabled || !prompt || prompt.length < minPromptLength) return contextText; // too short to search meaningfully, or disabled
   try {
     const mem = await _fetch(`${CX_URL}/api/recall`, {
       method: 'POST',
@@ -2453,10 +2476,15 @@ const server = http.createServer(async (req, res) => {
     contextText = await _injectRecallContext(prompt, contextText);
 
     // §P110: Cortex MASTERMIND causal enrichment
-    const mastermind = await _queryCortexMastermind(prompt, contextText.slice(0, 500), sessionId);
-    if (mastermind?.analysis) {
-      contextText += `\n\n=== CORTEX MASTERMIND ===\n${mastermind.analysis.slice(0, 400)}`;
-      broadcast('copilot.mastermind.enriched', { sessionId });
+    const mastermindRule = _getInjectRule('mastermind');
+    if (mastermindRule.enabled) {
+      const mastermind = await _queryCortexMastermind(prompt, contextText.slice(0, 500), sessionId);
+      if (mastermind?.analysis) {
+        const maxChars = mastermindRule.limits?.analysisMaxChars ?? 400;
+        const block = (mastermindRule.template || '\n\n=== CORTEX MASTERMIND ===\n{analysis}').replace('{analysis}', mastermind.analysis.slice(0, maxChars));
+        contextText += block;
+        broadcast('copilot.mastermind.enriched', { sessionId });
+      }
     }
 
     // Route through LIFELINE — Ollama primary, Guardian fallback

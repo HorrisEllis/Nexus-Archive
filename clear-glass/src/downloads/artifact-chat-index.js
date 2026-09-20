@@ -159,16 +159,44 @@ function recordResponse(root, { kind, provider, chatId, raw, artifactBuffer, art
   fs.fsyncSync(fd); // real durability — this file is the source of truth, not a best-effort write
   fs.closeSync(fd);
 
-  const db = _openDb(p);
+  // §FIXED 2026-09-20 — this block used to throw on any index failure,
+  // AFTER the .response file above had already been written and fsync'd.
+  // That contradicted this module's own stated design in two ways: the
+  // header says the .response file is the SOURCE OF TRUTH and index.db
+  // is "disposable and regenerable — never the only copy of anything,"
+  // and rebuildIndexFromResponses() exists precisely to recreate it.
+  // Losing a successful capture because a disposable accelerator was
+  // unavailable is the accelerator deciding the outcome.
+  //
+  // Not hypothetical: better-sqlite3 has been an OPTIONAL dependency
+  // since 0.39.153 (its node-gyp build needs a C++ toolchain James's
+  // Windows box does not have — that entry's own root-cause fix), and it
+  // is genuinely absent in this checkout. So on the real target machine
+  // every single recordResponse() call threw, and the whole index was
+  // unusable, while the .response files it wrote were sitting on disk
+  // perfectly intact.
+  //
+  // Now: the source of truth is written and kept; the index is attempted
+  // and its failure is REPORTED, never swallowed and never fatal.
+  // `indexed` is the honest flag — a caller that needs to know can ask.
+  let indexed = false;
+  let indexError = null;
   try {
-    db.prepare(`INSERT INTO items (id, kind, provider, chat_id, captured_at, content_hash, response_path, artifact_path, status)
-                VALUES (@id, @kind, @provider, @chat_id, @captured_at, @content_hash, @response_path, @artifact_path, 'ok')`)
-      .run({ id, kind, provider: provider || null, chat_id: chatId || null, captured_at: capturedAt, content_hash: contentHash, response_path: responseRelPath, artifact_path: artifactPath });
-  } finally {
-    db.close();
+    const db = _openDb(p);
+    try {
+      db.prepare(`INSERT INTO items (id, kind, provider, chat_id, captured_at, content_hash, response_path, artifact_path, status)
+                  VALUES (@id, @kind, @provider, @chat_id, @captured_at, @content_hash, @response_path, @artifact_path, 'ok')`)
+        .run({ id, kind, provider: provider || null, chat_id: chatId || null, captured_at: capturedAt, content_hash: contentHash, response_path: responseRelPath, artifact_path: artifactPath });
+      indexed = true;
+    } finally {
+      db.close();
+    }
+  } catch (e) {
+    indexError = e.message;
+    console.warn(`[${MODULE_ID}] recordResponse: the .response file is written and durable at ${responseRelPath}, but indexing it failed (${e.message}) — rebuildIndexFromResponses() recovers this`);
   }
 
-  return { id, kind, capturedAt, contentHash, responsePath: responseRelPath, artifactPath };
+  return { id, kind, capturedAt, contentHash, responsePath: responseRelPath, artifactPath, indexed, indexError };
 }
 
 /**
@@ -260,9 +288,53 @@ function queryItems(root, { kind, provider, chatId, limit = 100 } = {}) {
     return run();
   } catch (e) {
     console.warn(`[${MODULE_ID}] queryItems: index.db read failed (${e.message}) — rebuilding from responses/ and retrying once`);
-    rebuildIndexFromResponses(root);
-    return run(); // real retry — throws for real if this one also fails, no infinite/silent loop
+    try {
+      rebuildIndexFromResponses(root);
+      return run(); // real retry
+    } catch (e2) {
+      // §FIXED 2026-09-20 — the fallback chain stopped one link short.
+      // A rebuild cannot help when SQLite itself is unavailable (an
+      // optional dependency since 0.39.153, genuinely absent on the real
+      // target machine), so this used to throw and the caller got
+      // nothing — even though every .response file, the actual source of
+      // truth, was sitting right there readable. The last link is
+      // reading them directly: slower, unordered by index, and entirely
+      // correct. This is what "redundant backups, and fallback chains"
+      // has to mean to be real rather than decorative.
+      console.warn(`[${MODULE_ID}] queryItems: index unavailable (${e2.message}) — reading responses/ directly`);
+      return _scanResponses(p, { kind, provider, chatId, limit });
+    }
   }
+}
+
+/** _scanResponses — the last link in the fallback chain. Reads the
+ *  .response files themselves, newest first. A file that will not parse
+ *  is reported with status:'unreadable' rather than skipped silently,
+ *  the same rule rebuildIndexFromResponses() already applies. */
+function _scanResponses(p, { kind, provider, chatId, limit = 100 } = {}) {
+  let names;
+  try { names = fs.readdirSync(p.responsesDir).filter(n => n.endsWith('.response')); }
+  catch (_) { return []; }
+  const out = [];
+  for (const name of names) {
+    const abs = path.join(p.responsesDir, name);
+    let r;
+    try { r = JSON.parse(fs.readFileSync(abs, 'utf8')); }
+    catch (e) {
+      out.push({ id: name.replace(/\.response$/, ''), kind: null, provider: null, chat_id: null,
+        captured_at: 0, content_hash: null, response_path: path.join('responses', name),
+        artifact_path: null, status: 'unreadable', error: e.message });
+      continue;
+    }
+    if (kind && r.kind !== kind) continue;
+    if (provider && r.provider !== provider) continue;
+    if (chatId && r.chat_id !== chatId) continue;
+    out.push({ id: r.id, kind: r.kind, provider: r.provider, chat_id: r.chat_id,
+      captured_at: r.captured_at, content_hash: r.content_hash,
+      response_path: path.join('responses', name), artifact_path: r.artifact_path, status: 'ok' });
+  }
+  out.sort((a, b) => (b.captured_at || 0) - (a.captured_at || 0));
+  return out.slice(0, limit);
 }
 
 /**

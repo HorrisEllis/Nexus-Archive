@@ -3017,16 +3017,22 @@ function handleExtendedRoutes(req, res, url, method) {
   // exchange as a real job, it doesn't dispatch a new one).
   if (method === 'POST' && url.pathname === '/wake-job-ack') {
     bodyJ(req).then(body => {
-      const { jobId, provider, prompt, response, tabId } = body || {};
+      const { jobId, provider, prompt, response, tabId, fileName, syntax } = body || {};
       if (!jobId || !provider) { pRes(res, 400, { ok: false, error: 'jobId and provider required' }); return; }
       const job = {
         id: jobId, provider, command: 'wake', prompt: prompt || '',
         status: 'complete', responseText: response || '',
         createdAt: Date.now(), completedAt: Date.now(),
         _source: 'nexus-wake', tabId: tabId || null,
+        // §CODE-ARTIFACT 2026-09-20 — a wake exchange can declare a target
+        // file too. Absent (the normal case) the listener below no-ops.
+        fileName: fileName || null, syntax: syntax || null,
       };
       jobs.set(jobId, job);
       try { jaa.insert('jobs', job); } catch (e) { console.warn(`[guardian] wake-job-ack: jaa insert failed (job still registered in memory): ${e.message}`); }
+      try {
+        require('./lib/code-artifact.js').onJobComplete({ job, text: response || '', bus });
+      } catch (e) { console.warn(`[guardian] code-artifact listener (wake-job-ack) failed: ${e.message}`); }
       bus.emit('guardian.wake.job.acked', { jobId, provider, tabId, ts: Date.now() });
       pRes(res, 200, { ok: true, jobId });
     }).catch(e => pRes(res, 400, { ok: false, error: e.message }));
@@ -3259,7 +3265,11 @@ function handleExtendedRoutes(req, res, url, method) {
 
       // §LAW II — createJob writes to JAA
       const job = createJob({ command, provider, prompt, content, source: body.source || null,
-        accountId: body.accountId, agentId: body.agentId, transport: body.transport === 'ncp' ? 'ncp' : undefined, wakeDepth: body.wakeDepth });
+        accountId: body.accountId, agentId: body.agentId, transport: body.transport === 'ncp' ? 'ncp' : undefined, wakeDepth: body.wakeDepth,
+        // §CODE-ARTIFACT 2026-09-19 — the file this job's code belongs in,
+        // and the fence language to trust. Both optional: absent means the
+        // completion listener captures nothing, exactly as before.
+        fileName: body.fileName, syntax: body.syntax });
       dispatchJob(job);
       pRes(res, 200, { ok:true, jobId: job.id, status: job.status, provider });
 

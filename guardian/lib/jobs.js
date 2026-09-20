@@ -128,7 +128,7 @@ function createJobStore() {
     }
   }
 
-  function createJob({ command, provider, prompt, content, source, tools, accountId, agentId, transport, wakeDepth }) {
+  function createJob({ command, provider, prompt, content, source, tools, accountId, agentId, transport, wakeDepth, fileName, syntax }) {
     const id = randomUUID();
     // §ACK-INJECTION-FIX — computed once at creation, not per-dispatch-
     // retry, so a job's persona stays stable across any real redelivery.
@@ -139,6 +139,16 @@ function createJobStore() {
       // 2026-09-19: which account/agent tab this job belongs to, an optional transport pin ('ncp' = the userscript, never the
       // mesh: a wake reply to a HUMAN must land in the tab they typed in), and wake recursion depth (loop guard).
       accountId: accountId || null, agentId: agentId || null, transport: transport || null, wakeDepth: wakeDepth || 0,
+      // §CODE-ARTIFACT 2026-09-19 — James: "Each job needs to list file
+      // name. Then the listener listens for the code and uses the file
+      // name for the artifact. And coding syntax." The requester is the
+      // only side that knows what file it asked for, so the name is
+      // declared here at creation rather than guessed at completion
+      // (which is all _findActiveJobForProvider below could ever do).
+      // `syntax` is the fence language to trust when a reply contains
+      // several blocks; null means "infer it from the extension".
+      // Consumed by guardian/lib/code-artifact.js on completion.
+      fileName: fileName || null, syntax: syntax || null,
       hat,
       status: 'pending', response: '', ts: Date.now(), updatedAt: Date.now(),
     };

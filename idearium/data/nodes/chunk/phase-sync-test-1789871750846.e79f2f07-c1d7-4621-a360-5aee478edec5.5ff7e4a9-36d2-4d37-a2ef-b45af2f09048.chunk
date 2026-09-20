@@ -1,0 +1,39 @@
+envelope: 1
+uuid: nexus-export-chunk-phase-sync-test-1789871750846.e79f2f07-c1d7-4621-a360-5aee478edec5.5ff7e4a9-36d2-4d37-a2ef-b45af2f09048
+type: chunk
+id: phase-sync-test-1789871750846.e79f2f07-c1d7-4621-a360-5aee478edec5.5ff7e4a9-36d2-4d37-a2ef-b45af2f09048
+context: idearium spec-engine chunk of spec e79f2f07-c1d7-4621-a360-5aee478edec5
+intent: null
+summary: failure_modes (complete)
+system: idearium
+tags:
+  - spec:e79f2f07-c1d7-4621-a360-5aee478edec5
+  - status:complete
+  - section:failure_modes
+  - specName:phase-sync-test-1789871750846
+  - agent:claude
+exported_at: 1789871750897
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1789871750897
+lastSeenAt: 1789871750897
+fingerprint: null
+payload:
+  uuid: 5ff7e4a9-36d2-4d37-a2ef-b45af2f09048
+  specUuid: e79f2f07-c1d7-4621-a360-5aee478edec5
+  sectionId: failure_modes
+  sectionTitle: Failure Modes
+  chunkIdx: 7
+  status: complete
+  realPath: null
+  fileName: 07-failure_modes.md
+  filePath: /home/claude/work/merged/idearium/data/specs/e79f2f07-c1d7-4621-a360-5aee478edec5/07-failure_modes-5ff7e4a9.md
+  agent: claude
+  agentModel: null
+  attempts: 0
+  failureMode: null
+  byteSize: 429
+  contentHash: 2bf354cebcbe302256dd30bf128579ca5ce44b0b6723b7e299aab1cddff255d9
+  createdAt: 1789871750847
+  updatedAt: 1789871750894
+  completedAt: 1789871750894

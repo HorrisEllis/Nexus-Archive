@@ -50,18 +50,143 @@ import { writeRepositoryNode } from './repo-node.js';
 
 const MODULE_ID = 'idearium/repo/import-pipeline';
 
+// §MCO1 — static import, deliberately not a dynamic one. A dynamic
+// import() would have forced runImportPipeline() to become async, and
+// its 5 real callers include repo/index.js's SYNCHRONOUS
+// _materializeQuiet() (run on every native file write/delete). Turning a
+// sync contract async across five call sites to add a DERIVED projection
+// is the tail wagging the dog (§16.6 — the architecture decides, not the
+// call site's convenience). Both files are ESM in the same package, so a
+// plain import costs nothing here.
+import { buildGraph, writeGraph } from './graph.js';
+
+// lib/languages.js is CJS and idearium is type:module — Node's own
+// interop exposes module.exports as the default, so this is a plain
+// import, not a createRequire shim.
+import languages from '../../lib/languages.js';
+
 // ── language detection (§1 file discovery / language detection) ──────────
-const LANGUAGES = {
-  '.js': 'javascript', '.mjs': 'javascript', '.cjs': 'javascript', '.jsx': 'javascript',
-  '.ts': 'typescript', '.tsx': 'typescript',
-  '.py': 'python', '.json': 'json', '.md': 'markdown', '.html': 'html',
-  '.css': 'css', '.yml': 'yaml', '.yaml': 'yaml', '.sh': 'shell', '.spec': 'spec',
-};
+// §DERIVED + EXPANDED 2026-09-20 — James: "Expand into the other
+// languages." This was a hand-maintained 15-extension map and the
+// narrowest of the four that existed; it is why MCO1's graph reported
+// languagesUndetectedUpstream for Go/Rust/Ruby/Java/C#/C/C++ — seven
+// real reference extractors that could never fire because nothing
+// upstream ever labelled a file as one of those languages. That gap was
+// named at the time and deliberately not patched with a second table in
+// graph.js (§17.1 — detection has one owner). This is the fix at the
+// owner: 15 extensions to 62, from lib/languages.js.
+//
+// §WHAT THIS CHANGES, STATED PLAINLY — a newly-detected language is no
+// longer status:'unsupported', so its files are now PARSED, CHUNKED and
+// INDEXED where before they were observable but excluded. That is the
+// point. What it does NOT do is claim more than it can: BRACE_LANGS and
+// SYMBOL_PATTERNS below are unchanged, so a .rs or .swift file chunks on
+// the generic whole-file boundary and yields no symbols until a real
+// pattern set exists for it. Better than being invisible, and honest
+// about the difference — an empty symbol list for a chunked file is a
+// visible gap; an unsupported file is a silent one.
+const LANGUAGES = languages.EXT_TO_LANGUAGE;
 function detectLanguage(relPath) {
   return LANGUAGES[path.extname(relPath).toLowerCase()] || null;
 }
 
 const BRACE_LANGS = new Set(['javascript', 'typescript', 'css']);
+
+/**
+ * braceDepth(src) — brace balance that ignores braces which are not code.
+ *
+ * §REAL BUG FIXED 2026-09-19, found by measurement, not by reading. The
+ * previous implementation was a bare `for (const ch of content)` counting
+ * every `{` and `}` in the file, including ones inside string literals,
+ * comments, template literals and regex character classes. Any file whose
+ * prose or regexes happen to contain unbalanced braces was marked
+ * status:'failed' — which per §10 means chunkable:false, so it is
+ * EXCLUDED FROM CHUNKING ENTIRELY and (since MCO1) from the relationship
+ * graph too.
+ *
+ * Measured across 407 real .js files in guardian/, lib/, idearium/ and
+ * cortex/ before the fix: 6 files marked parse-failed, and `node --check`
+ * passes on ALL SIX. A 100% false-positive rate on this check, and the
+ * casualties included guardian/server.js — the single largest and most
+ * connected file in the system. Silently dropping the biggest file in the
+ * repo out of the map is precisely the failure the chunker exists to
+ * prevent.
+ *
+ * §REUSE (§8.6) — this is the same class of bug lib/version.js's 0.39.125
+ * entry already records being found and fixed in cli/decompose.js, whose
+ * walkBraceBlock() gained "genuine regex-literal tracking (including
+ * character classes, where an unescaped `/` does NOT end the regex) using
+ * the same regex-vs-division heuristic every real JS tokenizer uses."
+ * That function is a block FINDER in a CJS CLI and neither it nor its
+ * stripCommentsAndStrings() is exported, so the state machine is applied
+ * here rather than imported — the discipline is reused, and the earlier
+ * fix is credited rather than rediscovered as if new.
+ *
+ * §STILL NOT A PARSER, honestly — this counts braces correctly, it does
+ * not validate syntax. A file with balanced braces and genuinely broken
+ * syntax still reads as ok. That is unchanged from before and is stated
+ * rather than implied away; a real parser is a separate decision.
+ */
+function braceDepth(src) {
+  let depth = 0;
+  let inString = null, inLineComment = false, inBlockComment = false;
+  let inRegex = false, inRegexClass = false, lastSig = '';
+  const templateStack = [];   // brace depth at each open `${` — see below
+  for (let i = 0; i < src.length; i++) {
+    const c = src[i], next = src[i + 1];
+    if (inLineComment) { if (c === '\n') inLineComment = false; continue; }
+    if (inBlockComment) { if (c === '*' && next === '/') { inBlockComment = false; i++; } continue; }
+    if (inRegex) {
+      if (c === '\\') { i++; continue; }
+      if (c === '[') { inRegexClass = true; continue; }
+      if (c === ']') { inRegexClass = false; continue; }
+      if (c === '/' && !inRegexClass) inRegex = false;
+      continue;
+    }
+    if (inString) {
+      if (c === '\\') { i++; continue; }
+      // A template literal's ${...} IS code and its braces are real, so
+      // the scanner has to leave string mode and come back.
+      //
+      // §CAUGHT BY MEASUREMENT, NOT BY READING — the first version of
+      // this just did depth++ and dropped back to code mode, never
+      // returning to the template. Everything after the first `${x}` in
+      // any template literal was then scanned as code, which cratered
+      // the real chunk count from 4731 to 195 and ADDED false positives.
+      // Re-measuring against the same 407 files caught it immediately;
+      // shipping on the strength of "the logic reads right" would not
+      // have. Hence a real stack: templateStack records the brace depth
+      // at which each interpolation began, and the matching `}` restores
+      // backtick-string mode.
+      if (inString === '`' && c === '$' && next === '{') {
+        templateStack.push(depth);
+        depth++;
+        inString = null;
+        i++;
+        continue;
+      }
+      if (c === inString) inString = null;
+      continue;
+    }
+    if (c === '/' && next === '/') { inLineComment = true; continue; }
+    if (c === '/' && next === '*') { inBlockComment = true; i++; continue; }
+    if (c === "'" || c === '"' || c === '`') { inString = c; continue; }
+    if (c === '/' && !/[\w$)\]]/.test(lastSig)) { inRegex = true; continue; }
+    if (c === '{') depth++;
+    else if (c === '}') {
+      depth--;
+      // Closing the brace that opened an interpolation puts us back
+      // inside the template literal it belongs to.
+      if (templateStack.length && templateStack[templateStack.length - 1] === depth) {
+        templateStack.pop();
+        inString = '`';
+        continue;
+      }
+    }
+    if (!/\s/.test(c)) lastSig = c;
+  }
+  return depth;
+}
 
 // Top-level-only, deterministic regex per language family — not an AST.
 const SYMBOL_PATTERNS = {
@@ -154,11 +279,7 @@ function parseFile(repoDir, relPath) {
   }
 
   let braceBalance = null;
-  if (BRACE_LANGS.has(language)) {
-    let depth = 0;
-    for (const ch of content) { if (ch === '{') depth++; else if (ch === '}') depth--; }
-    braceBalance = depth;
-  }
+  if (BRACE_LANGS.has(language)) braceBalance = braceDepth(content);
   const syntaxOk = braceBalance === null || braceBalance === 0;
 
   return {
@@ -461,6 +582,33 @@ export function runImportPipeline(repo, repoDir) {
     return { ...result, state: 'FAULT', parse: summarizeParse(parsed), atlas, chunks: chunks.length, verification, error: `index failed: ${e.message}` };
   }
 
+  // §24-26 GRAPHING — MCO1. Derived from the indexes just written, plus
+  // one reference pass. Placed AFTER INDEXING because it reads that
+  // output (§3.1 — nothing is built on something that does not exist
+  // yet) and BEFORE readiness because a repo's edges are part of what
+  // makes it addressable.
+  //
+  // §NON-FATAL BY DESIGN — a graph failure never FAULTs an import that
+  // otherwise parsed, chunked, verified and indexed. The repo is still
+  // real and still usable without edges; losing the whole import over a
+  // derived projection would be the tail wagging the dog. The failure is
+  // recorded on the result, never swallowed (§1.2).
+  result.state = 'GRAPHING';
+  let graphSummary = null;
+  try {
+    const graph = buildGraph({ repoDir, repository: repo.uuid });
+    const written = writeGraph(repoDir, graph);
+    graphSummary = {
+      nodeCount: graph.nodeCount, edgeCount: graph.edgeCount,
+      unresolvedCount: graph.unresolvedCount, relationCounts: graph.relationCounts,
+      languagesUndetectedUpstream: graph.languagesUndetectedUpstream,
+      written: written.ok, writeError: written.error || null,
+    };
+  } catch (e) {
+    console.error(`[${MODULE_ID}] repository:graph:failed — ${e.message}`);
+    graphSummary = { error: e.message, nodeCount: 0, edgeCount: 0 };
+  }
+
   // §41 readiness — structurally addressable and safe for the next
   // operation, NOT "every file parsed cleanly." Only L0/L1 (a chunk
   // genuinely missing on disk, or addressed to a file that isn't in
@@ -479,6 +627,7 @@ export function runImportPipeline(repo, repoDir) {
     chunks: { count: chunks.length, dir: chunkDir, incremental },
     verification,
     indexes: { fileCount: indexes.files.length, symbolCount: indexes.symbols.length, chunkCount: indexes.chunks.length },
+    graph: graphSummary,
   };
 
   // §3 "A repository is a first-class node" — one canonical, addressable

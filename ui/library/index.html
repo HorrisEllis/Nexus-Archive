@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NEXUS Library</title>
+<!--
+  §BUILT 2026-09-19 — James: "library ui... its own file. no monoliths."
+  Its own directory under ui/, matching ui/brainos/'s exact real
+  precedent (a separate static page, opened via openAgentWindow,
+  served by orchestrator's existing generic UI_ROOT catch-all — zero
+  orchestrator changes needed, checked directly). Reached by plain
+  fetch() to clear-glass's own :7702 /cli/* REST surface, NOT the IPC
+  bridge (that's only privileged inside ClearGlass's main renderer —
+  same real reason BrainOS itself uses fetch(), not window.ClearGlass).
+
+  Six real tabs, matching James's own named list exactly: Bookmarks,
+  History, Downloads, Accounts, Macros, Passwords. Every one backed by
+  a real, already-existing (or, for bookmarks/accounts/downloads-list,
+  just-added this same pass) /cli/* route — no tab here calls anything
+  that doesn't already have a real backend.
+-->
+<link rel="stylesheet" href="/ui/library/library-app.css">
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">⬡ NEXUS LIBRARY</div>
+  <div class="tab-nav">
+    <div class="tnav act" data-tab="bookmarks">BOOKMARKS</div>
+    <div class="tnav" data-tab="history">HISTORY</div>
+    <div class="tnav" data-tab="downloads">DOWNLOADS</div>
+    <div class="tnav" data-tab="accounts">ACCOUNTS</div>
+    <div class="tnav" data-tab="macros">MACROS</div>
+    <div class="tnav" data-tab="passwords">PASSWORDS</div>
+  </div>
+  <div class="spacer"></div>
+  <input id="search" class="search-box" type="text" placeholder="Search this list…">
+</div>
+
+<div class="main">
+
+  <div class="panel act" id="panel-bookmarks">
+    <div class="panel-head">
+      <span>Bookmarks</span>
+      <button class="hbtn" id="bookmarks-refresh">↻ REFRESH</button>
+    </div>
+    <div class="list" id="bookmarks-list"><div class="empty-state">loading…</div></div>
+  </div>
+
+  <div class="panel" id="panel-history">
+    <div class="panel-head">
+      <span>History</span>
+      <button class="hbtn danger" id="history-clear">CLEAR ALL</button>
+      <button class="hbtn" id="history-refresh">↻ REFRESH</button>
+    </div>
+    <div class="list" id="history-list"><div class="empty-state">loading…</div></div>
+  </div>
+
+  <div class="panel" id="panel-downloads">
+    <div class="panel-head">
+      <span>Downloads</span>
+      <button class="hbtn" id="downloads-refresh">↻ REFRESH</button>
+    </div>
+    <div class="list" id="downloads-list"><div class="empty-state">loading…</div></div>
+  </div>
+
+  <div class="panel" id="panel-accounts">
+    <div class="panel-head">
+      <span>Accounts</span>
+      <button class="hbtn g" id="accounts-new">+ NEW ACCOUNT</button>
+      <button class="hbtn" id="accounts-refresh">↻ REFRESH</button>
+    </div>
+    <div class="list" id="accounts-list"><div class="empty-state">loading…</div></div>
+  </div>
+
+  <div class="panel" id="panel-macros">
+    <div class="panel-head">
+      <span>Macros</span>
+      <button class="hbtn" id="macros-refresh">↻ REFRESH</button>
+    </div>
+    <div class="list" id="macros-list"><div class="empty-state">loading…</div></div>
+  </div>
+
+  <div class="panel" id="panel-passwords">
+    <div class="panel-head">
+      <span>Passwords</span>
+      <span class="honest-note">Values are never shown here — origin + username only, matching passwords/vault.js's own real real read surface.</span>
+      <button class="hbtn" id="passwords-refresh">↻ REFRESH</button>
+    </div>
+    <div class="list" id="passwords-list"><div class="empty-state">loading…</div></div>
+  </div>
+
+</div>
+
+<script src="/ui/library/library-app.js"></script>
+</body>
+</html>

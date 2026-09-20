@@ -1,0 +1,39 @@
+envelope: 1
+uuid: nexus-export-repository-nexus-id-repo-34b46033
+type: repository
+id: nexus-id-repo-34b46033
+context: idearium repo auto-repo-test-3
+intent: null
+summary: 10 files, 10 chunks, READY
+system: idearium
+tags:
+  - spec:19013897-b60a-4426-8248-518f01db06b7
+  - state:READY
+  - verification:passed
+exported_at: 1789872749917
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1789872749917
+lastSeenAt: 1789872749917
+fingerprint: null
+payload:
+  uuid: nexus-id-repo-34b46033
+  name: auto-repo-test-3
+  specUuid: 19013897-b60a-4426-8248-518f01db06b7
+  rootHash: 74c2e5affdc5ed3044b47a32edf602f8237a62667dff39a0282d5c5166bfc4ad
+  parent: null
+  state: READY
+  fileCount: 10
+  byLanguage:
+    markdown: 10
+  failedCount: 0
+  chunkCount: 10
+  symbolCount: 0
+  verificationStatus: passed
+  verificationLevel: L3
+  paths:
+    atlas: /tmp/idearium-repo-autocreate-1nTKDh/projects/nexus-id-repo-34b46033/atlas.json
+    chunks: /tmp/idearium-repo-autocreate-1nTKDh/projects/nexus-id-repo-34b46033/chunks
+    indexes: /tmp/idearium-repo-autocreate-1nTKDh/projects/nexus-id-repo-34b46033/indexes
+    verification: /tmp/idearium-repo-autocreate-1nTKDh/projects/nexus-id-repo-34b46033/verification.json
+  generatedAt: 1789872749916
