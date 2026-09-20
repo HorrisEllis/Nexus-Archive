@@ -1981,6 +1981,17 @@ async function handle(req, res, route, query, body) {
       // older ui/import-project screen, the CLI, the e2e tests — behaves
       // exactly as before. Only a caller that asks gets the new ordering.
       const enrichedRepo = getRepoLayer().get(repoUuid);
+      // §FIXED 2026-09-20 — real crash caught from a live boot log:
+      // "ReferenceError: Cannot access 'realFileCount' before
+      // initialization". This declaration used to sit below, after both
+      // branches — the deferChunking branch's staged-event emit (right
+      // below) reached it 16 lines before its own `const` ran, a TDZ
+      // violation on every deferred import. `sources` (line ~1944) and
+      // `included` (destructured at ~1892) are both already real and
+      // available up here, well before either branch needs them — moving
+      // the declaration up costs nothing and fixes the crash at its root
+      // rather than special-casing the deferred branch.
+      const realFileCount = sources ? sources.written : included.length;
       let pipeline;
       if (body.deferChunking) {
         pipeline = { state: 'DEFERRED', note: 'chunking not run — call POST /api/repos/:uuid/chunk' };
@@ -1999,9 +2010,8 @@ async function handle(req, res, route, query, body) {
       // project would report 0 files despite a complete, correct import.
       // Falls back to chunk count when the source layer produced nothing
       // (import.real_files off), the one case where chunks are the
-      // content.
-      const realFileCount = sources ? sources.written : included.length;
-
+      // content. Declaration moved up above (§FIXED 2026-09-20) — see
+      // that comment for why.
       const result = await pc.finalizeContainer({
         containerUuid: params.uuid, repoUuid, repoDir: mat.dir, fileCount: realFileCount,
       });

@@ -137,6 +137,17 @@ function refreshOnEvent(ev) {
   // stalled build deserves the same loud, impossible-to-miss toast() any
   // user-initiated failure already gets, not just a quiet log line.
   if (t === 'error' || t.startsWith('spec-engine.build.stalled')) { toast(ev.payload?.reason || 'a spec build stalled — see event log', 'err'); }
+  // §BUILT 2026-09-20 — real chunk-progress toast, see toastProgress()'s
+  // own header. Only updates a toast that chunkRepoWithProgress() already
+  // opened for this exact repoUuid — a progress event for a repo nobody
+  // is watching in this tab has nothing to update and is silently ignored,
+  // not an error.
+  if (t === 'repo.chunk.progress' && ev.payload?.repoUuid) {
+    const p = ev.payload;
+    if (_progressToasts.has(p.repoUuid)) {
+      toastProgress(p.repoUuid, `chunking "${p.sectionId}" — ${p.doneChunks}/${p.totalChunks} (${p.progress}%)`, p.progress);
+    }
+  }
   if (t==='push.complete')     { loadSnapshots(); }
   if (t==='snr.update')        { loadStats(); }
   // §RESEQUENCED 2026-09-20 — chunking progress, whoever started it. The
@@ -1235,20 +1246,24 @@ async function submitUploadProjectImport() {
 // who just clicked import sees something immediately rather than only if
 // SSE happens to be connected.
 async function chunkRepoWithProgress(repoUuid, repoName) {
-  toast(`chunking "${repoName || repoUuid.slice(0,8)}" — parse, atlas, chunk, verify, index…`, 'ok');
+  // §FIXED 2026-09-20 — was one static "working…" toast for the whole
+  // (up to 180s) call, indistinguishable from a genuine stall. Real,
+  // live percentage now, fed by the repo.chunk.progress SSE handler above
+  // — updates the SAME toast element in place as each chunk completes.
+  toastProgress(repoUuid, `chunking "${repoName || repoUuid.slice(0,8)}" — starting…`, 0);
   try {
     const r = await api(`/api/repos/${repoUuid}/chunk`, { method: 'POST', body: '{}' }, 180000);
     const st = r.pipeline?.state || 'unknown';
     if (st === 'FAULT') {
-      toast(`chunking fault: ${r.pipeline?.error || 'see verification tiers'}`, 'err');
+      toastProgressDone(repoUuid, `chunking fault: ${r.pipeline?.error || 'see verification tiers'}`, 'err');
     } else {
-      toast(`chunking complete — ${st}`, 'ok');
+      toastProgressDone(repoUuid, `chunking complete — ${st}`, 'ok');
     }
   } catch (e) {
     // Loud. A repo with files but no index is a real, visible half-state,
     // not something to swallow: the Intelligence tab will say "not scanned"
     // and the Files tab will still work, but nothing that reads by chunk will.
-    toast(`chunking failed — repo imported but NOT indexed: ${e.message}`, 'err');
+    toastProgressDone(repoUuid, `chunking failed — repo imported but NOT indexed: ${e.message}`, 'err');
     return;
   }
   await loadApiRepos();
@@ -2721,6 +2736,34 @@ function toast(msg, type='ok') {
   div.textContent = msg;
   area.appendChild(div);
   setTimeout(()=>div.remove(), 2800);
+}
+
+// §BUILT 2026-09-20 — James: "the ui needs to use a toast to show progress
+// like a loading bar." Real chunk-progress events (idearium.repo.chunk.
+// progress, spec-engine/index.js's completeChunk — see that file for the
+// server side) update ONE toast element in place, keyed by repoUuid, so a
+// multi-minute import shows real, live percentage instead of a single
+// "working…" message that could be a stall or genuine slow progress —
+// indistinguishable before this fix.
+const _progressToasts = new Map(); // repoUuid -> {div, fill, label}
+function toastProgress(id, label, pct) {
+  const area = document.getElementById('toast-area');
+  let entry = _progressToasts.get(id);
+  if (!entry) {
+    const div = document.createElement('div');
+    div.className = 'toast progress ok';
+    div.innerHTML = `<div class="toast-progress-label"></div><div class="toast-progress-bar"><div class="toast-progress-fill"></div></div>`;
+    area.appendChild(div);
+    entry = { div, label: div.querySelector('.toast-progress-label'), fill: div.querySelector('.toast-progress-fill') };
+    _progressToasts.set(id, entry);
+  }
+  entry.label.textContent = label;
+  entry.fill.style.width = `${Math.max(0, Math.min(100, pct))}%`;
+}
+function toastProgressDone(id, msg, type='ok') {
+  const entry = _progressToasts.get(id);
+  if (entry) { entry.div.remove(); _progressToasts.delete(id); }
+  toast(msg, type);
 }
 document.addEventListener('keydown', e => {
   if (e.key==='Escape') { closeModal(); closeNewSpecModal(); closeUploadProjectModal(); }

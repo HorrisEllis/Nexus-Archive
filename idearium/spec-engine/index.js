@@ -906,6 +906,27 @@ export function completeChunk(specUuid, chunkUuid, content, { preserveWhitespace
   // failed save leave a node claiming a completion that never happened.
   chunkNodes.writeChunkNode(chunk, specUuid, { specName: manifest.name, repoUuid });
   console.log(`[${MODULE_ID}] ✓ chunk ${chunk.sectionId} complete · ${chunk.byteSize}b · ${manifest.progress}% done`);
+  // §BUILT 2026-09-20 — James: "the ui needs to use a toast to show
+  // progress like a loading bar." This real percentage (manifest.progress,
+  // computed 3 lines above) only ever reached a console.log before this —
+  // the SRESEQUENCED 2026-09-20 UI comment in idearium/api/index.js
+  // already describes "idearium.repo.chunk.started/done/fault" arriving
+  // over SSE as if it were real; it wasn't, nothing anywhere emitted them.
+  // Dynamic import, not _require() — idearium/index.js is a real ESM
+  // module (export class IdeaOS), and require() cannot load one (throws
+  // ERR_REQUIRE_ESM). Dynamic import() is async, but completeChunk() is
+  // not — deliberately not awaited, fire-and-forget: a progress event
+  // nobody sees yet is not a reason to make every chunk completion wait
+  // on it, or to change this function's long-standing synchronous
+  // contract for every existing caller. ESM caches the module after the
+  // first real import, so this costs nothing on every call after the
+  // first for a given process.
+  import('../index.js').then(({ getIdeaOS }) => {
+    getIdeaOS().emit('idearium.repo.chunk.progress', {
+      specUuid, repoUuid, sectionId: chunk.sectionId, byteSize: chunk.byteSize,
+      doneChunks: manifest.doneChunks, totalChunks: manifest.totalChunks, progress: manifest.progress,
+    });
+  }).catch(e => console.warn(`[${MODULE_ID}] chunk-progress SSE emit failed (non-fatal): ${e.message}`));
   return chunk;
 }
 

@@ -272,6 +272,17 @@ body{display:flex;flex-direction:column;position:relative}
 @keyframes to{to{opacity:0;transform:translateX(16px)}}
 .toast.ok{border-color:rgba(52,211,153,.3);color:var(--mint)}
 .toast.err{border-color:rgba(248,113,113,.3);color:var(--coral)}
+/* §BUILT 2026-09-20 — James: "the ui needs to use a toast to show
+   progress like a loading bar." A progress toast never uses the base
+   .toast rule's timed fade-out (animation: ti ... , to ... 2.4s) — it's
+   explicitly updated/removed by JS as real chunk-progress events arrive,
+   not on a fixed clock, since chunking a large import can run well past
+   2.4s. */
+.toast.progress{opacity:0;transform:translateX(16px);animation:ti .2s ease forwards;pointer-events:none;min-width:220px}
+.toast-progress-label{margin-bottom:5px}
+.toast-progress-bar{height:4px;border-radius:2px;background:rgba(255,255,255,.08);overflow:hidden}
+.toast-progress-fill{height:100%;background:var(--sky,#38bdf8);border-radius:2px;transition:width .25s ease;width:0%}
+.toast.progress.err .toast-progress-fill{background:var(--coral)}
 
 .offline-banner{background:rgba(248,113,113,.06);border-bottom:1px solid rgba(248,113,113,.2);color:var(--coral);font-family:var(--mono);font-size:10px;padding:6px 14px;display:none;align-items:center;gap:10px;flex-shrink:0}
 .offline-banner.show{display:flex}
