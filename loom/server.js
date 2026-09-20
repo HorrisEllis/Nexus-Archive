@@ -337,13 +337,16 @@ const server = http.createServer(async (req, res) => {
     // Same shape as every other sovereign system's /contract (phase 137
     // audit — cortex/bridge/architect all needed this added this session).
     if (method === 'GET' && p === '/contract') {
+      // §FIXED 2026-09-20 (MCO7f/P2) — this was a hand-typed, 16-route
+      // inline list, confirmed stale against loom's own real component
+      // count: loom/registry-components.js declares 25. Same drift-proof
+      // pattern ollama/clear-glass/versionium's own /contract routes
+      // already use for exactly this reason — serve the live module,
+      // not a hand-maintained copy of it.
+      const components = require('./registry-components.js');
       return json(res, 200, {
         id: 'loom-v1', systemId: SYSTEM_ID, version: VERSION,
-        routes: ['GET /health', 'GET /contract', 'GET /api/registry/:kind',
-          'GET /api/registry/:kind/:id', 'POST /api/registry/:kind', 'GET /api/graph', 'GET /api/context-graph', 'GET /api/impact/:id',
-          'POST /api/contracts', 'POST /api/contracts/:id/handoff', 'POST /api/contracts/:id/close',
-          'POST /api/ingest', 'POST /api/ingest-upload', 'GET /api/revisions', 'GET /api/revisions/:id',
-          'GET /api/templates', 'POST /api/scaffold'],
+        routes: components.map(c => `${c.route.method} ${c.route.path}`),
       });
     }
 

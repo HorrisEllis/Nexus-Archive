@@ -17,63 +17,71 @@ meta:
 systems:
 
   bridge:
-    port:    9999   # §RETIRED 2026-09-06 — kept per §A-4, see contracts/nexus-interaction-contract.js RETIRED_PORTS.bridge
-    entry:   bridge/nexus-bridge.js
+    port:    9999
+    entry:   bridge/nexus-bridge.js   # directory no longer exists — real, confirmed 2026-09-20
     role:    connective_tissue
-    boots:   first   # STALE — bridge no longer boots; see 2026-09-10 ADDENDUM below
+    boots:   none   # §FIXED 2026-09-20 (P1) — was "first", false since retirement; James: "wasn't needed"
     purpose: |
-      Tag system, request queue, push/pull subscriptions, handshake protocol.
-      All cross-system communication goes through here.
-      No system calls another directly.
-    provides: [tags, requests, subscriptions, handshake, broadcast, pull]
+      RETIRED. Was: tag system, request queue, push/pull subscriptions,
+      handshake protocol, all cross-system communication routed through
+      here. That last claim ("no system calls another directly") is FALSE
+      for the whole file below and has been since this system's retirement
+      — every other system's `depends:` line naming bridge here was equally
+      false and is fixed below, not left to imply bridge is still load-
+      bearing. Real replacement for "no system calls another directly":
+      MCO7f (docs/nexus-repository-system-build-phasemap.spec) — per-system
+      interaction contracts + orchestrator's contract-handshake.js, in
+      progress, not yet complete for every system.
+    provides: []   # was [tags, requests, subscriptions, handshake, broadcast, pull] — none real since retirement
     depends:  []
     retired:   true
     retiredAt: '2026-09-06'
+    retiredReason: "wasn't needed"   # James, verbatim, 2026-09-20 — no deeper root cause on record
 
   cortex:
     port:    3748
     entry:   cortex/boot.js
     cli:     cortex/cortex.js
     role:    source_of_truth
-    boots:   second
+    boots:   first   # §FIXED 2026-09-20 (P1) — was "second", after bridge; bridge no longer boots at all
     purpose: |
       Append-only memory. 28 JAA tables. Never deletes.
       CobaltBus connects all modules. RAID routes agents local-first.
       Versionium auto-commits on sigma spikes.
     provides: [event_log, memory, gaps, artifacts, versionium, sse]
-    depends:  [bridge]
+    depends:  []   # §FIXED 2026-09-20 (P1) — was [bridge], bridge retired 2026-09-06
 
   guardian:
     ports:   { http: 7820, wss: 7821, dropzone: 7822, memory: 7823 }
     entry:   guardian/server.js
     cli:     guardian/cli.js
     role:    agent_orchestrator
-    boots:   third
+    boots:   second   # §FIXED 2026-09-20 (P1) — was "third", after bridge
     purpose: |
       Dispatches prompts to AI providers via WSS.
       ChatGPT is primary. Claude secondary. Ollama local.
       SEAM chunker, GapHunter, Prompt Archaeology, Queue.
     provides: [job_dispatch, provider_wss, artifacts, seam, ledger, cockpit_ui]
-    depends:  [bridge, cortex]
+    depends:  [cortex]   # §FIXED 2026-09-20 (P1) — was [bridge, cortex]; guardian/compartment.json's real boundaryFindings also show cortex:13, intelligence:9, clear-glass:1, copilot:1 — cortex is the real, current dependency, the others are cross-system requires MCO7f is converting to contract calls, not boot-order dependencies
 
   idearium:
     port:    4800
     entry:   idearium/api/index.js
     cli:     idearium/cli/index.js
     role:    idea_os
-    boots:   fourth
+    boots:   third   # §FIXED 2026-09-20 (P1) — was "fourth", after bridge
     purpose: |
       Idea lifecycle management. Tension engine scores ideas 0..1.
       SNR tracks system signal quality.
       CLI is source of truth — API is projection.
     provides: [ideas, specs, gaps, snapshots, snr, tension]
-    depends:  [bridge, cortex]
+    depends:  [cortex]   # §FIXED 2026-09-20 (P1) — was [bridge, cortex]
 
   emerge_ide:
     port:    4242
     entry:   emerge-ide.js
     role:    compiler_and_ide
-    boots:   fifth
+    boots:   fourth   # §FIXED 2026-09-20 (P1) — was "fifth", after bridge
     purpose: |
       SNR gate compiler for .eg/.emerge files.
       595 keywords, 7 axioms. IR decompressor.
@@ -89,6 +97,62 @@ systems:
     role:    local_inference
     purpose: Local-first AI inference. No cloud call if Ollama can handle it.
     models:  [qwen2.5-coder:1.5b, mistral:7b-instruct-q4_K_M]
+
+  # §ADDED 2026-09-20 (P1) — real systems this file never listed. Port/entry/
+  # dependsOn sourced directly from each system's own <s>/compartment.json
+  # (MCO7b, derived from the registry + a code scan, not hand-authored) and
+  # purpose from each system's own spec/<s>.spec meta.purpose — nothing here
+  # invented. copilot, architect, eravos, diagnostic, and the rest of MCO7g's
+  # unnamed list are deliberately still absent — out of scope for this pass,
+  # not forgotten.
+
+  intelligence:
+    port:    3753
+    entry:   intelligence/server.js
+    role:    cognition_layer
+    purpose: |
+      NEXUS's real cognition layer, consolidated into its own system:
+      pattern learning, RFR2/relational-field, gap detection, CFR
+      coherence/tension/regime tracking.
+    provides: [patterns, gaps, crystals, cfr, adversarial, sse]
+    depends:  [cortex, guardian]   # guardian:1 boundary edge is real but thin — see guardian/compartment.json
+
+  loom:
+    port:    3752
+    entry:   loom/server.js
+    role:    component_wire_registry
+    purpose: |
+      Sovereign component/hook/wire/seam registry + contracts + phasemap
+      aggregation. The real cross-system dependency graph (106 static
+      require/import edges among the 9 MCO7 systems as of 2026-09-19) lives
+      here — loom/data/registry.json.
+    provides: [component_registry, hook_graph, wire_graph, phasemap, contracts]
+    depends:  [cortex]
+
+  versionium:
+    port:    3754
+    entry:   versionium/server.js
+    role:    version_control
+    purpose: |
+      Causal version control — temporal replay, calendar playback,
+      sigma-gated auto-commit, per-file snapshots (MCO-B) and restore
+      (MCO-C). Was referenced in design conversation for a long time
+      before this system existed for real; confirmed no prior
+      implementation existed under this name before it was built.
+    provides: [snapshots, restore, file_delta, sigma_gate]
+    depends:  [intelligence, cortex, guardian]
+
+  clear-glass:
+    port:    7704
+    entry:   clear-glass/src/main/index.js
+    role:    sovereign_browser
+    purpose: |
+      Sovereign NEXUS browser — Electron + Chromium + Firefox fingerprint +
+      TLS JA4 + ErosmancerOS wire (SISO-native). One of the most actively
+      developed systems in this codebase (67+ real components, confirmed
+      in its own registry-components.js).
+    provides: [browsing, autofill, downloads, provider_hosting, fingerprint]
+    depends:  [copilot]
 
 # ── Providers ─────────────────────────────────────────────────────────────────
 
@@ -124,7 +188,7 @@ cli:
 
   subcommands:
 
-    bridge:
+    bridge:  # §RETIRED 2026-09-06, kept present-but-marked per §A-4 — none of these are real commands, no bridge process exists to run them
       - nexus bridge health
       - nexus bridge handshake <system>
       - nexus bridge requests [--status pending]
@@ -172,7 +236,7 @@ cli:
 
     system:
       - nexus start                    # boots all servers in order
-      - nexus start:core               # bridge + cortex + guardian
+      - nexus start:core               # cortex + guardian — §FIXED 2026-09-20 (P1), was "bridge + cortex + guardian"
       - nexus status                   # all server health checks
       - nexus stop                     # graceful shutdown all
       - nexus test                     # 142 unit tests
@@ -182,17 +246,18 @@ cli:
 
 channels:
   guardian.job.complete:    { from: guardian, to: [cortex, versionium] }
-  guardian.artifact:        { from: guardian, to: [cortex, bridge.tags] }
+  guardian.artifact:        { from: guardian, to: [cortex] }   # §FIXED 2026-09-20 (P1) — was [cortex, bridge.tags]; bridge.tags has not existed since 2026-09-06
   guardian.gaps:            { from: guardian, to: [cortex, ledger] }
   guardian.ledger:          { from: guardian, to: [jaa.ledger_entries] }
   guardian.session.named:   { from: guardian, to: [jaa.sessions] }
   cortex.gap.found:         { from: cortex,   to: [guardian.ledger] }
-  cortex.gap.resolved:      { from: cortex,   to: [bridge.broadcast] }
-  idearium.idea.created:    { from: idearium, to: [cortex, bridge.tags] }
+  cortex.gap.resolved:      { from: cortex,   to: [] }   # §FIXED 2026-09-20 (P1) — was [bridge.broadcast]; no real replacement target confirmed yet
+  idearium.idea.created:    { from: idearium, to: [cortex] }   # §FIXED 2026-09-20 (P1) — was [cortex, bridge.tags]
   idearium.snapshot.pushed: { from: idearium, to: [cortex.versionium] }
-  bridge.request.created:   { from: bridge,   to: [all_subscribers] }
-  bridge.request.accepted:  { from: bridge,   to: [all_subscribers] }
-  bridge.request.complete:  { from: bridge,   to: [all_subscribers] }
+  # §RETIRED 2026-09-06, kept present-but-marked per §A-4 — bridge no longer emits or routes any of these
+  bridge.request.created:   { from: bridge,   to: [all_subscribers], retired: true }
+  bridge.request.accepted:  { from: bridge,   to: [all_subscribers], retired: true }
+  bridge.request.complete:  { from: bridge,   to: [all_subscribers], retired: true }
 
 # ── Axioms (active laws) ──────────────────────────────────────────────────────
 
@@ -419,6 +484,37 @@ picture" fix the synthesis flags this file as needing — scoped here to only
 the two claims that were independently confirmed, not the full dependency
 graph. See `docs/2026-09-11-sovereign-node-architecture-phasemap.spec` P1
 for that fuller pass.
+
+## ADDENDUM 2026-09-20 — P1 closes both open questions above
+
+Both real open questions this addendum left standing are resolved, doing
+the actual P1 pass this addendum pointed at:
+
+1. `depends: [bridge, ...]` dropped bridge from every real system above
+   (cortex, guardian, idearium) — kept `depends: [cortex]` etc. where a real
+   dependency remains, dropped to `[]` where bridge was the only entry.
+   Bridge's own `depends: []` and `provides: []` are unchanged (still
+   accurate — it never depended on anything, and provides nothing now).
+
+2. "No system calls another directly" — checked directly against real
+   evidence rather than left open: it's false today (every dependent
+   system's own file requires the others it needs — guardian's
+   `compartment.json` alone shows 24 real cross-system requires) and was
+   never fully true even while bridge was live (bridge routed
+   tags/requests/subscriptions/handshake; it never claimed to intermediate
+   every function call). Corrected in bridge's `purpose:` above to state
+   what's real: MCO7f (per-system interaction contracts + handshake
+   verification, docs/nexus-repository-system-build-phasemap.spec) is the
+   actual, in-progress replacement for that principle, not yet complete.
+
+Also added: intelligence, loom, versionium, clear-glass — four real,
+running systems this file never listed at all, sourced from each one's own
+`compartment.json` (MCO7b, derived not authored) and `spec/<s>.spec`
+meta.purpose. copilot, architect, eravos, diagnostic, and MCO7g's remaining
+unnamed systems are still absent — out of scope for this pass, not
+forgotten; James's actual list for now is cortex, guardian, intelligence,
+ollama, clear-glass, idearium, loom, versionium (diagnostic and a healing
+system are named as coming later).
 
 ## ADDENDUM 2026-09-11 — docs/ARCHITECTURE.md retired and deleted (exception to §A-4)
 
