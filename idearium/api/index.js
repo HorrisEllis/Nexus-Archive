@@ -792,6 +792,36 @@ function matchRoute(method, url) {
     ['GET',    ['api','repos',    ':uuid','graph','traverse'], 'repo.graph.traverse'],
     ['GET',    ['api','repos',    ':uuid','graph','cone'],   'repo.graph.cone'],
     ['GET',    ['api','repos',    ':uuid','verification'],  'repo.verification'],
+    // §SCAN 2026-09-20 — the Intelligence subtab's data. Pure read over
+    // graph.json/verification.json/verification-lazy.json; computes no
+    // new facts of its own. See idearium/repo/scan.js's own header.
+    ['GET',    ['api','repos',    ':uuid','scan'],          'repo.scan'],
+    // §RESEQUENCED 2026-09-20 — the chunking step, callable on its own so
+    // import can navigate you to the repo first and chunk after. Emits
+    // idearium.repo.chunk.* over SSE so the UI can toast real progress.
+    ['POST',   ['api','repos',    ':uuid','chunk'],         'repo.chunk.run'],
+    // §CI 2026-09-20 — CI/CD per compartment. cos/ci/index.js owns the
+    // pipeline; these are idearium's surface onto it, scoped to a repo
+    // (which is what carries the compartmentId).
+    // §REPO-HAT 2026-09-20 — the project agent. lib/repo-hat.js on top of
+    // lib/hat-forge.js; this is idearium's surface onto it.
+    ['GET',    ['api','repos',    ':uuid','hat'],           'repo.hat.show'],
+    ['POST',   ['api','repos',    ':uuid','hat'],           'repo.hat.ensure'],
+    ['POST',   ['api','repos',    ':uuid','hat','refresh'], 'repo.hat.refresh'],
+    ['DELETE', ['api','repos',    ':uuid','hat'],           'repo.hat.revoke'],
+    // §KEYS 2026-09-20 — compartment key/secret options, on the COS vault.
+    // Values are NEVER returned by any of these; listings are names only.
+    ['GET',    ['api','repos',    ':uuid','ci','keys'],        'repo.ci.keys.list'],
+    ['POST',   ['api','repos',    ':uuid','ci','keys'],        'repo.ci.keys.register'],
+    ['DELETE', ['api','repos',    ':uuid','ci','keys',':alias'],'repo.ci.keys.remove'],
+    ['GET',    ['api','repos',    ':uuid','ci','secrets'],     'repo.ci.secrets.list'],
+    ['POST',   ['api','repos',    ':uuid','ci','secrets'],     'repo.ci.secrets.set'],
+    ['DELETE', ['api','repos',    ':uuid','ci','secrets',':name'],'repo.ci.secrets.remove'],
+    ['GET',    ['api','repos',    ':uuid','ci'],            'repo.ci.config'],
+    ['PUT',    ['api','repos',    ':uuid','ci'],            'repo.ci.setConfig'],
+    ['POST',   ['api','repos',    ':uuid','ci','run'],      'repo.ci.run'],
+    ['GET',    ['api','repos',    ':uuid','ci','runs'],     'repo.ci.runs'],
+    ['GET',    ['api','repos',    ':uuid','ci','runs',':runId'], 'repo.ci.run.show'],
     ['POST',   ['api','repos',    ':uuid','reindex'],       'repo.reindex'],
   ];
 
@@ -1820,10 +1850,33 @@ async function handle(req, res, route, query, body) {
       // the end-state below only checks files/manifest/project.json/git,
       // unaffected by this — so an import still completes even if, say,
       // a single file's chunk boundaries couldn't be indexed.
+      // §RESEQUENCED 2026-09-20 — James: "import -> unzip -> take you to
+      // the repo -> chunk -> toast showing the progress." Chunking used to
+      // run HERE, inside finalize, so the whole import blocked on it and
+      // you only reached the repo once every file was parsed, atlased,
+      // chunked, verified and indexed.
+      //
+      // With deferChunking, finalize stops once the files are really on
+      // disk (unzip -> COS container -> materialize) and returns. The repo
+      // EXISTS and is navigable at that point; it simply has no index yet,
+      // which every reader already handles honestly (repo.scan returns
+      // scanned:false; phasemap says "not verified yet"). The UI then
+      // calls POST /api/repos/:uuid/chunk, which runs the identical
+      // pipeline and emits progress as it goes.
+      //
+      // Default is UNCHANGED (synchronous) so every existing caller — the
+      // older ui/import-project screen, the CLI, the e2e tests — behaves
+      // exactly as before. Only a caller that asks gets the new ordering.
       const enrichedRepo = getRepoLayer().get(repoUuid);
-      const pipeline = runImportPipeline(enrichedRepo, mat.dir);
-      if (pipeline.state === 'FAULT') {
-        console.error(`[api] project-import pipeline FAULT for ${repoUuid}: ${pipeline.error || 'see verification tiers'}`);
+      let pipeline;
+      if (body.deferChunking) {
+        pipeline = { state: 'DEFERRED', note: 'chunking not run — call POST /api/repos/:uuid/chunk' };
+        os.emit('idearium.repo.import.staged', { repoUuid, name: repoName, fileCount: realFileCount });
+      } else {
+        pipeline = runImportPipeline(enrichedRepo, mat.dir);
+        if (pipeline.state === 'FAULT') {
+          console.error(`[api] project-import pipeline FAULT for ${repoUuid}: ${pipeline.error || 'see verification tiers'}`);
+        }
       }
 
       // §RESTORED 2026-09-17 — 'files-imported' end-state condition asks
@@ -2124,6 +2177,233 @@ async function handle(req, res, route, query, body) {
       const { readLazyVerification } = await import('../repo/verify-lazy.js');
       const lazy = readLazyVerification(dir);
       return ok(res, { ...verification, lazyVerification: lazy });
+    }
+
+    // §RESEQUENCED 2026-09-20 — run (or re-run) the import pipeline for a
+    // repo whose files are already on disk. The SAME runImportPipeline
+    // every other path uses — not a second chunker — wrapped in real
+    // start/done/fault events so a caller can show progress instead of a
+    // spinner that means nothing.
+    case 'repo.chunk.run': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const dir = _repoDiskDir(params.uuid);
+      if (!dir) return err(res, 500, 'could not resolve repo directory');
+
+      const fileCount = (repo.files || []).length;
+      os.emit('idearium.repo.chunk.started', { repoUuid: params.uuid, name: repo.name, fileCount });
+
+      let pipeline;
+      try {
+        pipeline = runImportPipeline(repo, dir);
+      } catch (e) {
+        os.emit('idearium.repo.chunk.fault', { repoUuid: params.uuid, error: e.message });
+        return err(res, 500, `chunking failed: ${e.message}`);
+      }
+
+      if (pipeline.state === 'FAULT') {
+        os.emit('idearium.repo.chunk.fault', { repoUuid: params.uuid, error: pipeline.error || 'see verification tiers' });
+      } else {
+        // Real counts, read back off what the pipeline actually wrote —
+        // not echoed from the request.
+        let chunkCount = null;
+        try {
+          const idx = path.join(dir, 'chunks', 'index.json');
+          if (fs.existsSync(idx)) chunkCount = JSON.parse(fs.readFileSync(idx, 'utf8')).length;
+        } catch (_) { /* stays null — honestly unknown, not zero */ }
+        os.emit('idearium.repo.chunk.done', {
+          repoUuid: params.uuid, name: repo.name, state: pipeline.state, fileCount, chunkCount,
+        });
+        // §REPO-HAT 2026-09-20 — a project agent forged before the pipeline
+        // ran carries a persona stating "this project has NOT been indexed
+        // yet". That is now false, and a stale persona is a falsehood told
+        // to the agent on every dispatch. Re-ground it here, where the
+        // index actually changed. Best-effort: a repo with no hat (the
+        // common case) is a no-op, and a refresh failure never fails the
+        // chunk run that succeeded.
+        try {
+          const RH = _require('../../lib/repo-hat.js');
+          if (RH.getRepoHat(params.uuid)) {
+            const rr = RH.refreshRepoHatPersona({ repo, repoDir: dir });
+            if (rr.ok) os.emit('idearium.repo.hat.refreshed', { repoUuid: params.uuid, chunkCount });
+            else console.warn(`[api] repo-hat persona refresh failed for ${params.uuid}: ${(rr.errors || []).join('; ')}`);
+          }
+        } catch (e) { console.warn(`[api] repo-hat refresh threw (non-fatal): ${e.message}`); }
+      }
+      return ok(res, { repoUuid: params.uuid, pipeline });
+    }
+
+    // ── §REPO-HAT 2026-09-20 — one project agent per repo ─────────────────
+    case 'repo.hat.show': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const RH = _require('../../lib/repo-hat.js');
+      const hat = RH.getRepoHat(params.uuid);
+      return ok(res, {
+        repoUuid: params.uuid, compartmentId: repo.compartmentId || null,
+        // exists:false is a real, ordinary state — not an error. (ok:false
+        // would make api() throw in the UI; see repo.scan's own note.)
+        exists: !!hat,
+        hat: hat || null,
+        toolScope: RH.REPO_TOOL_SCOPE,
+      });
+    }
+
+    case 'repo.hat.ensure': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const dir = _repoDiskDir(params.uuid);
+      const RH = _require('../../lib/repo-hat.js');
+      const r = RH.ensureRepoHat({ repo, repoDir: dir, baseAgent: body.baseAgent || 'copilot' });
+      if (!r.ok) return err(res, 400, (r.errors || ['forge failed']).join('; '));
+      if (r.created) os.emit('idearium.repo.hat.forged', { repoUuid: params.uuid, name: r.hat.name, compartmentId: repo.compartmentId });
+      return ok(res, { repoUuid: params.uuid, created: r.created, hat: r.hat });
+    }
+
+    case 'repo.hat.refresh': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const dir = _repoDiskDir(params.uuid);
+      const RH = _require('../../lib/repo-hat.js');
+      const r = RH.refreshRepoHatPersona({ repo, repoDir: dir });
+      if (!r.ok) return err(res, 400, (r.errors || ['refresh failed']).join('; '));
+      return ok(res, { repoUuid: params.uuid, hat: r.hat, index: r.index });
+    }
+
+    case 'repo.hat.revoke': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const RH = _require('../../lib/repo-hat.js');
+      const r = RH.revokeRepoHat(params.uuid);
+      if (!r.ok) return err(res, 404, (r.errors || ['revoke failed']).join('; '));
+      os.emit('idearium.repo.hat.revoked', { repoUuid: params.uuid, name: r.revoked });
+      return ok(res, { repoUuid: params.uuid, revoked: r.revoked });
+    }
+
+    // ── §KEYS 2026-09-20 — compartment key/secret options ────────────────
+    // Every handler here is scoped to the repo's own compartment. A secret
+    // VALUE is never in any response: cos/ci/keys.js returns values from
+    // exactly one function (secretsEnvFor), which is only ever called by
+    // the CI runner when spawning a stage — never from an HTTP path.
+    case 'repo.ci.keys.list':
+    case 'repo.ci.keys.register':
+    case 'repo.ci.keys.remove':
+    case 'repo.ci.secrets.list':
+    case 'repo.ci.secrets.set':
+    case 'repo.ci.secrets.remove': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      if (!repo.compartmentId) {
+        return err(res, 400, 'this repo has no compartment — keys and secrets live in a compartment, not on a bare directory.');
+      }
+      const keys = _require('../../cos/ci/keys.js');
+      const compartmentName = repo.compartmentId;
+      let r;
+      switch (action) {
+        case 'repo.ci.keys.list':      r = keys.listSshKeys({ compartmentName }); break;
+        case 'repo.ci.keys.register':  r = keys.registerSshKey({ compartmentName, alias: body.alias, keyPath: body.keyPath }); break;
+        case 'repo.ci.keys.remove':    r = keys.removeSshKey({ compartmentName, alias: params.alias }); break;
+        case 'repo.ci.secrets.list':   r = keys.listSecrets({ compartmentName }); break;
+        case 'repo.ci.secrets.set':    r = keys.setSecret({ compartmentName, name: body.name, value: body.value }); break;
+        case 'repo.ci.secrets.remove': r = keys.removeSecret({ compartmentName, name: params.name }); break;
+      }
+      if (!r || !r.ok) return err(res, 400, (r && r.error) || 'key operation failed');
+      return ok(res, { repoUuid: params.uuid, compartmentId: repo.compartmentId, ...r });
+    }
+
+    // ── §CI 2026-09-20 — CI/CD per compartment ────────────────────────────
+    // A repo's compartmentId (MCO6) is what makes this per-compartment
+    // rather than per-directory. A repo with no compartment is refused
+    // rather than silently run against a bare path: "ci/cd per compartment"
+    // means the compartment is the unit, and pretending otherwise would
+    // make the scoping a lie.
+    case 'repo.ci.config': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const dir = _repoDiskDir(params.uuid);
+      if (!dir) return err(res, 500, 'could not resolve repo directory');
+      const ci = _require('../../cos/ci/index.js');
+      const r = ci.readConfig(dir);
+      if (!r.ok) return err(res, 400, r.error);
+      return ok(res, {
+        repoUuid: params.uuid, compartmentId: repo.compartmentId || null,
+        exists: r.exists, config: r.config, configFile: ci.CONFIG_FILENAME,
+        stageKinds: ci.STAGE_KINDS,
+      });
+    }
+
+    case 'repo.ci.setConfig': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const dir = _repoDiskDir(params.uuid);
+      if (!dir) return err(res, 500, 'could not resolve repo directory');
+      const ci = _require('../../cos/ci/index.js');
+      const w = ci.writeConfig(dir, body.config || body);
+      if (!w.ok) return err(res, 400, w.error);
+      os.emit('idearium.repo.ci.configured', { repoUuid: params.uuid, compartmentId: repo.compartmentId || null });
+      return ok(res, { repoUuid: params.uuid, written: w.path });
+    }
+
+    case 'repo.ci.run': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      if (!repo.compartmentId) {
+        return err(res, 400, 'this repo has no compartment — CI here is per compartment. Import it through the project-import flow (which creates a real COS compartment) or attach one first.');
+      }
+      const dir = _repoDiskDir(params.uuid);
+      if (!dir) return err(res, 500, 'could not resolve repo directory');
+      const ci = _require('../../cos/ci/index.js');
+      const result = await ci.run({
+        compartmentId: repo.compartmentId, rootDir: dir,
+        only: Array.isArray(body.only) && body.only.length ? body.only : null,
+        // Every stage event becomes a real idearium event, so the UI and
+        // the event log see CI progress the same way they see everything else.
+        onEvent: (type, payload) => { try { os.emit(`idearium.${type.replace(/:/g, '.')}`, payload); } catch (_) {} },
+      });
+      if (!result.ok) return err(res, 400, result.error);
+      return ok(res, { repoUuid: params.uuid, run: result.run });
+    }
+
+    case 'repo.ci.runs': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const dir = _repoDiskDir(params.uuid);
+      if (!dir) return err(res, 500, 'could not resolve repo directory');
+      const ci = _require('../../cos/ci/index.js');
+      const limit = Math.max(1, Math.min(50, parseInt(query.limit || '20', 10) || 20));
+      // Summaries only — a full run carries every stage's stdout/stderr and
+      // is not a useful list payload. Fetch one by id for the logs.
+      const runs = ci.listRuns(dir, limit).map(r => ({
+        runId: r.runId, status: r.status, startedAt: r.startedAt, durationMs: r.durationMs,
+        stages: (r.stages || []).map(s => ({ name: s.name, kind: s.kind, status: s.status, exitCode: s.exitCode, durationMs: s.durationMs })),
+      }));
+      return ok(res, { repoUuid: params.uuid, count: runs.length, runs });
+    }
+
+    case 'repo.ci.run.show': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const dir = _repoDiskDir(params.uuid);
+      if (!dir) return err(res, 500, 'could not resolve repo directory');
+      const ci = _require('../../cos/ci/index.js');
+      const run = ci.getRun(dir, params.runId);
+      if (!run) return err(res, 404, `no such CI run: ${params.runId}`);
+      return ok(res, { repoUuid: params.uuid, run });
+    }
+
+    // §SCAN 2026-09-20 — repo intelligence scan: dangling hooks, gaps,
+    // tension. Returns 200 with ok:false (not a 4xx) when the repo simply
+    // has not been indexed yet: "not scanned" is a real, expected state
+    // of a real repo, not a client error, and the UI renders that state
+    // honestly rather than as a failed request.
+    case 'repo.scan': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const dir = _repoDiskDir(params.uuid);
+      if (!dir) return err(res, 500, 'could not resolve repo directory');
+      const { scanRepo } = await import('../repo/scan.js');
+      const result = scanRepo(dir);
+      return ok(res, { repoUuid: params.uuid, repoName: repo.name, ...result });
     }
 
     // §INCREMENTAL-REINDEX (§35) — explicit re-run for a repo whose files

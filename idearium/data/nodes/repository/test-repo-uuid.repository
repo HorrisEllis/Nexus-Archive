@@ -1,0 +1,38 @@
+envelope: 1
+uuid: nexus-export-repository-test-repo-uuid
+type: repository
+id: test-repo-uuid
+context: idearium repo scan-probe
+intent: null
+summary: 9 files, 83 chunks, READY
+system: idearium
+tags:
+  - spec:undefined
+  - state:READY
+  - verification:passed
+exported_at: 1789892626114
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1789892626114
+lastSeenAt: 1789892626114
+fingerprint: null
+payload:
+  uuid: test-repo-uuid
+  name: scan-probe
+  rootHash: null
+  parent: null
+  state: READY
+  fileCount: 9
+  byLanguage:
+    javascript: 9
+  failedCount: 0
+  chunkCount: 83
+  symbolCount: 74
+  verificationStatus: passed
+  verificationLevel: L5
+  paths:
+    atlas: /tmp/scanrepo2/atlas.json
+    chunks: /tmp/scanrepo2/chunks
+    indexes: /tmp/scanrepo2/indexes
+    verification: /tmp/scanrepo2/verification.json
+  generatedAt: 1789892626113

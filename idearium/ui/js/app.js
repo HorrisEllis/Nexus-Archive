@@ -135,6 +135,21 @@ function refreshOnEvent(ev) {
   if (t === 'error' || t.startsWith('spec-engine.build.stalled')) { toast(ev.payload?.reason || 'a spec build stalled — see event log', 'err'); }
   if (t==='push.complete')     { loadSnapshots(); }
   if (t==='snr.update')        { loadStats(); }
+  // §RESEQUENCED 2026-09-20 — chunking progress, whoever started it. The
+  // import flow toasts these itself in the foreground; this branch covers
+  // the other cases (a reindex from the Intelligence tab, the CLI, another
+  // window) so a chunk run is never silent. Placed BEFORE the generic
+  // 'repo.' branch below, which only refreshes — it does not report.
+  if (t === 'repo.chunk.started') {
+    toast(`chunking "${ev.payload?.name || ''}" — ${ev.payload?.fileCount ?? '?'} file(s)…`, 'ok');
+  }
+  if (t === 'repo.chunk.done') {
+    const c = ev.payload?.chunkCount;
+    toast(`chunked "${ev.payload?.name || ''}" — ${c != null ? `${c} chunks` : 'complete'} · ${ev.payload?.state || ''}`, 'ok');
+  }
+  if (t === 'repo.chunk.fault') {
+    toast(`chunking fault: ${ev.payload?.error || 'see verification tiers'}`, 'err');
+  }
   if (t.startsWith('repo.')) {
     loadApiRepos().then(() => {
       if (CURRENT_API_REPO && ev.payload?.repoUuid === CURRENT_API_REPO.uuid) {
@@ -173,7 +188,7 @@ async function loadGaps()     { try { GAPS  = (await api('/api/gaps')).gaps  || 
 // an open spec builder. An SSE-driven chunk/build event updated the spec
 // list and status chips but left a currently-open builder panel showing
 // stale chunk statuses until the user reselected the spec by hand.
-async function loadSpecs()    { try { SPECS = (await api('/api/specs')).specs|| []; renderSpecList(); renderArchitect(); if (SELECTED_SPEC) { const s = SPECS.find(x=>x.uuid===SELECTED_SPEC); if (s) renderSpecBuilder(s); } } catch(e){ console.warn('[idearium] loadSpecs failed:', e.message); toast('failed to load specs: '+e.message,'err'); } }
+async function loadSpecs()    { try { SPECS = (await api('/api/specs')).specs|| []; renderSpecList(); if (CURRENT_REPO_SUBTAB === 'architect') renderCurrentRepoSubtab(); if (SELECTED_SPEC) { const s = SPECS.find(x=>x.uuid===SELECTED_SPEC); if (s) renderSpecBuilder(s); } } catch(e){ console.warn('[idearium] loadSpecs failed:', e.message); toast('failed to load specs: '+e.message,'err'); } }
 async function loadSnapshots(){ try { SNAPSHOTS = (await api('/api/snapshots')).snapshots || []; renderVersionium(); } catch(e){ console.warn('[idearium] loadSnapshots failed:', e.message); } }
 async function loadStats()    { try { STATS = (await api('/api/stats')).stats; } catch(e){ console.warn('[idearium] loadStats failed:', e.message); } updateStats(); }
 // Ideas/Repo merge: repos are no longer their own rail tab — they're looked
@@ -269,10 +284,12 @@ function buildSpecHistoryHtml(specUuid) {
 
 
 function updateStats() {
+  // §UI 2026-09-20 — James: "Remove open gaps, snr, from top." The topbar
+  // strip is now ideas + specs only. GAPS/STATS are still loaded and still
+  // real — open gaps remain per-idea in renderDetail(), and snr is still
+  // the versionium/snapshot metric — only the two global counters are gone.
   document.getElementById('stat-ideas').textContent = IDEAS.filter(i=>i.phase!=='archived').length || 0;
-  document.getElementById('stat-gaps').textContent  = GAPS.filter(g=>g.status==='open').length || 0;
   document.getElementById('stat-specs').textContent = SPECS.length || 0;
-  document.getElementById('stat-snr').textContent    = STATS && STATS.snr!=null ? STATS.snr.toFixed ? STATS.snr.toFixed(2) : STATS.snr : '—';
   document.getElementById('brain-count-badge').textContent = `${BRAINSTORMS.length} entries`;
   document.getElementById('spec-count-badge').textContent  = `${SPECS.length} specs`;
   document.getElementById('snap-btn').disabled = !CONNECTED;
@@ -969,7 +986,7 @@ async function buildSpec(uuid) {
   try {
     const res = await api(`/api/specs/${uuid}/build`, { method:'POST' });
     toast(res.message || res.status, res.status==='built'?'ok':'err');
-    await loadSpecs(); selectSpec(uuid); renderArchitect();
+    await loadSpecs(); selectSpec(uuid);
   } catch(e) { toast(e.message,'err'); }
 }
 async function exportSpec(uuid) {
@@ -1125,11 +1142,15 @@ async function submitUploadProjectImport() {
     return;
   }
 
-  document.getElementById('up-drop-text').textContent = 'generating manifest, project.json, and .git…';
+  document.getElementById('up-drop-text').textContent = 'unzipping into the compartment…';
   let res;
   try {
+    // §RESEQUENCED 2026-09-20 — deferChunking:true. finalize now returns as
+    // soon as the files are really on disk; chunking happens after you are
+    // already standing in the repo (see below). The old behaviour is still
+    // the server default — this flag is what opts in.
     res = await api(`/api/project-import/${UP_CONTAINER_UUID}/finalize`, {
-      method: 'POST', body: JSON.stringify({ filename: UP_STAGED_FILE.name, contentBase64 }),
+      method: 'POST', body: JSON.stringify({ filename: UP_STAGED_FILE.name, contentBase64, deferChunking: true }),
     }, 30000);
   } catch (e) {
     toast(`import did not reach the declared end-state: ${e.message}`, 'err');
@@ -1141,7 +1162,7 @@ async function submitUploadProjectImport() {
   if (zone) zone.classList.remove('drag');
   toast(res.deduped
     ? 'content already exists as an existing repo — reusing it'
-    : `imported "${res.repo?.name || ''}" — ${res.fileCount} file(s), ${res.git?.committed ? 'committed' : 'git not committed'}`,
+    : `unzipped "${res.repo?.name || ''}" — ${res.fileCount} file(s), ${res.git?.committed ? 'committed' : 'git not committed'}`,
     'ok');
 
   closeUploadProjectModal();
@@ -1153,7 +1174,45 @@ async function submitUploadProjectImport() {
   // refresh before routing to the repo view, or openRepoFor's match
   // against the in-memory list will miss it.
   await loadApiRepos();
-  if (repo) openRepoFor(repo.ideaUuid, repo.specUuid, repo.name);
+  if (!repo) return;
+  openRepoFor(repo.ideaUuid, repo.specUuid, repo.name);
+
+  // §RESEQUENCED 2026-09-20 — you are now IN the repo, with its real files,
+  // before a single chunk exists. Chunking runs from here and reports as it
+  // goes. Deliberately not awaited before navigation: the whole point of
+  // the re-sequencing is that the repo is reachable first.
+  chunkRepoWithProgress(repo.uuid, repo.name);
+}
+
+// Run the import pipeline over a repo that is already on disk, keeping a
+// live toast up while it works. The real progress events
+// (idearium.repo.chunk.started/done/fault) also arrive over SSE and are
+// handled in refreshOnEvent — this is the foreground half, so the person
+// who just clicked import sees something immediately rather than only if
+// SSE happens to be connected.
+async function chunkRepoWithProgress(repoUuid, repoName) {
+  toast(`chunking "${repoName || repoUuid.slice(0,8)}" — parse, atlas, chunk, verify, index…`, 'ok');
+  try {
+    const r = await api(`/api/repos/${repoUuid}/chunk`, { method: 'POST', body: '{}' }, 180000);
+    const st = r.pipeline?.state || 'unknown';
+    if (st === 'FAULT') {
+      toast(`chunking fault: ${r.pipeline?.error || 'see verification tiers'}`, 'err');
+    } else {
+      toast(`chunking complete — ${st}`, 'ok');
+    }
+  } catch (e) {
+    // Loud. A repo with files but no index is a real, visible half-state,
+    // not something to swallow: the Intelligence tab will say "not scanned"
+    // and the Files tab will still work, but nothing that reads by chunk will.
+    toast(`chunking failed — repo imported but NOT indexed: ${e.message}`, 'err');
+    return;
+  }
+  await loadApiRepos();
+  if (CURRENT_API_REPO?.uuid === repoUuid) {
+    const fresh = API_REPOS.find(x => x.uuid === repoUuid);
+    if (fresh) CURRENT_API_REPO = fresh;
+    renderCurrentRepoSubtab();
+  }
 }
 
 
@@ -1245,47 +1304,78 @@ function createSpecForIdea(ideaUuid) {
 // ════════════════════════════════════════════════════
 // ARCHITECT — blueprint tree derived from real compiled specs
 // ════════════════════════════════════════════════════
-async function renderArchitect() {
-  const wrap = document.getElementById('architect-wrap');
-  // §DATA-SOURCE FIX 2026-07-18 — this used to read SPECS (loaded from
-  // /api/specs — the LEGACY lightweight spec system: db.specs inside
-  // IdeaOS, auto-stub sections with placeholder content, a checklist/
-  // wiring tracker, not real content — see idearium/index.js's own header
-  // history for "two separate spec systems"). Every node showed "1 chars"
-  // because that's genuinely what was there: a stub, not your actual
-  // spec-engine chunks. The real content — what you've been editing in
-  // the Repository panel — lives entirely in spec-engine's manifests,
-  // reached via /api/spec-engine/specs, a completely different store this
-  // view never queried. Fixed to read from there instead.
-  let realSpecs = [];
-  try {
-    const r = await api('/api/spec-engine/specs');
-    realSpecs = (r.specs || []).filter(s => !s.deleted && s.totalChunks > 0);
-  } catch (e) {
-    wrap.innerHTML = `<div class="detail-empty">could not load spec-engine specs: ${escapeHtml(e.message)}</div>`;
+// §MOVED 2026-09-20 — was renderArchitect(), a global view over EVERY
+// compiled spec, reached from Build > Architect. James: "Move architect
+// from build tab to repo sub tabs per repo." Now scoped to one repo and
+// rendered into that repo's own Architect subtab.
+//
+// Data source unchanged and still real (the §DATA-SOURCE FIX 2026-07-18
+// this function already carried): spec-engine manifests via
+// GET /api/spec-engine/specs, NOT /api/specs — the legacy lightweight
+// spec system whose sections are auto-stubs, which is why every node
+// used to read "1 chars". The only new thing here is the repo filter.
+async function renderRepoArchitect(repo) {
+  const wrap = document.getElementById('repo-subtab-architect');
+  if (!wrap || !repo) return;
+  const forUuid = repo.uuid;
+
+  // The repo -> spec link, in the same precedence RepoLayer._enrich() and
+  // openRepoFor() already use. A repo with neither is not an error: it is
+  // a repo that was never promoted from a spec (a raw import, say), and
+  // it says so rather than showing another repo's blueprint.
+  const specUuid = repo.specUuid || repo.promotedFromSpec || null;
+  if (!specUuid) {
+    wrap.innerHTML = `<div class="detail-empty">this repo has no spec-engine spec attached — nothing to draw a blueprint from.<br><br>a blueprint comes from a compiled spec; repos imported from a zip or dropped as files have none unless one is promoted onto them.</div>`;
     return;
   }
-  if (!realSpecs.length) { wrap.innerHTML = `<div class="detail-empty">no compiled specs yet — import or build one to see its blueprint here</div>`; return; }
-  wrap.innerHTML = `<div class="blueprint-tree">` + realSpecs.map(spec => {
-    const children = (spec.chunks || []).map(c => {
-      const complete = c.status === 'complete';
-      const label = complete ? `${c.byteSize.toLocaleString()}b` : c.status;
-      return `
+
+  wrap.innerHTML = `<div class="detail-empty">loading blueprint…</div>`;
+  let spec;
+  try {
+    const r = await api(`/api/spec-engine/specs/${specUuid}`);
+    spec = r.manifest || r.spec || r;
+  } catch (e) {
+    if (CURRENT_API_REPO?.uuid !== forUuid || CURRENT_REPO_SUBTAB !== 'architect') return;
+    wrap.innerHTML = `<div class="detail-empty">could not load this repo's spec (${escapeHtml(specUuid.slice(0,8))}): ${escapeHtml(e.message)}</div>`;
+    return;
+  }
+  // The repo may have been switched (or the tab changed) while that
+  // request was in flight — same guard renderRepoPhasemap() uses.
+  if (CURRENT_API_REPO?.uuid !== forUuid || CURRENT_REPO_SUBTAB !== 'architect') return;
+
+  if (!spec || !spec.uuid) {
+    wrap.innerHTML = `<div class="detail-empty">spec ${escapeHtml(specUuid.slice(0,8))} is linked to this repo but no longer exists in spec-engine.</div>`;
+    return;
+  }
+
+  const chunks = spec.chunks || [];
+  if (!chunks.length) {
+    wrap.innerHTML = `<div class="detail-empty">spec "${escapeHtml(spec.name || specUuid)}" has no chunks yet — build it in the Spec Library and its blueprint appears here.</div>`;
+    return;
+  }
+
+  const done = chunks.filter(c => c.status === 'complete').length;
+  const totalBytes = chunks.reduce((n, c) => n + (c.byteSize || 0), 0);
+  const children = chunks.map(c => {
+    const complete = c.status === 'complete';
+    const label = complete ? `${(c.byteSize || 0).toLocaleString()}b` : c.status;
+    return `
       <div class="bp-node">
         <span class="bp-dot ${complete ? '' : 'gray'}"></span>
         <span class="bp-label">${escapeHtml((c.sectionTitle || c.sectionId || '').replace(/_/g,' '))}</span>
-        <span class="bp-meta">${label}</span>
+        <span class="bp-meta">${escapeHtml(label)}</span>
       </div>`;
-    }).join('');
-    return `
+  }).join('');
+
+  wrap.innerHTML = `
+    <div class="blueprint-tree">
       <div class="bp-node">
         <span class="bp-dot"></span>
-        <span class="bp-label" style="font-size:13px;color:var(--sky)">${escapeHtml(spec.name)}</span>
-        <span class="bp-meta">${spec.status} · v${spec.version||'1.0.0'} · ${spec.doneChunks}/${spec.totalChunks} chunks · ${(spec.totalBytes||0).toLocaleString()}b total</span>
+        <span class="bp-label" style="font-size:13px;color:var(--sky)">${escapeHtml(spec.name || specUuid)}</span>
+        <span class="bp-meta">${escapeHtml(spec.status || 'unknown')} \u00b7 v${escapeHtml(spec.version || '1.0.0')} \u00b7 ${done}/${chunks.length} chunks \u00b7 ${totalBytes.toLocaleString()}b total</span>
       </div>
       <div class="bp-children">${children}</div>
-    `;
-  }).join('') + `</div>`;
+    </div>`;
 }
 
 // ════════════════════════════════════════════════════
@@ -1463,7 +1553,8 @@ function selectApiRepo(uuid) {
 }
 
 // ════════════════════════════════════════════════════
-// §REPO SUBTABS 2026-09-20 — Home / Files / Phasemap / Settings. Each
+// §REPO SUBTABS 2026-09-20 — Home / Files / Architect / Phasemap /
+// Intelligence / Settings. Each
 // panel loads its own data; switching tabs never re-fetches a panel
 // that's already showing the current repo (see the *_LOADED_FOR guards
 // below) — CURRENT_API_REPO can change out from under an open tab via
@@ -1483,7 +1574,9 @@ function renderCurrentRepoSubtab() {
   if (!CURRENT_API_REPO) return;
   if (CURRENT_REPO_SUBTAB === 'home') renderRepoHome(CURRENT_API_REPO);
   else if (CURRENT_REPO_SUBTAB === 'files') renderApiRepoPanel(CURRENT_API_REPO);
+  else if (CURRENT_REPO_SUBTAB === 'architect') renderRepoArchitect(CURRENT_API_REPO);
   else if (CURRENT_REPO_SUBTAB === 'phasemap') renderRepoPhasemap(CURRENT_API_REPO);
+  else if (CURRENT_REPO_SUBTAB === 'intelligence') renderRepoIntelligence(CURRENT_API_REPO);
   else if (CURRENT_REPO_SUBTAB === 'settings') renderRepoSettings(CURRENT_API_REPO);
 }
 
@@ -1553,6 +1646,166 @@ async function renderRepoPhasemap(repo) {
     : `<div class="ds"><div class="ds-label">dependency graph</div><div class="ds-mono">${graph.nodeCount ?? '—'} nodes\n${graph.edgeCount ?? '—'} edges\n${graph.unresolvedCount ?? 0} unresolved references</div></div>`;
 
   el.innerHTML = verificationHtml + graphHtml;
+}
+
+// ── INTELLIGENCE — structural scan of THIS repo: dangling hooks, gaps,
+// tension. GET /api/repos/:uuid/scan (idearium/repo/scan.js).
+//
+// A repo that has never been through the import pipeline is a real,
+// ordinary state — not an error — so the endpoint returns ok:true with
+// scanned:false and a reason. (It must NOT return ok:false: api() above
+// throws on that, which would make this empty state unreachable.)
+async function renderRepoIntelligence(repo) {
+  const el = document.getElementById('repo-subtab-intelligence');
+  if (!el) return;
+  const forUuid = repo.uuid;
+  el.innerHTML = `<div class="detail-empty">scanning…</div>`;
+
+  let scan;
+  try { scan = await api(`/api/repos/${forUuid}/scan`, {}, 20000); }
+  catch (e) {
+    if (CURRENT_API_REPO?.uuid !== forUuid || CURRENT_REPO_SUBTAB !== 'intelligence') return;
+    el.innerHTML = `<div class="detail-empty">scan request failed: ${escapeHtml(e.message)}</div>`;
+    return;
+  }
+  if (CURRENT_API_REPO?.uuid !== forUuid || CURRENT_REPO_SUBTAB !== 'intelligence') return;
+
+  if (scan.scanned === false) {
+    el.innerHTML = `
+      <div class="ds"><div class="ds-label">not scanned</div>
+        <div class="ds-mono">${escapeHtml(scan.reason || 'scan unavailable')}</div>
+        ${scan.remedy === 'reindex' ? `<div class="action-row"><button class="action-btn" onclick="reindexRepoThenScan('${forUuid}')">run import pipeline now</button></div>` : ''}
+      </div>`;
+    return;
+  }
+
+  const h = scan.headline || {};
+  const num = (n, good) => `<span style="color:${n > 0 ? (good ? 'var(--text)' : 'var(--coral)') : 'var(--mint)'}">${n}</span>`;
+
+  // ── headline strip — counts only, never a composite "health score".
+  const headline = `
+    <div class="ds"><div class="ds-label">scan · ${escapeHtml(String(scan.fileCount ?? '—'))} files · ${escapeHtml(String(scan.edgeCount ?? '—'))} edges</div>
+      <div class="ds-mono">broken links      ${num(h.brokenLinks || 0)}
+parse failures    ${num(h.parseFailures || 0)}
+failed tiers      ${num(h.failedTiers || 0)}
+uncovered files   ${num(h.uncoveredFiles || 0)}
+stress points     ${num(h.stressPoints || 0, true)}</div>
+    </div>`;
+
+  // ── dangling hooks ──────────────────────────────────────────────────
+  const d = scan.dangling || {};
+  const hookRow = (x) => `<div style="display:flex;justify-content:space-between;gap:10px;padding:3px 0;border-bottom:1px solid var(--b0)">
+      <span style="font-family:var(--mono);font-size:10px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(x.from || '?')}${x.line != null ? `:${x.line}` : ''}</span>
+      <span style="font-family:var(--mono);font-size:10px;color:var(--coral);flex-shrink:0">→ ${escapeHtml(x.target || '(none)')}</span>
+    </div>`;
+
+  const brokenBlock = d.brokenCount
+    ? `<div class="ds"><div class="ds-label">dangling hooks — broken (${d.brokenCount})</div>
+         <div style="font-size:10px;color:var(--text3);margin-bottom:6px">a relative path imported from inside this repo that does not resolve to a file here</div>
+         ${d.broken.map(hookRow).join('')}
+         ${d.brokenTruncated ? `<div style="font-size:10px;color:var(--text3);margin-top:6px">showing first ${d.broken.length} of ${d.brokenCount}</div>` : ''}
+       </div>`
+    : `<div class="ds"><div class="ds-label">dangling hooks — broken</div><div class="ds-mono" style="color:var(--mint)">none — every intra-repo import resolves</div></div>`;
+
+  const parseBlock = d.parseFailedCount
+    ? `<div class="ds"><div class="ds-label">unparseable files (${d.parseFailedCount})</div>
+         <div style="font-size:10px;color:var(--text3);margin-bottom:6px">the indexer could not read or parse these at all — everything downstream of them is blind</div>
+         ${d.parseFailed.map(hookRow).join('')}</div>`
+    : '';
+
+  const chunkBlock = d.chunkGapCount
+    ? `<div class="ds"><div class="ds-label">symbols outside every chunk (${d.chunkGapCount})</div>
+         <div style="font-size:10px;color:var(--text3);margin-bottom:6px">real symbols the chunker left uncovered — they exist in the file but no chunk owns them</div>
+         ${d.chunkGap.map(hookRow).join('')}</div>`
+    : '';
+
+  // External refs are NOT a defect — stated as such, and collapsed.
+  const externalBlock = d.externalCount
+    ? `<div class="ds"><div class="ds-label">external references (${d.externalCount})</div>
+         <div class="ds-mono" style="color:var(--text3)">packages and system modules outside this repo. An intra-repo graph cannot resolve these by design — listed for completeness, not as a problem.</div>
+         ${Object.entries(d.byReason || {}).map(([k, v]) => `<div style="font-family:var(--mono);font-size:10px;color:var(--text3);padding:2px 0">${escapeHtml(k)} · ${v}</div>`).join('')}
+       </div>`
+    : '';
+
+  // ── gaps ────────────────────────────────────────────────────────────
+  const g = scan.gaps || {};
+  const tierRow = (t) => `<div style="padding:4px 0;border-bottom:1px solid var(--b0)">
+      <div style="display:flex;justify-content:space-between">
+        <span style="font-family:var(--mono);font-size:10px;color:var(--text2)">${escapeHtml(String(t.level))}${t.name ? ` · ${escapeHtml(t.name)}` : ''}</span>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--coral)">${escapeHtml(t.status)}</span>
+      </div>
+      ${t.detail ? `<div style="font-family:var(--mono);font-size:9.5px;color:var(--text3);padding-left:8px">${escapeHtml(t.detail)}</div>` : ''}
+      ${t.failures ? t.failures.map(f => `<div style="font-family:var(--mono);font-size:9.5px;color:var(--text3);padding-left:8px">· ${escapeHtml(typeof f === 'string' ? f : JSON.stringify(f))}</div>`).join('') : ''}
+      ${t.failureCount && t.failures && t.failureCount > t.failures.length ? `<div style="font-size:9.5px;color:var(--text3);padding-left:8px">…${t.failureCount - t.failures.length} more</div>` : ''}
+    </div>`;
+
+  let gapsBlock;
+  if (!g.verificationPresent) {
+    gapsBlock = `<div class="ds"><div class="ds-label">gaps — verification</div><div class="ds-mono">no verification.json — this repo was indexed but never verified.</div></div>`;
+  } else if (!g.failedTiers.length && !g.pendingTiers.length) {
+    gapsBlock = `<div class="ds"><div class="ds-label">gaps — verification</div><div class="ds-mono" style="color:var(--mint)">every tier passed${g.lazyStatus ? ` · lazy L6-L8 ${escapeHtml(g.lazyStatus)}` : ''}</div></div>`;
+  } else {
+    gapsBlock = `<div class="ds"><div class="ds-label">gaps — verification (${g.failedTiers.length} failed, ${g.pendingTiers.length} pending)</div>
+      ${g.failedTiers.map(tierRow).join('')}
+      ${g.pendingTiers.map(t => `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--b0)"><span style="font-family:var(--mono);font-size:10px;color:var(--text3)">${escapeHtml(String(t.level))}</span><span style="font-family:var(--mono);font-size:10px;color:var(--text3)">${escapeHtml(t.status)}</span></div>`).join('')}
+    </div>`;
+  }
+
+  const uncoveredBlock = g.uncoveredFileCount
+    ? `<div class="ds"><div class="ds-label">gaps — files no chunk covers (${g.uncoveredFileCount})</div>
+         <div style="font-size:10px;color:var(--text3);margin-bottom:6px">present in the repo, absent from the chunk index — invisible to anything that reads by chunk</div>
+         <div class="ds-mono">${g.uncoveredFiles.map(f => escapeHtml(f)).join('\n')}${g.uncoveredTruncated ? `\n…${g.uncoveredFileCount - g.uncoveredFiles.length} more` : ''}</div></div>`
+    : '';
+
+  // ── tension ─────────────────────────────────────────────────────────
+  const t = scan.tension || {};
+  const degRow = (x, max) => `<div style="display:flex;align-items:center;gap:8px;padding:3px 0">
+      <span style="font-family:var(--mono);font-size:10px;color:var(--text2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(x.file)}</span>
+      <span style="height:4px;background:var(--sky);border-radius:2px;width:${Math.max(4, Math.round((x.degree / max) * 80))}px;flex-shrink:0"></span>
+      <span style="font-family:var(--mono);font-size:10px;color:var(--text3);width:24px;text-align:right;flex-shrink:0">${x.degree}</span>
+    </div>`;
+
+  const fanIn = t.highFanIn || [], fanOut = t.highFanOut || [];
+  const maxIn = fanIn.length ? fanIn[0].degree : 1, maxOut = fanOut.length ? fanOut[0].degree : 1;
+  const tensionBlock = `
+    <div class="ds"><div class="ds-label">tension — depended on by many (≥ ${t.fanInThreshold ?? '—'})</div>
+      <div style="font-size:10px;color:var(--text3);margin-bottom:6px">changing these moves everything downstream</div>
+      ${fanIn.length ? fanIn.map(x => degRow(x, maxIn)).join('') : '<div class="ds-mono" style="color:var(--mint)">no outliers — dependency load is evenly spread</div>'}
+    </div>
+    <div class="ds"><div class="ds-label">tension — depends on many (≥ ${t.fanOutThreshold ?? '—'})</div>
+      <div style="font-size:10px;color:var(--text3);margin-bottom:6px">these are hard to move, test, or reason about alone</div>
+      ${fanOut.length ? fanOut.map(x => degRow(x, maxOut)).join('') : '<div class="ds-mono" style="color:var(--mint)">no outliers</div>'}
+    </div>
+    <div class="ds"><div class="ds-label">method</div><div class="ds-mono" style="color:var(--text3)">${escapeHtml(t.note || '')}\n${t.dependencyEdgesConsidered ?? 0} resolved depends_on edges considered</div></div>`;
+
+  const actions = `<div class="ds"><div class="ds-label">actions</div>
+      <div class="action-row">
+        <button class="action-btn" onclick="renderRepoIntelligence(CURRENT_API_REPO)">↻ rescan</button>
+        <button class="action-btn" onclick="reindexRepoThenScan('${forUuid}')">⟲ reindex then scan</button>
+      </div>
+      <div style="font-family:var(--mono);font-size:9.5px;color:var(--text3);margin-top:6px">rescan re-reads the existing index · reindex re-runs the pipeline over the files on disk first</div>
+    </div>`;
+
+  el.innerHTML = headline + brokenBlock + parseBlock + chunkBlock + gapsBlock + uncoveredBlock + tensionBlock + externalBlock + actions;
+}
+
+// Re-run the real import pipeline, then scan. Used by both the "never
+// indexed" empty state and the actions row — a scan is only ever as
+// current as the index it reads, and this is the honest way to refresh it.
+async function reindexRepoThenScan(uuid) {
+  toast('reindexing — parse, atlas, chunk, verify, index…', 'ok');
+  try {
+    const r = await api(`/api/repos/${uuid}/reindex`, { method: 'POST', body: '{}' }, 60000);
+    const state = r.pipeline?.state || 'unknown';
+    if (state === 'FAULT') toast(`pipeline fault: ${r.pipeline?.error || 'see verification tiers'}`, 'err');
+    else toast(`reindex complete · ${escapeHtml(state)}`, 'ok');
+  } catch (e) {
+    toast(`reindex failed: ${e.message}`, 'err');
+    return;
+  }
+  if (CURRENT_API_REPO?.uuid === uuid && CURRENT_REPO_SUBTAB === 'intelligence') {
+    renderRepoIntelligence(CURRENT_API_REPO);
+  }
 }
 
 // ── SETTINGS — compartment (real, MCO6), agent/source provenance, and
@@ -2063,7 +2316,7 @@ async function handleNexusDeepLink() {
 // INIT — no seed data. Connect to real nexus, render empty states until then.
 // ════════════════════════════════════════════════════
 window.addEventListener('load', () => {
-  renderIdeaList(); renderSpecList(); renderVersionium(); renderArchitect(); renderBrainstorms();
+  renderIdeaList(); renderSpecList(); renderVersionium(); renderBrainstorms();
   updateStats();
   nexusConnect();
   handleNexusDeepLink();

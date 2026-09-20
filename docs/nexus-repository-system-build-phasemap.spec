@@ -165,7 +165,13 @@ spec:
   # ── MCO2: verification tiers L4-L8 ────────────────────────────────────
   MCO2_verification_deepening:
     depends_on: [MCO1]
-    status: "NOT STARTED"
+    status: >
+      DONE 2026-09-20 (commit 5e082f4). Built: L4-L5 synchronous in
+      idearium/repo/import-pipeline.js (DEEPENING step), L6-L8 lazy in
+      idearium/repo/verify-lazy.js writing verification.lazy.json, test in
+      tests/modules/test-mco2-verify-deepening.js. Status corrected in
+      0.39.170 — this entry read NOT STARTED after the code landed. Gate
+      evidence not re-run at correction time.
     does: >
       Extends the existing verify() (which already covers L0-L3) up
       the tier ladder. Per §37's own note, expensive tiers (L6 runtime/

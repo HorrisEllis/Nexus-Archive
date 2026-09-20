@@ -340,11 +340,18 @@ body{display:flex;flex-direction:column;position:relative}
    the selected repo) | ide-pane (unchanged — same open/save/dirty
    logic as before, untouched).
    ════════════════════════════════════════════════════ */
-.repo-wrap{flex:1;display:grid;grid-template-columns:250px 1fr;overflow:hidden;transition:grid-template-columns .15s}
-/* ── repo detail: sub-nav (Home/Files/Phasemap/Settings) + one panel visible
-   at a time. Files' panel alone recreates the old 260px-tree + flex-ide
-   two-column layout the grid used to give it directly. ── */
+/* §NO-SIDEBAR 2026-09-20 — James: "Hide the filter repos when open a repo.
+   No sidebars." Open state is now ONE column, not rail+detail: the rail
+   (and the filter input inside it) is display:none, not narrowed. The repo
+   you're in owns the entire viewport; getting back to the others is the
+   "← All repos" button in the header, which already exists. The closed
+   state is unchanged — still the full-width block grid. */
+.repo-wrap{flex:1;display:grid;grid-template-columns:1fr;overflow:hidden}
+/* ── repo detail: sub-nav (Home/Files/Architect/Phasemap/Intelligence/
+   Settings) + one panel visible at a time. Files' panel alone recreates the
+   old 260px-tree + flex-ide two-column layout the grid used to give it. ── */
 .repo-wrap:not(.repo-open) .repo-detail-body{display:none}
+.repo-wrap.repo-open .repo-rail{display:none}
 .repo-detail-body{display:flex;flex-direction:column;overflow:hidden}
 .repo-subnav{display:flex;gap:4px;padding:8px 10px;border-bottom:1px solid var(--b0);flex-shrink:0}
 .repo-subtab-btn{background:none;border:1px solid transparent;color:var(--text3);font-family:var(--mono);font-size:11px;letter-spacing:.03em;padding:6px 13px;border-radius:5px;cursor:pointer;transition:all .15s}
@@ -356,8 +363,9 @@ body{display:flex;flex-direction:column;position:relative}
 .repo-subtab-panel:not(#repo-subtab-files){flex-direction:column;overflow-y:auto;padding:18px}
 /* §BLOCKS-2026-09-19 — GitHub-style landing: until a repo is entered, the
    rail takes the whole view as a grid of blocks and the tree/ide panes are
-   hidden. enterRepoDetail()/exitRepoDetail() toggle this class. */
-.repo-wrap:not(.repo-open){grid-template-columns:1fr}
+   hidden. enterRepoDetail()/exitRepoDetail() toggle this class. (The
+   grid-template-columns override that used to live here is gone — as of
+   §NO-SIDEBAR above, .repo-wrap is single-column in BOTH states.) */
 .repo-back-btn{margin-right:10px}
 .repo-rail-body.block-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;padding:16px}
 .repo-block{background:rgba(255,255,255,.02);border:1px solid var(--b1);border-radius:8px;padding:14px 16px;cursor:pointer;transition:all .15s;display:flex;flex-direction:column;gap:8px}
@@ -512,9 +520,7 @@ body{display:flex;flex-direction:column;position:relative}
   <div class="logo" onclick="setView('welcome')">IDEA<span>RIUM</span></div>
   <div class="tb-sep"></div>
   <div class="tb-stat">ideas <span class="v sky" id="stat-ideas">—</span></div>
-  <div class="tb-stat">open gaps <span class="v hi" id="stat-gaps">—</span></div>
   <div class="tb-stat">specs <span class="v" id="stat-specs">—</span></div>
-  <div class="tb-stat">snr <span class="v ok" id="stat-snr">—</span></div>
   <div class="tb-right">
     <div class="tb-conn offline" id="conn-indicator" onclick="nexusConnect(true)"><span class="dot"></span><span id="conn-label">connecting…</span></div>
   </div>
@@ -532,21 +538,27 @@ body{display:flex;flex-direction:column;position:relative}
     <button class="tab-btn active" data-view="welcome" onclick="setView('welcome')"><span class="tab-icon">⌂</span>Welcome</button>
 
     <div class="tab-group" data-group="create">
-      <button class="tab-btn tab-group-btn" data-views="brainstorm,ideas,eravos,architect-build,spec-wizard" onclick="toggleTabGroup(event,this)"><span class="tab-icon">✎</span>Create<span class="tab-caret">▾</span></button>
+      <button class="tab-btn tab-group-btn" data-views="brainstorm,ideas" onclick="toggleTabGroup(event,this)"><span class="tab-icon">✎</span>Create<span class="tab-caret">▾</span></button>
       <div class="tab-dropdown">
         <button class="tab-sub" data-view="brainstorm" onclick="setView('brainstorm')"><span class="tab-icon">✎</span>Brainstorm</button>
         <button class="tab-sub" data-view="ideas" onclick="setView('ideas')"><span class="tab-icon">◇</span>Ideas</button>
-        <button class="tab-sub" data-view="eravos" onclick="setView('eravos')"><span class="tab-icon">◈</span>Eravos</button>
-        <button class="tab-sub" data-view="architect-build" onclick="setView('architect-build')"><span class="tab-icon">⌘</span>Architect Build</button>
-        <button class="tab-sub" data-view="spec-wizard" onclick="setView('spec-wizard')"><span class="tab-icon">▦</span>Spec Wizard</button>
       </div>
     </div>
 
+    <!-- §UI 2026-09-20 — James: "Move eravos, architect, and spec builder to
+         build tab. Eravos the organism canvas. Architect the block building
+         canvas for architecture." Build is now the three canvases plus the
+         Spec Library that feeds them. The OLD Build entry "Architect" (the
+         read-only blueprint viewer, #view-architect) is deliberately NOT
+         here anymore — it moved to a per-repo subtab, because a blueprint
+         is a property of one repo, not a global destination. -->
     <div class="tab-group" data-group="build">
-      <button class="tab-btn tab-group-btn" data-views="spec,architect" onclick="toggleTabGroup(event,this)"><span class="tab-icon">▦</span>Build<span class="tab-caret">▾</span></button>
+      <button class="tab-btn tab-group-btn" data-views="spec,eravos,architect-build,spec-wizard" onclick="toggleTabGroup(event,this)"><span class="tab-icon">▦</span>Build<span class="tab-caret">▾</span></button>
       <div class="tab-dropdown">
         <button class="tab-sub" data-view="spec" onclick="setView('spec')"><span class="tab-icon">▦</span>Spec Library</button>
-        <button class="tab-sub" data-view="architect" onclick="setView('architect')"><span class="tab-icon">⌘</span>Architect</button>
+        <button class="tab-sub" data-view="eravos" onclick="setView('eravos')"><span class="tab-icon">◈</span>Eravos — organism canvas</button>
+        <button class="tab-sub" data-view="architect-build" onclick="setView('architect-build')"><span class="tab-icon">⌘</span>Architect — block canvas</button>
+        <button class="tab-sub" data-view="spec-wizard" onclick="setView('spec-wizard')"><span class="tab-icon">▤</span>Spec Builder</button>
       </div>
     </div>
 
@@ -592,11 +604,11 @@ body{display:flex;flex-direction:column;position:relative}
             <div class="pillar-name">Spec &amp; Library Builder</div>
             <div class="pillar-desc">SEAM-chunked sections, compiled with confidence scoring and gap analysis.</div>
           </div>
-          <div class="pillar" onclick="setView('architect')">
+          <div class="pillar" onclick="setView('architect-build')">
             <div class="pillar-step">05 · ARCHITECT</div>
             <div class="pillar-icon">⌘</div>
-            <div class="pillar-name">Architect</div>
-            <div class="pillar-desc">Compiled specs become a blueprint — the structure the system is actually built from.</div>
+            <div class="pillar-name">Architect — block canvas</div>
+            <div class="pillar-desc">Assemble architecture as blocks. The read-only blueprint of a compiled spec now lives on that repo's own Architect subtab.</div>
           </div>
         </div>
         <div class="welcome-foot" id="welcome-foot">awaiting connection to nexus idearium service · :4800</div>
@@ -675,12 +687,11 @@ body{display:flex;flex-direction:column;position:relative}
     </section>
 
     <!-- ══════════ ARCHITECT ══════════ -->
-    <section class="view" id="view-architect">
-      <div class="ph"><span class="ph-title">Architect</span><span class="ph-badge">blueprint, derived from compiled specs</span></div>
-      <div class="architect-wrap" id="architect-wrap">
-        <div class="detail-empty">no specced/built ideas yet — compile a spec in the Library to see its blueprint here</div>
-      </div>
-    </section>
+    <!-- §MOVED 2026-09-20 — the "Architect" blueprint view that used to live
+         here (a global #view-architect listing EVERY compiled spec) is now
+         a per-repo subtab: #repo-subtab-architect, rendered by
+         renderRepoArchitect(repo) against that one repo's own spec. James:
+         "Move architect from build tab to repo sub tabs per repo." -->
 
     <!-- ══════════ ERAVOS (own system, own port — sovereign iframe) ══════════ -->
     <section class="view" id="view-eravos">
@@ -720,7 +731,9 @@ body{display:flex;flex-direction:column;position:relative}
           <nav class="repo-subnav" id="repo-subnav">
             <button class="repo-subtab-btn active" data-subtab="home" onclick="setRepoSubtab('home')">Home</button>
             <button class="repo-subtab-btn" data-subtab="files" onclick="setRepoSubtab('files')">Files</button>
+            <button class="repo-subtab-btn" data-subtab="architect" onclick="setRepoSubtab('architect')">Architect</button>
             <button class="repo-subtab-btn" data-subtab="phasemap" onclick="setRepoSubtab('phasemap')">Phasemap</button>
+            <button class="repo-subtab-btn" data-subtab="intelligence" onclick="setRepoSubtab('intelligence')">Intelligence</button>
             <button class="repo-subtab-btn" data-subtab="settings" onclick="setRepoSubtab('settings')">Settings</button>
           </nav>
 
@@ -739,10 +752,27 @@ body{display:flex;flex-direction:column;position:relative}
             </div>
           </div>
 
+          <!-- ARCHITECT — this repo's blueprint: its own spec-engine spec,
+               chunk by chunk. Same renderer the old global Build > Architect
+               view used, scoped to one repo via repo.specUuid. -->
+          <div class="repo-subtab-panel" id="repo-subtab-architect">
+            <div class="detail-empty">← select a repo</div>
+          </div>
+
           <!-- PHASEMAP — real data: MCO2's verification tiers (L0-L8,
                merged sync+lazy) and MCO1's dependency graph summary.
                GET /api/repos/:uuid/verification, GET .../graph. -->
           <div class="repo-subtab-panel" id="repo-subtab-phasemap">
+            <div class="detail-empty">← select a repo</div>
+          </div>
+
+          <!-- INTELLIGENCE — structural scan of THIS repo: dangling hooks
+               (graph edges with no resolvable target), gaps (verification
+               tiers that did not pass + unreferenced files), and tension
+               (symbols with abnormal fan-in/fan-out). All computed from the
+               repo's own real atlas/graph/verification artifacts — see
+               GET /api/repos/:uuid/scan. -->
+          <div class="repo-subtab-panel" id="repo-subtab-intelligence">
             <div class="detail-empty">← select a repo</div>
           </div>
 

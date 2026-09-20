@@ -92,6 +92,26 @@ const COMPONENTS = [
   _comp('repo.fork',       'POST', '/api/repos/:uuid/fork',             'Fork a repo into a new lineage'),
   _comp('repo.archive',    'DELETE','/api/repos/:uuid',                 'Archive a repo'),
   _comp('repo.lineage',    'GET',  '/api/repos/:uuid/lineage',          "Get a repo's fork lineage"),
+  // §CI 2026-09-20 — CI/CD per compartment (cos/ci/index.js). Real
+  // commands, so the CLI and any agent reach CI the same way they reach
+  // every other capability, rather than through a UI-only button.
+  _comp('repo.scan',       'GET',  '/api/repos/:uuid/scan',             'Scan a repo for dangling hooks, gaps and tension', { tags: ['intelligence'] }),
+  _comp('repo.chunk.run',  'POST', '/api/repos/:uuid/chunk',            'Run the import pipeline (parse, atlas, chunk, verify, index) over a repo already on disk', { tags: ['pipeline'] }),
+  _comp('repo.hat.show',   'GET',  '/api/repos/:uuid/hat',              "Show this repo's project agent (hat), if forged", { tags: ['agent'] }),
+  _comp('repo.hat.ensure', 'POST', '/api/repos/:uuid/hat',              'Forge the project agent for this repo, constrained to its compartment', { tags: ['agent'] }),
+  _comp('repo.hat.refresh','POST', '/api/repos/:uuid/hat/refresh',      "Re-ground the project agent's persona against the repo's current index", { tags: ['agent'] }),
+  _comp('repo.hat.revoke', 'DELETE','/api/repos/:uuid/hat',             "Revoke this repo's project agent", { tags: ['agent'] }),
+  _comp('repo.ci.keys.list',    'GET',   '/api/repos/:uuid/ci/keys',          "List SSH key aliases registered to this compartment (never key material)", { tags: ['ci','keys'] }),
+  _comp('repo.ci.keys.register','POST',  '/api/repos/:uuid/ci/keys',          'Register an SSH key BY PATH under an alias, in the compartment vault', { tags: ['ci','keys'] }),
+  _comp('repo.ci.keys.remove',  'DELETE','/api/repos/:uuid/ci/keys/:alias',   'Remove an SSH key alias from this compartment', { tags: ['ci','keys'] }),
+  _comp('repo.ci.secrets.list', 'GET',   '/api/repos/:uuid/ci/secrets',       'List CI secret names for this compartment (names only, never values)', { tags: ['ci','keys'] }),
+  _comp('repo.ci.secrets.set',  'POST',  '/api/repos/:uuid/ci/secrets',       'Store an encrypted CI secret in the compartment vault', { tags: ['ci','keys'] }),
+  _comp('repo.ci.secrets.remove','DELETE','/api/repos/:uuid/ci/secrets/:name','Delete a CI secret from this compartment', { tags: ['ci','keys'] }),
+  _comp('repo.ci.config',  'GET',  '/api/repos/:uuid/ci',               "Read a compartment's CI pipeline definition", { tags: ['ci'] }),
+  _comp('repo.ci.setConfig','PUT', '/api/repos/:uuid/ci',               "Write a compartment's CI pipeline definition", { tags: ['ci'] }),
+  _comp('repo.ci.run',     'POST', '/api/repos/:uuid/ci/run',           'Run the compartment CI pipeline in a real sandbox', { tags: ['ci'] }),
+  _comp('repo.ci.runs',    'GET',  '/api/repos/:uuid/ci/runs',          'List CI run history for a compartment', { tags: ['ci'] }),
+  _comp('repo.ci.run.show','GET',  '/api/repos/:uuid/ci/runs/:runId',   'Get one CI run with full stage logs', { tags: ['ci'] }),
 
   // ── Queue ───────────────────────────────────────────────────────────────
   _comp('queue.show',      'GET',  '/api/queue/:queueId',               'Get queue item status'),
