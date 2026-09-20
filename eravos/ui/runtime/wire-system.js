@@ -2,7 +2,7 @@
    WIRE SYSTEM  v1.0.0
    runtime/wire-system.js
 
-   Right-click any organism window → shows its hooks.
+   Right-click any mod window → shows its hooks.
    Drag from an output hook → compatible input hooks glow.
    Release on an input hook → wire drawn, bus subscription made.
    Click a wire → remove it.
@@ -196,7 +196,7 @@ function _drawWire(fromId, fromHookId, fromEventType, toId, toHookId, toEventTyp
     KERNEL.bus.publish(toEventType + ':' + toId, payload);
   });
 
-  /* SVG path between organism window centers */
+  /* SVG path between mod window centers */
   const fromWin = _canvasEl.querySelector(`[data-wm-id="${fromId}"]`);
   const toWin   = _canvasEl.querySelector(`[data-wm-id="${toId}"]`);
   if (!fromWin || !toWin) { sub(); return; }
@@ -254,7 +254,7 @@ function _removeWire(wireId) {
   KERNEL.bus.publish('kernel:notify', { message: '✂ Wire removed' });
 }
 
-/* ── Called by shell when an organism window spawns ── */
+/* ── Called by shell when an mod window spawns ── */
 function onSpawn(instanceId) {
   /* Small delay for DOM to settle */
   setTimeout(() => {
@@ -265,7 +265,7 @@ function onSpawn(instanceId) {
 }
 
 function onClose(instanceId) {
-  /* Remove all wires involving this organism */
+  /* Remove all wires involving this mod */
   _wires.forEach((entry, wireId) => {
     if (entry.fromId === instanceId || entry.toId === instanceId) {
       _removeWire(wireId);

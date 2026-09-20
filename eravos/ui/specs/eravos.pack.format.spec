@@ -13,10 +13,10 @@
 # Nothing in the zip executes before the manifest is validated.
 #
 # A pack can be:
-#   single organism    — one organism + its files
-#   organism pack      — multiple related organisms
+#   single mod    — one mod + its files
+#   mod pack      — multiple related mods
 #   workspace          — saved universe snapshot
-#   ecosystem          — genome + behaviors + organisms + theme
+#   ecosystem          — genome + behaviors + mods + theme
 #   behavior           — environment modifier, no window
 #   theme              — visual token overrides only
 #   recipe             — composition instructions
@@ -59,8 +59,8 @@ manifest_json_schema:
     pack_type:
       type:       string
       enum:
-        - organism
-        - organism_pack
+        - mod
+        - mod_pack
         - workspace
         - ecosystem
         - behavior
@@ -90,7 +90,7 @@ manifest_json_schema:
 
     permissions:
       type:       array
-      description: All permissions any organism in this pack needs
+      description: All permissions any mod in this pack needs
       items:
         type:     string
         enum:
@@ -118,12 +118,12 @@ manifest_json_schema:
     requires:
       type:       array
       items:      string
-      description: Capabilities that must exist before any organism mounts
+      description: Capabilities that must exist before any mod mounts
 
     dependencies:
       type:       array
       items:      string
-      description: Pack IDs or organism IDs that must be installed first
+      description: Pack IDs or mod IDs that must be installed first
 
     conflicts:
       type:       array
@@ -139,10 +139,10 @@ manifest_json_schema:
           type:   string
           value:  "manifest.json"
 
-        organisms:
+        mods:
           type:   array
           items:  string
-          description: Paths to organism spec files inside zip
+          description: Paths to mod spec files inside zip
 
         behaviors:
           type:   array
@@ -176,13 +176,13 @@ manifest_json_schema:
 
         ui:
           type:   object
-          description: UI component files by organism id
+          description: UI component files by mod id
           additionalProperties:
             type: string
 
         voices:
           type:   object
-          description: Audio engine files by organism id
+          description: Audio engine files by mod id
 
         schemas:
           type:   object
@@ -194,19 +194,19 @@ manifest_json_schema:
 
         tests:
           type:   object
-          description: Test files by organism id
+          description: Test files by mod id
 
     install_order:
       type:       array
       items:      string
       description: >
-        Explicit organism mount sequence if deps require it.
+        Explicit mod mount sequence if deps require it.
         If omitted, kernel resolves order from dependencies.
 
     auto_mount:
       type:       array
       items:      string
-      description: Organism IDs to mount immediately on install
+      description: Mod IDs to mount immediately on install
 
     starter_workspace:
       type:       string
@@ -277,20 +277,20 @@ kernel_install_sequence:
     fault:         ASSET_003 if hash mismatch
 
   11:
-    name:          mount_organisms
+    name:          mount_mods
     action: >
-      For each organism in resolved order:
-        - Register in organism registry
+      For each mod in resolved order:
+        - Register in mod registry
         - Validate constraints[]
         - Apply auto-wires from relations[]
         - Mount default projection at drop position
         - Write to causal ledger
-    fault:         MOUNT_002 through MOUNT_007 per organism
+    fault:         MOUNT_002 through MOUNT_007 per mod
 
   12:
     name:          apply_mutations
     action: >
-      For each organism's mutations[]:
+      For each mod's mutations[]:
         - Validate target exists
         - Apply operation
         - Write to causal ledger
@@ -354,7 +354,7 @@ example_raven_voice_pack:
 
       "contents": {
         "manifest": "manifest.json",
-        "organisms": [],
+        "mods": [],
         "assets": [
           { "path": "audio/Always_be_here_for_you.mp3",           "mime": "audio/mpeg", "role": "voice_sample" },
           { "path": "audio/Days_when_were_quiet.mp3",             "mime": "audio/mpeg", "role": "voice_sample" },
@@ -411,7 +411,7 @@ example_raven_voice_pack:
 
 # ============================================================
 # EXAMPLE — DRUM MACHINE ZIP
-# The pads organism as a self-contained drop-in zip
+# The pads mod as a self-contained drop-in zip
 # ============================================================
 
 example_drum_machine_zip:
@@ -420,7 +420,7 @@ example_drum_machine_zip:
     eravos.pads.zip
     ├── manifest.json                     ← kernel reads this first
     ├── spec/
-    │   └── pads.spec                     ← full organism spec
+    │   └── pads.spec                     ← full mod spec
     ├── ui/
     │   ├── pads.html                     ← canvas projection
     │   └── pads-mini.html                ← compact projection
@@ -438,7 +438,7 @@ example_drum_machine_zip:
       "manifest_version": "1.0.0",
       "pack_id": "eravos.pack.drum-machine",
       "pack_version": "1.0.0",
-      "pack_type": "organism",
+      "pack_type": "mod",
       "label": "Drum Machine",
       "icon": "🥁",
       "description": "16-pad drum machine with 19 synthesis voices and 3 banks",
@@ -467,7 +467,7 @@ example_drum_machine_zip:
 
       "contents": {
         "manifest": "manifest.json",
-        "organisms": ["spec/pads.spec"],
+        "mods": ["spec/pads.spec"],
         "ui": {
           "eravos.pads": "ui/pads.html",
           "eravos.pads.compact": "ui/pads-mini.html"

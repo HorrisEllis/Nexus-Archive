@@ -57,7 +57,7 @@ constraints:
     blocking:       false
 
   - constraint_id:  music.C-2
-    predicate:      BPM must be consistent across all mounted organisms
+    predicate:      BPM must be consistent across all mounted mods
     failure_mode:   CONSTRAINT_001
     blocking:       false
 
@@ -284,7 +284,7 @@ identity:
   description: >
     Saves workspace snapshot to the causal ledger every
     N seconds. No UI. Runs silently in background.
-    Triggered by timer or organism mount/unmount events.
+    Triggered by timer or mod mount/unmount events.
   comp_type:       behavior
   comp_intent: >
     Automatically persist workspace state at configurable
@@ -305,10 +305,10 @@ triggers:
   - event_type:    kernel:timer
     condition:     elapsed_seconds >= config.interval
 
-  - event_type:    kernel:organism-mounted
+  - event_type:    kernel:mod-mounted
     condition:     true
 
-  - event_type:    kernel:organism-unmounted
+  - event_type:    kernel:mod-unmounted
     condition:     true
 
 effects:
@@ -358,7 +358,7 @@ identity:
   description: >
     Quantizes clip positions to the nearest grid division
     on drag release. No UI. Intercepts ui:clip_move events
-    and corrects position before organism receives them.
+    and corrects position before mod receives them.
   comp_type:       behavior
   comp_intent: >
     Snap timeline clips to the nearest musical grid division

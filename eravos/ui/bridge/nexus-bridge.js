@@ -2,9 +2,9 @@
    ERAVOS NEXUS BRIDGE  v1.0.0
    bridge/nexus-bridge.js
 
-   Polls the NEXUS guardian organism-queue.
-   When NEXUS builds a new organism, it appears here.
-   Delivers zips to PackLoader — organism lands in catalog.
+   Polls the NEXUS guardian mod-queue.
+   When NEXUS builds a new mod, it appears here.
+   Delivers zips to PackLoader — mod lands in catalog.
 
    API:
      NexusBridge.start(orchUrl)   — begin polling (idempotent)
@@ -75,13 +75,13 @@ async function deliver(id, arrayBuffer, opts = {}) {
 
 async function _poll() {
   try {
-    const r = await fetch(`${_orchUrl}/api/guardian/organism-queue`, {
+    const r = await fetch(`${_orchUrl}/api/guardian/mod-queue`, {
       signal: AbortSignal.timeout(2000),
     });
     if (!r.ok) return;
     const data = await r.json();
-    const organisms = data.organisms || [];
-    for (const org of organisms) {
+    const mods = data.mods || [];
+    for (const org of mods) {
       await _fetch_and_install(org.id, org.label);
     }
   } catch(_) {
@@ -91,7 +91,7 @@ async function _poll() {
 
 async function _fetch_and_install(id, label) {
   try {
-    const r = await fetch(`${_orchUrl}/api/guardian/organism-queue/${id}/zip`, {
+    const r = await fetch(`${_orchUrl}/api/guardian/mod-queue/${id}/zip`, {
       signal: AbortSignal.timeout(10000),
     });
     if (!r.ok) { _errors++; return; }
@@ -116,7 +116,7 @@ async function _fetch_and_install(id, label) {
 
 async function _ack(id) {
   try {
-    await fetch(`${_orchUrl}/api/guardian/organism-queue/${id}/ack`, {
+    await fetch(`${_orchUrl}/api/guardian/mod-queue/${id}/ack`, {
       method: 'POST',
       signal: AbortSignal.timeout(2000),
     });

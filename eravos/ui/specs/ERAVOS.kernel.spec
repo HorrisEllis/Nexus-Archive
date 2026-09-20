@@ -10,7 +10,7 @@
 # universe. Everything the kernel builds is derived from this
 # spec and specs that conform to it.
 #
-# NEXUS reads this spec and can build any conforming organism,
+# NEXUS reads this spec and can build any conforming mod,
 # workspace, behavior, genome, or ecosystem from it.
 #
 # If it is not in a spec, it does not exist.
@@ -19,23 +19,23 @@
 
 # ============================================================
 # LAYER 0 — KERNEL AXIOMS
-# Immutable. Never overridden by any organism or spec.
+# Immutable. Never overridden by any mod or spec.
 # ============================================================
 
 axioms:
 
-  K-1:  Nothing exists until registered in the organism registry
+  K-1:  Nothing exists until registered in the mod registry
   K-2:  Nothing silently fails — every fault is loud, named, traceable
-  K-3:  No organism touches another organism directly
-  K-4:  Every connection between organisms is a wire
-  K-5:  Every wire is owned by the wire registry, not the organisms
+  K-3:  No mod touches another mod directly
+  K-4:  Every connection between mods is a wire
+  K-5:  Every wire is owned by the wire registry, not the mods
   K-6:  Every mutation is recorded in the causal ledger before it applies
   K-7:  Hook contracts must match on both ends before a wire goes live
   K-8:  Permissions are enforced by the kernel — never self-reported as trusted
-  K-9:  Everything that exists can be removed — no organism is permanent
+  K-9:  Everything that exists can be removed — no mod is permanent
   K-10: The spec is the source of truth — not the runtime state
-  K-11: The canvas is one space — the universe owns the organisms
-  K-12: A wire owns the relationship — removing an organism removes its wires
+  K-11: The canvas is one space — the universe owns the mods
+  K-12: A wire owns the relationship — removing an mod removes its wires
   K-13: Build order is bottom-up — dependencies mount before dependents
   K-14: No stubs in production — unresolved dependencies block mount
   K-15: Session context before build — NEXUS reads full spec before any output
@@ -48,10 +48,10 @@ axioms:
 
 primitives:
 
-  Organism:
+  Mod:
     description: >
       A thing that exists in the universe. Has identity, hooks,
-      permissions, and projections. Never touches other organisms
+      permissions, and projections. Never touches other mods
       directly. Communicates only through wires and the bus.
     required_fields:
       - uuid
@@ -62,7 +62,7 @@ primitives:
 
   Space:
     description: >
-      A topology that organisms can inhabit. Defines how organisms
+      A topology that mods can inhabit. Defines how mods
       are arranged, navigated, and related within it. The canvas
       is one space. The timeline is another.
     topologies:
@@ -76,8 +76,8 @@ primitives:
 
   Hook:
     description: >
-      A named, typed, versioned connection point on an organism.
-      The only surface another organism can connect to.
+      A named, typed, versioned connection point on an mod.
+      The only surface another mod can connect to.
       Has a declared schema. Has a declared failure mode.
       Has a contract version that must match before wire goes live.
     required_fields:
@@ -93,9 +93,9 @@ primitives:
   Wire:
     description: >
       A connection between exactly two hooks.
-      Owned by the wire registry — never by either organism.
+      Owned by the wire registry — never by either mod.
       Validates contract versions on both ends before going live.
-      Removed automatically when either organism unmounts.
+      Removed automatically when either mod unmounts.
     required_fields:
       - wire_id
       - source_hook
@@ -105,10 +105,10 @@ primitives:
 
   Projection:
     description: >
-      How an organism appears in a specific space.
-      An organism can have multiple projections.
+      How an mod appears in a specific space.
+      An mod can have multiple projections.
       Projections are views — they do not own data.
-      The organism owns data. The projection renders it.
+      The mod owns data. The projection renders it.
     required_fields:
       - space_id
       - component
@@ -127,12 +127,12 @@ primitives:
 
   Mutation:
     description: >
-      A declared, reversible change to an existing organism's
+      A declared, reversible change to an existing mod's
       surface or config. Written to the causal ledger before
-      it applies. Rolled back if the mutating organism unmounts.
+      it applies. Rolled back if the mutating mod unmounts.
     required_fields:
       - mutation_id
-      - target_organism
+      - target_mod
       - operation
       - reason
       - reversible
@@ -142,7 +142,7 @@ primitives:
       Something that happened on the bus.
       Has a topic, payload schema, and timestamp.
       Routed by the bus to all subscribers of that topic.
-      Never delivered directly organism-to-organism.
+      Never delivered directly mod-to-mod.
     required_fields:
       - topic
       - payload_schema
@@ -167,7 +167,7 @@ primitives:
       A declared capability grant.
       Requested in the manifest. Granted by the kernel.
       Enforced at runtime — not self-reported.
-      Violations kill the organism, log the fault.
+      Violations kill the mod, log the fault.
 
 # ============================================================
 # LAYER 2 — SPEC FILE FORMAT
@@ -180,7 +180,7 @@ spec_file:
 
   header:
     spec_id:          string    # unique — reverse domain notation
-    spec_version:     semver    # organism version
+    spec_version:     semver    # mod version
     spec_type:        enum      # see spec_types below
     kernel_target:    semver    # minimum kernel version required
     author:           string
@@ -190,11 +190,11 @@ spec_file:
     status:           enum      # draft | review | canonical | deprecated
 
   spec_types:
-    organism:         A single mountable component
+    mod:         A single mountable component
     workspace:        A saved universe snapshot
     behavior:         An environment modifier (no UI)
     genome:           A species definition (preferred archetypes + behaviors)
-    recipe:           A composition — how to assemble multiple organisms
+    recipe:           A composition — how to assemble multiple mods
     ecosystem:        A culture — genome + behaviors + constraints + theme
     theme:            Visual token overrides
     agent:            An AI or automated worker
@@ -206,7 +206,7 @@ spec_file:
   shared:
 
     identity:
-      id:             string    # organism identifier
+      id:             string    # mod identifier
       version:        semver
       label:          string    # human display name
       icon:           string    # emoji or path to svg
@@ -242,8 +242,8 @@ spec_file:
         - peer_connect
 
     provides:
-      # Capability identifiers this organism emits into the universe
-      # Other organisms can list these in their requires[]
+      # Capability identifiers this mod emits into the universe
+      # Other mods can list these in their requires[]
       type: string[]
       example:
         - capability.audio_out
@@ -252,17 +252,17 @@ spec_file:
         - capability.seek
 
     requires:
-      # Capabilities that must exist before this organism mounts
+      # Capabilities that must exist before this mod mounts
       # If not satisfied — mount blocks with named fault
       type: string[]
 
     dependencies:
-      # Organism IDs that must be mounted before this one
+      # Mod IDs that must be mounted before this one
       # Order is resolved by the kernel — not the author
       type: string[]
 
     constraints:
-      # Invariants that must hold for this organism to function
+      # Invariants that must hold for this mod to function
       # Checked before mount and after every mutation
       fields:
         constraint_id:    string
@@ -271,16 +271,16 @@ spec_file:
         blocking:         boolean   # true = hard block | false = warning
 
 # ============================================================
-# LAYER 3 — ORGANISM SPEC
-# Full contract for a single mountable organism.
+# LAYER 3 — MOD SPEC
+# Full contract for a single mountable mod.
 # ============================================================
 
-organism_spec:
+mod_spec:
 
   # Inherits all shared blocks from Layer 2
 
   hooks:
-    # Every addressable surface this organism exposes
+    # Every addressable surface this mod exposes
     # Wires connect to hooks — nothing else
     fields:
       hook_id:          string    # uuid — permanent
@@ -297,10 +297,10 @@ organism_spec:
       middleware:       string[]  # optional transform chain
 
   relations:
-    # Preferred connections to other organisms
+    # Preferred connections to other mods
     # The wire registry reads these — auto-wires when both present
     fields:
-      to:               string    # organism id or capability
+      to:               string    # mod id or capability
       wire:
         from:           string    # self.hook_id
         to:             string    # target.hook_id
@@ -310,11 +310,11 @@ organism_spec:
       label:            string    # shown in wire registry UI
 
   mutations:
-    # Declared changes this organism makes to others on mount
+    # Declared changes this mod makes to others on mount
     # Rolled back on unmount — recorded in causal ledger
     fields:
       mutation_id:      string
-      target:           string    # organism id
+      target:           string    # mod id
       operation:        enum      # add_hook | remove_hook | set_config |
                                   # add_projection | add_constraint
       payload:          object    # operation-specific
@@ -322,7 +322,7 @@ organism_spec:
       reversible:       boolean   # always true in canonical spec
 
   projections:
-    # How this organism appears in different spaces
+    # How this mod appears in different spaces
     fields:
       space_id:         string    # canvas | timeline | graph | notebook | etc
       component:        string    # path to UI component inside zip
@@ -350,7 +350,7 @@ organism_spec:
 
   modes:
     # Alternate behavioral states
-    # Broadcast by kernel — organism switches if mode is declared
+    # Broadcast by kernel — mod switches if mode is declared
     fields:
       mode_id:          string
       label:            string
@@ -361,21 +361,21 @@ organism_spec:
         set:            object    # config overrides
 
   imports:
-    # File/asset types this organism ingests on drop
+    # File/asset types this mod ingests on drop
     fields:
       mime:             string    # mime type or glob
       role:             string    # how the asset is used
-      auto_mount:       boolean   # true = spawn organism on file drop
+      auto_mount:       boolean   # true = spawn mod on file drop
 
   exports:
-    # What this organism can serialize out
+    # What this mod can serialize out
     fields:
       format:           string    # wav | mid | json | zip | png | etc
       from:             string    # hook or state key
       label:            string    # shown in export UI
 
   files:
-    # All files in the zip this organism needs
+    # All files in the zip this mod needs
     # Paths relative to zip root
     fields:
       ui:               string    # canvas projection component
@@ -386,13 +386,13 @@ organism_spec:
       worker:           string    # AudioWorklet or Web Worker
 
   ui_hooks:
-    # The interaction contract between UI and organism logic
-    # UI publishes to these — organism subscribes
-    # Organism publishes to these — UI subscribes
-    # Nothing in the UI touches organism internals directly
+    # The interaction contract between UI and mod logic
+    # UI publishes to these — mod subscribes
+    # Mod publishes to these — UI subscribes
+    # Nothing in the UI touches mod internals directly
     fields:
       hook_id:          string
-      direction:        enum      # ui_to_organism | organism_to_ui
+      direction:        enum      # ui_to_mod | mod_to_ui
       event_type:       string
       schema:           object
       description:      string
@@ -408,9 +408,9 @@ workspace_spec:
 
   genome:           string    # genome id this workspace expresses
 
-  organisms:
+  mods:
     fields:
-      organism_id:    string
+      mod_id:    string
       instance_id:    string    # uuid — this specific instance
       position:
         space:        string
@@ -476,7 +476,7 @@ behavior_spec:
 
 genome_spec:
 
-  archetypes:       string[]  # preferred organism types
+  archetypes:       string[]  # preferred mod types
   behaviors:        string[]  # auto-mounted behaviors
   spaces:           string[]  # available spaces
   default_space:    string
@@ -492,7 +492,7 @@ genome_spec:
 
 # ============================================================
 # LAYER 7 — RECIPE SPEC
-# A composition — how to assemble multiple organisms
+# A composition — how to assemble multiple mods
 # ============================================================
 
 recipe_spec:
@@ -530,12 +530,12 @@ ecosystem_spec:
 
 # ============================================================
 # LAYER 9 — AGENT SPEC
-# An AI or automated worker — first-class organism
+# An AI or automated worker — first-class mod
 # ============================================================
 
 agent_spec:
 
-  # Inherits organism spec
+  # Inherits mod spec
 
   worker_type:      enum      # transcriber | composer | librarian |
                               # refactorer | colorist | assistant | custom
@@ -563,7 +563,7 @@ agent_spec:
 pack_spec:
 
   contents:
-    organisms:      string[]  # organism spec paths inside zip
+    mods:      string[]  # mod spec paths inside zip
     behaviors:      string[]
     assets:         string[]
     workspace:      string    # optional starter workspace
@@ -575,7 +575,7 @@ pack_spec:
     capabilities:   string[]
     genomes:        string[]
 
-  conflicts:        string[]  # organism ids this pack replaces
+  conflicts:        string[]  # mod ids this pack replaces
 
 # ============================================================
 # LAYER 11 — ASSET SPEC
@@ -666,7 +666,7 @@ wire_registry:
         wire_id:        string
       effects:
         - Wire removed from registry
-        - Organisms notified via bus
+        - Mods notified via bus
         - Ledger entry written
 
     get_edges:
@@ -684,10 +684,10 @@ wire_registry:
 causal_ledger:
 
   entry_types:
-    organism_mounted:
-      fields: [instance_id, organism_id, timestamp, position]
-    organism_unmounted:
-      fields: [instance_id, organism_id, timestamp, reason]
+    mod_mounted:
+      fields: [instance_id, mod_id, timestamp, position]
+    mod_unmounted:
+      fields: [instance_id, mod_id, timestamp, reason]
     wire_registered:
       fields: [wire_id, source, target, timestamp]
     wire_removed:
@@ -697,9 +697,9 @@ causal_ledger:
     mutation_rolled_back:
       fields: [mutation_id, reason, timestamp]
     fault_raised:
-      fields: [fault_class, organism_id, hook_id, message, timestamp]
+      fields: [fault_class, mod_id, hook_id, message, timestamp]
     permission_denied:
-      fields: [organism_id, permission, timestamp]
+      fields: [mod_id, permission, timestamp]
     mode_changed:
       fields: [mode_id, scope, timestamp]
     asset_imported:
@@ -726,7 +726,7 @@ faults:
     MOUNT_003: permission_denied
     MOUNT_004: schema_version_mismatch
     MOUNT_005: manifest_invalid
-    MOUNT_006: duplicate_organism_id
+    MOUNT_006: duplicate_mod_id
     MOUNT_007: constraint_violated_on_mount
 
   WIRE:
@@ -787,37 +787,37 @@ nexus_build:
   output:
     structure:
       manifest.json:    pack_spec conforming
-      organisms/:       one directory per organism
+      mods/:       one directory per mod
       behaviors/:       behavior components
       assets/:          included assets
       schemas/:         JSON Schema files
       workspace/:       optional starter workspace
-      tests/:           one test file per organism
+      tests/:           one test file per mod
       CHANGELOG.md:     phase-by-phase build log
 
 # ============================================================
 # LAYER 16 — INTERACTION CONTRACT
-# How UI and organism logic are isolated
+# How UI and mod logic are isolated
 # ============================================================
 
 interaction_contract:
 
   principle: >
-    The UI never touches organism internals directly.
-    The organism never touches UI internals directly.
+    The UI never touches mod internals directly.
+    The mod never touches UI internals directly.
     All communication is through declared ui_hooks.
     The wire validates the schema on every message.
 
-  ui_to_organism:
-    # UI publishes — organism subscribes
+  ui_to_mod:
+    # UI publishes — mod subscribes
     examples:
       - event: ui:knob_change    payload: { hook_id, value }
       - event: ui:button_press   payload: { hook_id }
       - event: ui:pad_trigger    payload: { index, velocity }
       - event: ui:select_change  payload: { hook_id, value }
 
-  organism_to_ui:
-    # Organism publishes — UI subscribes
+  mod_to_ui:
+    # Mod publishes — UI subscribes
     examples:
       - event: org:state_update  payload: { key, value }
       - event: org:meter_update  payload: { level }
@@ -826,21 +826,21 @@ interaction_contract:
 
   enforcement:
     - Any UI event not declared in ui_hooks is dropped with RUNTIME_002
-    - Any organism event not declared in ui_hooks is dropped with RUNTIME_002
+    - Any mod event not declared in ui_hooks is dropped with RUNTIME_002
     - Schema validation on every message — invalid payload = RUNTIME_002
-    - UI components are sandboxed — no access to organism scope
+    - UI components are sandboxed — no access to mod scope
 
 # ============================================================
 # END KERNEL SPEC
 # ============================================================
 #
 # Everything in ERAVOS is derived from this document.
-# Kernel, organisms, workspaces, behaviors, genomes,
+# Kernel, mods, workspaces, behaviors, genomes,
 # agents, assets, wires, mutations, constraints — all of it.
 #
 # The kernel never learns what music is.
 # It only knows what is written here.
 #
 # Same kernel.
-# Different organism.
+# Different mod.
 # ============================================================

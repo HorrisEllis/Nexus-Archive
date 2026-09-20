@@ -20,7 +20,7 @@ payload:
     method: GET
     path: /api/catalog
   intent: []
-  description: Available organisms from registry
+  description: Available mods from registry
   params: []
   tags:
     - eravos

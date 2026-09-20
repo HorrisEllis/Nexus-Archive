@@ -13,7 +13,7 @@
 
    Depends on:
      CatalogRegistry         — data source
-     OrganismFactory         — spawn()
+     ModFactory         — spawn()
      KERNEL.bus              — publish spawn events
      catalog.css             — loaded by index.html
 
@@ -53,7 +53,7 @@ function init(mountEl) {
 
   const title = document.createElement('div');
   title.id = 'eravos-catalog-title';
-  title.textContent = 'ORGANISM CATALOG';
+  title.textContent = 'MOD CATALOG';
 
   _search = document.createElement('input');
   _search.id = 'eravos-catalog-search';
@@ -63,7 +63,7 @@ function init(mountEl) {
   const createBtn = document.createElement('button');
   createBtn.className = 'eravos-catalog-btn';
   createBtn.textContent = '+ NEW';
-  createBtn.title = 'Download a starter organism scaffold';
+  createBtn.title = 'Download a starter mod scaffold';
   createBtn.addEventListener('click', _openCreateFlow);
 
   const closeBtn = document.createElement('button');
@@ -85,10 +85,10 @@ function init(mountEl) {
   _overlay.appendChild(box);
   target.appendChild(_overlay);
 
-  // Seed CatalogRegistry from OrganismFactory (catches boot-time reg() calls
+  // Seed CatalogRegistry from ModFactory (catches boot-time reg() calls
   // that fired before CatalogRegistry was loaded)
-  if (typeof OrganismFactory !== 'undefined') {
-    OrganismFactory.defs().forEach(def => {
+  if (typeof ModFactory !== 'undefined') {
+    ModFactory.defs().forEach(def => {
       if (!CatalogRegistry.get(def.id)) {
         CatalogRegistry.register({ source: 'built-in', ...def });
       }
@@ -136,19 +136,19 @@ function isOpen() {
 
 function _render(query) {
   _body.innerHTML = '';
-  const organisms = query ? CatalogRegistry.search(query) : CatalogRegistry.list();
+  const mods = query ? CatalogRegistry.search(query) : CatalogRegistry.list();
 
-  if (!organisms.length) {
+  if (!mods.length) {
     const empty = document.createElement('div');
     empty.className = 'eravos-cat-empty';
-    empty.textContent = query ? `No organisms match "${query}"` : 'No organisms registered yet.';
+    empty.textContent = query ? `No mods match "${query}"` : 'No mods registered yet.';
     _body.appendChild(empty);
     return;
   }
 
   // Group by category
   const byCategory = new Map();
-  organisms.forEach(o => {
+  mods.forEach(o => {
     if (!byCategory.has(o.category)) byCategory.set(o.category, []);
     byCategory.get(o.category).push(o);
   });
@@ -225,7 +225,7 @@ function _buildCard(o) {
   return card;
 }
 
-/* ── Add organism ─────────────────────────────────────────── */
+/* ── Add mod ─────────────────────────────────────────── */
 
 function _add(o) {
   if (o.needs && o.needs.length) {
@@ -238,7 +238,7 @@ function _add(o) {
 function _spawn(o, config) {
   if (typeof bootAudio === 'function') bootAudio();
   const pos = { x: 80 + Math.random() * 320, y: 80 + Math.random() * 160 };
-  OrganismFactory.spawn(o.id, pos, null, config);
+  ModFactory.spawn(o.id, pos, null, config);
   close();
 }
 
@@ -300,7 +300,7 @@ function _openNeedsPrompt(o) {
   document.body.appendChild(overlay);
 }
 
-/* ── Create new organism scaffold ─────────────────────────── */
+/* ── Create new mod scaffold ─────────────────────────── */
 
 function _openCreateFlow() {
   const overlay = document.createElement('div');
@@ -311,11 +311,11 @@ function _openCreateFlow() {
 
   const title = document.createElement('div');
   title.style.cssText = 'font-family:var(--orb);font-size:10px;font-weight:700;letter-spacing:.12em;color:var(--accent);';
-  title.textContent = 'NEW ORGANISM SCAFFOLD';
+  title.textContent = 'NEW MOD SCAFFOLD';
 
   const desc = document.createElement('div');
   desc.style.cssText = 'font-family:var(--mono);font-size:7px;color:var(--dim2);line-height:1.6;';
-  desc.textContent = 'Downloads a starter engine.js + schema.json that matches the ERAVOS organism convention. Drop them into organisms/<id>/ and build from there.';
+  desc.textContent = 'Downloads a starter engine.js + schema.json that matches the ERAVOS mod convention. Drop them into mods/<id>/ and build from there.';
 
   function mkField(labelText, placeholder, id) {
     const wrap = document.createElement('label');
@@ -330,8 +330,8 @@ function _openCreateFlow() {
 
   box.appendChild(title);
   box.appendChild(desc);
-  box.appendChild(mkField('ID (kebab-case)', 'my-organism', '_create-id'));
-  box.appendChild(mkField('LABEL', 'My Organism', '_create-label'));
+  box.appendChild(mkField('ID (kebab-case)', 'my-mod', '_create-id'));
+  box.appendChild(mkField('LABEL', 'My Mod', '_create-label'));
   box.appendChild(mkField('ICON', '◆', '_create-icon'));
   box.appendChild(mkField('CATEGORY', 'Custom', '_create-cat'));
 
@@ -342,14 +342,14 @@ function _openCreateFlow() {
   dlBtn.style.cssText = 'flex:1;background:var(--accent);border:none;color:#000;font-family:var(--mono);font-size:8px;font-weight:700;letter-spacing:.08em;padding:8px;border-radius:4px;cursor:pointer;';
   dlBtn.textContent = '⬇ DOWNLOAD SCAFFOLD';
   dlBtn.addEventListener('click', () => {
-    const id       = (document.getElementById('_create-id')?.value    || 'my-organism').trim().replace(/\s+/g, '-').toLowerCase();
-    const label    = (document.getElementById('_create-label')?.value  || 'My Organism').trim();
+    const id       = (document.getElementById('_create-id')?.value    || 'my-mod').trim().replace(/\s+/g, '-').toLowerCase();
+    const label    = (document.getElementById('_create-label')?.value  || 'My Mod').trim();
     const icon     = (document.getElementById('_create-icon')?.value   || '◆').trim();
     const category = (document.getElementById('_create-cat')?.value    || 'Custom').trim();
 
     // Generate engine.js scaffold
     const engineSrc = `/* ═══════════════════════════════════════════════════════════
-   ORGANISM: ${label.toUpperCase()}  v0.1.0
+   MOD: ${label.toUpperCase()}  v0.1.0
    id: ${id}
    ═══════════════════════════════════════════════════════════ */
 
@@ -359,7 +359,7 @@ window.${_toCamelCase(id)}Engine = (() => {
 function mount(instanceId, sBus, audio, config = {}) {
   const gBus = KERNEL.bus;
 
-  // Register organism in KERNEL registry
+  // Register mod in KERNEL registry
   KERNEL.registry.register({
     instanceId,
     id: '${id}',
@@ -407,7 +407,7 @@ return { mount };
     const schemaSrc = JSON.stringify({
       "$schema": "http://json-schema.org/draft-07/schema",
       "title": label,
-      "description": `Schema for ${id} organism`,
+      "description": `Schema for ${id} mod`,
       "type": "object",
       "properties": {
         "output": { "type": "object", "description": "Output payload" },

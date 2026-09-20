@@ -5,21 +5,21 @@
    Pure data layer. No DOM. No rendering. No inline logic.
 
    Responsibilities:
-     register(def)           — add an organism to the catalog
-     list()                  — all registered organisms
-     get(id)                 — one organism by id
+     register(def)           — add an mod to the catalog
+     list()                  — all registered mods
+     get(id)                 — one mod by id
      search(query)           — filter by label/summary/category
      categories()            — sorted unique category list
      on(event, fn)           — subscribe to catalog events
 
    Events emitted on KERNEL.bus:
-     catalog:registered      — organism added
-     catalog:updated         — organism definition replaced
-     catalog:removed         — organism removed
+     catalog:registered      — mod added
+     catalog:updated         — mod definition replaced
+     catalog:removed         — mod removed
 
    Called by:
-     OrganismFactory          — seeds catalog on reg()
-     PackLoader               — registers dynamically loaded organisms
+     ModFactory          — seeds catalog on reg()
+     PackLoader               — registers dynamically loaded mods
      NexusBridge              — triggers registration after delivery
      CatalogUI                — reads data to render
 
@@ -31,7 +31,7 @@
 window.CatalogRegistry = (() => {
 'use strict';
 
-const _organisms = new Map(); // id → def
+const _mods = new Map(); // id → def
 const _listeners = new Map(); // event → fn[]
 
 function _emit(event, data) {
@@ -49,7 +49,7 @@ function register(def) {
     console.warn('[CatalogRegistry] register: id required');
     return null;
   }
-  const existed = _organisms.has(def.id);
+  const existed = _mods.has(def.id);
   const entry = {
     id:       def.id,
     label:    def.label    || def.id,
@@ -61,26 +61,26 @@ function register(def) {
     tags:     Array.isArray(def.tags)  ? def.tags  : [],
     source:   def.source   || 'built-in', // built-in | pack | nexus-build
     registeredAt: Date.now(),
-    _def: def, // full def for OrganismFactory.spawn()
+    _def: def, // full def for ModFactory.spawn()
   };
-  _organisms.set(def.id, entry);
+  _mods.set(def.id, entry);
   _emit(existed ? 'catalog:updated' : 'catalog:registered', { id: def.id, entry });
   return entry;
 }
 
 function remove(id) {
-  if (!_organisms.has(id)) return false;
-  _organisms.delete(id);
+  if (!_mods.has(id)) return false;
+  _mods.delete(id);
   _emit('catalog:removed', { id });
   return true;
 }
 
 function get(id) {
-  return _organisms.get(id) || null;
+  return _mods.get(id) || null;
 }
 
 function list() {
-  return [..._organisms.values()];
+  return [..._mods.values()];
 }
 
 function search(query) {
@@ -111,7 +111,7 @@ function on(event, fn) {
 
 function status() {
   return {
-    count:      _organisms.size,
+    count:      _mods.size,
     categories: categories(),
     sources:    [...new Set(list().map(o => o.source))],
   };

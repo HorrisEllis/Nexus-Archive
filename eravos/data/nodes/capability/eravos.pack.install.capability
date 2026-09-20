@@ -20,7 +20,7 @@ payload:
     method: POST
     path: /api/pack/install
   intent: []
-  description: Install a .zip organism pack
+  description: Install a .zip mod pack
   params: []
   tags:
     - eravos

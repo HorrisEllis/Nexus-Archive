@@ -5,10 +5,10 @@
  * Port: 3751
  *
  * ERAVOS is a sovereign system. Not a UI folder. A peer.
- * It has a kernel, runtime, organism registry, wire system,
+ * It has a kernel, runtime, mod registry, wire system,
  * audio engine, catalog, pack loader, and nexus bridge.
  * It registers with orchestrator. RAID routes compose/visualize/sequence
- * intents here. Guardian delivers built organisms here.
+ * intents here. Guardian delivers built mods here.
  */
 
 const http   = require('http');
@@ -34,10 +34,10 @@ const SYSTEM_ID = 'eravos';
 // the way cortex/boot.js's VERSION already had. Fixed the same way.
 const VERSION   = (() => { try { return require('../lib/version').services.eravos; } catch (_) { return '3.0.0'; } })();
 
-// ── In-memory organism state ──────────────────────────────────────────────────
-const _mounted    = new Map();   // id → organism descriptor
+// ── In-memory mod state ──────────────────────────────────────────────────
+const _mounted    = new Map();   // id → mod descriptor
 const _wires      = new Map();   // wireId → { from, to }
-const _queue      = [];          // organism packs waiting for browser to install
+const _queue      = [];          // mod packs waiting for browser to install
 const _sseClients = new Set();
 
 // ── SSE broadcast ─────────────────────────────────────────────────────────────
@@ -108,7 +108,7 @@ const server = http.createServer(async (req, res) => {
   if (p === '/health') {
     json(res, 200, {
       ok: true, system: SYSTEM_ID, version: VERSION, port: PORT,
-      organisms: _mounted.size, wires: _wires.size, queue: _queue.length,
+      mods: _mounted.size, wires: _wires.size, queue: _queue.length,
       ts: Date.now(),
     });
     return;
@@ -130,14 +130,14 @@ const server = http.createServer(async (req, res) => {
 
   // ── API routes ────────────────────────────────────────────────────────────
 
-  // GET /api/organisms
-  if (method === 'GET' && p === '/api/organisms') {
-    json(res, 200, { ok:true, organisms: [..._mounted.values()] });
+  // GET /api/mods
+  if (method === 'GET' && p === '/api/mods') {
+    json(res, 200, { ok:true, mods: [..._mounted.values()] });
     return;
   }
 
-  // POST /api/organisms — spawn
-  if (method === 'POST' && p === '/api/organisms') {
+  // POST /api/mods — spawn
+  if (method === 'POST' && p === '/api/mods') {
     const body = await readBody(req);
     if (!body.id) { json(res, 400, { ok:false, error:'id required' }); return; }
     const org = {
@@ -149,18 +149,18 @@ const server = http.createServer(async (req, res) => {
       config:    body.config || {},
     };
     _mounted.set(org.uuid, org);
-    broadcast('eravos.organism.spawned', org);
-    json(res, 200, { ok:true, organism: org });
+    broadcast('eravos.mod.spawned', org);
+    json(res, 200, { ok:true, mod: org });
     return;
   }
 
-  // DELETE /api/organisms/:uuid
-  if (method === 'DELETE' && p.startsWith('/api/organisms/')) {
+  // DELETE /api/mods/:uuid
+  if (method === 'DELETE' && p.startsWith('/api/mods/')) {
     const uuid = p.split('/')[3];
     const org  = _mounted.get(uuid);
     if (!org) { json(res, 404, { ok:false, error:'not found' }); return; }
     _mounted.delete(uuid);
-    broadcast('eravos.organism.removed', { uuid, id: org.id });
+    broadcast('eravos.mod.removed', { uuid, id: org.id });
     json(res, 200, { ok:true, removed: uuid });
     return;
   }
@@ -195,11 +195,11 @@ const server = http.createServer(async (req, res) => {
 
   // GET /api/catalog
   if (method === 'GET' && p === '/api/catalog') {
-    // Read organism manifests from ui/organisms/
-    const orgsDir = path.join(UI_DIR, 'organisms');
-    let organisms = [];
+    // Read mod manifests from ui/mods/
+    const orgsDir = path.join(UI_DIR, 'mods');
+    let mods = [];
     try {
-      organisms = fs.readdirSync(orgsDir)
+      mods = fs.readdirSync(orgsDir)
         .filter(d => fs.statSync(path.join(orgsDir, d)).isDirectory())
         .map(id => {
           try {
@@ -208,11 +208,11 @@ const server = http.createServer(async (req, res) => {
           } catch(_) { return { id, name: id }; }
         });
     } catch(_) {}
-    json(res, 200, { ok:true, organisms });
+    json(res, 200, { ok:true, mods });
     return;
   }
 
-  // POST /api/pack/install — receive organism zip from Guardian/NEXUS build
+  // POST /api/pack/install — receive mod zip from Guardian/NEXUS build
   if (method === 'POST' && p === '/api/pack/install') {
     const body = await readBody(req);
     _queue.push({ uuid: crypto.randomUUID(), ...body, ts: Date.now() });
@@ -221,8 +221,8 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // GET /api/organism-queue — browser polls this to pick up built organisms
-  if (method === 'GET' && p === '/api/organism-queue') {
+  // GET /api/mod-queue — browser polls this to pick up built mods
+  if (method === 'GET' && p === '/api/mod-queue') {
     const item = _queue.shift() || null;
     json(res, 200, { ok:true, item, remaining: _queue.length });
     return;

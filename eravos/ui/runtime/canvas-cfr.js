@@ -6,8 +6,8 @@
    Wraps ALK-GL particle field engine.
    Wires ERAVOS kernel bus events → field physics.
 
-   ORGANISM LIFECYCLE → ATTRACTORS:
-     canvas:organism-spawned  → upsertAttractor(instanceId, x, y)
+   MOD LIFECYCLE → ATTRACTORS:
+     canvas:mod-spawned  → upsertAttractor(instanceId, x, y)
      canvas:window-closed     → removeAttractor(instanceId)
      canvas:window-moved      → upsertAttractor (update position)
 
@@ -20,7 +20,7 @@
      kernel:fault              → entropy spike + stress inject
 
    The field shows the system. Calm system = laminar flow.
-   Many active organisms = structured attractors.
+   Many active mods = structured attractors.
    Faults = turbulence.
    ═══════════════════════════════════════════════════════════ */
 
@@ -127,14 +127,14 @@ function connectAnalyser(analyserNode) {
   _fftData  = new Uint8Array(analyserNode.frequencyBinCount);
 }
 
-/* ── Organism → attractor bridge ───────────────────────── */
+/* ── Mod → attractor bridge ───────────────────────── */
 function onSpawn(instanceId, x, y, accent) {
   if (!_engine || !_canvas) return;
   const W = _canvas.offsetWidth  || 1;
   const H = _canvas.offsetHeight || 1;
   const [wx, wy] = _pxToWorld(x, y, W, H);
 
-  /* Mass based on organism type (larger organisms = stronger attractors) */
+  /* Mass based on mod type (larger mods = stronger attractors) */
   const mass = 0.8 + Math.random() * 0.4;
   _engine.upsertAttractor(instanceId, wx, wy, 0, mass);
 }
@@ -150,7 +150,7 @@ function onMove(instanceId, x, y) {
 function onClose(instanceId) {
   if (!_engine) return;
   _engine.removeAttractor(instanceId);
-  /* Inject turbulence where the organism was */
+  /* Inject turbulence where the mod was */
   _engine.injectStress(
     (Math.random() - 0.5) * BOUND,
     (Math.random() - 0.5) * BOUND,

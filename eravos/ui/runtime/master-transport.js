@@ -3,7 +3,7 @@
    runtime/master-transport.js
 
    Single play/stop/record for the entire canvas.
-   All organisms that respond to seq:play / seq:stop sync here.
+   All mods that respond to seq:play / seq:stop sync here.
 
    RECORD: taps KERNEL.audio.dry via MediaStreamDestination,
    captures to ArrayBuffer, hands to timeline as a new clip.
@@ -92,7 +92,7 @@ function setBPM(bpm) {
   gBus().publish('kernel:bpm-change', { BPM: _bpm });
 }
 
-/* Listen for organisms that want to drive transport */
+/* Listen for mods that want to drive transport */
 function _wire() {
   gBus().subscribe('ui:transport-play',   () => play());
   gBus().subscribe('ui:transport-stop',   () => stop());

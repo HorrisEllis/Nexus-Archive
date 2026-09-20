@@ -22,7 +22,7 @@ payload:
     method: GET
     path: /
   intent: []
-  description: Main ERAVOS canvas — organisms, wires, transport
+  description: Main ERAVOS canvas — mods, wires, transport
   params: []
   tags:
     - eravos

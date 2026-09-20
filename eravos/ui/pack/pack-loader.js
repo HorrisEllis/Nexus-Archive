@@ -3,7 +3,7 @@
    pack/pack-loader.js
 
    Responsible for taking a zip ArrayBuffer and turning it
-   into a live mounted organism.
+   into a live mounted mod.
 
    API:
      PackLoader.install(arrayBuffer, opts)
@@ -19,15 +19,15 @@
      3. Request permissions (calls opts.onPermissionRequest)
      4. Check requires (capabilities)
      5. Evaluate engine.js into window scope
-     6. CatalogRegistry.register() → organism available in catalog
-     7. OrganismFactory.register() → organism spawnable
-     8. If opts.autoSpawn → OrganismFactory.spawn()
+     6. CatalogRegistry.register() → mod available in catalog
+     7. ModFactory.register() → mod spawnable
+     8. If opts.autoSpawn → ModFactory.spawn()
      9. Emit kernel:pack-installed
 
    Called by:
      NexusBridge          — when NEXUS delivers a built zip
      index.html drop zone — when user drops a zip file
-     CLI (future)         — node nexus-cli.js install-organism <zip>
+     CLI (future)         — node nexus-cli.js install-mod <zip>
    ═══════════════════════════════════════════════════════════ */
 
 window.PackLoader = (() => {
@@ -132,7 +132,7 @@ async function install(arrayBuffer, opts = {}) {
   const category     = manifest.domains?.[0] || manifest.category || 'Custom';
   const summary      = manifest.description || manifest.summary || '';
   const needs        = manifest.needs || [];
-  const engineGlobal = manifest.engine_global; // e.g. 'MyOrganismEngine'
+  const engineGlobal = manifest.engine_global; // e.g. 'MyModEngine'
 
   const def = {
     id, label, icon, accent, category, summary, needs,
@@ -153,12 +153,12 @@ async function install(arrayBuffer, opts = {}) {
     },
   };
 
-  // 8. Register in CatalogRegistry + OrganismFactory
+  // 8. Register in CatalogRegistry + ModFactory
   if (typeof CatalogRegistry !== 'undefined') {
     CatalogRegistry.register({ ...def, _def: def });
   }
-  if (typeof OrganismFactory !== 'undefined') {
-    OrganismFactory.register(id, def);
+  if (typeof ModFactory !== 'undefined') {
+    ModFactory.register(id, def);
   }
 
   // 9. Write to KERNEL ledger
@@ -168,9 +168,9 @@ async function install(arrayBuffer, opts = {}) {
   }
 
   // 10. Auto-spawn
-  if (autoSpawn && typeof OrganismFactory !== 'undefined') {
+  if (autoSpawn && typeof ModFactory !== 'undefined') {
     if (typeof bootAudio === 'function') bootAudio();
-    OrganismFactory.spawn(id, pos);
+    ModFactory.spawn(id, pos);
   }
 
   console.log(`[PackLoader] installed: ${label} (${id}) from ${source}`);

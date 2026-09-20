@@ -5,7 +5,7 @@
    Axioms (from ERAVOS.kernel.spec):
    K-1  Nothing exists until registered
    K-2  Nothing silently fails
-   K-3  No organism touches another directly
+   K-3  No mod touches another directly
    K-4  Every connection is a wire
    K-5  Wires owned by wire registry
    K-6  Every mutation recorded before it applies
@@ -23,7 +23,7 @@ window.KERNEL = (() => {
 
 /* ──────────────────────────────────────────────────────────
    BUS  — publish/subscribe event backbone
-   No organism talks to another organism directly.
+   No mod talks to another mod directly.
    Everything goes through here.
 ────────────────────────────────────────────────────────── */
 const _subs = {};
@@ -49,11 +49,11 @@ const bus = {
 /* ──────────────────────────────────────────────────────────
    FAULT  — named, loud, traced (K-2)
 ────────────────────────────────────────────────────────── */
-function _fault(code, organismId, message) {
-  const entry = { code, organismId, message, timestamp: Date.now() };
+function _fault(code, modId, message) {
+  const entry = { code, modId, message, timestamp: Date.now() };
   ledger._write({ type: 'fault_raised', ...entry });
   bus.publish('kernel:fault', entry);
-  console.error(`[ERAVOS FAULT ${code}]${organismId ? ' organism:'+organismId : ''} ${message}`);
+  console.error(`[ERAVOS FAULT ${code}]${modId ? ' mod:'+modId : ''} ${message}`);
   return entry;
 }
 
@@ -73,7 +73,7 @@ const ledger = {
 
 /* ──────────────────────────────────────────────────────────
    PERMISSION ENFORCER  (K-8)
-   Granted permissions stored per organism instance.
+   Granted permissions stored per mod instance.
    Kernel checks before any privileged operation.
 ────────────────────────────────────────────────────────── */
 const _grants = new Map(); /* instanceId → Set<permission> */
@@ -100,50 +100,50 @@ const permissions = {
 };
 
 /* ──────────────────────────────────────────────────────────
-   ORGANISM REGISTRY  (K-1, K-9)
+   MOD REGISTRY  (K-1, K-9)
    Everything that exists is registered here.
    If it's not here, it doesn't exist.
 ────────────────────────────────────────────────────────── */
-const _organisms = new Map(); /* instanceId → descriptor */
+const _mods = new Map(); /* instanceId → descriptor */
 
 const registry = {
   register(descriptor) {
     const { instanceId, id, label, hooks, permissions: perms, provides, requires } = descriptor;
-    if (_organisms.has(instanceId)) {
+    if (_mods.has(instanceId)) {
       _fault('MOUNT_006', instanceId, `duplicate instance id: ${instanceId}`);
       return false;
     }
-    _organisms.set(instanceId, {
+    _mods.set(instanceId, {
       ...descriptor,
       mountedAt: Date.now(),
       state: 'mounted',
     });
     permissions.grant(instanceId, perms || []);
-    ledger._write({ type: 'organism_mounted', instanceId, id, label });
-    bus.publish('kernel:organism-mounted', { instanceId, id, label, provides });
+    ledger._write({ type: 'mod_mounted', instanceId, id, label });
+    bus.publish('kernel:mod-mounted', { instanceId, id, label, provides });
     return true;
   },
 
   unregister(instanceId) {
-    const org = _organisms.get(instanceId);
+    const org = _mods.get(instanceId);
     if (!org) return false;
     wireRegistry.removeAll(instanceId);
     permissions.revoke(instanceId);
-    _organisms.delete(instanceId);
-    ledger._write({ type: 'organism_unmounted', instanceId, id: org.id });
-    bus.publish('kernel:organism-unmounted', { instanceId, id: org.id });
+    _mods.delete(instanceId);
+    ledger._write({ type: 'mod_unmounted', instanceId, id: org.id });
+    bus.publish('kernel:mod-unmounted', { instanceId, id: org.id });
     return true;
   },
 
-  get(instanceId)   { return _organisms.get(instanceId) || null; },
-  getById(id)       { return [..._organisms.values()].filter(o => o.id === id); },
-  all()             { return [..._organisms.values()]; },
-  has(instanceId)   { return _organisms.has(instanceId); },
+  get(instanceId)   { return _mods.get(instanceId) || null; },
+  getById(id)       { return [..._mods.values()].filter(o => o.id === id); },
+  all()             { return [..._mods.values()]; },
+  has(instanceId)   { return _mods.has(instanceId); },
 
   /* Check all required capabilities are satisfied */
   checkRequires(requires = []) {
     const provided = new Set();
-    _organisms.forEach(org => (org.provides || []).forEach(c => provided.add(c)));
+    _mods.forEach(org => (org.provides || []).forEach(c => provided.add(c)));
     const missing = requires.filter(r => !provided.has(r));
     return { ok: missing.length === 0, missing };
   },
@@ -151,9 +151,9 @@ const registry = {
 
 /* ──────────────────────────────────────────────────────────
    WIRE REGISTRY  (K-4, K-5, K-7)
-   Wires connect hooks between organisms.
+   Wires connect hooks between mods.
    Validates contract versions before going live.
-   Owned here — never by organisms.
+   Owned here — never by mods.
 ────────────────────────────────────────────────────────── */
 const _wires = new Map(); /* wireId → descriptor */
 
@@ -163,11 +163,11 @@ const wireRegistry = {
 
     /* Validate both endpoints exist */
     if (!registry.has(sourceInstanceId)) {
-      _fault('WIRE_002', sourceInstanceId, `source organism not found: ${sourceInstanceId}`);
+      _fault('WIRE_002', sourceInstanceId, `source mod not found: ${sourceInstanceId}`);
       return null;
     }
     if (!registry.has(targetInstanceId)) {
-      _fault('WIRE_002', targetInstanceId, `target organism not found: ${targetInstanceId}`);
+      _fault('WIRE_002', targetInstanceId, `target mod not found: ${targetInstanceId}`);
       return null;
     }
 
@@ -222,7 +222,7 @@ const wireRegistry = {
 
   get(wireId)    { return _wires.get(wireId) || null; },
   all()          { return [..._wires.values()]; },
-  forOrganism(instanceId) {
+  forMod(instanceId) {
     return [..._wires.values()].filter(
       w => w.sourceInstanceId === instanceId || w.targetInstanceId === instanceId
     );
@@ -237,23 +237,88 @@ let _masterGain = null;
 let _reverbNode = null;
 let _delayNode  = null;
 let _compressor = null;
+let _reverbSend = null;  /* gain: dry voices connect here to reach the reverb */
+let _reverbRet  = null;  /* gain: reverb tail level into the master chain */
+let _delaySend  = null;  /* gain: dry voices connect here to reach the delay */
+let _delayRet   = null;  /* gain: delay tail level into the master chain */
+let _delayFB    = null;  /* gain: feedback loop amount */
+
+function _buildImpulse(AC, seconds = 2.4, decay = 3.2) {
+  /* Procedurally generated stereo impulse response — no external IR file
+     available in a file:// pack, so synthesize exponentially-decaying
+     noise per channel (classic algorithmic-reverb IR technique). */
+  const len = Math.max(1, Math.floor(AC.sampleRate * seconds));
+  const buf = AC.createBuffer(2, len, AC.sampleRate);
+  for (let ch = 0; ch < 2; ch++) {
+    const data = buf.getChannelData(ch);
+    for (let i = 0; i < len; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, decay);
+    }
+  }
+  return buf;
+}
 
 const audio = {
   get AC() { return _AC; },
   get dry() { return _masterGain; },
+  get reverbSend() { return _reverbSend; },
+  get delaySend()  { return _delaySend; },
 
   boot() {
     if (_AC) return _AC;
     _AC = new (window.AudioContext || window.webkitAudioContext)();
     _compressor  = _AC.createDynamicsCompressor();
     _masterGain  = _AC.createGain(); _masterGain.gain.value = 0.88;
-    _reverbNode  = _AC.createConvolver();
-    _delayNode   = _AC.createDelay(2.0);
     _masterGain.connect(_compressor);
     _compressor.connect(_AC.destination);
+
+    /* ── Reverb send bus: send gain → convolver → return gain → compressor ── */
+    _reverbNode  = _AC.createConvolver();
+    _reverbNode.buffer = _buildImpulse(_AC);
+    _reverbSend  = _AC.createGain(); _reverbSend.gain.value = 1;
+    _reverbRet   = _AC.createGain(); _reverbRet.gain.value  = 0.35;
+    _reverbSend.connect(_reverbNode);
+    _reverbNode.connect(_reverbRet);
+    _reverbRet.connect(_compressor);
+
+    /* ── Delay send bus: send gain → delay → return gain → compressor,
+       with a feedback loop (delay → feedback gain → delay) for repeats ── */
+    _delayNode   = _AC.createDelay(2.0); _delayNode.delayTime.value = 0.32;
+    _delaySend   = _AC.createGain(); _delaySend.gain.value = 1;
+    _delayRet    = _AC.createGain(); _delayRet.gain.value  = 0.28;
+    _delayFB     = _AC.createGain(); _delayFB.gain.value   = 0.35;
+    _delaySend.connect(_delayNode);
+    _delayNode.connect(_delayFB);
+    _delayFB.connect(_delayNode);
+    _delayNode.connect(_delayRet);
+    _delayRet.connect(_compressor);
+
     bus.publish('kernel:audio-ready', { sampleRate: _AC.sampleRate });
     return _AC;
   },
+
+  /* Master FX parameter access — used by the Master FX mod */
+  setReverb({ mix, time, decay } = {}) {
+    if (!_AC) this.boot();
+    if (mix  != null) _reverbRet.gain.value = mix;
+    if (time != null || decay != null) _reverbNode.buffer = _buildImpulse(_AC, time ?? 2.4, decay ?? 3.2);
+  },
+  setDelay({ mix, time, feedback } = {}) {
+    if (!_AC) this.boot();
+    if (mix      != null) _delayRet.gain.value = mix;
+    if (time     != null) _delayNode.delayTime.setTargetAtTime(time, _AC.currentTime, 0.01);
+    if (feedback != null) _delayFB.gain.value = Math.min(0.92, feedback);
+  },
+  setCompressor({ threshold, ratio, attack, release, knee } = {}) {
+    if (!_AC) this.boot();
+    if (threshold != null) _compressor.threshold.setTargetAtTime(threshold, _AC.currentTime, 0.01);
+    if (ratio     != null) _compressor.ratio.setTargetAtTime(ratio, _AC.currentTime, 0.01);
+    if (attack    != null) _compressor.attack.setTargetAtTime(attack, _AC.currentTime, 0.01);
+    if (release   != null) _compressor.release.setTargetAtTime(release, _AC.currentTime, 0.01);
+    if (knee      != null) _compressor.knee.setTargetAtTime(knee, _AC.currentTime, 0.01);
+  },
+  get compressor() { return _compressor; },
+  get masterGainNode() { return _masterGain; },
 
   osc(freq = 440, type = 'sine') {
     if (!_AC) this.boot();
@@ -278,6 +343,8 @@ const audio = {
   send(node, withReverb = false, withDelay = false, withComp = false) {
     if (!_masterGain) this.boot();
     node.connect(withComp ? _compressor : _masterGain);
+    if (withReverb) node.connect(_reverbSend);
+    if (withDelay)  node.connect(_delaySend);
   },
   analyser() {
     if (!_AC) this.boot();
@@ -336,7 +403,7 @@ const manifestParser = {
 /* ──────────────────────────────────────────────────────────
    ZIP IMPORTER  — handles drop-in zip install
    Reads manifest.json, validates, checks permissions,
-   routes to organism spawner.
+   routes to mod spawner.
 ────────────────────────────────────────────────────────── */
 const zipImporter = {
   async install(arrayBuffer, dropPos, onPermissionRequest) {
@@ -400,8 +467,8 @@ const zipImporter = {
 
 /* ──────────────────────────────────────────────────────────
    INTERACTION CONTRACT BRIDGE
-   Validates event schemas on the UI ↔ organism boundary.
-   UI publishes ui:* events. Organism publishes org:* events.
+   Validates event schemas on the UI ↔ mod boundary.
+   UI publishes ui:* events. Mod publishes org:* events.
    Both validated here before delivery.
 ────────────────────────────────────────────────────────── */
 const _uiSchemas = new Map(); /* eventType → schema */

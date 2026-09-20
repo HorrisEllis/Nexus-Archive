@@ -8,20 +8,20 @@ function _c(id,method,path,desc,opts={}){
     permissions:opts.permissions||['system'],hooks:opts.hooks||{}};
 }
 const components=[
-  _c('canvas','GET','/','Main ERAVOS canvas — organisms, wires, transport',{grammar:['eravos','canvas','open canvas']}),
-  _c('organism.spawn','POST','/api/organisms','Spawn an organism by id onto the canvas',{
-    grammar:['eravos spawn','spawn organism'],
+  _c('canvas','GET','/','Main ERAVOS canvas — mods, wires, transport',{grammar:['eravos','canvas','open canvas']}),
+  _c('mod.spawn','POST','/api/mods','Spawn an mod by id onto the canvas',{
+    grammar:['eravos spawn','spawn mod'],
     hooks:{
-      in:[{id:'eravos.organism.spawn.receive',intent:['compose','visualize','spawn'],contract:'nexus-interaction-contract-v1::eravos',tags:['spawn']}],
-      out:[{id:'eravos.organism.spawn.complete',wires_to:['cortex.raid.feedback'],tags:['spawned']}]
+      in:[{id:'eravos.mod.spawn.receive',intent:['compose','visualize','spawn'],contract:'nexus-interaction-contract-v1::eravos',tags:['spawn']}],
+      out:[{id:'eravos.mod.spawn.complete',wires_to:['cortex.raid.feedback'],tags:['spawned']}]
     }
   }),
-  _c('organism.list','GET','/api/organisms','List all mounted organisms',{grammar:['eravos organisms']}),
-  _c('organism.remove','DELETE','/api/organisms/:uuid','Remove an organism'),
-  _c('wire.connect','POST','/api/wires','Connect two organism hooks',{grammar:['eravos wire']}),
+  _c('mod.list','GET','/api/mods','List all mounted mods',{grammar:['eravos mods']}),
+  _c('mod.remove','DELETE','/api/mods/:uuid','Remove an mod'),
+  _c('wire.connect','POST','/api/wires','Connect two mod hooks',{grammar:['eravos wire']}),
   _c('wire.list','GET','/api/wires','List all wires'),
-  _c('catalog.list','GET','/api/catalog','Available organisms from registry',{grammar:['eravos catalog']}),
-  _c('pack.install','POST','/api/pack/install','Install a .zip organism pack',{grammar:['eravos install']}),
+  _c('catalog.list','GET','/api/catalog','Available mods from registry',{grammar:['eravos catalog']}),
+  _c('pack.install','POST','/api/pack/install','Install a .zip mod pack',{grammar:['eravos install']}),
   _c('transport.play','POST','/api/transport/play','Start playback',{grammar:['eravos play']}),
   _c('transport.stop','POST','/api/transport/stop','Stop playback',{grammar:['eravos stop']}),
   _c('health','GET','/health','ERAVOS health'),
@@ -29,10 +29,10 @@ const components=[
 ];
 module.exports={
   systemId:NS,version:V,port:3751,
-  label:'ERAVOS',purpose:'Sovereign canvas. Organisms, wires, audio, spatial.',
+  label:'ERAVOS',purpose:'Sovereign canvas. Mods, wires, audio, spatial.',
   components,
   events:{
-    emits:['eravos.booted','eravos.organism.spawned','eravos.organism.removed','eravos.wire.connected','eravos.wire.disconnected','eravos.pack.queued','eravos.transport.play','eravos.transport.stop'],
-    handles:['guardian.organism-queue.push','raid.dispatch.eravos','orchestrator.shutdown'],
+    emits:['eravos.booted','eravos.mod.spawned','eravos.mod.removed','eravos.wire.connected','eravos.wire.disconnected','eravos.pack.queued','eravos.transport.play','eravos.transport.stop'],
+    handles:['guardian.mod-queue.push','raid.dispatch.eravos','orchestrator.shutdown'],
   },
 };

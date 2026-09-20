@@ -1,12 +1,22 @@
 spec:
   meta:
     name:        eravos
-    version:     3.0.0
+    version:     3.17.0   # §2026-09-20 bump — app layer (mods/runtime/specs/
+                          # kernel/behaviors/workspace/index.html/manifest.json)
+                          # replaced wholesale with the v3-17 standalone catalog
+                          # export. server.js, config.js, registry-components.js,
+                          # data/ (incl. its own per-system ledger), and the
+                          # nexus-taxonomy schemas (schema.component/system/node/
+                          # hook/capability/command) were NOT touched — the
+                          # catalog doesn't know about Nexus and never should
+                          # overwrite the integration layer. Same pass renamed
+                          # "organism" -> "mod" everywhere in this system, code
+                          # and paths, catalog and root (0 residual references).
     foundation:  nexus-system-foundation@1.0.0
     port:        3751
     uuid:        nexus-eravos-v3-0000-2026-0627-jamesbrooks-001
     purpose: >
-      Sovereign canvas system. Organisms, wires, audio, spatial transport.
+      Sovereign canvas system. Mods, wires, audio, spatial transport.
       Moved from ui/eravos/ to its own sovereign service (Phase 74).
 
   # 🔴 This spec did not exist before this pass — eravos had no docs/eravos.spec
@@ -21,7 +31,7 @@ spec:
   # real, running sovereign systems aren't in it. Suggested addition:
   #   services: {
   #     ...
-  #     eravos:   '3.0.0',   // :3751 — sovereign canvas, organisms/wires/transport
+  #     eravos:   '3.0.0',   // :3751 — sovereign canvas, mods/wires/transport
   #     copilot:  '<check copilot/server.js for its real version string>',
   #   }
   # Not applied here — that file is yours to edit, this just documents the gap.
@@ -34,30 +44,30 @@ spec:
   events:
     emits:
       - "eravos.booted"
-      - "eravos.organism.spawned"
-      - "eravos.organism.removed"
+      - "eravos.mod.spawned"
+      - "eravos.mod.removed"
       - "eravos.wire.connected"
       - "eravos.wire.disconnected"
       - "eravos.pack.queued"
       - "eravos.transport.play"
       - "eravos.transport.stop"
     handles:
-      - "guardian.organism-queue.push"
+      - "guardian.mod-queue.push"
       - "raid.dispatch.eravos"
       - "orchestrator.shutdown"
 
   routes:
     external:
-      - { method: GET,    path: /,                    description: "Main ERAVOS canvas — organisms, wires, transport" }
+      - { method: GET,    path: /,                    description: "Main ERAVOS canvas — mods, wires, transport" }
       - { method: GET,    path: /health,               description: "ERAVOS health" }
       - { method: GET,    path: /contract,             description: "ERAVOS interaction contract" }
-      - { method: POST,   path: /api/organisms,        description: "Spawn an organism by id onto the canvas" }
-      - { method: GET,    path: /api/organisms,        description: "List all mounted organisms" }
-      - { method: DELETE, path: "/api/organisms/:uuid", description: "Remove an organism" }
-      - { method: POST,   path: /api/wires,            description: "Connect two organism hooks" }
+      - { method: POST,   path: /api/mods,        description: "Spawn an mod by id onto the canvas" }
+      - { method: GET,    path: /api/mods,        description: "List all mounted mods" }
+      - { method: DELETE, path: "/api/mods/:uuid", description: "Remove an mod" }
+      - { method: POST,   path: /api/wires,            description: "Connect two mod hooks" }
       - { method: GET,    path: /api/wires,             description: "List all wires" }
-      - { method: GET,    path: /api/catalog,          description: "Available organisms from registry" }
-      - { method: POST,   path: /api/pack/install,      description: "Install a .zip organism pack" }
+      - { method: GET,    path: /api/catalog,          description: "Available mods from registry" }
+      - { method: POST,   path: /api/pack/install,      description: "Install a .zip mod pack" }
       - { method: POST,   path: /api/transport/play,    description: "Start playback" }
       - { method: POST,   path: /api/transport/stop,    description: "Stop playback" }
 
@@ -66,10 +76,10 @@ spec:
       - { id: "eravos.canvas",            route: { method: GET,    path: "/" } }
       - { id: "eravos.health",            route: { method: GET,    path: "/health" } }
       - { id: "eravos.contract",          route: { method: GET,    path: "/contract" } }
-      - { id: "eravos.organism.spawn",    route: { method: POST,   path: "/api/organisms" },
+      - { id: "eravos.mod.spawn",    route: { method: POST,   path: "/api/mods" },
           hooks: { out: ["cortex.raid.feedback"] } }
-      - { id: "eravos.organism.list",     route: { method: GET,    path: "/api/organisms" } }
-      - { id: "eravos.organism.remove",   route: { method: DELETE, path: "/api/organisms/:uuid" } }
+      - { id: "eravos.mod.list",     route: { method: GET,    path: "/api/mods" } }
+      - { id: "eravos.mod.remove",   route: { method: DELETE, path: "/api/mods/:uuid" } }
       - { id: "eravos.wire.connect",      route: { method: POST,   path: "/api/wires" } }
       - { id: "eravos.wire.list",         route: { method: GET,    path: "/api/wires" } }
       - { id: "eravos.catalog.list",      route: { method: GET,    path: "/api/catalog" } }
@@ -78,10 +88,10 @@ spec:
       - { id: "eravos.transport.stop",    route: { method: POST,   path: "/api/transport/stop" } }
 
   # ── AX-008 (foundation addendum v1.1.0) ────────────────────────────────────
-  # 🔴 OPEN — only organism.spawn has a hooks.out, and it wires to
+  # 🔴 OPEN — only mod.spawn has a hooks.out, and it wires to
   # cortex.raid.feedback, not copilot, and not verified to chain onward
   # (same caveat as emerge.spec — needs a live check, not an assumption).
-  # eravos.organism.spawned / removed / wire.connected — three of the eight
+  # eravos.mod.spawned / removed / wire.connected — three of the eight
   # real emitted events — have no component wiring them anywhere.
 
   ui:
@@ -89,6 +99,6 @@ spec:
     hotswap: true
 
   tests:
-    - "organism.spawn rejects an unknown organism id with explicit error, never silent pass"
+    - "mod.spawn rejects an unknown mod id with explicit error, never silent pass"
     - "wire.connect rejects a wire between two hooks with incompatible schemas"
-    - "pack.install validates zip contents against organism schema before mounting"
+    - "pack.install validates zip contents against mod schema before mounting"

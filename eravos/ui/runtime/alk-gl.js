@@ -2,7 +2,7 @@
    ALK-GL — WebGL2 Particle Field Engine  v1.9.0
    Adapted for ERAVOS: ES6 exports → window.ALKGL
    Original: ES6 module with MediaPipe blendshape support.
-   ERAVOS usage: organisms are attractors, audio drives field.
+   ERAVOS usage: mods are attractors, audio drives field.
    ═══════════════════════════════════════════════════════════ */
 window.ALKGL = (() => {
 'use strict';

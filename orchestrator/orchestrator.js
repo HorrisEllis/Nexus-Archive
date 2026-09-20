@@ -442,12 +442,30 @@ const LEDGER_DIR  = path.join(ROOT, 'data', 'ledger');
 const LEDGER_FILE = path.join(LEDGER_DIR, 'orchestrator.jsonl');
 
 // §LAW II — module-scope event ledger: every ledgerWrite goes here first
-let _eventLedger = null;
-try {
-  if (createCFRLedger) {
-    _eventLedger = createCFRLedger({
-      ledgerDir: LEDGER_DIR,
-      systemId: 'orchestrator',
+//
+// §SPLIT 2026-09-20 — James: "whatever system generates it, it is in charge
+// of holding it." Previously ONE createCFRLedger instance lived at
+// data/ledger/ and every event crossing the bus — regardless of which of
+// the 15 real systems actually emitted it — was written into that single
+// shared event_log.jsonl/cfr_state.json/event_stats.json. That's the pile-up:
+// not an abnormal write rate (measured ~0.04 events/sec average, ~1 pulse
+// per system per 5min — sane), but one un-rotated global sink nothing ever
+// split. Fixed to match the pattern guardian/server.js already uses
+// correctly for its own CFR ledger (data/guardian/ledger/cfr/): one CFR
+// ledger instance PER SYSTEM, lazily created on first real write, living at
+// data/<system>/ledger/cfr/. Each system's coherence/tension/sigma is now
+// computed over only its own events, not a blended global stream.
+const _eventLedgers = new Map(); // system -> CFR ledger instance
+
+function _getEventLedger(system) {
+  if (!createCFRLedger) return null;
+  if (_eventLedgers.has(system)) return _eventLedgers.get(system);
+  const dir = path.join(ROOT, 'data', system, 'ledger', 'cfr');
+  let ledger = null;
+  try {
+    ledger = createCFRLedger({
+      ledgerDir: dir,
+      systemId: system,
       onGap: (gap) => {
         // §CFR-WIRE-02: mirror cortex/boot.js's gap routing — tension signals
         // are field observations, not actionable gaps, so they're dropped
@@ -455,14 +473,26 @@ try {
         try {
           const SIGNAL_TYPES = new Set(['DELTA.TENSION','delta.tension','tension','cfr.tension']);
           if (SIGNAL_TYPES.has(gap.type)) return;
-          console.warn(`[orchestrator][cfr] ${gap.type}: ${gap.message}`);
+          console.warn(`[orchestrator][cfr:${system}] ${gap.type}: ${gap.message}`);
         } catch(_) {}
       },
     });
-    _eventLedger.open();
-    _eventLedger.startAutoSave(60000);
+    ledger.open();
+    ledger.startAutoSave(60000);
+  } catch (e) {
+    console.warn(`[orchestrator] cfr ledger init failed for system=${system}:`, e.message);
+    return null;
   }
-} catch(e) { console.warn('[orchestrator] cfr ledger init failed:', e.message); }
+  _eventLedgers.set(system, ledger);
+  return ledger;
+}
+
+// Backward-compat alias — orchestrator's OWN ledger instance, for the debug/
+// admin surfaces below (handleCFRRoute, getAllBaselines, getAllStats,
+// scanInvariants) that were already scoped to systemId:'orchestrator' before
+// this split and don't need to change: they report on orchestrator itself,
+// not on the whole ecosystem.
+const _eventLedger = _getEventLedger('orchestrator');
 
 // In-memory ring (fast reads)
 // §FIX 2026-09-16 — 'clear-glass' added. Real, pre-existing gap: this dict
@@ -503,7 +533,11 @@ try {
 
 function ledgerWrite(system, type, payload = {}) {
   // §LAW II — event-ledger writes first, before anything else sees this event
-  if (_eventLedger) {
+  // §SPLIT 2026-09-20 — routed to the emitting system's OWN ledger instance,
+  // not the shared orchestrator one. `system` here is already the true
+  // resolved origin (every real call site passes it explicitly).
+  const ledger = _getEventLedger(system);
+  if (ledger) {
     // §CAUSAL HYGIENE (ported from v44 2026-07-30) — a causedBy equal to the
     // emitting system's own name is NOT a causal edge; it's a self-loop
     // (status/heartbeat pings like guardian.ncp.status with causedBy:'guardian')
@@ -511,7 +545,7 @@ function ledgerWrite(system, type, payload = {}) {
     // One guard at the choke point covers all systems (§1.2 — never a false edge).
     const rawCause = payload.causedBy || null;
     const causedBy = (rawCause === system) ? null : rawCause;
-    _eventLedger.record(type, payload, { source: system, causedBy });
+    ledger.record(type, payload, { source: system, causedBy });
   }
   const entry = { _system: system, _ts: Date.now(), type, payload };
   const ring  = LEDGER[system] || (LEDGER[system] = []);
@@ -3314,8 +3348,10 @@ try {
     (system, type, payload) => {
       LEDGER[system] = LEDGER[system] || [];
       LEDGER[system].push({ type, payload, ts: Date.now() });
-      if (_eventLedger) {
-        try { _eventLedger.record(type, payload, { source: system, causedBy: null }); }
+      // §SPLIT 2026-09-20 — routed per-system, same as ledgerWrite() above.
+      const ledger = _getEventLedger(system);
+      if (ledger) {
+        try { ledger.record(type, payload, { source: system, causedBy: null }); }
         catch(e) { console.error('[orchestrator] §1.2 ledger.record:', e.message); }
       }
     },
