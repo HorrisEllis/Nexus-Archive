@@ -16,7 +16,10 @@
   },
   "cos": {
     "compartmentId": "cos.nexus.idearium",
-    "axioms": []
+    "axioms": [
+      "cos is the source of all compartments. nothing less."
+    ],
+    "_note_2026_09_20": "This compartmentId (identity-level, per-system) is NOT what 'idearium uses cos' turned out to mean in practice — confirmed with James directly. Real target: idearium spec builds / spawned compilers-workers become real cos compartments (idearium/spec-engine/compiler-t0.js emitStructure(), via lib/agent-tools/tools/sandbox/cos-compartment.js, the same tool copilot already uses), going through cos/host's real SISO gate pipeline, not skipped. This field is left as the shared governing axiom for if/when system-identity-level compartments are built later."
   },
   "runtime": {
     "entry": "idearium/api/index.js",

@@ -249,7 +249,41 @@ export async function emitStructure(specUuid, opts = {}) {
   try { ordered = _topoOrder(files); }
   catch (e) { return { ok: false, error: e.message, tree: [], written: 0, failed: 0, total: files.length }; }
 
-  const seeded = await _seedFromCompartment(opts.compartmentName);
+  // §BUILT 2026-09-20 — James: "idearium's own sub-work — spec builds,
+  // spawned compilers/workers — becomes real cos compartments, going
+  // through the gauntlet normally." Was: opts.compartmentName only ever
+  // SEEDS from an existing compartment someone else already created (see
+  // _seedFromCompartment above) — this build itself never became one.
+  // Real cos_compartment tool reused (same one copilot already uses,
+  // lib/agent-tools/tools/sandbox/cos-compartment.js), which itself
+  // dispatches through cos/host's real SISO gate pipeline
+  // (cos/cli/commands/create.js — "gate runs before emit() returns",
+  // not skipped or short-circuited). Non-fatal on failure: a build this
+  // spec engine already knows how to run without a compartment (every
+  // build before this one) must not start failing because COS is
+  // unavailable — same honest-default posture _seedFromCompartment
+  // itself already uses one line below.
+  let compartmentName = opts.compartmentName || null;
+  if (!compartmentName) {
+    try {
+      const cosCompartment = _require('../../lib/agent-tools/tools/sandbox/cos-compartment.js');
+      const created = await cosCompartment.execute({
+        action: 'create',
+        name: `idearium-spec-${specUuid}`,
+        purpose: `idearium spec build — ${specUuid}`,
+      });
+      if (created.ok) {
+        compartmentName = `idearium-spec-${specUuid}`;
+        console.log(`[compiler-t0] real cos compartment '${compartmentName}' created for this build (gate pipeline, not skipped)`);
+      } else {
+        console.warn(`[compiler-t0] cos compartment creation failed (non-fatal, build proceeds without one): ${created.error}`);
+      }
+    } catch (e) {
+      console.warn(`[compiler-t0] cos compartment creation threw (non-fatal, build proceeds without one): ${e.message}`);
+    }
+  }
+
+  const seeded = await _seedFromCompartment(compartmentName);
   const tree = [];
   const failedPaths = [];
   const sectionIdForPath = new Map(); // filled as each real chunk is created, in bottom-up order — a later file's dependsOn (its dependencies, already emitted first by definition of topo order) can always be translated by the time it's needed
@@ -293,7 +327,7 @@ export async function emitStructure(specUuid, opts = {}) {
   const fresh = loadSpec(specUuid);
   chunkNodes.writeManifestChunkNodes(fresh, { repoUuid: opts.repoUuid || null });
 
-  return { ok: true, tree, written, failed: failedPaths.length, total: files.length, error: failedPaths.length ? `${failedPaths.length} file(s) failed: ${failedPaths.join(', ')}` : undefined };
+  return { ok: true, tree, written, failed: failedPaths.length, total: files.length, compartmentName, error: failedPaths.length ? `${failedPaths.length} file(s) failed: ${failedPaths.join(', ')}` : undefined };
 }
 
 export { parseBuildOrder, _placeholderFor as placeholderFor };

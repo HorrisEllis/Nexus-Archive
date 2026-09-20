@@ -154,6 +154,27 @@ systems:
     provides: [browsing, autofill, downloads, provider_hosting, fingerprint]
     depends:  [copilot]
 
+  cos:
+    port:    null   # CLI/library system by deliberate design — see cos/spec/cos.spec's own §meta note. No HTTP surface of its own; cos/vaultd/server.js is a separate, optional daemon for the vault subsystem only.
+    entry:   cos/host/index.js
+    cli:     cos/cli/index.js
+    role:    compartment_os
+    purpose: |
+      Isolated sandboxes with their own process/network/runtime boundary,
+      real persistent state on disk, real snapshots. 16 archetypes, 11
+      blueprints. "COS-2: CLI first. COS-13: Host service is the
+      authority. CLI is a client of the host." Any process calls
+      createHost() (cos/host/index.js) directly, in-process — multiple
+      processes share state via the same on-disk file, not a network
+      call. James, 2026-09-20: "cos is the source of all compartments,
+      nothing less." Real, current usage: idearium's spec-engine
+      (compiler-t0.js) creates one real compartment per spec build,
+      through the real gate pipeline — not idearium itself as a
+      compartment (that would mean short-circuiting the birth gates for
+      an always-on trusted system, which is not what this pass built).
+    provides: [compartments, sandboxing, snapshots, archetypes, blueprints, gates]
+    depends:  []
+
 # ── Providers ─────────────────────────────────────────────────────────────────
 
 providers:
