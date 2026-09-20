@@ -302,6 +302,15 @@ const SUITES = [
   // §2026-09-19 — MCO1 graph layer + the brace-balance false-positive it
   // surfaced (6 of 407 real files wrongly excluded from the map).
   'test-repo-graph.js',
+  // §2026-09-20 — MCO2 (verification L4-L8; code landed in 5e082f4 but its
+  // test was never registered here) and MCO3 (repo snapshots, §33).
+  'test-mco2-verify-deepening.js',
+  'test-mco3-repo-snapshot.js',
+  'test-mco3-versionium-tab.js',
+  'test-mcob-file-versioning.js',
+  'test-mcob-snapshot-restore.js',
+  'test-mcoc-import-baseline.js',
+  'test-mcof-config-gate.js',
   'test-extract-code.js',
   'test-languages.js',
   'test-loom-phasemap-status.js',

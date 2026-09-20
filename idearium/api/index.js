@@ -21,7 +21,7 @@ import { spawnSync, spawn as spawnProc } from 'child_process';
 // §WIRED — real, distinct config, not inline constants. See
 // idearium/config.js's own header. Matches the established pattern.
 import config from '../config.js';
-import { getConfig as getIdeariumConfig, setConfig as setIdeariumConfig } from '../lib/config.js';
+import { getConfig as getIdeariumConfig, setConfig as setIdeariumConfig, getValue as getIdeariumValue } from '../lib/config.js';
 const _require = createRequire(import.meta.url);
 
 // §AX-010 2026-07-10 — idearium hardcoded 127.0.0.1:9000 in four places
@@ -511,6 +511,100 @@ async function readBody(req) {
 
 // ─── Response helpers ─────────────────────────────────────────────────────────
 
+// §MCO3 2026-09-20 — lib/nexus-client.js REJECTS on any non-2xx and on an
+// unreachable system (it never resolves {error}), so a bare await lands in
+// the outer catch as a generic 500. Repo snapshot routes need to tell "no
+// such commit" (404) from "versionium is down" (502).
+async function _versionium(method, urlPath, body, timeout) {
+  try {
+    const opts = timeout ? { timeout } : undefined;
+    const data = method === 'GET'
+      ? await _nexusClient.get('versionium', urlPath, opts)
+      : await _nexusClient.post('versionium', urlPath, body, opts);
+    return { ok: true, data };
+  } catch (e) {
+    const m = /-> HTTP (\d{3})/.exec(e.message);
+    return { ok: false, status: m ? parseInt(m[1], 10) : 502, error: e.message };
+  }
+}
+
+// §MCO-B 2026-09-20 — versionium's per-file layer as the two shapes
+// idearium/repo/snapshot.js and snapshot-restore.js take. Both throw the real
+// error text on any failure; neither invents a fallback.
+async function _vcall(method, urlPath, body, timeout) {
+  const r = await _versionium(method, urlPath, body, timeout);
+  if (!r.ok) throw new Error(r.error);
+  if (r.data && r.data.ok === false) throw new Error(r.data.error || 'versionium refused');
+  return r.data;
+}
+function _fileLayers(repoUuid) {
+  const q = (o) => new URLSearchParams(o).toString();
+  const limits = () => _vcall('GET', '/api/versionium/files/limits');
+  return {
+    // for taking a snapshot
+    fileLayer: {
+      limits,
+      plan: (tree) => _vcall('POST', '/api/versionium/files/plan', { repository: repoUuid, tree }, 30000),
+      record: ({ commitId, tree, contents, mode }) => _vcall('POST', '/api/versionium/files/record', { repository: repoUuid, commitId, tree, contents, mode }, 120000),
+    },
+    // for restoring from one
+    layer: {
+      limits,
+      tree: (commitId) => _vcall('GET', `/api/versionium/files/tree?${q({ repository: repoUuid, commitId })}`, undefined, 30000),
+      content: async (commitId, p) => {
+        const d = await _vcall('GET', `/api/versionium/files/content?${q({ repository: repoUuid, commitId, path: p })}`, undefined, 30000);
+        return { path: d.path, sha256: d.sha256, bytes: Buffer.from(d.content_b64, 'base64') };
+      },
+    },
+  };
+}
+
+// pipeline.snapshot_mode ('delta' | 'full') was declared in the idearium config
+// from the start and read by nothing; MCO-B is its reader.
+function _snapshotMode() {
+  try { const m = getIdeariumValue('pipeline.snapshot_mode'); return m === 'full' ? 'full' : 'delta'; }
+  catch (_) { return 'delta'; }
+}
+
+// §MCO-C 2026-09-20 — the baseline hook. Called after a repo's first index
+// (archive import, project import, chunk run). Never awaited by callers and
+// never throws: see idearium/repo/import-baseline.js.
+function _baselineSnapshot(repoUuid, reason) {
+  return (async () => {
+    try {
+      const repo = getRepoLayer().get(repoUuid);
+      const dir = _repoDiskDir(repoUuid);
+      if (!repo || !dir) return { status: 'failed', reason, code: 'NO_REPO', error: 'repo or directory not resolvable' };
+      const { ensureBaselineSnapshot } = await import('../repo/import-baseline.js');
+      const { commitRepoSnapshot, summarizeRepoSnapshots, SNAPSHOT_SYSTEM } = await import('../repo/snapshot.js');
+      let enabled = true;
+      try { enabled = getIdeariumValue('snapshots.import_baseline') !== false; } catch (_) { enabled = true; }
+      const { fileLayer } = _fileLayers(repoUuid);
+      const r = await ensureBaselineSnapshot({
+        repo, repoDir: dir, enabled, reason,
+        listSnapshots: async () => {
+          const h = await _vcall('GET', `/api/versionium/history?system=${encodeURIComponent(SNAPSHOT_SYSTEM)}`);
+          return summarizeRepoSnapshots(h.commits || [], repoUuid);
+        },
+        takeSnapshot: ({ message }) => commitRepoSnapshot({
+          repo: getRepoLayer().get(repoUuid) || repo, repoDir: dir, message, fileLayer, snapshotMode: _snapshotMode(),
+          commit: async (payload) => {
+            const c = await _versionium('POST', '/api/versionium/commit', payload);
+            if (!c.ok) return { error: c.error };
+            return c.data?.commit || { error: c.data?.error || 'versionium returned no commit' };
+          },
+        }),
+      });
+      getIdeaOS().emit('idearium.repo.snapshot.baseline', { repoUuid, reason, status: r.status, commitId: r.commitId || null, error: r.error || null, code: r.code || null });
+      if (r.status === 'failed') console.warn(`[api] baseline snapshot for ${repoUuid} (${reason}) did not complete: ${r.code}: ${r.error}`);
+      return r;
+    } catch (e) {
+      console.warn(`[api] baseline snapshot for ${repoUuid} (${reason}) threw (non-fatal): ${e.message}`);
+      return { status: 'failed', reason, code: 'THREW', error: e.message };
+    }
+  })();
+}
+
 function ok(res, data) {
   res.writeHead(200, { 'Content-Type': 'application/json', ...CORS });
   res.end(JSON.stringify({ ok: true, ...data }));
@@ -800,6 +894,13 @@ function matchRoute(method, url) {
     // import can navigate you to the repo first and chunk after. Emits
     // idearium.repo.chunk.* over SSE so the UI can toast real progress.
     ['POST',   ['api','repos',    ':uuid','chunk'],         'repo.chunk.run'],
+    // §MCO3 2026-09-20 — repository snapshots (§33). idearium/repo/snapshot.js
+    // builds the nine-field record and commits it to versionium under its own
+    // system ('idearium.repo'), never 'idearium' — see idearium.repo-snapshot.spec.
+    ['POST',   ['api','repos',    ':uuid','snapshot'],      'repo.snapshot.commit'],
+    ['GET',    ['api','repos',    ':uuid','snapshots'],     'repo.snapshot.list'],
+    ['GET',    ['api','repos',    ':uuid','snapshots',':commitId'], 'repo.snapshot.show'],
+    ['POST',   ['api','repos',    ':uuid','snapshots',':commitId','restore'], 'repo.snapshot.restore'],
     // §CI 2026-09-20 — CI/CD per compartment. cos/ci/index.js owns the
     // pipeline; these are idearium's surface onto it, scoped to a repo
     // (which is what carries the compartmentId).
@@ -1697,6 +1798,9 @@ async function handle(req, res, route, query, body) {
         const finalized = await pc.finalizeContainer({ containerUuid: container.containerUuid, repoUuid: result.repo.uuid, repoDir: mat.dir, fileCount: included.length });
         if (!finalized.ok) console.warn(`[api] repo.import-archive: container finalize failed for ${container.containerUuid}: ${finalized.error}`);
       }
+      // §MCO-C — baseline snapshot with the files, after finalize so the repo's
+      // own .git (written by finalizeContainer) is there for the record to see.
+      if (!mat.error && pipeline && pipeline.state !== 'FAULT') void _baselineSnapshot(result.repo.uuid, 'import-archive');
 
       // §CHECKLIST — see _readPipelineArtifacts' own header. mat.dir is
       // only valid when materialize() didn't error, matching the guard
@@ -1892,6 +1996,9 @@ async function handle(req, res, route, query, body) {
       const result = await pc.finalizeContainer({
         containerUuid: params.uuid, repoUuid, repoDir: mat.dir, fileCount: realFileCount,
       });
+      // §MCO-C — baseline after finalize (so .git exists). A deferred import has
+      // no index yet; its baseline is taken when POST /api/repos/:uuid/chunk finishes.
+      if (!body.deferChunking && pipeline && pipeline.state !== 'FAULT') void _baselineSnapshot(repoUuid, 'project-import');
       // §CHECKLIST — see _readPipelineArtifacts' own header. mat.dir is
       // guaranteed here (materialize() already err-returned above if it
       // failed), so this only degrades on the artifact read itself.
@@ -2214,6 +2321,8 @@ async function handle(req, res, route, query, body) {
         os.emit('idearium.repo.chunk.done', {
           repoUuid: params.uuid, name: repo.name, state: pipeline.state, fileCount, chunkCount,
         });
+        // §MCO-C — a repo's first index gets its baseline snapshot (a no-op if it has one).
+        void _baselineSnapshot(params.uuid, 'chunk-run');
         // §REPO-HAT 2026-09-20 — a project agent forged before the pipeline
         // ran carries a persona stating "this project has NOT been indexed
         // yet". That is now false, and a stale persona is a falsehood told
@@ -2404,6 +2513,109 @@ async function handle(req, res, route, query, body) {
       const { scanRepo } = await import('../repo/scan.js');
       const result = scanRepo(dir);
       return ok(res, { repoUuid: params.uuid, repoName: repo.name, ...result });
+    }
+
+    // §MCO3 2026-09-20 — take a §33 snapshot of a repo and commit it to
+    // versionium. Refused (409) for a repo the pipeline has never indexed:
+    // a snapshot of nothing is not a snapshot. A versionium that is down is
+    // a 502 with its real error, same convention as snapshot.push.
+    case 'repo.snapshot.commit': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const dir = _repoDiskDir(params.uuid);
+      if (!dir) return err(res, 500, 'could not resolve repo directory');
+      const { commitRepoSnapshot, verifyMustRecord } = await import('../repo/snapshot.js');
+      const result = await commitRepoSnapshot({
+        repo, repoDir: dir, message: body.message || null, causedBy: body.causedBy || null,
+        fileLayer: _fileLayers(params.uuid).fileLayer, snapshotMode: _snapshotMode(),
+        commit: async (payload) => {
+          const r = await _versionium('POST', '/api/versionium/commit', payload);
+          if (!r.ok) return { error: r.error };
+          if (r.data?.error) return { error: r.data.error };
+          return r.data?.commit || { error: 'versionium returned no commit' };
+        },
+      });
+      if (!result.ok) {
+        const status = ['NOT_INDEXED', 'FILES_TOO_BIG'].includes(result.code) ? 409
+          : ['COMMIT_FAILED', 'FILES_PLAN_FAILED', 'FILES_RECORD_FAILED'].includes(result.code) ? 502 : 500;
+        // FILES_RECORD_FAILED leaves a commit behind; say which, so it can be found.
+        return err(res, status, result.error, { code: result.code, commitId: result.commit?.commitId || null });
+      }
+      os.emit('idearium.repo.snapshot.committed', {
+        repoUuid: params.uuid, commitId: result.commit.commitId,
+        sourceFresh: result.record.mustRecord.sourceHash.fresh ?? null,
+      });
+      return ok(res, {
+        repoUuid: params.uuid, commitId: result.commit.commitId, branch: result.commit.branch,
+        system: result.commit.system, mustRecord: verifyMustRecord(result.record), record: result.record,
+        files: result.files ? { treeHash: result.files.treeHash, counts: result.files.counts, bytes: result.files.bytes || null, alreadyRecorded: !!result.files.alreadyRecorded } : null,
+      });
+    }
+
+    case 'repo.snapshot.list': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const { SNAPSHOT_SYSTEM, summarizeRepoSnapshots } = await import('../repo/snapshot.js');
+      const hist = await _versionium('GET', `/api/versionium/history?system=${encodeURIComponent(SNAPSHOT_SYSTEM)}`);
+      if (!hist.ok) return err(res, 502, hist.error);
+      return ok(res, { repoUuid: params.uuid, snapshots: summarizeRepoSnapshots(hist.data.commits || [], params.uuid) });
+    }
+
+    case 'repo.snapshot.show': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const { isRepoSnapshotState } = await import('../repo/snapshot.js');
+      const got = await _versionium('GET', `/api/versionium/state/${encodeURIComponent(params.commitId)}`);
+      if (!got.ok) return err(res, got.status === 404 ? 404 : 502, got.status === 404 ? `no snapshot ${params.commitId} for repo ${params.uuid}` : got.error);
+      const st = got.data;
+      // A commit id that exists but is an idea snapshot, or another repo's
+      // snapshot, is "not found" as far as THIS repo is concerned.
+      if (!isRepoSnapshotState(st?.state) || st.state.repository !== params.uuid) {
+        return err(res, 404, `no snapshot ${params.commitId} for repo ${params.uuid}`);
+      }
+      return ok(res, { repoUuid: params.uuid, commitId: params.commitId, ts: st.commit?.wall ?? null, message: st.commit?.message ?? null, record: st.state });
+    }
+
+    // §MCO-B 2026-09-20 — restore a repo's files to a snapshot. dryRun defaults
+    // to TRUE: a caller must send {"dryRun":false} to change anything. The
+    // envelope is ok:true whenever the attempt ran or was refused for a stated
+    // reason; the outcome is result.ok / result.verified (api() throws on
+    // ok:false, and the UI needs result.mismatches and result.preRestoreCommitId
+    // from a restore that ran but did not fully verify).
+    case 'repo.snapshot.restore': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const dir = _repoDiskDir(params.uuid);
+      if (!dir) return err(res, 500, 'could not resolve repo directory');
+      const { isRepoSnapshotState, commitRepoSnapshot } = await import('../repo/snapshot.js');
+      const { restoreRepoSnapshot } = await import('../repo/snapshot-restore.js');
+      const got = await _versionium('GET', `/api/versionium/state/${encodeURIComponent(params.commitId)}`);
+      if (!got.ok) return err(res, got.status === 404 ? 404 : 502, got.status === 404 ? `no snapshot ${params.commitId} for repo ${params.uuid}` : got.error);
+      const st = got.data;
+      if (!isRepoSnapshotState(st?.state) || st.state.repository !== params.uuid) {
+        return err(res, 404, `no snapshot ${params.commitId} for repo ${params.uuid}`);
+      }
+      const dryRun = body.dryRun !== false;
+      const { fileLayer, layer } = _fileLayers(params.uuid);
+      const result = await restoreRepoSnapshot({
+        repo, repoDir: dir, commitId: params.commitId, record: st.state, layer, repoLayer: getRepoLayer(), dryRun,
+        takeSnapshot: () => commitRepoSnapshot({
+          repo: getRepoLayer().get(params.uuid) || repo, repoDir: dir, fileLayer, snapshotMode: _snapshotMode(),
+          message: `pre-restore snapshot (before restoring ${params.commitId})`, causedBy: params.commitId,
+          commit: async (payload) => {
+            const r = await _versionium('POST', '/api/versionium/commit', payload);
+            if (!r.ok) return { error: r.error };
+            return r.data?.commit || { error: r.data?.error || 'versionium returned no commit' };
+          },
+        }),
+      });
+      if (!dryRun && result.changed) {
+        os.emit('idearium.repo.snapshot.restored', {
+          repoUuid: params.uuid, commitId: params.commitId, verified: !!result.verified,
+          preRestoreCommitId: result.preRestoreCommitId || null,
+        });
+      }
+      return ok(res, { repoUuid: params.uuid, commitId: params.commitId, dryRun, result });
     }
 
     // §INCREMENTAL-REINDEX (§35) — explicit re-run for a repo whose files

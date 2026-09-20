@@ -129,7 +129,18 @@ export class RepoLayer {
       // above: none of these are spec chunks, so without this they'd
       // silently vanish the first time a later writeFile()/deleteFile()
       // triggers a quiet re-materialize.
-      const PRESERVE = new Set(['.git', 'manifest.json', 'project.json', 'chunks', 'atlas.json', 'indexes', 'verification.json']);
+      // §PRESERVE-GAP 2026-09-20 — found while wiring MCO3 snapshots over real
+      // HTTP: this list stopped at verification.json, so every materialize()
+      // silently deleted graph.json (MCO1), verification.lazy.json (MCO2)
+      // and, from the CI work, .nexus-ci.json and .nexus-ci-runs/ (cos/ci
+      // keeps its config and run history in the repo directory). Each was
+      // added by a later phase than this list. The snapshot route itself
+      // triggered it: _repoDiskDir() materializes, which wiped the graph it
+      // was about to record. Names are literal (not imported from cos/ci) so
+      // this file keeps no dependency on it; tests/modules/test-mco3-repo-
+      // snapshot.js asserts they still match cos/ci's constants.
+      const PRESERVE = new Set(['.git', 'manifest.json', 'project.json', 'chunks', 'atlas.json', 'indexes', 'verification.json',
+        'graph.json', 'verification.lazy.json', '.nexus-ci.json', '.nexus-ci-runs']);
 
       // §SOURCE-FILES 2026-09-15 — James: "it needs to import the real
       // files from the uploaded project to the repo, not just the
@@ -246,6 +257,28 @@ export class RepoLayer {
       this._save();
     }
     return result;
+  }
+
+  // §MCO-C 2026-09-20 — the source layer's single-file primitives, for snapshot
+  // restore (see source-files.js setSourceFile).
+  _sourceDir(repoUuid) {
+    const r = this.repos.repos.find(x => x.uuid === repoUuid);
+    if (!r) return null;
+    return r.materializeDir || path.join(this.dataDir, 'projects', repoUuid);
+  }
+  isSourceOwned(repoUuid, relPath) {
+    const dir = this._sourceDir(repoUuid); if (!dir) return false;
+    return sourceFiles.sourcePathSet(sourceFiles.loadSourceManifest(dir)).has(relPath);
+  }
+  writeSourceBytes(repoUuid, relPath, buffer) {
+    const dir = this._sourceDir(repoUuid); if (!dir) return { error: 'repo not found' };
+    const r = sourceFiles.setSourceFile(dir, relPath, buffer);
+    return r.ok ? { ok: true } : { error: r.error };
+  }
+  deleteSourceFile(repoUuid, relPath) {
+    const dir = this._sourceDir(repoUuid); if (!dir) return { error: 'repo not found' };
+    const r = sourceFiles.removeSourceFile(dir, relPath);
+    return r.ok ? { ok: true } : { error: r.error };
   }
 
   /** Real re-hash of this repo's source files against their manifest. */
@@ -578,7 +611,11 @@ export class RepoLayer {
     } catch (e) { return { error: e.message }; }
   }
 
-  writeFile(repoUuid, relPath, content) {
+  // §MCO-B 2026-09-20 — `opts.defer` skips the per-write materialize+reindex
+  // so a caller writing many files (snapshot restore) pays for it once, via
+  // refresh(), instead of once per file. Default behavior is unchanged: every
+  // existing caller still gets the immediate, never-stale projection.
+  writeFile(repoUuid, relPath, content, opts = {}) {
     if (typeof content !== 'string') return { error: 'content must be a string' };
     try {
       const { manifest, chunk, clean } = this._resolveChunk(repoUuid, relPath);
@@ -586,7 +623,7 @@ export class RepoLayer {
         // existing file — edit in place via the same completeChunk every
         // other content write goes through (disk-verified, rootHash recomputed)
         this.se.completeChunk(manifest.uuid, chunk.uuid, content, { repoUuid });
-        this._materializeQuiet(repoUuid); // §BUILT 2026-09-06 — keep the real, physical projection honestly in sync, never stale
+        if (!opts.defer) this._materializeQuiet(repoUuid); // §BUILT 2026-09-06 — keep the real, physical projection honestly in sync, never stale
         return { ok: true, path: chunk.realPath || chunk.fileName, created: false };
       }
       // new file — no chunk for this path yet. sectionId must be a slug;
@@ -595,18 +632,18 @@ export class RepoLayer {
       // real relative path/extension for materialize() (§REALPATH).
       const sectionId = clean.replace(/\.[a-zA-Z0-9]+$/, '').replace(/[^a-zA-Z0-9_-]/g, '-').toLowerCase() || `file-${Date.now()}`;
       const fresh = this.se.addChunk(manifest.uuid, { sectionId, title: clean, content, realPath: clean, repoUuid });
-      const newChunk = fresh.chunks.find(c => c.sectionId === sectionId);
-      this._materializeQuiet(repoUuid);
+      const newChunk = fresh.chunks.find(c => c.sectionId === sectionId && c.status !== 'removed');
+      if (!opts.defer) this._materializeQuiet(repoUuid);
       return { ok: true, path: newChunk?.realPath || newChunk?.fileName || clean, created: true };
     } catch (e) { return { error: e.message }; }
   }
 
-  deleteFile(repoUuid, relPath) {
+  deleteFile(repoUuid, relPath, opts = {}) {
     try {
       const { manifest, chunk } = this._resolveChunk(repoUuid, relPath);
       if (!chunk) return { error: `file not found in repo: ${relPath}` };
       this.se.removeChunk(manifest.uuid, chunk.uuid);
-      this._materializeQuiet(repoUuid); // real, physical file must actually disappear too, not just the manifest's record of it
+      if (!opts.defer) this._materializeQuiet(repoUuid); // real, physical file must actually disappear too, not just the manifest's record of it
       return { ok: true, path: chunk.realPath || chunk.fileName };
     } catch (e) { return { error: e.message }; }
   }
@@ -625,6 +662,9 @@ export class RepoLayer {
   // goes stale just because the edit came from writeFile()/deleteFile()
   // rather than the initial import. Same non-fatal contract as
   // materialize() itself — a reindex failure is logged, never thrown.
+  // Public: materialize + reindex once, after a batch of {defer:true} writes.
+  refresh(repoUuid) { this._materializeQuiet(repoUuid); }
+
   _materializeQuiet(repoUuid) {
     const r = this.materialize(repoUuid);
     if (r.error) { console.warn(`[idearium/repo] materialize for ${repoUuid} failed after a real content change: ${r.error}`); return; }

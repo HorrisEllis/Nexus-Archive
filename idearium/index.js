@@ -26,6 +26,7 @@ import { readFileSync, existsSync, mkdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { loadTable, syncTable, migrateOnce } from './lib/db.js';
+import { STATE_KIND as REPO_SNAPSHOT_KIND } from './repo/snapshot.js';
 
 const __dir = dirname(fileURLToPath(import.meta.url));
 const _require = createRequire(import.meta.url);
@@ -462,8 +463,8 @@ export class IdeaOS {
   // history metadata.
   async diffSnapshots(commitIdA, commitIdB) {
     const [ra, rb] = await Promise.all([
-      nx.get('cortex', `/api/versionium/state/${encodeURIComponent(commitIdA)}`),
-      nx.get('cortex', `/api/versionium/state/${encodeURIComponent(commitIdB)}`),
+      nx.get('versionium', `/api/versionium/state/${encodeURIComponent(commitIdA)}`),
+      nx.get('versionium', `/api/versionium/state/${encodeURIComponent(commitIdB)}`),
     ]);
     if (ra?.error || rb?.error) return { error: ra?.error || rb?.error };
     const a = ra.state, b = rb.state;
@@ -492,7 +493,12 @@ export class IdeaOS {
       gaps:  this.db.gaps,  links: this.db.links,
       tensionMap, phaseMap: phaseMapForState, snr: this.snr,
     };
-    const result = await nx.post('cortex', '/api/versionium/commit', {
+    // §FIXED 2026-09-20 (MCO3) — this posted to 'cortex', which answers every
+    // /api/versionium/* with 410 since versionium became sovereign (:3754);
+    // snapshots() and snapshot() below were repointed at 'versionium'
+    // (§FIX 2026-09-03), the commit half never was. Found while wiring repo
+    // snapshots onto the same commit path.
+    const result = await nx.post('versionium', '/api/versionium/commit', {
       message, branch, causedBy, system: 'idearium', state,
     });
     if (result?.error) return { error: result.error };
@@ -520,8 +526,20 @@ export class IdeaOS {
   // snapshot — same "stash before checkout" behavior SnapshotRestoreGate
   // had), then overwrites live state from the target commit's stored state.
   async restoreSnapshot(commitId, { author = 'cli' } = {}) {
-    const stateResult = await nx.get('cortex', `/api/versionium/state/${encodeURIComponent(commitId)}`);
+    // §FIXED 2026-09-20 (MCO3) — same 410 as commitSnapshot() above: this
+    // read went to 'cortex', so restore could never fetch a state at all.
+    const stateResult = await nx.get('versionium', `/api/versionium/state/${encodeURIComponent(commitId)}`);
     if (stateResult?.error) return { error: stateResult.error };
+
+    // §GUARD 2026-09-20 (MCO3) — a repo snapshot (idearium/repo/snapshot.js)
+    // carries no ideas/specs/gaps/links. Restoring one here would set all
+    // four to [] via the `|| []` fallbacks below. It commits under its own
+    // system so it should not reach here from the idea snapshot list, but a
+    // commit id can be passed directly. Refused BEFORE the pre-restore
+    // stash and before any mutation.
+    if (stateResult?.state && stateResult.state.kind === REPO_SNAPSHOT_KIND) {
+      return { error: `commit ${commitId} is a repository snapshot, not an idea snapshot — it records repo state and cannot be restored into ideas/specs/gaps` };
+    }
 
     const stash = await this.commitSnapshot({
       message: `pre-restore snapshot (before pulling ${commitId})`, branch: 'main', author,

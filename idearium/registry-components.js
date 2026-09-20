@@ -97,6 +97,10 @@ const COMPONENTS = [
   // every other capability, rather than through a UI-only button.
   _comp('repo.scan',       'GET',  '/api/repos/:uuid/scan',             'Scan a repo for dangling hooks, gaps and tension', { tags: ['intelligence'] }),
   _comp('repo.chunk.run',  'POST', '/api/repos/:uuid/chunk',            'Run the import pipeline (parse, atlas, chunk, verify, index) over a repo already on disk', { tags: ['pipeline'] }),
+  _comp('repo.snapshot.commit', 'POST', '/api/repos/:uuid/snapshot',        'Commit a section-33 snapshot of a repo (source hash, git commit, atlas/chunk/graph versions, dependency, environment, test and verification state) to versionium', { tags: ['snapshot', 'versionium'] }),
+  _comp('repo.snapshot.list',   'GET',  '/api/repos/:uuid/snapshots',       'List a repo\'s versionium snapshots, newest first', { tags: ['snapshot', 'versionium'] }),
+  _comp('repo.snapshot.show',   'GET',  '/api/repos/:uuid/snapshots/:commitId', 'Read one repo snapshot record back from versionium', { tags: ['snapshot', 'versionium'] }),
+  _comp('repo.snapshot.restore', 'POST', '/api/repos/:uuid/snapshots/:commitId/restore', 'Restore a repo\'s files to a snapshot (dry run by default; takes a pre-restore snapshot; verifies the result against disk)', { tags: ['snapshot', 'versionium'] }),
   _comp('repo.hat.show',   'GET',  '/api/repos/:uuid/hat',              "Show this repo's project agent (hat), if forged", { tags: ['agent'] }),
   _comp('repo.hat.ensure', 'POST', '/api/repos/:uuid/hat',              'Forge the project agent for this repo, constrained to its compartment', { tags: ['agent'] }),
   _comp('repo.hat.refresh','POST', '/api/repos/:uuid/hat/refresh',      "Re-ground the project agent's persona against the repo's current index", { tags: ['agent'] }),

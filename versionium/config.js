@@ -34,6 +34,14 @@ module.exports = {
   AUTOCOMMIT_COOLDOWN_MS: parseInt(process.env.VERSIONIUM_AUTOCOMMIT_COOLDOWN_MS || String(5 * 60 * 1000), 10),
   POLL_MS: parseInt(process.env.VERSIONIUM_POLL_MS || '3000', 10),
 
+  // ── Per-file layer (MCO-B, spec/versionium.file-versioning.spec) ───────
+  // Every value env-overridable, none scattered in lib/files.js.
+  FILE_MAX_BYTES: parseInt(process.env.VERSIONIUM_FILE_MAX_BYTES || String(2 * 1024 * 1024), 10),
+  FILE_KEYFRAME_INTERVAL: parseInt(process.env.VERSIONIUM_FILE_KEYFRAME_INTERVAL || '20', 10),
+  FILE_DELTA_MAX_RATIO: parseFloat(process.env.VERSIONIUM_FILE_DELTA_MAX_RATIO || '0.9'),
+  FILE_MAX_RECORD_BYTES: parseInt(process.env.VERSIONIUM_FILE_MAX_RECORD_BYTES || String(32 * 1024 * 1024), 10),
+  FILE_BLOB_DIR: process.env.VERSIONIUM_FILE_BLOB_DIR || path.join(process.env.VERSIONIUM_DATA_DIR || path.join(__dirname, '..', 'data', 'versionium'), 'file-blobs'),
+
   // ── Identity (not tunable) ─────────────────────────────────────────────
   SYSTEM_ID: 'versionium',
   VERSION:   '3.0.0',

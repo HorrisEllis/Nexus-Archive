@@ -48,6 +48,7 @@ try { fs.mkdirSync(config.DATA_DIR, { recursive: true }); } catch (_) {}
 const routes = [
   require('./routes/system.js'),
   require('./routes/versionium.js'),
+  require('./routes/files.js'),
 ];
 
 const server = http.createServer(async (req, res) => {

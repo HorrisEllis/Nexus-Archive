@@ -1185,7 +1185,15 @@ export function findByRootHash(rootHash) {
 export function addChunk(specUuid, { sectionId, title = null, content = '', realPath = null, repoUuid = null, dependsOn = [] } = {}) {
   if (!sectionId) throw new Error('addChunk: sectionId required');
   const manifest = loadSpec(specUuid);
-  if (manifest.chunks.some(c => c.sectionId === sectionId)) {
+  // §FIXED 2026-09-20 (MCO-B) — this counted REMOVED chunks. removeChunk()
+  // is a soft delete, and repo/index.js's _resolveChunk() ignores removed
+  // chunks, so a deleted file looked "not found" to writeFile(), which then
+  // tried addChunk() and was told the section "already exists". Result: a
+  // file could never be re-created at a path it had once been deleted from.
+  // Found by restoring a snapshot over the real RepoLayer (undoing a restore
+  // has to re-create a file it deleted). A removed chunk stays in the
+  // manifest (§7.4 nothing discarded); it just no longer blocks a new one.
+  if (manifest.chunks.some(c => c.sectionId === sectionId && c.status !== 'removed')) {
     throw new Error(`addChunk: section '${sectionId}' already exists on this spec — use completeChunk to edit it`);
   }
   // §BUILT 2026-09-19 — James: "file tree with needed files,

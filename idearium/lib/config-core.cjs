@@ -131,6 +131,15 @@ const SCHEMA = {
     max_attempts:  { default: 3, min: 1, max: 20, copilot_writable: true, type: 'number' },
   },
 
+  // §MCO-C 2026-09-20 — the hook from repo import/indexing to the file layer
+  // (versionium/spec/versionium.file-versioning.spec). A repo's FIRST index
+  // takes one baseline snapshot with its files, so every materialized file has
+  // a full copy in versionium from the start. Off = repos get snapshots only
+  // when asked.
+  snapshots: {
+    import_baseline: { default: true, copilot_writable: true, type: 'boolean' },
+  },
+
   cicd: {
     push_enabled: { default: false, copilot_writable: true,  type: 'boolean' },
     pull_enabled: { default: false, copilot_writable: true,  type: 'boolean' },

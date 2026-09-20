@@ -150,6 +150,14 @@ function refreshOnEvent(ev) {
   if (t === 'repo.chunk.fault') {
     toast(`chunking fault: ${ev.payload?.error || 'see verification tiers'}`, 'err');
   }
+  // §MCO3-UI 2026-09-20 — a snapshot taken from anywhere (this tab, the API,
+  // another window) refreshes the Versionium list if it is the open tab for
+  // that repo. Placed before the generic 'repo.' branch, which would only
+  // reload the file panel.
+  if (t === 'repo.snapshot.committed' && CURRENT_API_REPO && ev.payload?.repoUuid === CURRENT_API_REPO.uuid
+      && CURRENT_REPO_SUBTAB === 'versionium') {
+    renderRepoVersionium(CURRENT_API_REPO);
+  }
   if (t.startsWith('repo.')) {
     loadApiRepos().then(() => {
       if (CURRENT_API_REPO && ev.payload?.repoUuid === CURRENT_API_REPO.uuid) {
@@ -1577,6 +1585,7 @@ function renderCurrentRepoSubtab() {
   else if (CURRENT_REPO_SUBTAB === 'architect') renderRepoArchitect(CURRENT_API_REPO);
   else if (CURRENT_REPO_SUBTAB === 'phasemap') renderRepoPhasemap(CURRENT_API_REPO);
   else if (CURRENT_REPO_SUBTAB === 'intelligence') renderRepoIntelligence(CURRENT_API_REPO);
+  else if (CURRENT_REPO_SUBTAB === 'versionium') renderRepoVersionium(CURRENT_API_REPO);
   else if (CURRENT_REPO_SUBTAB === 'settings') renderRepoSettings(CURRENT_API_REPO);
 }
 
@@ -1807,6 +1816,313 @@ async function reindexRepoThenScan(uuid) {
     renderRepoIntelligence(CURRENT_API_REPO);
   }
 }
+
+// ── VERSIONIUM — this repo's snapshots (MCO3, §33). GET/POST
+// /api/repos/:uuid/snapshot(s). A snapshot records the repo's DERIVED state
+// (source hash, git commit, atlas/chunk/graph identity, dependencies,
+// environment, tests, verification) and is committed to versionium. It does
+// carries the repo's files too (MCO-B), so a snapshot can be restored — with a
+// preview first, a pre-restore snapshot, and a check against the disk afterwards.
+//
+// Unknown is not zero here either: every field a record could not determine
+// carries available:false and a reason, and this view shows that reason
+// instead of a blank or a 0.
+let SNAP_OPEN = null; // { repoUuid, commitId } — which snapshot's detail is showing
+
+const _short = (h, n = 12) => (h ? String(h).slice(0, n) : '—');
+const _snapWhen = (ts) => (ts ? new Date(ts).toLocaleString() : '—');
+
+// One line per §33 field. Returns [{key, ok, text, warn}] — warn marks the
+// things worth a second look (stale source, dirty tree, failed tests).
+function snapFieldRows(rec) {
+  const m = (rec && rec.mustRecord) || {};
+  const rows = [];
+  const gone = (f) => (f && f.available === false);
+  const reason = (f) => (f && f.reason ? f.reason : 'not recorded');
+
+  const sh = m.sourceHash;
+  if (gone(sh)) rows.push({ key: 'source', ok: false, text: reason(sh) });
+  else if (sh) rows.push({ key: 'source', ok: sh.fresh !== false, warn: sh.fresh === false,
+    text: `${sh.fresh === false ? `on disk ${_short(sh.diskHash)} · indexed ${_short(sh.value)}` : _short(sh.value)} · ${sh.indexedFileCount ?? '?'} files indexed · ${sh.fresh === false
+      ? `STALE — the indexes below describe older source (${(sh.mismatched || []).length} changed, ${(sh.missing || []).length} missing${(sh.mismatched || []).length ? ': ' + sh.mismatched.slice(0, 3).join(', ') : ''})`
+      : 'indexes match the files on disk'}` });
+
+  const g = m.gitCommit;
+  if (gone(g)) rows.push({ key: 'git', ok: false, text: reason(g) });
+  else if (g) rows.push({ key: 'git', ok: !g.dirty, warn: !!g.dirty, text: `${_short(g.commit, 10)} · ${g.branch || '?'}${g.dirty ? ' · working tree has uncommitted changes' : ' · clean'}` });
+
+  const a = m.atlasVersion;
+  rows.push(gone(a) ? { key: 'atlas', ok: false, text: reason(a) }
+    : { key: 'atlas', ok: true, text: `sha ${_short(a?.sha256)} · ${a?.fileCount ?? '?'} files · no declared version (identity is the hash)` });
+
+  const c = m.chunkIndexVersion;
+  rows.push(gone(c) ? { key: 'chunks', ok: false, text: reason(c) }
+    : { key: 'chunks', ok: true, text: `sha ${_short(c?.sha256)} · ${c?.chunkCount ?? '?'} chunks · no declared version (identity is the hash)` });
+
+  const gr = m.graphVersion;
+  rows.push(gone(gr) ? { key: 'graph', ok: false, text: reason(gr) }
+    : { key: 'graph', ok: true, text: `v${gr?.declaredVersion ?? '?'} · ${gr?.nodeCount ?? '?'} nodes · ${gr?.edgeCount ?? '?'} edges · ${gr?.unresolvedCount ?? '?'} unresolved · sha ${_short(gr?.sha256)}` });
+
+  const d = m.dependencyState;
+  if (gone(d)) rows.push({ key: 'deps', ok: false, text: reason(d) });
+  else if (d) {
+    const dec = d.declared && !d.declared.error
+      ? `${d.declared.dependencies} deps, ${d.declared.devDependencies} dev` : 'no root package.json';
+    rows.push({ key: 'deps', ok: true,
+      text: `${(d.manifests || []).length} manifest(s) · ${dec} · lockfile ${d.lockfilePresent ? 'present' : 'absent'}${d.nodeModulesPresent === null ? '' : ` · node_modules ${d.nodeModulesPresent ? 'present' : 'absent'}`}` });
+  }
+
+  const e = m.environment;
+  if (e) rows.push({ key: 'env', ok: true,
+    text: `${e.compartmentId ? 'compartment ' + e.compartmentId : 'no compartment attached'} · snapshot taken on node ${e.host?.node || '?'} ${e.host?.platform || ''} · repo runtime not resolved (owned by its compartment)` });
+
+  const t = m.testState;
+  if (gone(t)) rows.push({ key: 'tests', ok: false, text: `${reason(t)}${t.status ? ` (${t.status})` : ''}` });
+  else if (t) rows.push({ key: 'tests', ok: t.status === 'passed', warn: t.status === 'failed',
+    text: `${t.status} · ${t.testsRun}/${t.testsFound} run, ${t.testsSkipped} skipped${t.failedCount ? ` · failed: ${(t.failed || []).slice(0, 3).join(', ')}` : ''}` });
+
+  const v = m.verificationState;
+  if (gone(v)) rows.push({ key: 'verify', ok: false, text: reason(v) });
+  else if (v) {
+    const mark = (x) => x.state === 'passed' ? '✓' : x.state === 'failed' ? '✗' : x.state === 'pending' ? '…' : '–';
+    rows.push({ key: 'verify', ok: !(v.failedTiers || []).length, warn: (v.failedTiers || []).length > 0,
+      text: `${v.status || '?'} · ${(v.tiers || []).map(x => `${x.level}${mark(x)}`).join(' ')}${v.lazy?.status ? ` · lazy ${v.lazy.status}` : ''}` });
+  }
+  return rows;
+}
+
+// What changed between two records — identity comparisons only, each traced to
+// a field the record carries. No score, no "significance".
+function snapDiffLines(cur, prev) {
+  const c = cur?.mustRecord || {}, p = prev?.mustRecord || {};
+  const pick = (m) => ({
+    // The source as it actually was on disk when the snapshot was taken.
+    // sourceHash.value is the hash the INDEXES were built from, which does
+    // not move when a file is edited without a reindex — comparing it would
+    // report "same" for a repo whose files changed.
+    source: m.sourceHash?.available ? (m.sourceHash.diskHash || m.sourceHash.value) : null,
+    git: m.gitCommit?.available ? m.gitCommit.commit : null,
+    atlas: m.atlasVersion?.available ? m.atlasVersion.sha256 : null,
+    chunks: m.chunkIndexVersion?.available ? m.chunkIndexVersion.sha256 : null,
+    graph: m.graphVersion?.available ? m.graphVersion.sha256 : null,
+    tests: m.testState?.available ? m.testState.status : null,
+    verify: m.verificationState?.available ? m.verificationState.status : null,
+  });
+  const a = pick(c), b = pick(p), out = [];
+  for (const k of Object.keys(a)) {
+    if (a[k] === b[k]) out.push({ key: k, changed: false });
+    else if (a[k] == null || b[k] == null) out.push({ key: k, changed: true, note: a[k] == null ? 'unavailable now' : 'was unavailable' });
+    else out.push({ key: k, changed: true, note: (k === 'tests' || k === 'verify') ? `${b[k]} → ${a[k]}` : `${_short(b[k], 8)} → ${_short(a[k], 8)}` });
+  }
+  return out;
+}
+
+async function renderRepoVersionium(repo) {
+  const el = document.getElementById('repo-subtab-versionium');
+  if (!el) return;
+  const forUuid = repo.uuid;
+  const stale = () => CURRENT_API_REPO?.uuid !== forUuid || CURRENT_REPO_SUBTAB !== 'versionium';
+  el.innerHTML = `<div class="detail-empty">loading snapshots…</div>`;
+
+  let list;
+  try { list = await api(`/api/repos/${forUuid}/snapshots`, {}, 15000); }
+  catch (e) {
+    if (stale()) return;
+    el.innerHTML = `<div class="ds"><div class="ds-label">versionium</div>
+      <div class="ds-mono">could not read snapshots: ${escapeHtml(e.message)}\n\nversionium may not be running — snapshots are stored there.</div></div>`;
+    return;
+  }
+  if (stale()) return;
+  const snaps = list.snapshots || [];
+
+  const actions = `<div class="ds"><div class="ds-label">snapshot</div>
+      <div class="action-row" style="gap:8px;flex-wrap:wrap">
+        <input id="snap-msg" type="text" placeholder="message (optional)" maxlength="200"
+          style="flex:1;min-width:160px;background:var(--b0);border:1px solid var(--b1);color:var(--text);font-family:var(--mono);font-size:11px;padding:6px 8px;border-radius:5px">
+        <button class="action-btn" id="snap-take" onclick="takeRepoSnapshot('${forUuid}')">◉ take snapshot</button>
+      </div>
+      <div style="font-family:var(--mono);font-size:9.5px;color:var(--text3);margin-top:6px">records this repo's derived state and its files (first copy, then diffs) and commits them to versionium · files over the size limit, and binary files, are listed as not kept</div>
+    </div>`;
+
+  const row = (s) => {
+    const open = SNAP_OPEN && SNAP_OPEN.commitId === s.commitId && SNAP_OPEN.repoUuid === forUuid;
+    const badge = (txt, color) => `<span style="font-family:var(--mono);font-size:9.5px;color:${color};margin-left:8px">${escapeHtml(txt)}</span>`;
+    return `<div class="snap-row" data-commit="${escapeHtml(s.commitId)}" onclick="openRepoSnapshot('${forUuid}','${escapeHtml(s.commitId)}')"
+        style="padding:7px 8px;border-bottom:1px solid var(--b0);cursor:pointer;${open ? 'background:var(--b0);' : ''}">
+      <div style="display:flex;justify-content:space-between;gap:10px">
+        <span style="font-family:var(--mono);font-size:10.5px;color:var(--text)">${escapeHtml(s.message || '(no message)')}</span>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--text3);flex-shrink:0">${escapeHtml(_snapWhen(s.ts))}</span>
+      </div>
+      <div style="font-family:var(--mono);font-size:9.5px;color:var(--text3);margin-top:2px">
+        ${escapeHtml(s.commitId)} · indexed ${escapeHtml(_short(s.sourceHash, 8))}
+        ${s.fresh === false ? badge('stale index', 'var(--amber)') : ''}
+        ${s.gitCommit ? badge('git ' + _short(s.gitCommit, 7), 'var(--text3)') : ''}
+        ${s.verification ? badge('verify ' + s.verification, s.verification === 'passed' ? 'var(--mint)' : 'var(--coral)') : ''}
+        ${s.files ? badge(s.files.count + ' files kept', 'var(--text3)') : ''}
+        ${s.tests ? badge('tests ' + s.tests, s.tests === 'passed' ? 'var(--mint)' : s.tests === 'failed' ? 'var(--coral)' : 'var(--text3)') : ''}
+      </div></div>`;
+  };
+
+  const listBlock = snaps.length
+    ? `<div class="ds"><div class="ds-label">snapshots (${snaps.length}) · newest first</div>${snaps.map(row).join('')}</div>`
+    : `<div class="ds"><div class="ds-label">snapshots</div><div class="ds-mono">none yet for this repo.\n\nA snapshot needs the repo to have been through the import pipeline (chunked). If it has not been, taking one will say so.</div></div>`;
+
+  el.innerHTML = actions + listBlock + `<div id="snap-detail"></div>`;
+  if (SNAP_OPEN && SNAP_OPEN.repoUuid === forUuid && snaps.some(s => s.commitId === SNAP_OPEN.commitId)) {
+    openRepoSnapshot(forUuid, SNAP_OPEN.commitId, snaps);
+  }
+}
+
+async function takeRepoSnapshot(uuid) {
+  const msgEl = document.getElementById('snap-msg');
+  const btn = document.getElementById('snap-take');
+  if (btn) btn.disabled = true;
+  try {
+    const body = msgEl && msgEl.value.trim() ? { message: msgEl.value.trim() } : {};
+    const r = await api(`/api/repos/${uuid}/snapshot`, { method: 'POST', body: JSON.stringify(body) }, 30000);
+    const fresh = r.record?.mustRecord?.sourceHash?.fresh;
+    toast(`snapshot ${r.commitId}${fresh === false ? ' — recorded as STALE (indexes older than the files)' : ''}`, fresh === false ? 'err' : 'ok');
+    SNAP_OPEN = { repoUuid: uuid, commitId: r.commitId };
+  } catch (e) {
+    // NOT_INDEXED (409) arrives as a plain error message from api().
+    toast(`snapshot failed: ${e.message}`, 'err');
+  }
+  if (btn) btn.disabled = false;
+  if (CURRENT_API_REPO?.uuid === uuid && CURRENT_REPO_SUBTAB === 'versionium') renderRepoVersionium(CURRENT_API_REPO);
+}
+
+async function openRepoSnapshot(uuid, commitId, snapsHint) {
+  SNAP_OPEN = { repoUuid: uuid, commitId };
+  document.querySelectorAll('#repo-subtab-versionium .snap-row').forEach(r => {
+    r.style.background = r.dataset.commit === commitId ? 'var(--b0)' : '';
+  });
+  const box = document.getElementById('snap-detail');
+  if (!box) return;
+  box.innerHTML = `<div class="detail-empty">loading ${escapeHtml(commitId)}…</div>`;
+  const stale = () => CURRENT_API_REPO?.uuid !== uuid || CURRENT_REPO_SUBTAB !== 'versionium' || SNAP_OPEN?.commitId !== commitId;
+
+  let cur;
+  try { cur = await api(`/api/repos/${uuid}/snapshots/${encodeURIComponent(commitId)}`, {}, 15000); }
+  catch (e) {
+    if (stale()) return;
+    box.innerHTML = `<div class="ds"><div class="ds-label">${escapeHtml(commitId)}</div><div class="ds-mono">could not read this snapshot: ${escapeHtml(e.message)}</div></div>`;
+    return;
+  }
+  if (stale()) return;
+
+  // The next-older snapshot of this repo, if there is one, for a "what changed" strip.
+  let prevRec = null, prevId = null;
+  try {
+    const all = snapsHint || (await api(`/api/repos/${uuid}/snapshots`, {}, 15000)).snapshots || [];
+    const i = all.findIndex(s => s.commitId === commitId);
+    if (i >= 0 && all[i + 1]) {
+      prevId = all[i + 1].commitId;
+      prevRec = (await api(`/api/repos/${uuid}/snapshots/${encodeURIComponent(prevId)}`, {}, 15000)).record;
+    }
+  } catch (_) { /* the strip is optional; the record above is the point */ }
+  if (stale()) return;
+
+  const rows = snapFieldRows(cur.record);
+  const fieldHtml = rows.map(r => `<div style="display:flex;gap:10px;padding:4px 0;border-bottom:1px solid var(--b0)">
+      <span style="font-family:var(--mono);font-size:10px;color:var(--text3);width:52px;flex-shrink:0">${escapeHtml(r.key)}</span>
+      <span style="font-family:var(--mono);font-size:10px;color:${r.warn ? 'var(--amber)' : r.ok ? 'var(--text2)' : 'var(--text3)'};word-break:break-word">${escapeHtml(r.text)}</span>
+    </div>`).join('');
+
+  let diffHtml = '';
+  if (prevRec) {
+    const lines = snapDiffLines(cur.record, prevRec);
+    diffHtml = `<div class="ds"><div class="ds-label">since ${escapeHtml(prevId)}</div>
+      <div class="ds-mono">${lines.map(l => l.changed ? `changed   ${l.key}${l.note ? ' · ' + l.note : ''}` : `same      ${l.key}`).map(escapeHtml).join('\n')}</div></div>`;
+  } else {
+    diffHtml = `<div class="ds"><div class="ds-label">since previous</div><div class="ds-mono" style="color:var(--text3)">this is the first snapshot of this repo — nothing to compare against</div></div>`;
+  }
+
+  box.innerHTML = `<div class="ds"><div class="ds-label">${escapeHtml(commitId)} · ${escapeHtml(_snapWhen(cur.ts))}${cur.message ? ' · ' + escapeHtml(cur.message) : ''}</div>${fieldHtml}</div>${diffHtml}${snapRestoreBox(uuid, commitId, cur.record)}`;
+}
+
+// ── RESTORE (MCO-B) — put a repo's files back to a snapshot. Always a preview
+// first (the server defaults to dryRun and only changes anything on an explicit
+// dryRun:false). The server takes a pre-restore snapshot before writing, so a
+// restore can be undone, and re-reads the disk afterwards: what is shown here is
+// that check's result, not an assumed success.
+function snapRestoreBox(uuid, commitId, rec) {
+  const f = rec && rec.files;
+  if (!f) {
+    return `<div class="ds"><div class="ds-label">restore</div>
+      <div class="ds-mono" style="color:var(--text3)">no file layer — this snapshot recorded derived state only, so it cannot restore files.</div></div>`;
+  }
+  const skipped = (f.skipped || []).length;
+  return `<div class="ds"><div class="ds-label">restore</div>
+      <div class="ds-mono">${escapeHtml(String(f.fileCount))} files · ${escapeHtml(String(f.totalBytes))} bytes kept${skipped ? ` · ${skipped} not kept (${escapeHtml((f.skipped || []).slice(0, 3).map(x => x.path).join(', '))}${skipped > 3 ? ', …' : ''})` : ''}</div>
+      <div class="action-row"><button class="action-btn" onclick="previewRepoRestore('${uuid}','${escapeHtml(commitId)}')">preview restore</button></div>
+      <div id="snap-restore-out"></div>
+    </div>`;
+}
+
+function _pathList(paths, max = 20) {
+  if (!paths.length) return '<span style="color:var(--text3)">none</span>';
+  return escapeHtml(paths.slice(0, max).join('\n')) + (paths.length > max ? `\n…${paths.length - max} more` : '');
+}
+
+let SNAP_PREVIEW = null; // { uuid, commitId, plan } — what the confirm button acts on
+
+async function previewRepoRestore(uuid, commitId) {
+  const out = document.getElementById('snap-restore-out'); if (!out) return;
+  out.innerHTML = `<div class="detail-empty">reading the file layer…</div>`;
+  let r;
+  try { r = await api(`/api/repos/${uuid}/snapshots/${encodeURIComponent(commitId)}/restore`, { method: 'POST', body: JSON.stringify({ dryRun: true }) }, 60000); }
+  catch (e) { out.innerHTML = `<div class="ds-mono" style="color:var(--coral)">preview failed: ${escapeHtml(e.message)}</div>`; return; }
+  const res = r.result || {};
+  if (!res.ok) { SNAP_PREVIEW = null; out.innerHTML = `<div class="ds-mono" style="color:var(--coral)">cannot restore: ${escapeHtml(res.error || res.code || 'refused')}</div>`; return; }
+  const p = res.plan || {};
+  const changes = (p.write || []).length + (p.delete || []).length;
+  SNAP_PREVIEW = res.restorable && changes ? { uuid, commitId, plan: p } : null;
+  const blocked = (p.blocked || []);
+  out.innerHTML = `
+    <div style="font-family:var(--mono);font-size:10px;color:var(--text2);margin-top:8px">
+      <div>would write (${(p.write || []).length})</div><div style="color:var(--text3);white-space:pre-wrap;margin-bottom:4px">${_pathList(p.write || [])}</div>
+      <div>would delete (${(p.delete || []).length})</div><div style="color:var(--text3);white-space:pre-wrap;margin-bottom:4px">${_pathList(p.delete || [])}</div>
+      <div>already identical: ${escapeHtml(String(p.unchanged ?? 0))}</div>
+      ${(p.leftAlone?.tooLargeNow || []).length ? `<div style="color:var(--text3)">left alone (too large to track now): ${escapeHtml(p.leftAlone.tooLargeNow.join(', '))}</div>` : ''}
+      ${(p.leftAlone?.notInSnapshotButProtected || []).length ? `<div style="color:var(--text3)">left alone (the snapshot did not keep these, so they are not treated as extra): ${escapeHtml(p.leftAlone.notInSnapshotButProtected.join(', '))}</div>` : ''}
+      ${blocked.length ? `<div style="color:var(--amber);margin-top:6px">BLOCKED — ${blocked.length} file(s) cannot be restored through the repo layer, so the restore is refused whole:\n${blocked.map(b => escapeHtml(b.path)).join('\n')}</div>` : ''}
+    </div>
+    ${SNAP_PREVIEW
+      ? `<div class="action-row" style="margin-top:8px"><button class="action-btn danger" onclick="runRepoRestore()">restore ${changes} file change(s)</button></div>
+         <div style="font-family:var(--mono);font-size:9.5px;color:var(--text3);margin-top:4px">a pre-restore snapshot is taken first, so this can be undone</div>`
+      : `<div class="ds-mono" style="color:${blocked.length ? 'var(--amber)' : 'var(--mint)'};margin-top:6px">${blocked.length ? 'nothing was changed' : 'the repo already matches this snapshot — nothing to restore'}</div>`}`;
+}
+
+async function runRepoRestore() {
+  const pv = SNAP_PREVIEW; const out = document.getElementById('snap-restore-out');
+  if (!pv || !out) return;
+  const w = (pv.plan.write || []).length, d = (pv.plan.delete || []).length;
+  if (!window.confirm(`Restore ${w} file(s) and delete ${d} file(s)?\n\nA pre-restore snapshot is taken first, so this can be undone.`)) return;
+  out.innerHTML = `<div class="detail-empty">restoring…</div>`;
+  let r;
+  try { r = await api(`/api/repos/${pv.uuid}/snapshots/${encodeURIComponent(pv.commitId)}/restore`, { method: 'POST', body: JSON.stringify({ dryRun: false }) }, 180000); }
+  catch (e) { out.innerHTML = `<div class="ds-mono" style="color:var(--coral)">restore request failed: ${escapeHtml(e.message)}\n\nThe repo may be partly restored — check the snapshot list for a pre-restore snapshot.</div>`; return; }
+  SNAP_PREVIEW = null;
+  const res = r.result || {};
+  const pre = res.preRestoreCommitId;
+  const undo = pre ? `<div class="action-row" style="margin-top:6px"><button class="action-btn" onclick="previewRepoRestore('${pv.uuid}','${escapeHtml(pre)}')">undo — preview restoring ${escapeHtml(pre)}</button></div>` : '';
+  if (res.ok && res.verified) {
+    toast(`restored ${res.written} file(s), deleted ${res.deleted} — verified against disk`, 'ok');
+    out.innerHTML = `<div class="ds-mono" style="color:var(--mint)">restored and verified against the files on disk: ${res.written} written, ${res.deleted} deleted.</div>${undo}`;
+  } else if (res.code) {
+    toast(`restore refused: ${res.error || res.code}`, 'err');
+    out.innerHTML = `<div class="ds-mono" style="color:var(--coral)">${escapeHtml(res.error || res.code)}</div>`;
+    return;
+  } else {
+    toast('restore did NOT fully verify — see the panel', 'err');
+    out.innerHTML = `<div class="ds-mono" style="color:var(--amber);white-space:pre-wrap">the repo does not match the snapshot after the restore.
+${(res.failures || []).map(f => `${escapeHtml(f.op)} ${escapeHtml(f.path)} failed: ${escapeHtml(f.error)}`).join('\n')}
+${(res.mismatches || []).map(m => `${escapeHtml(m.path)}: ${escapeHtml(m.why)}`).join('\n')}
+${res.note ? '\n' + escapeHtml(res.note) : ''}</div>${undo}`;
+  }
+  if (CURRENT_API_REPO?.uuid === pv.uuid) loadApiRepos().then(() => { if (CURRENT_REPO_SUBTAB === 'files') renderCurrentRepoSubtab(); });
+}
+
 
 // ── SETTINGS — compartment (real, MCO6), agent/source provenance, and
 // the repo-level actions (add file, fork, export, archive) moved here

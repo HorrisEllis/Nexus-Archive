@@ -34,7 +34,7 @@ const { jaaDB } = require(path.join(ROOT, 'versionium/lib/store.js'));
 test('MCOA-001', 'schema.file_delta is indexed in versionium/schemas, status OPEN', () => {
   const def = schemas.get('file_delta');
   assert.ok(def, 'expected file_delta to be indexed');
-  assert.strictEqual(def.status, 'OPEN');
+  assert.ok(['OPEN', 'REAL'].includes(def.status), 'status: ' + def.status); // REAL since MCO-B's writer landed
   const required = Object.entries(def.fields).filter(([, f]) => f.required).map(([k]) => k);
   assert.deepStrictEqual(required.sort(), ['commit_ref', 'diff', 'file_path', 'ts', 'uuid'].sort());
 });

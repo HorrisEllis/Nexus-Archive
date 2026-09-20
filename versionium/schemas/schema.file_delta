@@ -17,9 +17,12 @@ tags: []
 exported_at: 1789564800000
 source: idearium-repository-overhaul-phasemap.spec:MCO-A
 payload:
-  status: OPEN
+  status: REAL
   source: >-
-    Registered this pass. No real writer exists yet — will be written by
+    MCO-B (2026-09-20): versionium/lib/files.js is now the real writer, and
+    writes and reads back real rows in tests/modules/test-mcob-file-
+    versioning.js. Status moved OPEN -> REAL on that proof. Original MCO-A
+    note follows. Registered this pass. No real writer exists yet — will be written by
     versionium.file.delta.capability once MCO-B lands (this spec's own
     gate: MET when both schemas are indexed AND one real round-trip row
     passes each; the round-trip below proves the shape, not a production
@@ -49,6 +52,22 @@ payload:
       type: number
       required: false
       description: byte-count delta vs storing a full snapshot, for observability only
+    repository:
+      type: string
+      required: false
+      description: "MCO-B — the repository (idearium repo uuid) this delta belongs to; the chain is per repository + path"
+    base_sha256:
+      type: string
+      required: false
+      description: "MCO-B — sha256 of the bytes this diff applies to; checked before applying"
+    result_sha256:
+      type: string
+      required: false
+      description: "MCO-B — sha256 the diff must reproduce; checked after applying, and verified again at write time"
+    result_bytes:
+      type: number
+      required: false
+      description: "MCO-B — byte length of the reproduced file"
     ts:
       type: number
       required: true

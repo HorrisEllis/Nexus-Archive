@@ -82,7 +82,9 @@ spec:
       Both indexed (auto-loaded by each system's own schemas/index.js —
       confirmed live: versionium/schemas.list() and idearium/schemas.list()
       both return the new type). Both status: OPEN, not REAL — no
-      production writer exists yet (MCO-B/MCO-E), per §1.1. Round-trip:
+      production writer exists yet (MCO-B/MCO-E), per §1.1. [Update 2026-09-20:
+      schema.file_delta is now REAL, MCO-B's writer landed in v0.39.176;
+      schema.phase_node stays OPEN until MCO-E.] Round-trip:
       tests/modules/test-mco-a-file-delta-schema.js (MCOA-001..003) and
       idearium/test/test-mco-a-phase-node-schema.js (MCOA-004..006), 6/6
       passing, each against a real, isolated instance of that system's
@@ -95,7 +97,26 @@ spec:
   # ── MCO-B: versionium <-> idearium bridge ───────────────────────────
   MCO-B_versionium_bridge:
     depends_on: [MCO-A]
-    status: "NOT STARTED"
+    status: >
+      DONE 2026-09-20 (v0.39.176). Spec: versionium/spec/versionium.file-versioning.spec
+      (written first). Built: versionium/lib/text-diff.js (fuzzed, 30,000 random
+      pairs), versionium/lib/files.js, versionium/routes/files.js (plan / record /
+      tree / content / limits), idearium/repo/snapshot-files.js, snapshot-restore.js,
+      routes repo.snapshot.restore (dry run by default). GATE MET: files round-trip
+      byte-for-byte (Buffer.equals; text, binary, CRLF, empty, no-EOL, unicode)
+      through the real engine, and over real HTTP against a booted versionium and
+      idearium through the REAL RepoLayer, including restore-then-undo.
+      Tests: test-mcob-file-versioning 33/33, test-mcob-snapshot-restore 24/24,
+      test-mco3-versionium-tab 32/32. DIFFERENCES from the plan above: (1) the
+      grouping unit is the MCO3 repo snapshot commit, not a commit per write;
+      (2) file.snapshot and file.delta are one route (files.record), which chooses
+      full copy vs delta per file and PROVES every delta before storing it;
+      (3) full copies live in a content-addressed blob store, deltas in the
+      file_delta rows; (4) restore is idearium's action and re-reads the disk to
+      verify. NOT DONE: an automatic commit on every repo write; binary/non-UTF-8
+      files cannot be restored through the repo layer (a restore that would need
+      one is refused whole); no blob garbage collection. (MCO-C's hook, listed
+      here as not wired when this was written, landed in v0.39.177.)
     does: >
       Per-file snapshot/delta wrap around versionium's existing
       commit.create/history.list/restore.read/state.read/calendar.read
@@ -106,16 +127,33 @@ spec:
   # ── MCO-C: archive upload hooks into real materialize ────────────────
   MCO-C_repo_materialize:
     depends_on: [MCO-B]
-    status: "PARTIAL — real already (MCO0): ingest+materialize write
-      real files to disk today. Remaining scope only: fire
-      versionium.file.snapshot per materialized file once MCO-B exists."
+    status: >
+      DONE 2026-09-20 (v0.39.177). The remaining scope named by MCO0 — hook MCO-B's
+      snapshot into the materialize/index step — is built: idearium/repo/import-baseline.js,
+      called after an archive import, a project import and a chunk run. GATE MET over
+      real HTTP with a real .zip: the repo tree exists on disk, every member is
+      byte-for-byte equal on disk AND in versionium's baseline (text, unicode path,
+      binary), and restore of the imported repo (edited text, changed binary,
+      removed file) is verified and undoable. One baseline snapshot per repo holds a
+      full copy of every materialized file (not a commit per file; see
+      versionium.file-versioning.spec decisions.baseline). Also found and fixed:
+      an imported repo's binaries are not in repo.files, so the first baseline
+      missed them; the capture set now includes the source layer.
     does: Add the MCO-B snapshot call into idearium/repo/index.js's existing materialize path — no new ingestion logic.
     gate: MET when every file an archive upload produces has triggered exactly one versionium.file.snapshot.
 
   # ── MCO1: graph layer ─────────────────────────────────────────────────
   MCO1_graph_layer:
     depends_on: [MCO0]
-    status: "NOT STARTED"
+    status: >
+      DONE 2026-09-19 (v0.39.158). Verified against the code 2026-09-20: idearium/repo/graph.js,
+      the GRAPHING step in import-pipeline.js (graph.json), routes repo.graph / repo.graph.traverse /
+      repo.graph.cone; tests/modules/test-repo-graph.js 53/53 against a real repo through the real
+      pipeline. Gate met: traverse returns real edges, and an import that resolves to nothing comes
+      back as an edge with resolution:'unresolved', marked, never omitted. `calls`/`called_by` are
+      NOT built and are declared unsupported in every graph. The named capabilities are these routes
+      (the .capability names above were not created as such). Full evidence and the open items are
+      in nexus-repository-system-build-phasemap.spec MCO1_graph_layer.
     does: Derive edges from data import-pipeline.js already produces; ships incrementally (imports/exports first, calls/callers last), unresolved edges stay explicitly unresolved (§24).
     adds: [repository.graph.traverse.capability, repository.graph.dependencies.capability, repository.graph.affected.capability]
     gate: MET when graph.traverse returns real edges for a real repo and undetermined relationships are marked unresolved, not omitted.
@@ -123,14 +161,17 @@ spec:
   # ── MCO2: verification tiers L4-L8 ────────────────────────────────────
   MCO2_verification_deepening:
     depends_on: [MCO1]
-    status: "NOT STARTED"
+    status: >
+      DONE 2026-09-20 (code landed in 5e082f4; this status was stale). L4-L5 run synchronously in
+      import-pipeline.js, L6-L8 lazily in idearium/repo/verify-lazy.js, scoped to the changed
+      files' cone from MCO1's graph; tests/modules/test-mco2-verify-deepening.js 18/18.
     does: Extends real verify() (L0-L3) with semantic (L4), dependency (L5, needs MCO1), and lazy runtime/integration/system-contract (L6-L8) tiers.
     gate: MET when L4-L5 run synchronously and L6-L8 run lazily against exactly MCO1's affected cone.
 
   # ── MCO-E: roadmap UI from .phase nodes ──────────────────────────────
   MCO-E_roadmap_ui:
     depends_on: [MCO-A]
-    status: "NOT STARTED"
+    status: "NOT STARTED — verified 2026-09-20: no roadmap route, capability or UI exists (the Phasemap repo subtab shows verification tiers and graph counts, not a roadmap). schema.phase_node exists from MCO-A."
     does: Renders per-project roadmap from schema.phase_node rows, reusing loom.phasemap.capability for the scan — render layer only.
     adds: [idearium.roadmap.get.capability, idearium.roadmap.phase.update.capability]
     gate: MET when a real project's .phase nodes render as a dependency-respecting roadmap and edits update the same rows loom's scanner reads.
@@ -138,21 +179,40 @@ spec:
   # ── MCO4: hooks/wires/flows/tools as typed repository nodes ──────────
   MCO4_hooks_wires_flows_tools:
     depends_on: [MCO1]
-    status: "NOT STARTED"
+    status: "NOT STARTED — verified 2026-09-20: no repository:hook / repository:wire / .flow nodes and no .tool wrapping of agent-suite or the pipeline exist in code."
     does: Wraps existing real functions (agent-suite, import-pipeline) as formal .tool nodes per §22; adds repository:hook/repository:wire (§18-19) and .flow (§21, distinct from clear-glass's .macro).
     gate: MET when every §22 .tool node either wraps a cited real function or is explicitly marked not-yet-implemented.
 
   # ── MCO3: full snapshot compliance ────────────────────────────────────
   MCO3_snapshot_compliance:
     depends_on: [MCO-B, MCO1, MCO2]
-    status: "NOT STARTED"
+    status: >
+      DONE 2026-09-20 (v0.39.174). idearium/repo/snapshot.js records all nine section-33 fields and
+      commits them to versionium under system 'idearium.repo'; tests/modules/test-mco3-repo-snapshot.js
+      38/38, and over real HTTP. One correction to the plan above: no repo-scoped versionium commit
+      existed to add fields to, so MCO3 added the repo-scoped commit path itself (see
+      nexus-repository-system-build-phasemap.spec MCO3_snapshot_compliance, and the depends_on above
+      which lists MCO-B: the file layer that makes a snapshot restorable landed in v0.39.176).
     does: Extends the real versionium_commit metadata with atlas_version/chunk_index_version/graph_version/dependency_state/test_state/verification_state — additive fields, no new commit mechanism.
     gate: MET when one real commit's metadata round-trips all of §33's must_record list.
 
   # ── MCO-F: adjustable config, copilot-writable ────────────────────────
   MCO-F_config:
     depends_on: [MCO0]
-    status: "NOT STARTED"
+    status: >
+      DONE 2026-09-20 (built earlier; the gate had never been proven, which is why this read NOT
+      STARTED). idearium/lib/config.js + config-core.cjs, routes GET/POST /api/config;
+      tests/modules/test-mcof-config-gate.js 14/14 proves the gate against the real config and the
+      real spec-engine: chunk_cap changes the real ingest cap live (2 refuses 3 files, 50 admits them,
+      no restart), and a copilot write differs from a human write only in the event's actor, and
+      mutation-checked. Differences from the schema shown below: chunk_cap defaults to 20000, not
+      500 (raised on purpose, config-core.cjs section RAISED); the config is layered default < file
+      < runtime; new keys snapshots.import_baseline (MCO-C) exist; pipeline.snapshot_mode is now READ
+      (v0.39.177); pipeline.zoom_levels is declared but has NO reader until MCO-D.
+      OBSERVED, NOT FIXED: the POST /api/config route takes `actor` from the request body, so
+      copilot_writable:false (ssh_key_path) holds only for a caller that reports its actor honestly. A
+      caller that sends actor:'user' is treated as a human. Section 31 (agents must not touch key
+      material) needs the actor to come from an authenticated identity, not the body.
     config_schema:
       idearium.config:
         chunk_cap:     { value: 500, min: 1, max: 5000, copilot_writable: true }
@@ -169,7 +229,7 @@ spec:
   # ── MCO-D: zoom / sub-repo model ─────────────────────────────────────
   MCO-D_zoom_subrepo:
     depends_on: [MCO-C]
-    status: "NOT STARTED — highest-risk, net-new. Read-only zoom first; write-through sub-repo creation deferred."
+    status: "NOT STARTED — highest-risk, net-new. Verified 2026-09-20: no zoom or sub-repo route/capability exists; pipeline.zoom_levels is a declared config key with no reader. Read-only zoom first; write-through sub-repo creation deferred."
     open_question: "Zoom level names still undecided — default count is 4 (MCO-F); candidate world->region->module->file, unconfirmed."
     adds: [idearium.repo.zoom.capability, idearium.repo.subrepo.create.capability]
     gate: MET (read-only phase) when a real multi-module project traverses cleanly at every configured depth.
@@ -219,7 +279,11 @@ spec:
   MCO-G_git_cicd_credentials:
     depends_on: [MCO-C, MCO-F, MCO3]
     status: "NOT STARTED — deliberately last, only MCO with real
-      external-network/credential surface. This was two separate MCOs
+      external-network/credential surface. Verified 2026-09-20: no repo push/pull
+      code exists. Groundwork only, not the gate: the cicd.* config keys (push_enabled,
+      pull_enabled, ssh_key_path copilot_writable:false), a .git written into an
+      imported repo by project-container, and cos/ci SSH stages by key path. See the
+      MCO-F note on the actor field before relying on ssh_key_path being copilot-proof. This was two separate MCOs
       (idearium-creative's MCO-G, repo-system's MCO5) before the merge
       — identical gate, now one MCO."
     does: Real git clone/fetch/branch/checkout/diff/commit/tag/restore/push/pull (§30 git_provides). NEXUS keeps owning semantic identity/atlas/chunks/graph/verification (§30 nexus_provides) — unchanged by this MCO.

@@ -171,7 +171,7 @@ spec:
       idearium/repo/verify-lazy.js writing verification.lazy.json, test in
       tests/modules/test-mco2-verify-deepening.js. Status corrected in
       0.39.170 — this entry read NOT STARTED after the code landed. Gate
-      evidence not re-run at correction time.
+      evidence re-run 2026-09-20: test-mco2-verify-deepening.js 18/18.
     does: >
       Extends the existing verify() (which already covers L0-L3) up
       the tier ladder. Per §37's own note, expensive tiers (L6 runtime/
@@ -192,7 +192,22 @@ spec:
   # ── MCO3: full snapshot compliance ────────────────────────────────────
   MCO3_snapshot_compliance:
     depends_on: [MCO1, MCO2]
-    status: "NOT STARTED"
+    status: >
+      DONE 2026-09-20 (v0.39.174). Built: idearium/repo/snapshot.js, spec at
+      idearium/spec/idearium.repo-snapshot.spec (written first, §8.5),
+      routes repo.snapshot.commit/.list/.show, test
+      tests/modules/test-mco3-repo-snapshot.js 38/38. GATE MET: one real
+      commit, read back through versionium's getState(), carries all nine
+      §33 must_record keys with their data intact; also exercised over real
+      HTTP against a booted versionium. CORRECTION to the "additive fields
+      on the existing real commit" premise below: no repo-scoped commit
+      existed (idea snapshots commit ideas/specs/gaps), so this phase added
+      the repo-scoped path on versionium's unchanged engine.commit(),
+      under system 'idearium.repo'. MCO-B (per-file snapshot/delta) is still
+      NOT STARTED: a repo snapshot records derived state and stores no file
+      content, so it cannot restore files.
+      UI: Versionium repo subtab (v0.39.175) — list, take, per-snapshot detail,
+      since-previous strip; tests/modules/test-mco3-versionium-tab.js.
     does: >
       Extends the versionium_commit metadata (real, existing — see
       idearium-creative-repo-overhaul-phasemap MCO-B) to also carry

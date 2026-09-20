@@ -181,6 +181,56 @@ export function writeSourceFiles(repoDir, realFiles = [], { verify = true } = {}
   return { ok: true, dir: repoDir, written, failed, skipped, manifest };
 }
 
+/**
+ * setSourceFile(repoDir, rel, buffer) — replace (or add) ONE source-owned file's
+ * bytes and its manifest entry, leaving every other entry alone.
+ * §MCO-C 2026-09-20 — writeSourceFiles() rewrites the whole manifest from the
+ * files it is handed, so it cannot be used to change one file. Snapshot restore
+ * needs exactly that: an imported repo's real files (binaries included) are
+ * owned by this layer, and RepoLayer.writeFile() only edits the chunk, which
+ * materialize() then declines to write over the real file. Refuses when the
+ * repo has no source layer (nothing to be owned by).
+ */
+export function setSourceFile(repoDir, rel, buffer) {
+  const safe = _safeRel(rel);
+  // _safeRel() CLEANS a path ('../x' -> 'x'). For a single-file write that would
+  // silently write somewhere other than what was asked, so a path that needed
+  // cleaning is refused instead.
+  if (!safe || safe !== rel || safe === SOURCE_MANIFEST_FILE) return { ok: false, error: `unsafe or reserved path: ${rel}` };
+  if (!Buffer.isBuffer(buffer)) return { ok: false, error: 'buffer required' };
+  const man = loadSourceManifest(repoDir);
+  if (!man || man.unreadable) return { ok: false, error: 'repo has no readable source layer' };
+  const dest = path.join(repoDir, safe);
+  try { fs.mkdirSync(path.dirname(dest), { recursive: true }); fs.writeFileSync(dest, buffer); }
+  catch (e) { return { ok: false, error: `write failed: ${e.message}` }; }
+  const hash = _sha256(buffer);
+  try { if (_sha256(fs.readFileSync(dest)) !== hash) return { ok: false, error: 'write verification failed' }; }
+  catch (e) { return { ok: false, error: `write verification read failed: ${e.message}` }; }
+  const prev = (man.files || []).find(f => f.path === safe);
+  const binary = prev ? !!prev.binary : (buffer.includes(0) || !Buffer.from(buffer.toString('utf8'), 'utf8').equals(buffer));
+  const files = (man.files || []).filter(f => f.path !== safe);
+  files.push({ path: safe, bytes: buffer.length, sha256: hash, binary });
+  return _writeManifest(repoDir, man, files);
+}
+
+/** removeSourceFile(repoDir, rel) — delete one source-owned file and its manifest entry. */
+export function removeSourceFile(repoDir, rel) {
+  const safe = _safeRel(rel);
+  if (!safe || safe !== rel || safe === SOURCE_MANIFEST_FILE) return { ok: false, error: `unsafe or reserved path: ${rel}` };
+  const man = loadSourceManifest(repoDir);
+  if (!man || man.unreadable) return { ok: false, error: 'repo has no readable source layer' };
+  if (!(man.files || []).some(f => f.path === safe)) return { ok: false, error: `not a source-owned file: ${safe}` };
+  try { fs.rmSync(path.join(repoDir, safe), { force: true }); } catch (e) { return { ok: false, error: `delete failed: ${e.message}` }; }
+  return _writeManifest(repoDir, man, (man.files || []).filter(f => f.path !== safe));
+}
+
+function _writeManifest(repoDir, man, files) {
+  const next = { ...man, writtenAt: Date.now(), totalFiles: files.length, totalBytes: files.reduce((n, f) => n + f.bytes, 0), files };
+  try { fs.writeFileSync(path.join(repoDir, SOURCE_MANIFEST_FILE), JSON.stringify(next, null, 2), 'utf8'); }
+  catch (e) { return { ok: false, error: `source manifest write failed: ${e.message}` }; }
+  return { ok: true, manifest: next };
+}
+
 /** loadSourceManifest(repoDir) -> the manifest, or null when this repo has no source layer. */
 export function loadSourceManifest(repoDir) {
   if (!repoDir) return null;
@@ -265,4 +315,4 @@ export function verify(repoDir) {
   };
 }
 
-export default { writeSourceFiles, loadSourceManifest, sourcePathSet, preserveEntries, verify, SOURCE_MANIFEST_FILE, MODULE_ID, VERSION };
+export default { writeSourceFiles, setSourceFile, removeSourceFile, loadSourceManifest, sourcePathSet, preserveEntries, verify, SOURCE_MANIFEST_FILE, MODULE_ID, VERSION };

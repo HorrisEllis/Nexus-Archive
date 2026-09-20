@@ -26,6 +26,15 @@ const components = [
   _c('restore.read', 'GET', '/api/versionium/restore/:commitId', 'Real temporal replay — read-only', { grammar: ['versionium restore'] }),
   _c('state.read', 'GET', '/api/versionium/state/:commitId', 'Direct-restore read of a commit\'s stored state', { grammar: ['versionium state'] }),
   _c('calendar.read', 'GET', '/api/versionium/calendar/:date', 'Real calendar playback for a given date', { grammar: ['versionium calendar'] }),
+  // §MCO-B 2026-09-20 — the per-file layer (versionium/spec/versionium.file-versioning.spec).
+  // The phasemap's file.snapshot / file.delta capabilities are one route here:
+  // record() decides full copy vs delta per file (and proves any delta), so a
+  // caller never has to know which one it got.
+  _c('files.limits', 'GET', '/api/versionium/files/limits', 'Per-file size cap, per-record cap and keyframe interval', { grammar: ['versionium files limits'], tags: ['files'] }),
+  _c('files.plan', 'POST', '/api/versionium/files/plan', 'Which file contents versionium needs for a repo tree, and which paths were deleted', { grammar: ['versionium files plan'], tags: ['files'] }),
+  _c('files.record', 'POST', '/api/versionium/files/record', 'Attach a repo tree\'s files (full copy or proven delta) to an existing repo-snapshot commit', { grammar: ['versionium files record'], tags: ['files'] }),
+  _c('files.tree', 'GET', '/api/versionium/files/tree', 'Files (path, sha256, bytes) and tree hash as of a commit', { grammar: ['versionium files tree'], tags: ['files'] }),
+  _c('files.content', 'GET', '/api/versionium/files/content', 'One file\'s exact bytes as of a commit, every chain step verified', { grammar: ['versionium files content'], tags: ['files'] }),
   _c('health', 'GET', '/health', 'Versionium health', { grammar: ['versionium health'] }),
 ];
 module.exports = {

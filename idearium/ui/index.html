@@ -737,6 +737,7 @@ body{display:flex;flex-direction:column;position:relative}
             <button class="repo-subtab-btn" data-subtab="architect" onclick="setRepoSubtab('architect')">Architect</button>
             <button class="repo-subtab-btn" data-subtab="phasemap" onclick="setRepoSubtab('phasemap')">Phasemap</button>
             <button class="repo-subtab-btn" data-subtab="intelligence" onclick="setRepoSubtab('intelligence')">Intelligence</button>
+            <button class="repo-subtab-btn" data-subtab="versionium" onclick="setRepoSubtab('versionium')">Versionium</button>
             <button class="repo-subtab-btn" data-subtab="settings" onclick="setRepoSubtab('settings')">Settings</button>
           </nav>
 
@@ -776,6 +777,16 @@ body{display:flex;flex-direction:column;position:relative}
                repo's own real atlas/graph/verification artifacts — see
                GET /api/repos/:uuid/scan. -->
           <div class="repo-subtab-panel" id="repo-subtab-intelligence">
+            <div class="detail-empty">← select a repo</div>
+          </div>
+
+          <!-- VERSIONIUM — this repo's snapshots (MCO3, §33): the derived
+               state of the repo at a moment (source hash, git commit,
+               atlas/chunk/graph identity, dependencies, environment, tests,
+               verification), committed to versionium. GET/POST
+               /api/repos/:uuid/snapshot(s). Records state only, not file
+               content — see js/app.js §VERSIONIUM. -->
+          <div class="repo-subtab-panel" id="repo-subtab-versionium">
             <div class="detail-empty">← select a repo</div>
           </div>
 
