@@ -90,6 +90,12 @@ module.exports = Object.freeze({
     severity: 'notable',
   },
 
+  GUARDIAN_BLOCKS_CAPTURED: {
+    description: "EVERY fenced code block in an agent's reply was written as a real file with its own syntax, not just the one matching a declared fileName. nameSource says where each name came from: 'job-declared' (the job named it), 'fence-declared' (the agent named it in its own info string), or 'derived' (block-<n><ext>, invented here) — derivedName:true marks the last so an invented name is never read as a stated one.",
+    payloadShape: ['jobId', 'provider', 'captured', 'blockCount', 'blocks'],
+    severity: 'info',
+  },
+
   GUARDIAN_RESPONSE_CAPTURED: {
     description: "Every completed agent response is recorded as a real .response node in the ClearGlass downloads index (a COS compartment), with its fenced code blocks and their resolved syntax. indexed:false means the .response file — the source of truth — was written and fsync'd but the disposable SQLite index was unavailable; rebuildIndexFromResponses() recovers it.",
     payloadShape: ['jobId', 'provider', 'responseId', 'responsePath', 'indexed', 'codeBlocks'],

@@ -376,6 +376,124 @@ function recordAgentResponse({ job, text, blocks } = {}) {
   }
 }
 
+/**
+ * captureAll({ job, text, dir, stage }) — EVERY fenced block in a reply
+ * becomes a real file, each with its own syntax.
+ *
+ * §BUILT 2026-09-20 — James: "Just need to capture all code blocks and
+ * coding syntax. That's the biggest gap with guardian."
+ *
+ * capture() above answers a narrow question: "the job declared ONE file,
+ * which block belongs in it." That was the right shape for a declared
+ * target and it is unchanged. But it means every OTHER block an agent
+ * returned was parsed, counted, and then thrown away — an agent that
+ * answers with three files produced one artifact and two discarded
+ * fences. The .response node records them, but a record inside a JSON
+ * blob is not a file anyone can use.
+ *
+ * §NAMING IS THE WHOLE PROBLEM, and it is answered honestly rather than
+ * guessed:
+ *   - The block that matches the job's declared fileName (by the same
+ *     pickBlock rules as capture()) gets THAT name. One block can hold
+ *     the declared name; the rest cannot.
+ *   - A fence whose info string carries a path — ```js src/x.js — has a
+ *     real name the AGENT stated. That is used, after the same path
+ *     safety check every other name gets. This was listed as an open
+ *     question when the feature shipped; the answer is that an agent
+ *     naming its own file is evidence, and the job's declared name still
+ *     outranks it for the one block that matches.
+ *   - Everything else gets `block-<index><ext>`, where ext comes from
+ *     the block's own fence language via lib/languages.js. These are
+ *     marked derivedName:true so nothing downstream mistakes an invented
+ *     name for one anybody actually stated (§1.2).
+ *   - A block whose language is unknown gets no extension rather than a
+ *     guessed one.
+ *
+ * Returns { ok, blocks: [...], captured, refused }. Never throws.
+ */
+function captureAll({ job, text, dir, stage = true } = {}) {
+  if (!job) return { ok: false, reason: 'no-job', blocks: [] };
+  const all = extractCodeBlocks(text);
+  if (!all.length) {
+    return {
+      ok: false,
+      reason: unclosedFence(text) ? 'unclosed-fence' : 'no-code-block',
+      blocks: [], captured: 0, refused: 0,
+    };
+  }
+
+  const baseDir = dir || path.join(ARTIFACT_DIR, String(job.id || 'no-job-id'));
+
+  // Which block, if any, claims the job's declared name.
+  let declaredIndex = -1;
+  const declaredRel = job.fileName ? _safeRelative(job.fileName) : null;
+  if (declaredRel) {
+    const picked = pickBlock(all, { syntax: job.syntax, fileName: declaredRel });
+    if (picked.block) declaredIndex = picked.block.index;
+  }
+
+  const out = [];
+  for (const b of all) {
+    let name = null;
+    let derivedName = false;
+    let source = null;
+
+    if (b.index === declaredIndex) {
+      name = declaredRel; source = 'job-declared';
+    } else {
+      // A path stated inside the fence's own info string, e.g.
+      // ```js src/x.js  or  ```js title="src/x.js"
+      const m = (b.info || '').match(/(?:^|\s)(?:title=)?["']?([\w./-]+\.[A-Za-z0-9]+)["']?\s*$/);
+      const stated = m && m[1] && m[1] !== b.tag ? _safeRelative(m[1]) : null;
+      if (stated) { name = stated; source = 'fence-declared'; }
+      else {
+        const ext = b.syntax ? _languages.extFor(b.syntax) : null;
+        name = `block-${b.index}${ext || ''}`;
+        derivedName = true; source = 'derived';
+      }
+    }
+
+    const rec = {
+      index: b.index, syntax: b.syntax || null,
+      ext: b.syntax ? _languages.extFor(b.syntax) : null,
+      fileName: name, nameSource: source, derivedName,
+      bytes: Buffer.byteLength(b.code, 'utf8'), sha256: sha256(b.code),
+    };
+
+    const target = path.join(baseDir, name);
+    try {
+      fs.mkdirSync(path.dirname(target), { recursive: true });
+      fs.writeFileSync(target, b.code, 'utf8');
+      rec.ok = true; rec.path = target;
+    } catch (e) {
+      rec.ok = false; rec.error = e.message;
+      out.push(rec);
+      continue;
+    }
+
+    if (stage) {
+      try {
+        const intake = require('../../lib/intake.js');
+        const r = intake.stage({
+          source: target,
+          provenance: {
+            provider: job.provider || null, filename: name,
+            jobId: job.id || null, agentId: job.agentId || null,
+            blockIndex: b.index, syntax: b.syntax || null,
+            derivedName, downloadedAt: Date.now(),
+          },
+        });
+        if (r && r.ok) rec.dropId = r.dropId;
+        else rec.stageError = (r && r.error) || 'intake.stage refused';
+      } catch (e) { rec.stageError = e.message; }
+    }
+    out.push(rec);
+  }
+
+  const captured = out.filter(b => b.ok).length;
+  return { ok: captured > 0, blocks: out, captured, refused: out.length - captured, blockCount: all.length };
+}
+
 function onJobComplete({ job, text, bus } = {}) {
   if (!job) return null;
 
@@ -394,6 +512,31 @@ function onJobComplete({ job, text, bus } = {}) {
         indexed: recorded.indexed, codeBlocks: blocks.length, ts: Date.now(),
       });
     } catch (_) { /* an emit failure never costs the capture */ }
+  }
+
+  // §ALL BLOCKS, not just the declared one. Runs for every reply that
+  // contains code, whether or not the job named a file — an agent
+  // returning three files now produces three real files instead of one
+  // artifact and two discarded fences.
+  let allBlocks = null;
+  if (blocks.length) {
+    try {
+      allBlocks = captureAll({ job, text });
+      if (allBlocks.ok) {
+        console.log(`[guardian] code blocks: ${allBlocks.captured}/${allBlocks.blockCount} written (${allBlocks.blocks.map(b => `${b.fileName}${b.derivedName ? '*' : ''}`).join(', ')})`);
+      }
+      if (bus && typeof bus.emit === 'function') {
+        bus.emit('guardian.blocks.captured', {
+          jobId: job.id, provider: job.provider || null,
+          captured: allBlocks.captured, blockCount: allBlocks.blockCount,
+          blocks: allBlocks.blocks.map(({ index, fileName, syntax, bytes, derivedName, dropId }) =>
+            ({ index, fileName, syntax, bytes, derivedName, dropId: dropId || null })),
+          ts: Date.now(),
+        });
+      }
+    } catch (e) {
+      console.warn(`[guardian] captureAll failed for job ${job.id} (non-fatal): ${e.message}`);
+    }
   }
 
   if (!job.fileName) return null;
@@ -420,6 +563,7 @@ function onJobComplete({ job, text, bus } = {}) {
 
 module.exports = {
   MODULE_ID,
+  captureAll,
   onJobComplete,
   recordAgentResponse,
   capture,

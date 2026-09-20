@@ -373,5 +373,90 @@ t('WIRE-011 the browser-command path is deliberately NOT wired', () => {
   assert.ok(!src.includes('onJobComplete'), 'dispatcher.js was wired — see the note in code-artifact.js');
 });
 
+console.log('\n── captureAll: every block, not just the declared one ────');
+
+const allTmp = fs.mkdtempSync(path.join(tmp, 'all-'));
+const MULTI = 'First:\n```js src/a.js\nconst a=1;\n```\nThen:\n```swift\nlet x=1\n```\nAnd:\n```py\nx=1\n```\nPlain:\n```\njust text\n```';
+
+t('ALL-001 every fenced block becomes a real file', () => {
+  const dir = path.join(allTmp, 'a1');
+  const r = CA.captureAll({ job: { id: 'a1', fileName: 'src/a.js', syntax: 'js' }, text: MULTI, dir, stage: false });
+  assert.strictEqual(r.blockCount, 4);
+  assert.strictEqual(r.captured, 4, 'blocks were discarded — the exact gap this closes');
+  for (const b of r.blocks) assert.ok(fs.existsSync(b.path), `${b.fileName} not on disk`);
+});
+
+t('ALL-002 each block keeps its OWN syntax', () => {
+  const dir = path.join(allTmp, 'a2');
+  const r = CA.captureAll({ job: { id: 'a2' }, text: MULTI, dir, stage: false });
+  assert.deepStrictEqual(r.blocks.map(b => b.syntax), ['javascript', 'swift', 'python', null]);
+  assert.deepStrictEqual(r.blocks.map(b => b.ext), ['.js', '.swift', '.py', null]);
+});
+
+t('ALL-003 the job-declared name goes to the block that matches it', () => {
+  const dir = path.join(allTmp, 'a3');
+  const r = CA.captureAll({ job: { id: 'a3', fileName: 'src/a.js', syntax: 'js' }, text: MULTI, dir, stage: false });
+  const d = r.blocks.find(b => b.nameSource === 'job-declared');
+  assert.ok(d, 'no block took the declared name');
+  assert.strictEqual(d.fileName, 'src/a.js');
+  assert.strictEqual(d.derivedName, false);
+  assert.strictEqual(r.blocks.filter(b => b.nameSource === 'job-declared').length, 1,
+    'more than one block claimed the declared name');
+});
+
+t('ALL-004 a path stated in the fence is USED, and marked as the agent\'s', () => {
+  // Was an open question at ship time. An agent naming its own file is
+  // real evidence; the job's declared name still outranks it.
+  const dir = path.join(allTmp, 'a4');
+  const text = '```js lib/one.js\nconst a=1;\n```\n```js lib/two.js\nconst b=2;\n```';
+  const r = CA.captureAll({ job: { id: 'a4' }, text, dir, stage: false });
+  const names = r.blocks.map(b => b.fileName);
+  assert.ok(names.includes('lib/one.js') && names.includes('lib/two.js'), `got ${names.join(', ')}`);
+  assert.ok(r.blocks.every(b => b.nameSource === 'fence-declared'));
+  assert.ok(r.blocks.every(b => b.derivedName === false));
+});
+
+t('ALL-005 an invented name is MARKED invented, never passed off as stated', () => {
+  const dir = path.join(allTmp, 'a5');
+  const r = CA.captureAll({ job: { id: 'a5' }, text: MULTI, dir, stage: false });
+  const derived = r.blocks.filter(b => b.derivedName);
+  assert.ok(derived.length >= 3);
+  for (const b of derived) {
+    assert.strictEqual(b.nameSource, 'derived');
+    assert.ok(b.fileName.startsWith('block-'), b.fileName);
+  }
+});
+
+t('ALL-006 an unknown language gets NO extension rather than a guessed one', () => {
+  const dir = path.join(allTmp, 'a6');
+  const r = CA.captureAll({ job: { id: 'a6' }, text: '```\nplain\n```', dir, stage: false });
+  assert.strictEqual(r.blocks[0].ext, null);
+  assert.strictEqual(r.blocks[0].fileName, 'block-0');
+});
+
+t('ALL-007 a fence path that escapes its directory is refused, not written', () => {
+  const dir = path.join(allTmp, 'a7');
+  const r = CA.captureAll({ job: { id: 'a7' }, text: '```js ../escape.js\nconst a=1;\n```', dir, stage: false });
+  assert.ok(!r.blocks[0].fileName.includes('..'), `unsafe name accepted: ${r.blocks[0].fileName}`);
+  assert.strictEqual(r.blocks[0].derivedName, true);
+});
+
+t('ALL-008 no code is an honest reason, and an unclosed fence its own', () => {
+  assert.strictEqual(CA.captureAll({ job: { id: 'a8' }, text: 'prose', stage: false }).reason, 'no-code-block');
+  assert.strictEqual(CA.captureAll({ job: { id: 'a8b' }, text: '```js\nx', stage: false }).reason, 'unclosed-fence');
+});
+
+t('ALL-009 every block stages through the real intake gate', () => {
+  const dir = path.join(allTmp, 'a9');
+  process.env.NEXUS_INTAKE_DIR = path.join(allTmp, 'intake9');
+  delete require.cache[require.resolve('../../lib/intake.js')];
+  const r = CA.captureAll({ job: { id: 'a9', provider: 'claude' }, text: MULTI, dir, stage: true });
+  const staged = r.blocks.filter(b => b.dropId);
+  assert.strictEqual(staged.length, r.captured, `only ${staged.length}/${r.captured} staged`);
+  const contract = require('../../lib/intake.js').read(staged[0].dropId);
+  assert.strictEqual(contract.provenance.jobId, 'a9');
+  assert.ok('blockIndex' in contract.provenance, 'block index not carried into provenance');
+});
+
 console.log(`\n${fail === 0 ? '✓' : '✗'} code-artifact: ${pass} passed, ${fail} failed\n`);
 process.exit(fail === 0 ? 0 : 1);

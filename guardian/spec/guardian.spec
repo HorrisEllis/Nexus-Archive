@@ -42,6 +42,7 @@ spec:
       - "guardian.artifact.captured"
       - "guardian.artifact.refused"
       - "guardian.response.captured"
+      - "guardian.blocks.captured"
     handles:
       - "cortex.raid.decided → dispatch to chosen provider"
       - "HEAL_REQUESTED      → forge.patch if applicable"
