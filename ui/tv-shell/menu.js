@@ -6,7 +6,7 @@
  *
  * Sovereign floating menu button module.
  * Zero coupling to the shell. Zero inline logic.
- * Loads as <script src="/ui/tv-shell/menu.js">.
+ * Loads as <script src="./menu.js">.
  *
  * Public API (window.NexusMenu):
  *   NexusMenu.toggle()      — open/close the menu

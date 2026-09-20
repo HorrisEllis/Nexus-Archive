@@ -1825,7 +1825,7 @@ function renderRepoSettings(repo) {
         <button class="action-btn" onclick="addApiRepoFile('${repo.uuid}')">+ add file</button>
         <button class="action-btn" onclick="forkApiRepo('${repo.uuid}')">⑂ fork</button>
         <button class="action-btn" onclick="exportApiRepo()">⇩ export .zip</button>
-        <button class="action-btn danger" onclick="archiveApiRepo()">✕ archive</button>
+        <button class="action-btn danger" onclick="openDeleteRepoModal()">✕ delete</button>
       </div>
     </div>`;
 }
@@ -2073,18 +2073,40 @@ async function deleteApiRepoFile(repoUuid, filePath) {
 // redesign (see idearium/api/index.js's dynRoutes) — soft-delete only,
 // status flips to 'archived' and it drops out of the default repo list;
 // nothing on disk is touched (§7.4). No prior UI path called this at all.
-async function archiveApiRepo() {
+// §RENAMED 2026-09-20 — "archive" became "delete": a styled type-to-confirm
+// modal instead of a browser confirm(), lands back on the repo library
+// (exitRepoDetail()) instead of leaving a stale detail panel open on a
+// repo that no longer exists. Same real endpoint underneath (DELETE
+// /api/repos/:uuid, still route id repo.archive server-side — unchanged,
+// this is a UI rename only).
+function openDeleteRepoModal() {
   if (!CURRENT_API_REPO) { toast('no repo loaded — open one first', 'err'); return; }
-  if (!confirm(`archive "${CURRENT_API_REPO.name}"? it'll drop out of the repo list — content itself is kept, not deleted.`)) return;
+  document.getElementById('delete-repo-name').textContent = CURRENT_API_REPO.name;
+  const input = document.getElementById('delete-repo-confirm-input');
+  input.value = '';
+  document.getElementById('delete-repo-confirm-btn').disabled = true;
+  document.getElementById('delete-repo-modal').classList.add('open');
+  input.focus();
+}
+function closeDeleteRepoModal() {
+  document.getElementById('delete-repo-modal').classList.remove('open');
+}
+function _onDeleteRepoInput() {
+  const ok = document.getElementById('delete-repo-confirm-input').value.trim().toLowerCase() === 'delete';
+  document.getElementById('delete-repo-confirm-btn').disabled = !ok;
+}
+async function confirmDeleteRepo() {
+  if (!CURRENT_API_REPO) return;
   const uuid = CURRENT_API_REPO.uuid;
+  const name = CURRENT_API_REPO.name;
   try {
     await api(`/api/repos/${uuid}`, { method: 'DELETE' });
-    toast('repo archived', 'ok');
+    closeDeleteRepoModal();
+    exitRepoDetail(); // lands back on the main repo library, not a dead detail panel
     await loadApiRepos();
-    CURRENT_API_REPO = null; ACTIVE_API_FILE = null; _showIdeEditor(false);
-    renderApiRepoPanel(null);
+    toast(`deleted "${name}"`, 'ok');
   } catch (e) {
-    toast('archive failed: ' + e.message, 'err');
+    toast('delete failed: ' + e.message, 'err');
   }
 }
 
