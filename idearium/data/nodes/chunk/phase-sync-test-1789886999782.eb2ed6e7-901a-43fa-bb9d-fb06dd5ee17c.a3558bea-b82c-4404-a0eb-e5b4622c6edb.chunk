@@ -1,0 +1,39 @@
+envelope: 1
+uuid: nexus-export-chunk-phase-sync-test-1789886999782.eb2ed6e7-901a-43fa-bb9d-fb06dd5ee17c.a3558bea-b82c-4404-a0eb-e5b4622c6edb
+type: chunk
+id: phase-sync-test-1789886999782.eb2ed6e7-901a-43fa-bb9d-fb06dd5ee17c.a3558bea-b82c-4404-a0eb-e5b4622c6edb
+context: idearium spec-engine chunk of spec eb2ed6e7-901a-43fa-bb9d-fb06dd5ee17c
+intent: null
+summary: tests (complete)
+system: idearium
+tags:
+  - spec:eb2ed6e7-901a-43fa-bb9d-fb06dd5ee17c
+  - status:complete
+  - section:tests
+  - specName:phase-sync-test-1789886999782
+  - agent:deepseek
+exported_at: 1789886999858
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1789886999858
+lastSeenAt: 1789886999858
+fingerprint: null
+payload:
+  uuid: a3558bea-b82c-4404-a0eb-e5b4622c6edb
+  specUuid: eb2ed6e7-901a-43fa-bb9d-fb06dd5ee17c
+  sectionId: tests
+  sectionTitle: Tests & Verification
+  chunkIdx: 9
+  status: complete
+  realPath: null
+  fileName: 09-tests.md
+  filePath: /home/claude/work/base/idearium/data/specs/eb2ed6e7-901a-43fa-bb9d-fb06dd5ee17c/09-tests-a3558bea.md
+  agent: deepseek
+  agentModel: null
+  attempts: 0
+  failureMode: null
+  byteSize: 421
+  contentHash: 6aca4005e4204348468d98306c5dcf996d67f6b113557f90d00cb132aa315c56
+  createdAt: 1789886999785
+  updatedAt: 1789886999854
+  completedAt: 1789886999854

@@ -1,0 +1,37 @@
+envelope: 1
+uuid: nexus-export-repository-mco2-test-repo-2
+type: repository
+id: mco2-test-repo-2
+context: idearium repo undefined
+intent: null
+summary: 1 files, 1 chunks, READY
+system: idearium
+tags:
+  - spec:undefined
+  - state:READY
+  - verification:passed
+exported_at: 1789886990864
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1789886990864
+lastSeenAt: 1789886990864
+fingerprint: null
+payload:
+  uuid: mco2-test-repo-2
+  rootHash: null
+  parent: null
+  state: READY
+  fileCount: 1
+  byLanguage:
+    javascript: 1
+  failedCount: 0
+  chunkCount: 1
+  symbolCount: 0
+  verificationStatus: passed
+  verificationLevel: L5
+  paths:
+    atlas: /tmp/mco2-noctract-XNStt6/repo/atlas.json
+    chunks: /tmp/mco2-noctract-XNStt6/repo/chunks
+    indexes: /tmp/mco2-noctract-XNStt6/repo/indexes
+    verification: /tmp/mco2-noctract-XNStt6/repo/verification.json
+  generatedAt: 1789886990864

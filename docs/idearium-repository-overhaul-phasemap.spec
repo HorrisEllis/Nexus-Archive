@@ -177,7 +177,41 @@ spec:
   # ── MCO6: Compartment ownership ────────────────────────────────────────
   MCO6_compartment_ownership:
     depends_on: [MCO0]
-    status: "NOT STARTED"
+    status: >
+      DONE 2026-09-20. Real finding during the map: the gate was already
+      being violated by code unrelated to repo-import — idea.phase→
+      'building' (idearium/api/index.js) called lib/compartment-engine.js's
+      spawn(), a second, fully independent id-space (JAA-backed,
+      constraint_frame/trace_log) with no connection to cos/'s real
+      compartment store. Migrated that call site to lib/cos-bridge.js
+      (already the established real entry point per its own 2026-09-15
+      header — this fixes the one caller its original migration missed).
+      Separately, two of five real repo-creation paths (spec.promote,
+      speceng.create's auto-repo) never attached any compartment at all
+      — compartmentId was permanently null. Both now call cos-bridge.js's
+      createCompartment()+uniqueName() via a shared _ensureCompartment()
+      helper (idearium/api/index.js). lib/compartment-engine.js itself is
+      untouched — its other real callers (RAID contract-intake,
+      autonomous-loop, adversary-suite, case-library) use it for
+      end-state PASS/FAIL evaluation, which cos-bridge.js's own header
+      already names as the one thing COS has no equivalent of; not in
+      scope here. gate_proof: tests/modules/test-mco6-repo-compartment.js,
+      11/11, real HTTP against a real server — confirms non-null
+      compartmentId on both previously-null repo paths, confirms idea and
+      repo compartments now resolve in the SAME real COS store
+      (cos-bridge.getCompartment), confirms dedup (same spec promoted
+      after auto-create correctly returns the same repo/compartment, not
+      a collision), confirms two distinct specs get two distinct
+      compartments. Zero regressions: every existing test touching these
+      paths (idearium-phase-compartment[-integration], spec-promote,
+      idearium-auto-repo-creation, idearium-materialize-physical,
+      idearium-phase-sync) still 44/44 total. NOT YET DONE: lib/
+      project-container.js's own two COS call sites still hand-roll a
+      direct cos/cli/commands/create.js call instead of going through
+      cos-bridge.js, despite that module's own header claiming it already
+      does ("uniqueName() ... project-container uses") — grep-confirmed
+      false; a separate, smaller drift, not fixed here since it was
+      already compartment-attached and outside MCO6's stated "does".
     does: Wires §5 — repo import attaches to an existing cos/ Compartment, never a second parallel abstraction. Adds compartment_id to idearium's repo record.
     gate: MET when every imported repo has exactly one compartment_id and no second compartment-like abstraction exists (grep-confirmed).
 

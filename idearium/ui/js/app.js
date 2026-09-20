@@ -275,7 +275,6 @@ function updateStats() {
   document.getElementById('stat-snr').textContent    = STATS && STATS.snr!=null ? STATS.snr.toFixed ? STATS.snr.toFixed(2) : STATS.snr : '—';
   document.getElementById('brain-count-badge').textContent = `${BRAINSTORMS.length} entries`;
   document.getElementById('spec-count-badge').textContent  = `${SPECS.length} specs`;
-  document.getElementById('snap-count-badge').textContent  = `${SNAPSHOTS.length} snapshots`;
   document.getElementById('snap-btn').disabled = !CONNECTED;
 }
 
@@ -291,7 +290,6 @@ function setView(v) {
     if (groupBtn) groupBtn.classList.toggle('active', views.includes(v));
     g.classList.remove('open');
   });
-  if (v === 'projects') loadProjects();
   // Clicking the Repos tab itself always lands on the landing grid, even if
   // a repo was left open last visit — openRepoFor() (idea/spec → repo) is
   // the only path that should skip straight to detail mode.
@@ -1432,7 +1430,7 @@ function enterRepoDetail(uuid) {
 // re-entering a repo always starts from its tree, same as a fresh visit.
 function exitRepoDetail() {
   REPO_DETAIL_OPEN = false;
-  CURRENT_API_REPO = null; ACTIVE_API_FILE = null; API_FILE_DIRTY = false;
+  CURRENT_API_REPO = null; ACTIVE_API_FILE = null; API_FILE_DIRTY = false; CURRENT_REPO_SUBTAB = null;
   document.getElementById('repo-wrap').classList.remove('repo-open');
   document.getElementById('repo-back-btn').style.display = 'none';
   document.getElementById('repo-view-title').textContent = 'Repository Library';
@@ -1442,7 +1440,8 @@ function exitRepoDetail() {
 function selectApiRepo(uuid) {
   const repo = API_REPOS.find(r => r.uuid === uuid);
   if (!repo) return;
-  if (CURRENT_API_REPO && CURRENT_API_REPO.uuid !== uuid) {
+  const switchingRepo = CURRENT_API_REPO && CURRENT_API_REPO.uuid !== uuid;
+  if (switchingRepo) {
     // switching to a genuinely different repo — any open file belongs to
     // the old one and must close, unlike a same-repo background refresh
     ACTIVE_API_FILE = null; API_FILE_DIRTY = false;
@@ -1453,6 +1452,129 @@ function selectApiRepo(uuid) {
   document.getElementById('repo-context').textContent = '';
   renderRepoLibrary(); // refresh active-card highlight
   renderApiRepoPanel(repo);
+  // §REPO SUBTABS — a genuinely different repo always lands back on Home,
+  // same "always starts fresh" rule the file-tree above already follows.
+  // A same-repo refresh (switchingRepo:false, e.g. after loadApiRepos()
+  // polls) leaves whichever subtab is currently open alone and just
+  // re-renders it, so an open Phasemap/Settings tab doesn't get yanked
+  // back to Home every poll cycle.
+  if (switchingRepo || !CURRENT_REPO_SUBTAB) setRepoSubtab('home');
+  else renderCurrentRepoSubtab();
+}
+
+// ════════════════════════════════════════════════════
+// §REPO SUBTABS 2026-09-20 — Home / Files / Phasemap / Settings. Each
+// panel loads its own data; switching tabs never re-fetches a panel
+// that's already showing the current repo (see the *_LOADED_FOR guards
+// below) — CURRENT_API_REPO can change out from under an open tab via
+// loadApiRepos()'s poll, so every render function re-checks the repo
+// uuid itself rather than trusting a stale "already loaded" flag.
+// ════════════════════════════════════════════════════
+let CURRENT_REPO_SUBTAB = null;
+
+function setRepoSubtab(name) {
+  CURRENT_REPO_SUBTAB = name;
+  document.querySelectorAll('.repo-subtab-btn').forEach(b => b.classList.toggle('active', b.dataset.subtab === name));
+  document.querySelectorAll('.repo-subtab-panel').forEach(p => p.classList.toggle('active', p.id === `repo-subtab-${name}`));
+  renderCurrentRepoSubtab();
+}
+
+function renderCurrentRepoSubtab() {
+  if (!CURRENT_API_REPO) return;
+  if (CURRENT_REPO_SUBTAB === 'home') renderRepoHome(CURRENT_API_REPO);
+  else if (CURRENT_REPO_SUBTAB === 'files') renderApiRepoPanel(CURRENT_API_REPO);
+  else if (CURRENT_REPO_SUBTAB === 'phasemap') renderRepoPhasemap(CURRENT_API_REPO);
+  else if (CURRENT_REPO_SUBTAB === 'settings') renderRepoSettings(CURRENT_API_REPO);
+}
+
+// ── HOME — the repo's own README/.spec if it has one, else basic identity.
+// Real content only: no fabricated summary when neither file exists.
+async function renderRepoHome(repo) {
+  const el = document.getElementById('repo-subtab-home');
+  if (!el) return;
+  const homeFile = (repo.files || []).find(f => /(^|\/)readme\.md$/i.test(f.path))
+                 || (repo.files || []).find(f => /\.spec$/i.test(f.path));
+  const identity = `
+    <div class="ds"><div class="ds-label">repository</div><div class="ds-mono">${escapeHtml(repo.name)}\nuuid ${repo.uuid}\nsource ${escapeHtml(repo.source || 'unknown')}${repo.createdAt ? '\n' + new Date(repo.createdAt).toLocaleString() : ''}</div></div>`;
+  if (!homeFile) {
+    el.innerHTML = identity + `<div class="detail-empty">no README.md or .spec file in this repo yet</div>`;
+    return;
+  }
+  el.innerHTML = identity + `<div class="ds"><div class="ds-label">${escapeHtml(homeFile.path)}</div><div class="ds-mono" id="repo-home-content">loading…</div></div>`;
+  try {
+    const r = await api(`/api/repos/${repo.uuid}/file?path=${encodeURIComponent(homeFile.path)}`, {}, 15000);
+    const target = document.getElementById('repo-home-content');
+    // still looking at the same repo/tab? (a fast repo switch mid-fetch
+    // must not paint a stale README over the new repo's Home panel)
+    if (target && CURRENT_API_REPO?.uuid === repo.uuid && CURRENT_REPO_SUBTAB === 'home') {
+      target.textContent = r.content || '(empty file)';
+    }
+  } catch (e) {
+    const target = document.getElementById('repo-home-content');
+    if (target) target.textContent = `// could not read ${homeFile.path}: ${e.message}`;
+  }
+}
+
+// ── PHASEMAP — MCO2's real verification tiers (L0-L8, sync+lazy merged)
+// and MCO1's real dependency graph summary. Both are honest about a repo
+// that hasn't been through the import pipeline yet (404, shown as such —
+// never faked as "all green").
+async function renderRepoPhasemap(repo) {
+  const el = document.getElementById('repo-subtab-phasemap');
+  if (!el) return;
+  el.innerHTML = `<div class="detail-empty">loading…</div>`;
+  let verification = null, verificationError = null, graph = null, graphError = null;
+  try { verification = await api(`/api/repos/${repo.uuid}/verification`, {}, 15000); }
+  catch (e) { verificationError = e.message; }
+  try { graph = await api(`/api/repos/${repo.uuid}/graph`, {}, 15000); }
+  catch (e) { graphError = e.message; }
+  // repo switched away while these were in flight — don't paint stale data
+  if (CURRENT_API_REPO?.uuid !== repo.uuid || CURRENT_REPO_SUBTAB !== 'phasemap') return;
+
+  const tierRow = (t) => `<div class="pend-row" style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--b0)">
+    <span style="font-family:var(--mono);font-size:10px;color:var(--text3)">${escapeHtml(t.level)} · ${escapeHtml(t.name || '')}</span>
+    <span style="font-family:var(--mono);font-size:10px;color:${t.status==='not_applicable'?'var(--text3)':t.passed?'var(--mint)':'var(--coral)'}">${t.status==='not_applicable'?'n/a':t.passed?'passed':'failed'}</span>
+  </div>`;
+
+  let verificationHtml;
+  if (verificationError) {
+    verificationHtml = `<div class="detail-empty">${escapeHtml(verificationError)}</div>`;
+  } else {
+    const tiers = verification.tiers || [];
+    const lazyTiers = verification.lazyVerification?.tiers || [];
+    const lazyStatus = verification.lazyVerification?.status || 'not scheduled';
+    verificationHtml = `
+      <div class="ds"><div class="ds-label">verification — synchronous (L0-L5)</div>${tiers.map(tierRow).join('') || '<span style="color:var(--text3);font-size:10px">—</span>'}</div>
+      <div class="ds"><div class="ds-label">verification — lazy (L6-L8) · ${escapeHtml(lazyStatus)}</div>${lazyTiers.map(tierRow).join('') || '<span style="color:var(--text3);font-size:10px">pending or not yet scheduled</span>'}</div>`;
+  }
+
+  const graphHtml = graphError
+    ? `<div class="detail-empty">${escapeHtml(graphError)}</div>`
+    : `<div class="ds"><div class="ds-label">dependency graph</div><div class="ds-mono">${graph.nodeCount ?? '—'} nodes\n${graph.edgeCount ?? '—'} edges\n${graph.unresolvedCount ?? 0} unresolved references</div></div>`;
+
+  el.innerHTML = verificationHtml + graphHtml;
+}
+
+// ── SETTINGS — compartment (real, MCO6), agent/source provenance, and
+// the repo-level actions (add file, fork, export, archive) moved here
+// from the file-tree toolbar — these are repo settings, not tree controls.
+function renderRepoSettings(repo) {
+  const el = document.getElementById('repo-subtab-settings');
+  if (!el) return;
+  const compartmentLine = repo.compartmentId
+    ? `compartment ${repo.compartmentId}`
+    : `compartment — none attached`;
+  el.innerHTML = `
+    <div class="ds"><div class="ds-label">compartment</div><div class="ds-mono">${escapeHtml(compartmentLine)}</div></div>
+    <div class="ds"><div class="ds-label">agent / provenance</div><div class="ds-mono">source ${escapeHtml(repo.source || 'unknown')}\nspec ${repo.specUuid || '—'}\nidea ${repo.ideaUuid || '—'}\npromoted from ${repo.promotedFromSpec || '—'}</div></div>
+    <div class="ds"><div class="ds-label">repository</div>
+      <div class="action-row">
+        <button class="action-btn" onclick="addApiRepoFile('${repo.uuid}')">+ add file</button>
+        <button class="action-btn" onclick="forkApiRepo('${repo.uuid}')">⑂ fork</button>
+        <button class="action-btn" onclick="exportApiRepo()">⇩ export .zip</button>
+        <button class="action-btn danger" onclick="archiveApiRepo()">✕ archive</button>
+      </div>
+    </div>`;
 }
 
 // Renders the selected repo as a real, nested, expanded-by-default file
@@ -1517,15 +1639,12 @@ function renderApiRepoPanel(repo) {
     return html;
   }
   const treeHtml = Object.keys(root).length ? renderNode(root, 0) : '<div style="padding:14px;color:var(--text3);font-family:var(--mono);font-size:11px">no files</div>';
+  // §MOVED 2026-09-20 — the add/fork/export/archive action strip that used
+  // to live here moved to the Settings subtab (renderRepoSettings below):
+  // those are repo-level actions, not file-tree controls, and the file
+  // tree is now specifically the Files subtab's content.
   tree.innerHTML = `
-    <div class="repo-detail-strip">
-      <span class="repo-detail-name" title="${escapeHtml(repo.name)}">${escapeHtml(repo.name)}</span>
-      <button class="repo-detail-btn" title="add file" onclick="addApiRepoFile('${repo.uuid}')">+</button>
-      <button class="repo-detail-btn" title="fork" onclick="forkApiRepo('${repo.uuid}')">⑂</button>
-      <button class="repo-detail-btn" title="export .zip" onclick="exportApiRepo()">⇩</button>
-      <button class="repo-detail-btn danger" title="archive" onclick="archiveApiRepo()">✕</button>
-    </div>
-    <div style="padding:8px 10px 4px;font-family:var(--mono);font-size:9px;color:var(--text3);line-height:1.5" id="repo-badge">${statusLine}</div>
+    <div style="padding:8px 10px 4px;font-family:var(--mono);font-size:9px;color:var(--text3);line-height:1.5" id="repo-badge">${escapeHtml(repo.name)} — ${statusLine}</div>
     <div class="tree-toolbar"><input type="text" id="tree-file-filter" placeholder="filter files…" oninput="renderApiRepoPanel(CURRENT_API_REPO)"></div>
     <div>${treeHtml}</div>`;
   // client-side file filter (kept simple — text match on path, re-render
@@ -1822,7 +1941,13 @@ async function openFile(path) {
 // VERSIONIUM — real snapshot history (commitId, tensionMap, phaseMap, snr)
 // ════════════════════════════════════════════════════
 function renderVersionium() {
+  // §REMOVED 2026-09-20 — the Versionium tab is gone; doSnapshot()/
+  // loadSnapshots() still populate SNAPSHOTS for real (a repo's Phasemap
+  // subtab and other future consumers can read the array directly), this
+  // function just has nothing left to render into. Guarded, not deleted —
+  // loadSnapshots() and the bulk-refresh line still call it.
   const list = document.getElementById('commit-list');
+  if (!list) return;
   if (!SNAPSHOTS.length) { list.innerHTML = `<div class="detail-empty">${CONNECTED?'no snapshots yet — push one from the Ideas view':'not connected to nexus'}</div>`; return; }
   list.innerHTML = SNAPSHOTS.map(s => `
     <div class="commit-card" onclick="selectSnapshot('${s.uuid}')">
@@ -1843,6 +1968,7 @@ function selectSnapshot(uuid) {
   const s = SNAPSHOTS.find(x=>x.uuid===uuid);
   if (!s) return;
   const area = document.getElementById('versionium-detail');
+  if (!area) return; // §REMOVED 2026-09-20 — see renderVersionium()'s own note
   const phaseRows = Object.entries(s.phaseMap||{}).map(([p,n])=>`<div class="pend-row" style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--b0)"><span style="font-family:var(--mono);font-size:9px;color:var(--text3)">${p}</span><span style="font-family:var(--mono);font-size:10px">${n}</span></div>`).join('');
   const tensionRows = Object.entries(s.tensionMap||{}).slice(0,12).map(([uuid,t])=>{
     const idea = IDEAS.find(i=>i.uuid===uuid);
@@ -1884,12 +2010,12 @@ document.addEventListener('keydown', e => {
 });
 
 // ════════════════════════════════════════════════════
-// PROJECTS — a flat shelf for whole zip archives (not tied to ideas/specs;
-// that's what Versionium/RepoLayer already covers). Just: drop zips, keep
-// them, list them, get one back. Backed by GET/POST /api/projects and
-// GET .../:uuid/download, DELETE .../:uuid.
+// §REMOVED 2026-09-20 — the flat Projects shelf (GET/POST /api/projects,
+// its own tab) is gone from this UI. formatBytes() stays: the Upload
+// Project modal (openUploadProjectModal, unrelated feature) still uses
+// it. The backend routes themselves are untouched — this is a UI-only
+// removal, not a route removal.
 // ════════════════════════════════════════════════════
-let PROJECTS = [];
 
 function formatBytes(n) {
   if (!n && n !== 0) return '—';
@@ -1897,95 +2023,6 @@ function formatBytes(n) {
   if (n < 1024*1024) return `${(n/1024).toFixed(1)} KB`;
   return `${(n/(1024*1024)).toFixed(1)} MB`;
 }
-
-async function loadProjects() {
-  try {
-    const res = await api('/api/projects');
-    PROJECTS = res.projects || [];
-  } catch (e) { /* stays whatever it was — likely offline */ }
-  renderProjectList();
-  const badgeText = `${PROJECTS.length} project${PROJECTS.length===1?'':'s'}`;
-  const b1 = document.getElementById('proj-header-badge'); if (b1) b1.textContent = badgeText;
-  const b2 = document.getElementById('proj-count-badge'); if (b2) b2.textContent = PROJECTS.length || '';
-}
-
-function renderProjectList() {
-  const list = document.getElementById('project-list');
-  if (!list) return;
-  const q = (document.getElementById('project-search')?.value || '').toLowerCase();
-  const items = PROJECTS.filter(p => !q || (p.name||'').toLowerCase().includes(q) || (p.filename||'').toLowerCase().includes(q))
-                        .sort((a,b) => (b.uploadedAt||0)-(a.uploadedAt||0));
-  if (!items.length) {
-    list.innerHTML = `<div class="detail-empty">${CONNECTED ? (PROJECTS.length ? 'no projects match that filter' : 'no projects yet — drop a zip above') : 'not connected to nexus'}</div>`;
-    return;
-  }
-  list.innerHTML = items.map(p => `
-    <div class="project-card">
-      <span class="pc-icon">🗜</span>
-      <span class="pc-name" title="${p.filename}">${p.name || p.filename}</span>
-      <span class="pc-meta">${formatBytes(p.size)} · ${p.uploadedAt ? new Date(p.uploadedAt).toLocaleDateString() : '—'}</span>
-      <button onclick="downloadProject('${p.uuid}')">download</button>
-      <button class="danger" onclick="deleteProject('${p.uuid}','${(p.name||p.filename||'').replace(/'/g,"\\'")}')">delete</button>
-    </div>
-  `).join('');
-}
-
-async function uploadProjectFiles(fileList) {
-  const files = Array.from(fileList || []);
-  if (!files.length) return;
-  const zone = document.getElementById('project-drop');
-  const textEl = document.getElementById('project-drop-text');
-  const defaultText = 'drop zips here, or click to choose files — select as many at once as you like';
-  if (zone) { zone.classList.add('drag'); zone.style.pointerEvents = 'none'; }
-  let okCount = 0, failCount = 0;
-  for (let i = 0; i < files.length; i++) {
-    const f = files[i];
-    if (textEl) textEl.textContent = `storing ${i+1}/${files.length} — ${f.name}`;
-    try {
-      const contentBase64 = await new Promise((resolve, reject) => {
-        const r = new FileReader();
-        r.onload = () => resolve(r.result.split(',')[1] || '');
-        r.onerror = reject;
-        r.readAsDataURL(f); // base64 — binary-safe, unlike readAsText
-      });
-      await api('/api/projects', { method: 'POST', body: JSON.stringify({
-        name: f.name.replace(/\.[^/.]+$/, ''), filename: f.name, contentBase64,
-      }) }, 30000);
-      okCount++;
-    } catch (e) { failCount++; console.error(`[projects] upload failed for ${f.name}:`, e.message); }
-  }
-  if (zone) { zone.classList.remove('drag'); zone.style.pointerEvents = ''; }
-  if (textEl) textEl.textContent = defaultText;
-  document.getElementById('project-file-input').value = '';
-  if (okCount) toast(`stored ${okCount} project${okCount>1?'s':''}${failCount?`, ${failCount} failed`:''}`, failCount ? 'err' : 'ok');
-  else if (failCount) toast(`upload failed`, 'err');
-  await loadProjects();
-}
-
-function downloadProject(uuid) {
-  if (!API_BASE) return toast('not connected to nexus', 'err');
-  window.open(API_BASE + `/api/projects/${uuid}/download`, '_blank');
-}
-
-async function deleteProject(uuid, name) {
-  if (!confirm(`delete "${name}"? this removes the stored zip — it can't be undone.`)) return;
-  try {
-    await api(`/api/projects/${uuid}`, { method: 'DELETE' });
-    toast(`deleted "${name}"`, 'ok');
-    await loadProjects();
-  } catch (e) { toast(`delete failed: ${e.message}`, 'err'); }
-}
-
-(function wireProjectDropzone() {
-  const zone = document.getElementById('project-drop');
-  if (!zone) return;
-  ['dragover','dragenter'].forEach(ev => zone.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); zone.classList.add('drag'); }));
-  ['dragleave'].forEach(ev => zone.addEventListener(ev, e => { e.preventDefault(); zone.classList.remove('drag'); }));
-  zone.addEventListener('drop', e => {
-    e.preventDefault(); e.stopPropagation(); zone.classList.remove('drag');
-    if (e.dataTransfer?.files?.length) uploadProjectFiles(e.dataTransfer.files);
-  });
-})();
 
 // ════════════════════════════════════════════════════
 // NEXUS URI DEEP LINK — the idearium-side half of lib/nexus-uri.js's

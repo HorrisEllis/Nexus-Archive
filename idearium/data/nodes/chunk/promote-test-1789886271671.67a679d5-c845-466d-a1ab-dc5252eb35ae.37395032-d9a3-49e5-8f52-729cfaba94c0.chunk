@@ -1,0 +1,39 @@
+envelope: 1
+uuid: nexus-export-chunk-promote-test-1789886271671.67a679d5-c845-466d-a1ab-dc5252eb35ae.37395032-d9a3-49e5-8f52-729cfaba94c0
+type: chunk
+id: promote-test-1789886271671.67a679d5-c845-466d-a1ab-dc5252eb35ae.37395032-d9a3-49e5-8f52-729cfaba94c0
+context: idearium spec-engine chunk of spec 67a679d5-c845-466d-a1ab-dc5252eb35ae
+intent: null
+summary: axioms (complete)
+system: idearium
+tags:
+  - spec:67a679d5-c845-466d-a1ab-dc5252eb35ae
+  - status:complete
+  - section:axioms
+  - specName:promote-test-1789886271671
+  - agent:claude
+exported_at: 1789886992088
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1789886992088
+lastSeenAt: 1789886992088
+fingerprint: null
+payload:
+  uuid: 37395032-d9a3-49e5-8f52-729cfaba94c0
+  specUuid: 67a679d5-c845-466d-a1ab-dc5252eb35ae
+  sectionId: axioms
+  sectionTitle: Axioms Enforced
+  chunkIdx: 2
+  status: complete
+  realPath: null
+  fileName: 02-axioms.md
+  filePath: /home/claude/work/base/idearium/data/specs/67a679d5-c845-466d-a1ab-dc5252eb35ae/02-axioms-37395032.md
+  agent: claude
+  agentModel: null
+  attempts: 0
+  failureMode: null
+  byteSize: 412
+  contentHash: 73d797e39b806667a40d86487a48261827bfc378d3a378ebe201dec5eb06b603
+  createdAt: 1789886271679
+  updatedAt: 1789886992084
+  completedAt: 1789886992084

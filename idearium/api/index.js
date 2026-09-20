@@ -211,7 +211,8 @@ import { LANG_TO_EXT } from '../../lib/extract-code.js';
 //   assumption for them the way it is for a source-code file (a data
 //   file or doc is far more likely to arrive as plain, unfenced content,
 //   or wrapped in prose explaining it).
-const CODE_EXTENSIONS = require('../../lib/languages.js').codeExtensions();import { COMPONENTS as IDEARIUM_COMPONENTS } from '../registry-components.js';
+const CODE_EXTENSIONS = _require('../../lib/languages.js').codeExtensions();
+import { COMPONENTS as IDEARIUM_COMPONENTS } from '../registry-components.js';
 import path from 'path';
 import fs from 'fs';
 import { loadTable, appendRow, deleteRow, syncTable } from '../lib/db.js';
@@ -273,12 +274,65 @@ function getRepoLayer() {
 // forcing a full re-materialize on every read. Falls back to a real
 // materialize() call only for the rare repo with no materializeDir set
 // yet (pre-project-import repos, ingested before that field existed).
+// §MCO6 — one real way for idearium to get anything a compartment:
+// lib/cos-bridge.js, "the single real entry point from any NEXUS
+// subsystem into COMPARTMENT OS" (see that module's own header). It
+// dispatches through COS's actual gate pipeline — nothing here builds a
+// second compartment object, which is exactly what idea.phase's own
+// call site was doing before this (see its §MCO6 note below) and
+// exactly what MCO6's gate forbids. Non-fatal: a repo/idea that can't
+// get a compartment right now still gets created — compartmentId stays
+// null, stated in a warning, never silently retried forever or faked.
+function _ensureCompartment(nameBase, purpose) {
+  try {
+    const cosBridge = _require('../../lib/cos-bridge.js');
+    const name = cosBridge.uniqueName(nameBase);
+    const created = cosBridge.createCompartment({ name, purpose: String(purpose || '').slice(0, 500), networkIsolated: true });
+    if (!created.ok) {
+      console.warn(`[api] §MCO6 compartment create failed for "${nameBase}": ${created.error}`);
+      return null;
+    }
+    return created.compartment.id;
+  } catch (e) {
+    console.warn(`[api] §MCO6 compartment create threw for "${nameBase}": ${e.message}`);
+    return null;
+  }
+}
+
 function _repoDiskDir(repoUuid) {
   const repo = getRepoLayer().get(repoUuid);
   if (!repo) return null;
   if (repo.materializeDir) return repo.materializeDir;
   const mat = getRepoLayer().materialize(repoUuid);
   return mat.error ? null : mat.dir;
+}
+
+// §CHECKLIST 2026-09-20 — James: "when creating a project, we need to
+// generate a dependency graph, file list is vital to use as a
+// checklist" — inline in the create-project response, one round trip.
+// runImportPipeline()'s GRAPHING step (MCO1) already writes both
+// artifacts to disk on every project creation (repo.import-archive AND
+// project-import.finalize both call it); this reads them back the same
+// way repo.graph/repo.symbols/repo.verification already do (path.join(dir,
+// ...) + JSON.parse), so the create-project response ships the full file
+// list + full graph without the client needing a second GET. Non-fatal
+// by the same rule the GRAPHING step itself follows (§NON-FATAL BY
+// DESIGN, import-pipeline.js) — a missing/unreadable artifact degrades
+// to null with an error string, never throws, never blocks the response
+// the repo itself already succeeded on.
+function _readPipelineArtifacts(dir) {
+  const out = { files: null, graph: null, filesError: null, graphError: null };
+  try {
+    out.files = JSON.parse(fs.readFileSync(path.join(dir, 'indexes', 'files.json'), 'utf8'));
+  } catch (e) {
+    out.filesError = e.message;
+  }
+  try {
+    out.graph = JSON.parse(fs.readFileSync(path.join(dir, 'graph.json'), 'utf8'));
+  } catch (e) {
+    out.graphError = e.message;
+  }
+  return out;
 }
 
 // §SHARED 2026-07-10 — the deterministic chunks-to-repo-files assembly that
@@ -317,12 +371,19 @@ async function _promoteSpecToRepo(ideaOS, se, specUuid, mode = 'emerge') {
       `(${pending.map(c => c.sectionId).join(', ')}). Build them, or promote with mode:'manual' to finish in the spec builder.` };
   }
 
+  // §MCO6 2026-09-20 — this path (spec.promote) never attached a
+  // compartment at all; compartmentId defaulted to null forever. Every
+  // OTHER real ingest() call site either already had one (project
+  // upload flows) or was already forwarding one from its request body;
+  // this one had no source to forward from — grep-confirmed the actual
+  // gap, not the whole file's.
   const result = getRepoLayer().ingest({
     name: manifest.name,
     specUuid: manifest.uuid,
     source: `promote:${mode}`,
     parent: manifest.ideaUuid || null,
     promotedFromSpec: specUuid,
+    compartmentId: _ensureCompartment(`idearium-repo-${manifest.uuid.slice(0, 8)}`, manifest.name),
   });
   if (result.error) return { error: result.error };
 
@@ -933,35 +994,43 @@ async function handle(req, res, route, query, body) {
       // removal established (commitSnapshot/restoreSnapshot as direct
       // async methods the API awaits, not async Gates).
       //
-      // Real chain, nothing invented: lib/intent-classifier.js's real
-      // classify()+freeze() turns the idea's own real text into a real,
-      // frozen intent (the exact shape lib/compartment-engine.js's spawn()
-      // requires — "a frozen intent with a uuid"); spawn() creates a real
-      // compartment (real pre-forge snapshot, real constraint frame, real
-      // JAA row); the idea's own real `compartment` field (already an
-      // IdeaUpdateGate-allowed field — checked, was never populated by
-      // anything) gets set to that real compartment id via the same
-      // idea.update path the UI's other fields already use.
+      // §MCO6 2026-09-20 — MIGRATED off lib/compartment-engine.js's
+      // spawn(). The 2026-09-15 cos-bridge.js build fixed exactly this
+      // mistake for project-container.js and said so plainly in its own
+      // header: "idearium's 'Upload Project' flow called itself a
+      // compartment flow and was not one... compartment-engine: a real
+      // module, but a different concept — an in-process constraint
+      // frame with no filesystem, no manifest, no process, no system
+      // map." This call site was the exact same mistake, one caller
+      // over: it also called itself a compartment flow ("we need a
+      // compartment specifically made for idearium," the §FIX 2026-09-03
+      // note below records James saying so directly) and also was not
+      // one — idea.compartment held a compartment-engine constraint-frame
+      // id, a completely different id-space than a repo's real
+      // compartmentId (idearium/repo/index.js), which IS a real COS id.
+      // Two ideas of "compartment" in one system, un-grep-confirmable
+      // apart — exactly what MCO6's gate forbids. Fixed the same way
+      // project-container.js already was: cos-bridge.js's real
+      // createCompartment(), no end-state PASS/FAIL evaluation needed
+      // here (this call site never used that half of compartment-engine
+      // to begin with), so nothing here needs compartment-engine at all.
+      //
+      // §FIX 2026-09-03 (superseded above, kept for the record) — James:
+      // "clicking on idearium phase to building does nothing, needs to
+      // change for the compartment... we need a compartment specifically
+      // made for idearium." IdeaPhaseGate.transform() (idearium/index.js)
+      // really does flip idea.phase and persist it; nothing beyond that
+      // field flip happened before this fix existed.
+      // §WHY THIS LIVES HERE, NOT IN THE GATE — siso's Stream.emit()
+      // calls gate.transform() synchronously with no await, so an async
+      // call inside IdeaPhaseGate would have its promise silently
+      // dropped. This route handler is already async and already
+      // awaited by its caller.
       let compartmentId = null;
       if (body.phase === 'building' && !idea.compartment) {
-        try {
-          // §FIX 2026-09-03 — real handoff-branch fix, reconciled in
-          // during the merge revert-recovery: James's own real boot log
-          // caught this — "compartment spawn failed... require is not
-          // defined." idearium/package.json sets "type":"module", this
-          // whole file is a real ES module, raw require() doesn't exist
-          // in this scope. The correct pattern this exact file already
-          // uses at its own top (`const _require = createRequire(...)`)
-          // just wasn't used at this specific call site when it was
-          // first written.
-          const { classify, freeze } = _require('../../lib/intent-classifier.js');
-          const { spawn } = _require('../../lib/compartment-engine.js');
-          const { intent } = classify({ text: idea.text, source: 'idearium-idea-phase' });
-          const compartment = await spawn({ intent: freeze(intent) });
-          compartmentId = compartment.id;
+        compartmentId = _ensureCompartment(`idearium-idea-${params.uuid.slice(0, 8)}`, idea.text);
+        if (compartmentId) {
           os.emit('idearium.idea.update', { uuid: params.uuid, fields: { compartment: compartmentId }, source: 'idea.phase' });
-        } catch (e) {
-          console.warn(`[idearium/api] idea.phase → building: compartment spawn failed for ${params.uuid}: ${e.message}`);
         }
       }
 
@@ -1599,6 +1668,11 @@ async function handle(req, res, route, query, body) {
         if (!finalized.ok) console.warn(`[api] repo.import-archive: container finalize failed for ${container.containerUuid}: ${finalized.error}`);
       }
 
+      // §CHECKLIST — see _readPipelineArtifacts' own header. mat.dir is
+      // only valid when materialize() didn't error, matching the guard
+      // already used above to decide whether to run the pipeline at all.
+      const checklist1 = (!mat.error && pipeline) ? _readPipelineArtifacts(mat.dir) : { files: null, graph: null };
+
       return ok(res, {
         ...result,
         fileCount: included.length,
@@ -1607,6 +1681,7 @@ async function handle(req, res, route, query, body) {
         omittedCount: omitted.length, omitted: omitted.slice(0, 50),
         stats, materialize: mat.error ? { error: mat.error } : mat,
         pipeline: pipeline ? { state: pipeline.state, chunks: pipeline.chunks, indexes: pipeline.indexes } : null,
+        files: checklist1.files, graph: checklist1.graph,
       });
     }
 
@@ -1764,10 +1839,15 @@ async function handle(req, res, route, query, body) {
       const result = await pc.finalizeContainer({
         containerUuid: params.uuid, repoUuid, repoDir: mat.dir, fileCount: realFileCount,
       });
+      // §CHECKLIST — see _readPipelineArtifacts' own header. mat.dir is
+      // guaranteed here (materialize() already err-returned above if it
+      // failed), so this only degrades on the artifact read itself.
+      const checklist2 = _readPipelineArtifacts(mat.dir);
       return ok(res, {
         ...result, repo: ingestResult.repo, deduped: !!ingestResult.deduped,
         fileCount: realFileCount, chunkCount: included.length,
         sourceFailed: sources ? sources.failed : [],
+        files: checklist2.files, graph: checklist2.graph,
         omittedCount: omitted.length, omitted: omitted.slice(0, 50),
         containerFileCount: ingested.fileCount, containerRoot: ingested.root,
         stats, pipeline,
@@ -2034,7 +2114,16 @@ async function handle(req, res, route, query, body) {
       if (!dir) return err(res, 500, 'could not resolve repo directory');
       const p = path.join(dir, 'verification.json');
       if (!fs.existsSync(p)) return err(res, 404, 'not verified yet — repo has not been through the import pipeline (see POST .../reindex)');
-      return ok(res, JSON.parse(fs.readFileSync(p, 'utf8')));
+      const verification = JSON.parse(fs.readFileSync(p, 'utf8'));
+      // §MCO2 — L6-L8 land in a separate file (verify-lazy.js's own
+      // header explains why: async, may still be 'pending' when this is
+      // read). Merged in here, never silently omitted: a caller asking
+      // "is this repo verified" gets the full L0-L8 picture in one call,
+      // with lazy's own status ('pending'/'passed'/'partial'/'error')
+      // stated plainly rather than folded into L0-L5's.
+      const { readLazyVerification } = await import('../repo/verify-lazy.js');
+      const lazy = readLazyVerification(dir);
+      return ok(res, { ...verification, lazyVerification: lazy });
     }
 
     // §INCREMENTAL-REINDEX (§35) — explicit re-run for a repo whose files
@@ -2194,6 +2283,12 @@ async function handle(req, res, route, query, body) {
         // shell (0 chunks complete yet) and the same writeFile()/
         // completeChunk() path that already exists fills it in as
         // chunks build, exactly like a promoted repo would.
+        // §MCO6 2026-09-20 — this path's own comment above already said
+        // the intent plainly ("specs build compartments, which are
+        // repositories") but never wired it: no compartmentId was ever
+        // passed here, same gap as the explicit promote path (see that
+        // one's own §MCO6 note) — this repo was created compartment-less
+        // from day one of its existence, not just at promote time.
         let autoRepoUuid = null;
         try {
           const repoResult = getRepoLayer().ingest({
@@ -2202,6 +2297,7 @@ async function handle(req, res, route, query, body) {
             source: 'spec.create.auto',
             parent: manifest.ideaUuid || null,
             promotedFromSpec: null,
+            compartmentId: _ensureCompartment(`idearium-repo-${manifest.uuid.slice(0, 8)}`, manifest.name),
           });
           if (repoResult.error) {
             console.warn(`[speceng.create] auto-repo creation failed, spec still created: ${repoResult.error}`);
@@ -2580,7 +2676,7 @@ async function handle(req, res, route, query, body) {
       const record = { ...body, ideaUuid: params.uuid, ts: Date.now() };
       if (!os.db.tensions) os.db.tensions = [];
       // Store as a tension record for timeline
-      os.db.tensions.push({ uuid: require('crypto').randomUUID(), ideaUuid: params.uuid,
+      os.db.tensions.push({ uuid: crypto.randomUUID(), ideaUuid: params.uuid,
         score: (body.pct||0)/100, components: { queue_progress: body.pct||0 }, ts: Date.now() });
       return ok(res, { ok: true, progress: record });
     }

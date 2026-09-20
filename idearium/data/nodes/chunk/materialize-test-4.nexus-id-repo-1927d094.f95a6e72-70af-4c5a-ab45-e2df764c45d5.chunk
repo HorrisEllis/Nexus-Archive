@@ -1,0 +1,40 @@
+envelope: 1
+uuid: nexus-export-chunk-materialize-test-4.nexus-id-repo-1927d094.f95a6e72-70af-4c5a-ab45-e2df764c45d5
+type: chunk
+id: materialize-test-4.nexus-id-repo-1927d094.f95a6e72-70af-4c5a-ab45-e2df764c45d5
+context: idearium spec-engine chunk of spec 209e5999-b98f-4257-993c-4c0ebce7a171
+intent: null
+summary: meta (complete)
+system: idearium
+tags:
+  - spec:209e5999-b98f-4257-993c-4c0ebce7a171
+  - status:complete
+  - section:meta
+  - specName:materialize-test-4
+  - agent:ollama
+  - repo:nexus-id-repo-1927d094
+exported_at: 1789886998199
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1789886998199
+lastSeenAt: 1789886998199
+fingerprint: null
+payload:
+  uuid: f95a6e72-70af-4c5a-ab45-e2df764c45d5
+  specUuid: 209e5999-b98f-4257-993c-4c0ebce7a171
+  sectionId: meta
+  sectionTitle: Meta & Identity
+  chunkIdx: 0
+  status: complete
+  realPath: null
+  fileName: 00-meta.md
+  filePath: /tmp/idearium-materialize-vjdZCc/specs/209e5999-b98f-4257-993c-4c0ebce7a171/00-meta-f95a6e72.md
+  agent: ollama
+  agentModel: null
+  attempts: 0
+  failureMode: null
+  byteSize: 390
+  contentHash: 7d2b1c16a4f3039e802b6c4fcac3ee9299760e44cb17fefff2e3cd0bf91d7b00
+  createdAt: 1789886998191
+  updatedAt: 1789886998198
+  completedAt: 1789886998198

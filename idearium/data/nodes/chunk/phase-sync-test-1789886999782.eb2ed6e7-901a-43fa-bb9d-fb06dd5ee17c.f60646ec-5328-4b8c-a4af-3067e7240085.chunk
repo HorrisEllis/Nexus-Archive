@@ -1,0 +1,39 @@
+envelope: 1
+uuid: nexus-export-chunk-phase-sync-test-1789886999782.eb2ed6e7-901a-43fa-bb9d-fb06dd5ee17c.f60646ec-5328-4b8c-a4af-3067e7240085
+type: chunk
+id: phase-sync-test-1789886999782.eb2ed6e7-901a-43fa-bb9d-fb06dd5ee17c.f60646ec-5328-4b8c-a4af-3067e7240085
+context: idearium spec-engine chunk of spec eb2ed6e7-901a-43fa-bb9d-fb06dd5ee17c
+intent: null
+summary: build_order (complete)
+system: idearium
+tags:
+  - spec:eb2ed6e7-901a-43fa-bb9d-fb06dd5ee17c
+  - status:complete
+  - section:build_order
+  - specName:phase-sync-test-1789886999782
+  - agent:ollama
+exported_at: 1789886999853
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1789886999853
+lastSeenAt: 1789886999853
+fingerprint: null
+payload:
+  uuid: f60646ec-5328-4b8c-a4af-3067e7240085
+  specUuid: eb2ed6e7-901a-43fa-bb9d-fb06dd5ee17c
+  sectionId: build_order
+  sectionTitle: Build Order
+  chunkIdx: 8
+  status: complete
+  realPath: null
+  fileName: 08-build_order.md
+  filePath: /home/claude/work/base/idearium/data/specs/eb2ed6e7-901a-43fa-bb9d-fb06dd5ee17c/08-build_order-f60646ec.md
+  agent: ollama
+  agentModel: null
+  attempts: 0
+  failureMode: null
+  byteSize: 419
+  contentHash: f966b5502ff2b1903ab513bd927eb92709ae50789f89fceae51c9035a5643fd8
+  createdAt: 1789886999785
+  updatedAt: 1789886999849
+  completedAt: 1789886999849

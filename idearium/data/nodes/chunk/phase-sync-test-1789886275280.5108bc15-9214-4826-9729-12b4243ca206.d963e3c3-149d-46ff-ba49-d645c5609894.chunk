@@ -1,0 +1,39 @@
+envelope: 1
+uuid: nexus-export-chunk-phase-sync-test-1789886275280.5108bc15-9214-4826-9729-12b4243ca206.d963e3c3-149d-46ff-ba49-d645c5609894
+type: chunk
+id: phase-sync-test-1789886275280.5108bc15-9214-4826-9729-12b4243ca206.d963e3c3-149d-46ff-ba49-d645c5609894
+context: idearium spec-engine chunk of spec 5108bc15-9214-4826-9729-12b4243ca206
+intent: null
+summary: events (complete)
+system: idearium
+tags:
+  - spec:5108bc15-9214-4826-9729-12b4243ca206
+  - status:complete
+  - section:events
+  - specName:phase-sync-test-1789886275280
+  - agent:ollama
+exported_at: 1789886275315
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1789886275315
+lastSeenAt: 1789886275315
+fingerprint: null
+payload:
+  uuid: d963e3c3-149d-46ff-ba49-d645c5609894
+  specUuid: 5108bc15-9214-4826-9729-12b4243ca206
+  sectionId: events
+  sectionTitle: Events & Bus
+  chunkIdx: 5
+  status: complete
+  realPath: null
+  fileName: 05-events.md
+  filePath: /home/claude/work/base/idearium/data/specs/5108bc15-9214-4826-9729-12b4243ca206/05-events-d963e3c3.md
+  agent: ollama
+  agentModel: null
+  attempts: 0
+  failureMode: null
+  byteSize: 406
+  contentHash: 05c5d92eda59a8de7f7075ea8b9b8ac9abf3adc762a528d7b6200da06275f256
+  createdAt: 1789886275282
+  updatedAt: 1789886275312
+  completedAt: 1789886275312

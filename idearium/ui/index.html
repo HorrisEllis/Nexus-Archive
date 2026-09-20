@@ -95,6 +95,7 @@ body{display:flex;flex-direction:column;position:relative}
 .view-area{flex:1;overflow:hidden;display:flex;flex-direction:column;position:relative}
 .view{position:absolute;inset:0;display:none;flex-direction:column;overflow:hidden}
 .view.active{display:flex}
+.system-frame{flex:1;width:100%;height:100%;border:0;background:var(--bg,#0a0a12)}
 
 /* ════════════════════════════════════════════════════
    WELCOME VIEW
@@ -339,12 +340,24 @@ body{display:flex;flex-direction:column;position:relative}
    the selected repo) | ide-pane (unchanged — same open/save/dirty
    logic as before, untouched).
    ════════════════════════════════════════════════════ */
-.repo-wrap{flex:1;display:grid;grid-template-columns:250px 260px 1fr;overflow:hidden;transition:grid-template-columns .15s}
+.repo-wrap{flex:1;display:grid;grid-template-columns:250px 1fr;overflow:hidden;transition:grid-template-columns .15s}
+/* ── repo detail: sub-nav (Home/Files/Phasemap/Settings) + one panel visible
+   at a time. Files' panel alone recreates the old 260px-tree + flex-ide
+   two-column layout the grid used to give it directly. ── */
+.repo-wrap:not(.repo-open) .repo-detail-body{display:none}
+.repo-detail-body{display:flex;flex-direction:column;overflow:hidden}
+.repo-subnav{display:flex;gap:4px;padding:8px 10px;border-bottom:1px solid var(--b0);flex-shrink:0}
+.repo-subtab-btn{background:none;border:1px solid transparent;color:var(--text3);font-family:var(--mono);font-size:11px;letter-spacing:.03em;padding:6px 13px;border-radius:5px;cursor:pointer;transition:all .15s}
+.repo-subtab-btn:hover{color:var(--text);background:rgba(255,255,255,.04)}
+.repo-subtab-btn.active{color:var(--text);background:var(--b0);border-color:var(--b1)}
+.repo-subtab-panel{display:none;flex:1;overflow:hidden}
+.repo-subtab-panel.active{display:flex}
+#repo-subtab-files.active{flex-direction:row}
+.repo-subtab-panel:not(#repo-subtab-files){flex-direction:column;overflow-y:auto;padding:18px}
 /* §BLOCKS-2026-09-19 — GitHub-style landing: until a repo is entered, the
    rail takes the whole view as a grid of blocks and the tree/ide panes are
    hidden. enterRepoDetail()/exitRepoDetail() toggle this class. */
 .repo-wrap:not(.repo-open){grid-template-columns:1fr}
-.repo-wrap:not(.repo-open) .file-tree,.repo-wrap:not(.repo-open) .ide-pane{display:none}
 .repo-back-btn{margin-right:10px}
 .repo-rail-body.block-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;padding:16px}
 .repo-block{background:rgba(255,255,255,.02);border:1px solid var(--b1);border-radius:8px;padding:14px 16px;cursor:pointer;transition:all .15s;display:flex;flex-direction:column;gap:8px}
@@ -391,7 +404,7 @@ body{display:flex;flex-direction:column;position:relative}
 .repo-rail-empty{padding:20px 14px;font-family:var(--mono);font-size:10.5px;color:var(--text3);line-height:1.7;text-align:center}
 
 /* ── Pane 2: file tree of the selected repo ── */
-.file-tree{overflow-y:auto;padding:8px 6px;border-right:1px solid var(--b0)}
+.file-tree{flex:0 0 260px;overflow-y:auto;padding:8px 6px;border-right:1px solid var(--b0)}
 .tree-toolbar{display:flex;align-items:center;gap:6px;padding:2px 6px 8px}
 .tree-toolbar input{flex:1;background:rgba(5,7,11,.5);border:1px solid var(--b1);border-radius:5px;color:var(--text);font-family:var(--mono);font-size:10.5px;padding:5px 8px;outline:none}
 .tree-toolbar input:focus{border-color:var(--sky)}
@@ -420,7 +433,7 @@ body{display:flex;flex-direction:column;position:relative}
 .repo-detail-btn:hover{border-color:var(--sky);color:var(--sky)}
 .repo-detail-btn.danger:hover{border-color:var(--coral);color:var(--coral)}
 
-.ide-pane{display:flex;flex-direction:column;overflow:hidden}
+.ide-pane{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
 .ide-tabs{height:30px;border-bottom:1px solid var(--b0);display:flex;align-items:center;padding:0 10px;gap:8px;flex-shrink:0;font-family:var(--mono);font-size:10px;color:var(--text2)}
 .ide-code{flex:1;overflow:auto;padding:14px;font-family:var(--mono);font-size:11.5px;line-height:1.65;color:var(--text);white-space:pre;background:rgba(5,7,11,.4)}
 .ide-code .ln{color:var(--text3);display:inline-block;width:34px;text-align:right;margin-right:14px;user-select:none}
@@ -519,10 +532,13 @@ body{display:flex;flex-direction:column;position:relative}
     <button class="tab-btn active" data-view="welcome" onclick="setView('welcome')"><span class="tab-icon">⌂</span>Welcome</button>
 
     <div class="tab-group" data-group="create">
-      <button class="tab-btn tab-group-btn" data-views="brainstorm,ideas" onclick="toggleTabGroup(event,this)"><span class="tab-icon">✎</span>Create<span class="tab-caret">▾</span></button>
+      <button class="tab-btn tab-group-btn" data-views="brainstorm,ideas,eravos,architect-build,spec-wizard" onclick="toggleTabGroup(event,this)"><span class="tab-icon">✎</span>Create<span class="tab-caret">▾</span></button>
       <div class="tab-dropdown">
         <button class="tab-sub" data-view="brainstorm" onclick="setView('brainstorm')"><span class="tab-icon">✎</span>Brainstorm</button>
         <button class="tab-sub" data-view="ideas" onclick="setView('ideas')"><span class="tab-icon">◇</span>Ideas</button>
+        <button class="tab-sub" data-view="eravos" onclick="setView('eravos')"><span class="tab-icon">◈</span>Eravos</button>
+        <button class="tab-sub" data-view="architect-build" onclick="setView('architect-build')"><span class="tab-icon">⌘</span>Architect Build</button>
+        <button class="tab-sub" data-view="spec-wizard" onclick="setView('spec-wizard')"><span class="tab-icon">▦</span>Spec Wizard</button>
       </div>
     </div>
 
@@ -535,8 +551,6 @@ body{display:flex;flex-direction:column;position:relative}
     </div>
 
     <button class="tab-btn" data-view="repo" onclick="setView('repo')"><span class="tab-icon">🗂</span>Repos<span class="tab-badge" id="repo-count-badge"></span></button>
-    <button class="tab-btn" data-view="projects" onclick="setView('projects')"><span class="tab-icon">📦</span>Projects<span class="tab-badge" id="proj-count-badge"></span></button>
-    <button class="tab-btn" data-view="versionium" onclick="setView('versionium')"><span class="tab-icon">◆</span>Versionium</button>
 
     <div class="tab-spacer"></div>
   </nav>
@@ -583,18 +597,6 @@ body{display:flex;flex-direction:column;position:relative}
             <div class="pillar-icon">⌘</div>
             <div class="pillar-name">Architect</div>
             <div class="pillar-desc">Compiled specs become a blueprint — the structure the system is actually built from.</div>
-          </div>
-          <div class="pillar" onclick="setView('versionium')">
-            <div class="pillar-step">— VERSIONIUM</div>
-            <div class="pillar-icon">◆</div>
-            <div class="pillar-name">Full Snapshot System</div>
-            <div class="pillar-desc">Every commit captures tension + phase across all ideas. Diff and restore any moment.</div>
-          </div>
-          <div class="pillar" onclick="setView('projects')">
-            <div class="pillar-step">— PROJECTS</div>
-            <div class="pillar-icon">🗂</div>
-            <div class="pillar-name">Project Shelf</div>
-            <div class="pillar-desc">Drop whole zip archives here — build outputs, snapshots, anything you want kept and findable, separate from the idea/spec system.</div>
           </div>
         </div>
         <div class="welcome-foot" id="welcome-foot">awaiting connection to nexus idearium service · :4800</div>
@@ -680,6 +682,18 @@ body{display:flex;flex-direction:column;position:relative}
       </div>
     </section>
 
+    <!-- ══════════ ERAVOS (own system, own port — sovereign iframe) ══════════ -->
+    <section class="view" id="view-eravos">
+      <iframe class="system-frame" src="../../eravos/ui/index.html" title="Eravos"></iframe>
+    </section>
+
+    <!-- ══════════ ARCHITECT BUILD UI (architect/'s own build surface — distinct
+         from the "Architect" blueprint viewer under Build, which reads
+         compiled-spec output; this is the architect system's own real UI) ══════════ -->
+    <section class="view" id="view-architect-build">
+      <iframe class="system-frame" src="../../architect/src/ui/arch-builder.html" title="Architect Build"></iframe>
+    </section>
+
     <!-- ══════════ REPOSITORY LIBRARY / FILE BROWSER / IDE ══════════ -->
     <section class="view" id="view-repo">
       <div class="ph">
@@ -698,13 +712,48 @@ body{display:flex;flex-direction:column;position:relative}
           <div class="repo-rail-search"><input type="text" id="repo-rail-filter" placeholder="filter repos…" oninput="renderRepoLibrary()"></div>
           <div class="repo-rail-body" id="repo-rail-body"></div>
         </div>
-        <!-- Pane 2: the selected repo's file tree, expanded by default -->
-        <div class="file-tree" id="file-tree"><div class="repo-empty">no repository loaded<br><br>pick one from the library on the left<br><br><button class="modal-btn confirm" onclick="pickLocalRepo()">or open local nexus folder</button></div></div>
-        <!-- Pane 3: unchanged — same open/save/dirty logic as before -->
-        <div class="ide-pane">
-          <div class="ide-tabs" id="ide-tabs">no file open</div>
-          <div class="ide-code" id="ide-code">// click a file in the tree to open it here</div>
-          <textarea class="ide-editor" id="ide-editor" style="display:none" spellcheck="false"></textarea>
+
+        <!-- Repo detail: one repo, four subtabs. setRepoSubtab() switches
+             which panel is .active; each panel loads its own data lazily
+             the first time it's shown (see js/app.js §REPO SUBTABS). -->
+        <div class="repo-detail-body" id="repo-detail-body">
+          <nav class="repo-subnav" id="repo-subnav">
+            <button class="repo-subtab-btn active" data-subtab="home" onclick="setRepoSubtab('home')">Home</button>
+            <button class="repo-subtab-btn" data-subtab="files" onclick="setRepoSubtab('files')">Files</button>
+            <button class="repo-subtab-btn" data-subtab="phasemap" onclick="setRepoSubtab('phasemap')">Phasemap</button>
+            <button class="repo-subtab-btn" data-subtab="settings" onclick="setRepoSubtab('settings')">Settings</button>
+          </nav>
+
+          <!-- HOME — the repo's own README/.spec, or basic identity if neither exists -->
+          <div class="repo-subtab-panel active" id="repo-subtab-home">
+            <div class="detail-empty">← select a repo</div>
+          </div>
+
+          <!-- FILES — unchanged tree + IDE, same open/save/dirty logic as before -->
+          <div class="repo-subtab-panel" id="repo-subtab-files">
+            <div class="file-tree" id="file-tree"><div class="repo-empty">no repository loaded<br><br>pick one from the library on the left<br><br><button class="modal-btn confirm" onclick="pickLocalRepo()">or open local nexus folder</button></div></div>
+            <div class="ide-pane">
+              <div class="ide-tabs" id="ide-tabs">no file open</div>
+              <div class="ide-code" id="ide-code">// click a file in the tree to open it here</div>
+              <textarea class="ide-editor" id="ide-editor" style="display:none" spellcheck="false"></textarea>
+            </div>
+          </div>
+
+          <!-- PHASEMAP — real data: MCO2's verification tiers (L0-L8,
+               merged sync+lazy) and MCO1's dependency graph summary.
+               GET /api/repos/:uuid/verification, GET .../graph. -->
+          <div class="repo-subtab-panel" id="repo-subtab-phasemap">
+            <div class="detail-empty">← select a repo</div>
+          </div>
+
+          <!-- SETTINGS — compartment (MCO6's real compartmentId), agent/
+               source provenance, and the repo-level actions (add file,
+               fork, export, archive) moved here from the old file-tree
+               toolbar strip — this is the "repo settings" surface, not
+               a file-tree control. -->
+          <div class="repo-subtab-panel" id="repo-subtab-settings">
+            <div class="detail-empty">← select a repo</div>
+          </div>
         </div>
       </div>
     </section>
@@ -1573,34 +1622,6 @@ async function saveToIdearium(){
   } catch(e) { toast('save failed: ' + e.message, 'err'); }
 }
 </script>
-      </div>
-    </section>
-
-    <!-- ══════════ PROJECTS ══════════ -->
-    <section class="view" id="view-projects">
-      <div class="ph"><span class="ph-title">Projects</span><span class="ph-badge" id="proj-header-badge">0 projects</span></div>
-      <div class="projects-wrap">
-        <div class="project-drop" id="project-drop" onclick="document.getElementById('project-file-input').click()">
-          <span class="pd-big">⇪</span>
-          <span id="project-drop-text">drop zips here, or click to choose files — select as many at once as you like</span>
-          <input type="file" id="project-file-input" multiple accept=".zip" style="display:none" onchange="uploadProjectFiles(this.files)">
-        </div>
-        <div class="project-toolbar">
-          <input id="project-search" placeholder="filter projects…" oninput="renderProjectList()">
-        </div>
-        <div class="project-list" id="project-list"><div class="detail-empty">loading…</div></div>
-      </div>
-    </section>
-
-    <!-- ══════════ VERSIONIUM ══════════ -->
-    <section class="view" id="view-versionium">
-      <div class="ph"><span class="ph-title">Versionium</span><span class="ph-badge" id="snap-count-badge">0 snapshots</span></div>
-      <div class="versionium-wrap">
-        <div class="commit-list" id="commit-list"><div class="detail-empty">no snapshots yet — push one from the Ideas view</div></div>
-        <div class="right">
-          <div class="ph"><span class="ph-title">Snapshot Detail</span></div>
-          <div class="detail-area" id="versionium-detail"><div class="detail-empty">← select a snapshot</div></div>
-        </div>
       </div>
     </section>
 

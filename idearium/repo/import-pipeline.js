@@ -60,6 +60,13 @@ const MODULE_ID = 'idearium/repo/import-pipeline';
 // plain import costs nothing here.
 import { buildGraph, writeGraph } from './graph.js';
 
+// §MCO2 — the lazy L6-L8 pass. Same static-import reasoning as MCO1's
+// own note directly above: runImportPipeline() has 5 real synchronous
+// callers and must not become async to accommodate a DERIVED, deferred
+// projection. scheduleLazyVerification() itself never blocks — see that
+// module's own header.
+import { scheduleLazyVerification } from './verify-lazy.js';
+
 // lib/languages.js is CJS and idearium is type:module — Node's own
 // interop exposes module.exports as the default, so this is a plain
 // import, not a createRequire shim.
@@ -363,6 +370,49 @@ function chunkFile(repo, parsed, chunkDir) {
   });
 }
 
+// ── MCO2 L4 — semantic consistency, basis: existing symbol table ─────────
+// §HONEST SCOPE — "semantic" here is exactly what indexes/symbols.json
+// already claims to know, cross-checked against a second, independently
+// -built view of the same fact: each chunk's own recorded `symbols`
+// (assigned during CHUNKING, from the same parse pass but a different
+// code path). Two views of one fact disagreeing is a real bug — a
+// chunk boundary computed from a symbol the index does not have on
+// record for that file. This is not new extraction; it is the
+// consistency check §37 asks for, using only data already in memory.
+function verifySemanticConsistency(indexes) {
+  const symbolsByFile = new Map();
+  for (const s of indexes.symbols) {
+    if (!symbolsByFile.has(s.file)) symbolsByFile.set(s.file, new Set());
+    symbolsByFile.get(s.file).add(s.name);
+  }
+  const failures = [];
+  for (const c of indexes.chunks) {
+    for (const sym of c.symbols || []) {
+      const known = symbolsByFile.get(c.file);
+      if (!known || !known.has(sym)) failures.push({ file: c.file, chunk: c.id, symbol: sym });
+    }
+  }
+  return { level: 'L4', name: 'semantic consistency', passed: failures.length === 0, failures };
+}
+
+// ── MCO2 L5 — dependency consistency, basis: MCO1 graph ──────────────────
+// §HONEST SCOPE — distinct from L1 (a CHUNK addressed to a file that
+// exists). This checks the GRAPH's own resolved edges: an edge marked
+// 'resolved' (not 'unresolved' — those are §24's honestly-named misses,
+// not failures) whose target is a file this import's own index does not
+// contain would mean the graph and the index have drifted from each
+// other — genuinely inconsistent, not merely incomplete.
+function verifyDependencyConsistency(graph, indexes) {
+  const filePaths = new Set(indexes.files.map(f => f.path));
+  const failures = [];
+  for (const e of graph.edges) {
+    if (e.resolution !== 'resolved' || !e.to || !e.to.startsWith('file:')) continue;
+    const targetPath = e.to.slice('file:'.length);
+    if (!filePaths.has(targetPath)) failures.push({ from: e.from, to: e.to, relation: e.relation });
+  }
+  return { level: 'L5', name: 'dependency consistency', passed: failures.length === 0, failures };
+}
+
 // ── VERIFY (§37) — import performs syntax, boundary, structural integrity ──
 function verify(repoDir, parsed, chunks) {
   const chunkDir = path.join(repoDir, 'chunks');
@@ -500,6 +550,7 @@ export function runImportPipeline(repo, repoDir) {
 
   result.state = 'CHUNKING';
   let chunks, chunkDir, incremental;
+  let changedFilePaths = []; // §MCO2 — what the lazy L6-L8 pass scopes to
   try {
     chunkDir = path.join(repoDir, 'chunks');
     fs.mkdirSync(chunkDir, { recursive: true });
@@ -552,6 +603,7 @@ export function runImportPipeline(repo, repoDir) {
     const reusedChunks = unchangedFiles.flatMap(p => prevByFile[p.path] || []);
     chunks = [...freshChunks, ...reusedChunks];
     incremental = { changed: changedFiles.length, unchanged: unchangedFiles.length, removed: removedPaths.length };
+    changedFilePaths = changedFiles.map(f => f.path);
     fs.writeFileSync(path.join(chunkDir, 'index.json'), JSON.stringify(chunks.map(({ content, ...c }) => c), null, 2), 'utf8');
   } catch (e) {
     console.error(`[${MODULE_ID}] repository:chunk:failed — ${e.message}`);
@@ -595,18 +647,61 @@ export function runImportPipeline(repo, repoDir) {
   // recorded on the result, never swallowed (§1.2).
   result.state = 'GRAPHING';
   let graphSummary = null;
+  let graphObj = null; // §MCO2 — lifted out of the try so L5 and the lazy
+                        // scheduler below can use the real, full graph
+                        // (writeGraph's lean copy is a separate object —
+                        // see graph.js's own §10.2 note — never this one).
   try {
-    const graph = buildGraph({ repoDir, repository: repo.uuid });
-    const written = writeGraph(repoDir, graph);
+    graphObj = buildGraph({ repoDir, repository: repo.uuid });
+    const written = writeGraph(repoDir, graphObj);
     graphSummary = {
-      nodeCount: graph.nodeCount, edgeCount: graph.edgeCount,
-      unresolvedCount: graph.unresolvedCount, relationCounts: graph.relationCounts,
-      languagesUndetectedUpstream: graph.languagesUndetectedUpstream,
+      nodeCount: graphObj.nodeCount, edgeCount: graphObj.edgeCount,
+      unresolvedCount: graphObj.unresolvedCount, relationCounts: graphObj.relationCounts,
+      languagesUndetectedUpstream: graphObj.languagesUndetectedUpstream,
       written: written.ok, writeError: written.error || null,
     };
   } catch (e) {
     console.error(`[${MODULE_ID}] repository:graph:failed — ${e.message}`);
     graphSummary = { error: e.message, nodeCount: 0, edgeCount: 0 };
+  }
+
+  // §MCO2 DEEPENING — L4 (semantic) and L5 (dependency) extend verify()'s
+  // L0-L3 now that indexes.symbols/chunks (INDEXING) and the graph
+  // (GRAPHING, just above) both exist. Merged into the SAME
+  // verification.json rather than a second file — one verification
+  // artifact for L0-L5, all synchronous, all cheap (pure re-reads of
+  // data already in memory this same call). Non-fatal by the same rule
+  // GRAPHING follows: a deepening failure never displaces the L0-L3
+  // result already written above.
+  let lazyScheduled = null;
+  try {
+    const l4 = verifySemanticConsistency(indexes);
+    verification.tiers.push(l4);
+    if (graphObj) verification.tiers.push(verifyDependencyConsistency(graphObj, indexes));
+    const allPassed = verification.tiers.every(t => t.passed);
+    verification.status = allPassed ? 'passed' : 'partial';
+    verification.level = allPassed ? 'L5' : verification.tiers.find(t => !t.passed).level;
+    fs.writeFileSync(path.join(repoDir, 'verification.json'), JSON.stringify(verification, null, 2), 'utf8');
+  } catch (e) {
+    console.error(`[${MODULE_ID}] repository:verification-deepening:failed — ${e.message}`);
+  }
+
+  // §MCO2 LAZY — L6-L8, scoped to exactly this import's changed files'
+  // affected cone (§26/§37). Fire-and-forget: never awaited here, never
+  // blocks READY/FAULT below, never blocks the caller's response. A
+  // graph-less run (GRAPHING threw above) has no cone to scope to, so
+  // there is nothing honest to schedule — stated, not silently skipped.
+  if (graphObj) {
+    try {
+      lazyScheduled = scheduleLazyVerification({
+        repoDir, repository: repo.uuid, graph: graphObj, changedFiles: changedFilePaths,
+      });
+    } catch (e) {
+      console.error(`[${MODULE_ID}] repository:lazy-verification-schedule:failed — ${e.message}`);
+      lazyScheduled = { scheduled: false, error: e.message };
+    }
+  } else {
+    lazyScheduled = { scheduled: false, reason: 'no graph to scope the affected cone to' };
   }
 
   // §41 readiness — structurally addressable and safe for the next
@@ -628,6 +723,7 @@ export function runImportPipeline(repo, repoDir) {
     verification,
     indexes: { fileCount: indexes.files.length, symbolCount: indexes.symbols.length, chunkCount: indexes.chunks.length },
     graph: graphSummary,
+    lazyVerification: lazyScheduled, // §MCO2 — L6-L8 status; see verification.lazy.json
   };
 
   // §3 "A repository is a first-class node" — one canonical, addressable

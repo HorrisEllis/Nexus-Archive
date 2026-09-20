@@ -1,0 +1,39 @@
+envelope: 1
+uuid: nexus-export-chunk-phase-sync-standalone-1789871750908.dfb48c8f-8d52-4cf4-ab09-9e879d151be9.8831f5b4-3e57-4820-813b-a8a2d297cc55
+type: chunk
+id: phase-sync-standalone-1789871750908.dfb48c8f-8d52-4cf4-ab09-9e879d151be9.8831f5b4-3e57-4820-813b-a8a2d297cc55
+context: idearium spec-engine chunk of spec dfb48c8f-8d52-4cf4-ab09-9e879d151be9
+intent: null
+summary: schema (complete)
+system: idearium
+tags:
+  - spec:dfb48c8f-8d52-4cf4-ab09-9e879d151be9
+  - status:complete
+  - section:schema
+  - specName:phase-sync-standalone-1789871750908
+  - agent:deepseek
+exported_at: 1789886214392
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1789886214392
+lastSeenAt: 1789886214392
+fingerprint: null
+payload:
+  uuid: 8831f5b4-3e57-4820-813b-a8a2d297cc55
+  specUuid: dfb48c8f-8d52-4cf4-ab09-9e879d151be9
+  sectionId: schema
+  sectionTitle: Data Schema
+  chunkIdx: 3
+  status: complete
+  realPath: null
+  fileName: 03-schema.md
+  filePath: /home/claude/work/base/idearium/data/specs/dfb48c8f-8d52-4cf4-ab09-9e879d151be9/03-schema-8831f5b4.md
+  agent: deepseek
+  agentModel: null
+  attempts: 0
+  failureMode: null
+  byteSize: 406
+  contentHash: b90df8c13fc98eb378935c45fdbb752b828a81f0141882a6539a307382893b0b
+  createdAt: 1789871750908
+  updatedAt: 1789886214384
+  completedAt: 1789886214384

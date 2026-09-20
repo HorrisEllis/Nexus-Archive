@@ -1,0 +1,39 @@
+envelope: 1
+uuid: nexus-export-chunk-mco6-auto-2-1789886261787.ec6edfdc-4b6d-4c9b-a255-3c582acc39bf.e8c38d63-dd7c-4500-bacc-11b05f39c46b
+type: chunk
+id: mco6-auto-2-1789886261787.ec6edfdc-4b6d-4c9b-a255-3c582acc39bf.e8c38d63-dd7c-4500-bacc-11b05f39c46b
+context: idearium spec-engine chunk of spec ec6edfdc-4b6d-4c9b-a255-3c582acc39bf
+intent: null
+summary: api (complete)
+system: idearium
+tags:
+  - spec:ec6edfdc-4b6d-4c9b-a255-3c582acc39bf
+  - status:complete
+  - section:api
+  - specName:mco6-auto-2-1789886261787
+  - agent:claude
+exported_at: 1789886992062
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1789886992062
+lastSeenAt: 1789886992062
+fingerprint: null
+payload:
+  uuid: e8c38d63-dd7c-4500-bacc-11b05f39c46b
+  specUuid: ec6edfdc-4b6d-4c9b-a255-3c582acc39bf
+  sectionId: api
+  sectionTitle: API & Routes
+  chunkIdx: 4
+  status: complete
+  realPath: null
+  fileName: 04-api.md
+  filePath: /home/claude/work/base/idearium/data/specs/ec6edfdc-4b6d-4c9b-a255-3c582acc39bf/04-api-e8c38d63.md
+  agent: claude
+  agentModel: null
+  attempts: 0
+  failureMode: null
+  byteSize: 397
+  contentHash: 9fd6aabc36c913be4d97e2e98a4e11ed9a0f17c164d7f18a5e4127e8405f22b6
+  createdAt: 1789886261788
+  updatedAt: 1789886992055
+  completedAt: 1789886992055

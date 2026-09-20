@@ -1,0 +1,39 @@
+envelope: 1
+uuid: nexus-export-chunk-mco6-auto-1789886214311.8dd90142-9909-4fba-9518-851cdd862ace.b782dca0-34dc-453e-bfc4-713e2ea0755b
+type: chunk
+id: mco6-auto-1789886214311.8dd90142-9909-4fba-9518-851cdd862ace.b782dca0-34dc-453e-bfc4-713e2ea0755b
+context: idearium spec-engine chunk of spec 8dd90142-9909-4fba-9518-851cdd862ace
+intent: null
+summary: axioms (complete)
+system: idearium
+tags:
+  - spec:8dd90142-9909-4fba-9518-851cdd862ace
+  - status:complete
+  - section:axioms
+  - specName:mco6-auto-1789886214311
+  - agent:claude
+exported_at: 1789886267093
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1789886267093
+lastSeenAt: 1789886267093
+fingerprint: null
+payload:
+  uuid: b782dca0-34dc-453e-bfc4-713e2ea0755b
+  specUuid: 8dd90142-9909-4fba-9518-851cdd862ace
+  sectionId: axioms
+  sectionTitle: Axioms Enforced
+  chunkIdx: 2
+  status: complete
+  realPath: null
+  fileName: 02-axioms.md
+  filePath: /home/claude/work/base/idearium/data/specs/8dd90142-9909-4fba-9518-851cdd862ace/02-axioms-b782dca0.md
+  agent: claude
+  agentModel: null
+  attempts: 0
+  failureMode: null
+  byteSize: 412
+  contentHash: 82c960494dafad5c8acd3a051ccd6d31549685d0a3a2c8ca1d0db7a924d419ac
+  createdAt: 1789886214322
+  updatedAt: 1789886267075
+  completedAt: 1789886267075

@@ -1,0 +1,39 @@
+envelope: 1
+uuid: nexus-export-chunk-phase-sync-standalone-1789886275343.8e2d4249-d79f-4ec0-991d-745b437a6e30.fd4462b9-9e50-431c-8748-85d9b9a0a425
+type: chunk
+id: phase-sync-standalone-1789886275343.8e2d4249-d79f-4ec0-991d-745b437a6e30.fd4462b9-9e50-431c-8748-85d9b9a0a425
+context: idearium spec-engine chunk of spec 8e2d4249-d79f-4ec0-991d-745b437a6e30
+intent: null
+summary: axioms (complete)
+system: idearium
+tags:
+  - spec:8e2d4249-d79f-4ec0-991d-745b437a6e30
+  - status:complete
+  - section:axioms
+  - specName:phase-sync-standalone-1789886275343
+  - agent:claude
+exported_at: 1789887000380
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1789887000380
+lastSeenAt: 1789887000380
+fingerprint: null
+payload:
+  uuid: fd4462b9-9e50-431c-8748-85d9b9a0a425
+  specUuid: 8e2d4249-d79f-4ec0-991d-745b437a6e30
+  sectionId: axioms
+  sectionTitle: Axioms Enforced
+  chunkIdx: 2
+  status: complete
+  realPath: null
+  fileName: 02-axioms.md
+  filePath: /home/claude/work/base/idearium/data/specs/8e2d4249-d79f-4ec0-991d-745b437a6e30/02-axioms-fd4462b9.md
+  agent: claude
+  agentModel: null
+  attempts: 0
+  failureMode: null
+  byteSize: 412
+  contentHash: a2080d0a732527efd869ad868bd716e9499bdad6e4303060f30b00df86257be6
+  createdAt: 1789886275344
+  updatedAt: 1789887000375
+  completedAt: 1789887000375

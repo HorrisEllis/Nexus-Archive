@@ -1,0 +1,39 @@
+envelope: 1
+uuid: nexus-export-chunk-mco6-auto-1789886261651.68e21b5f-cdc5-4950-9f42-eb2e2b7f187a.35834476-f89d-4781-978f-5f8a6a927c7a
+type: chunk
+id: mco6-auto-1789886261651.68e21b5f-cdc5-4950-9f42-eb2e2b7f187a.35834476-f89d-4781-978f-5f8a6a927c7a
+context: idearium spec-engine chunk of spec 68e21b5f-cdc5-4950-9f42-eb2e2b7f187a
+intent: null
+summary: events (complete)
+system: idearium
+tags:
+  - spec:68e21b5f-cdc5-4950-9f42-eb2e2b7f187a
+  - status:complete
+  - section:events
+  - specName:mco6-auto-1789886261651
+  - agent:ollama
+exported_at: 1789886992000
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1789886992000
+lastSeenAt: 1789886992000
+fingerprint: null
+payload:
+  uuid: 35834476-f89d-4781-978f-5f8a6a927c7a
+  specUuid: 68e21b5f-cdc5-4950-9f42-eb2e2b7f187a
+  sectionId: events
+  sectionTitle: Events & Bus
+  chunkIdx: 5
+  status: complete
+  realPath: null
+  fileName: 05-events.md
+  filePath: /home/claude/work/base/idearium/data/specs/68e21b5f-cdc5-4950-9f42-eb2e2b7f187a/05-events-35834476.md
+  agent: ollama
+  agentModel: null
+  attempts: 0
+  failureMode: null
+  byteSize: 406
+  contentHash: 05c5d92eda59a8de7f7075ea8b9b8ac9abf3adc762a528d7b6200da06275f256
+  createdAt: 1789886261687
+  updatedAt: 1789886991995
+  completedAt: 1789886991995

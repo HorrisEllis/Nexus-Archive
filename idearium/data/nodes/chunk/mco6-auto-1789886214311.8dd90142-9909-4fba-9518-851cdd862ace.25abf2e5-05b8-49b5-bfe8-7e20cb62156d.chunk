@@ -1,0 +1,39 @@
+envelope: 1
+uuid: nexus-export-chunk-mco6-auto-1789886214311.8dd90142-9909-4fba-9518-851cdd862ace.25abf2e5-05b8-49b5-bfe8-7e20cb62156d
+type: chunk
+id: mco6-auto-1789886214311.8dd90142-9909-4fba-9518-851cdd862ace.25abf2e5-05b8-49b5-bfe8-7e20cb62156d
+context: idearium spec-engine chunk of spec 8dd90142-9909-4fba-9518-851cdd862ace
+intent: null
+summary: failure_modes (complete)
+system: idearium
+tags:
+  - spec:8dd90142-9909-4fba-9518-851cdd862ace
+  - status:complete
+  - section:failure_modes
+  - specName:mco6-auto-1789886214311
+  - agent:claude
+exported_at: 1789887000521
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1789887000521
+lastSeenAt: 1789887000521
+fingerprint: null
+payload:
+  uuid: 25abf2e5-05b8-49b5-bfe8-7e20cb62156d
+  specUuid: 8dd90142-9909-4fba-9518-851cdd862ace
+  sectionId: failure_modes
+  sectionTitle: Failure Modes
+  chunkIdx: 7
+  status: complete
+  realPath: null
+  fileName: 07-failure_modes.md
+  filePath: /home/claude/work/base/idearium/data/specs/8dd90142-9909-4fba-9518-851cdd862ace/07-failure_modes-25abf2e5.md
+  agent: claude
+  agentModel: null
+  attempts: 0
+  failureMode: null
+  byteSize: 429
+  contentHash: 810a34b689975ca0525aae5595f8791951eacbacfb5aa3f640803807fb2c63e7
+  createdAt: 1789886214322
+  updatedAt: 1789887000515
+  completedAt: 1789887000515

@@ -1,0 +1,39 @@
+envelope: 1
+uuid: nexus-export-chunk-mco6-auto-2-1789886275904.f1cc8aec-c5db-4c35-9fb2-8858e15e6d64.d62fcbb9-c0df-41bd-b296-ff8437773579
+type: chunk
+id: mco6-auto-2-1789886275904.f1cc8aec-c5db-4c35-9fb2-8858e15e6d64.d62fcbb9-c0df-41bd-b296-ff8437773579
+context: idearium spec-engine chunk of spec f1cc8aec-c5db-4c35-9fb2-8858e15e6d64
+intent: null
+summary: meta (complete)
+system: idearium
+tags:
+  - spec:f1cc8aec-c5db-4c35-9fb2-8858e15e6d64
+  - status:complete
+  - section:meta
+  - specName:mco6-auto-2-1789886275904
+  - agent:ollama
+exported_at: 1789886275911
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1789886275911
+lastSeenAt: 1789886275911
+fingerprint: null
+payload:
+  uuid: d62fcbb9-c0df-41bd-b296-ff8437773579
+  specUuid: f1cc8aec-c5db-4c35-9fb2-8858e15e6d64
+  sectionId: meta
+  sectionTitle: Meta & Identity
+  chunkIdx: 0
+  status: complete
+  realPath: null
+  fileName: 00-meta.md
+  filePath: /home/claude/work/base/idearium/data/specs/f1cc8aec-c5db-4c35-9fb2-8858e15e6d64/00-meta-d62fcbb9.md
+  agent: ollama
+  agentModel: null
+  attempts: 0
+  failureMode: null
+  byteSize: 768
+  contentHash: 03045474b0bf6770ff461a6b8c7f6e7538677965de3ff2fd8ff8d7a75643b3d0
+  createdAt: 1789886275905
+  updatedAt: 1789886275906
+  completedAt: 1789886275906

@@ -10,11 +10,11 @@ tags:
   - spec:undefined
   - state:READY
   - verification:passed
-exported_at: 1789872748011
+exported_at: 1789886990693
 source: nexus.lib.node-export
 occurrences: 1
-firstSeenAt: 1789872748011
-lastSeenAt: 1789872748011
+firstSeenAt: 1789886990693
+lastSeenAt: 1789886990693
 fingerprint: null
 payload:
   uuid: anchor2
@@ -28,10 +28,10 @@ payload:
   chunkCount: 8
   symbolCount: 7
   verificationStatus: passed
-  verificationLevel: L3
+  verificationLevel: L5
   paths:
-    atlas: /tmp/pipeline-syntax-Xsal5x/anchor2-6EXhYs/atlas.json
-    chunks: /tmp/pipeline-syntax-Xsal5x/anchor2-6EXhYs/chunks
-    indexes: /tmp/pipeline-syntax-Xsal5x/anchor2-6EXhYs/indexes
-    verification: /tmp/pipeline-syntax-Xsal5x/anchor2-6EXhYs/verification.json
-  generatedAt: 1789872748011
+    atlas: /tmp/pipeline-syntax-XqI3lH/anchor2-uZAOfv/atlas.json
+    chunks: /tmp/pipeline-syntax-XqI3lH/anchor2-uZAOfv/chunks
+    indexes: /tmp/pipeline-syntax-XqI3lH/anchor2-uZAOfv/indexes
+    verification: /tmp/pipeline-syntax-XqI3lH/anchor2-uZAOfv/verification.json
+  generatedAt: 1789886990693
