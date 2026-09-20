@@ -78,25 +78,32 @@ function createDispatcher(deps) {
   const _watchedJobs = new Map();
   const _MAX_TIMEOUT_RETRIES = 2; // §1.2 — bounded, not an infinite requeue loop
 
+  // §SHARED 2026-09-20 — was inlined only in the setTimeout below (the
+  // 15-minute idle-window path). Extracted so guardian.provider.disconnected
+  // (added below) can requeue through the exact same bounded-retry logic
+  // instead of a second, drifting copy of it (§no repetition).
+  function _requeueOrFail(job, reason, waitedMs) {
+    _clearCompletionWatch(job.id);
+    const retries = (job._timeoutRetries || 0) + 1;
+    job._timeoutRetries = retries;
+    bus.emit('guardian.job.timeout', { jobId: job.id, provider: job.provider, waitedMs, retry: retries, reason });
+    if (retries > _MAX_TIMEOUT_RETRIES) {
+      updateJob(job.id, { status: 'failed', failedAt: Date.now(), failReason: `${reason} after ${retries - 1} retr${retries - 1 === 1 ? 'y' : 'ies'} — giving up, not requeuing forever` });
+      console.warn(`[guardian] ${job.id} → ${job.provider}: ${reason}, retries exhausted — marked failed`);
+      return;
+    }
+    updateJob(job.id, { status: 'queued', queuedAt: Date.now(), queueReason: `${reason} — requeued (attempt ${retries})` });
+    console.warn(`[guardian] ${job.id} → ${job.provider}: ${reason} — requeuing (attempt ${retries})`);
+    if (!pendingQueue.has(job.provider)) pendingQueue.set(job.provider, []);
+    pendingQueue.get(job.provider).push(job);
+  }
+
   function _armCompletionWatch(job) {
     _clearCompletionWatch(job.id);
     _watchedJobs.set(job.id, job);
     _completionWatch.set(job.id, setTimeout(() => {
       _completionWatch.delete(job.id);
-      const retries = (job._timeoutRetries || 0) + 1;
-      job._timeoutRetries = retries;
-      bus.emit('guardian.job.timeout', {
-        jobId: job.id, provider: job.provider, waitedMs: _COMPLETION_TIMEOUT_MS, retry: retries,
-      });
-      if (retries > _MAX_TIMEOUT_RETRIES) {
-        updateJob(job.id, { status: 'failed', failedAt: Date.now(), failReason: `no completion within ${_COMPLETION_TIMEOUT_MS}ms after ${retries - 1} retr${retries - 1 === 1 ? 'y' : 'ies'} — giving up, not requeuing forever` });
-        console.warn(`[guardian] ${job.id} → ${job.provider}: no completion within ${_COMPLETION_TIMEOUT_MS}ms, retries exhausted — marked failed`);
-        return;
-      }
-      updateJob(job.id, { status: 'queued', queuedAt: Date.now(), queueReason: `no completion within ${_COMPLETION_TIMEOUT_MS}ms — real absence, not a guess, requeued (attempt ${retries})` });
-      console.warn(`[guardian] ${job.id} → ${job.provider}: no completion within ${_COMPLETION_TIMEOUT_MS}ms — requeuing (attempt ${retries})`);
-      if (!pendingQueue.has(job.provider)) pendingQueue.set(job.provider, []);
-      pendingQueue.get(job.provider).push(job);
+      _requeueOrFail(job, `no completion within ${_COMPLETION_TIMEOUT_MS}ms — real absence, not a guess`, _COMPLETION_TIMEOUT_MS);
     }, _COMPLETION_TIMEOUT_MS));
   }
 
@@ -114,6 +121,28 @@ function createDispatcher(deps) {
   // non-replay branch, dispatch-pool-bridge) all emit this same bus event —
   // see this file's own header comment on why that's the one correct place.
   bus.on('guardian.job.complete', ({ jobId }) => _clearCompletionWatch(jobId));
+
+  // §BUILT 2026-09-20 — James, from a real pasted log: a job dispatched to
+  // chatgpt whose ping gate had already failed (line 362 below, "dispatching
+  // anyway — uncertain evidence") got an ack, then the tab genuinely died
+  // 31s later (guardian.provider.disconnected). Before this, that job just
+  // sat in _watchedJobs for up to the full 15-minute _COMPLETION_TIMEOUT_MS
+  // before anything noticed — guardian already KNEW the target was dead,
+  // seconds after it happened, and did nothing with that knowledge.
+  // Dispatch is provider-scoped, not tab-scoped (no tabId recorded on the
+  // job — "active client" is whichever tab NCP currently has for that
+  // provider), so a disconnect for provider P means every job still
+  // in-flight to P lost its target; each is requeued immediately through
+  // the same bounded-retry path the idle-timeout uses; a fresh tab
+  // reconnecting (as ClearGlass's re-spawn-and-reinject already does,
+  // separately, within seconds) picks the requeued job back up normally.
+  bus.on('guardian.provider.disconnected', ({ provider }) => {
+    for (const job of _watchedJobs.values()) {
+      if (job.provider !== provider) continue;
+      _watchedJobs.delete(job.id);
+      _requeueOrFail(job, `provider '${provider}' disconnected mid-flight`, job.dispatchedAt ? (Date.now() - job.dispatchedAt) : 0);
+    }
+  });
 
   function dispatchJob(job) {
     // §P11: route through dispatch pool — per-provider semaphore, job stealing.

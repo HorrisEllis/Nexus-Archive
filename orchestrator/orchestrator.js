@@ -494,6 +494,56 @@ function _getEventLedger(system) {
 // not on the whole ecosystem.
 const _eventLedger = _getEventLedger('orchestrator');
 
+// §BUILT 2026-09-20 — James: "make pulse emission an event, use negative
+// space for when an event is missed a number of times." orchestrator.pulse
+// was already a real event (bus + ledger + SSE, see the heartbeat handler
+// below) — what didn't exist was anything noticing its ABSENCE. Same shape
+// as guardian/lib/dispatcher.js's _armCompletionWatch: a timer re-armed on
+// every real beat; if it fires, that's one missed interval, not yet an
+// alert (jitter, a briefly slow system, is not a fault). Only after
+// PULSE_MISS_THRESHOLD consecutive misses — the system never came back to
+// clear the count — is this real, worth-alerting negative space, not noise.
+const PULSE_MISS_THRESHOLD = 3;
+const _pulseWatch = new Map(); // systemId -> { timer, missed }
+
+function _armPulseWatch(systemId, intervalMs) {
+  const prior = _pulseWatch.get(systemId);
+  if (prior) clearTimeout(prior.timer);
+  // §GRACE — 1.5x the system's own declared interval, not the raw interval:
+  // one real beat arriving a bit late (GC pause, event-loop backlog) is not
+  // a miss. Floored at 5s so a system declaring an unrealistically small
+  // intervalMs can't make this fire on ordinary network jitter.
+  const grace = Math.max(intervalMs || 10000, 5000) * 1.5;
+  const state = prior || { missed: 0, timer: null };
+  state.missed = 0; // a real beat just arrived — negative space resets
+  const _tick = () => {
+    state.missed += 1;
+    if (state.missed >= PULSE_MISS_THRESHOLD) {
+      const entry = SYSTEM_REGISTRY.get(systemId) || {};
+      SYSTEM_REGISTRY.set(systemId, { ...entry, pulseMissed: state.missed });
+      const payload = {
+        systemId, missed: state.missed, expectedIntervalMs: intervalMs || 10000,
+        lastSeen: entry.lastSeen || null, sinceLastSeenMs: entry.lastSeen ? Date.now() - entry.lastSeen : null,
+      };
+      console.warn(`[orchestrator][pulse] '${systemId}' missed ${state.missed} consecutive pulses (expected every ${intervalMs || 10000}ms) — negative space: the event never arrived, not a probe failure`);
+      if (nexusBus) { try { nexusBus.emit('pulse.missed', payload, { source: systemId }); } catch(_) {} }
+      // Recorded to the MISSING system's own ledger (not orchestrator's) —
+      // this is a fact about that system, same routing rule as every other
+      // real event since the per-system ledger split.
+      const ledger = _getEventLedger(systemId);
+      if (ledger) { try { ledger.record('pulse.missed', payload, { source: systemId, causedBy: null }); } catch(_) {} }
+      broadcast(JSON.stringify({ type: 'pulse.missed', ...payload, ts: Date.now() }));
+      // Keeps watching at the same grace interval — does not stop after
+      // one alert; a system that stays dead should not go quiet again
+      // just because it was already reported once. Recovery (a real beat)
+      // is what clears this, via the reset at the top of this function.
+    }
+    state.timer = setTimeout(_tick, grace);
+  };
+  state.timer = setTimeout(_tick, grace);
+  _pulseWatch.set(systemId, state);
+}
+
 // In-memory ring (fast reads)
 // §FIX 2026-09-16 — 'clear-glass' added. Real, pre-existing gap: this dict
 // gates POST /api/ledger's system field (`system in LEDGER ? system :
@@ -1672,9 +1722,18 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
       }
       const bpmHealth = computeBpmHealth(intervals, intervalMs, stats);
 
+      // §NEGATIVE SPACE — a real beat just arrived: re-arm the watchdog and
+      // clear any prior miss count. This is the ONLY place pulseMissed is
+      // cleared — recovery is proven by a real beat, not assumed by a timer.
+      const wasMissed = existing.pulseMissed || 0;
+      if (wasMissed > 0) {
+        console.log(`[orchestrator][pulse] '${systemId}' recovered after ${wasMissed} missed pulse(s)`);
+      }
+      _armPulseWatch(systemId, intervalMs);
+
       SYSTEM_REGISTRY.set(systemId, {
         ...existing, systemId, port, status, meta,
-        lastSeen: now, seq, pulseId,
+        lastSeen: now, seq, pulseId, pulseMissed: 0,
         _intervals: intervals,
         bpm: bpmHealth.bpm, targetBpm: bpmHealth.targetBpm,
         healthScore: bpmHealth.healthScore, healthComponents: bpmHealth.components,

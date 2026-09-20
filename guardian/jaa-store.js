@@ -457,10 +457,22 @@ class JaaStore {
    * propagating correctly across processes would need more than this.
    */
   reloadTable(name) {
-    this._loadTable(name);
+    // §FIX 2026-09-20 — James, from a real pasted log: intelligence/routes.js's
+    // freshReader() throttles this to at most once per second PER POLLED
+    // TABLE, but that's still once per second while something has that
+    // table's endpoint open (e.g. a UI panel tailing /api/intelligence/
+    // crystals) — "[jaa] Loaded 3 rows — crystals" printing every few
+    // seconds forever, looking exactly like a crash-restart loop from the
+    // outside when it's actually the cross-process freshness fix (§BUG
+    // FOUND AND FIXED 2026-07-18, this method's own doc comment above)
+    // working as designed, just loud about it. Silenced here — this is a
+    // refresh, not a boot; _loadTable()'s cold-load callers (_loadAll(),
+    // _table()'s on-demand branch) still log, since that IS worth knowing
+    // once per process.
+    this._loadTable(name, { silent: true });
   }
 
-  _loadTable(name) {
+  _loadTable(name, { silent = false } = {}) {
     const file = this._file(name);
     if (!fs.existsSync(file)) return;
     try {
@@ -471,7 +483,7 @@ class JaaStore {
           const id = row.id || row.key || _uuid();
           tbl.set(id, { ...row, id });
         }
-        console.log(`[jaa] Loaded ${tbl.size} rows — ${name}`);
+        if (!silent) console.log(`[jaa] Loaded ${tbl.size} rows — ${name}`);
       }
     } catch (e) {
       console.error(`[jaa] Load error (${name}): ${e.message}`);

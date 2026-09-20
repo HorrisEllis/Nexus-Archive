@@ -844,11 +844,34 @@ function startService() {
         // way to know whether anyone ever asked Clear Glass to be up.
         if (offlineMs > 30000 && !_remediatedGaps.has(gapKey) && !cfg.optional) {
           _remediatedGaps.add(gapKey);
+
+          // §BUILT 2026-09-20 — enrich with orchestrator's negative-space
+          // pulse watchdog (orchestrator.js's _armPulseWatch), when it has
+          // fired for this system. This is a SEPARATE, slower, higher-
+          // confidence signal (N consecutive missed heartbeat intervals,
+          // not a probe timeout) — corroborating evidence added to the
+          // existing gap, not a new detection path. A probe/registry
+          // hiccup can raise this gap alone; a real pulseMissed count says
+          // orchestrator waited multiple full intervals and heard nothing.
+          let pulseNote = '';
+          try {
+            const reg = await new Promise((resolve) => {
+              const rq = http.get(`http://127.0.0.1:9000/api/registry`, { timeout: 1000 }, r => {
+                let b = ''; r.on('data', d => b += d);
+                r.on('end', () => { try { resolve(JSON.parse(b)); } catch { resolve(null); } });
+              });
+              rq.on('error', () => resolve(null));
+              rq.on('timeout', () => { rq.destroy(); resolve(null); });
+            });
+            const missed = reg && reg.registry && reg.registry[name] && reg.registry[name].pulseMissed;
+            if (missed) pulseNote = ` — orchestrator's own pulse watchdog also missed ${missed} consecutive heartbeat(s) from ${name}`;
+          } catch (_) { /* registry unreachable — gap still stands on the probe alone */ }
+
           const gap = {
             type: 'system_offline', system: name, port: cfg.port,
             severity: 'high', offlineMs,
             fix: `Start ${name}: node ${name}/boot.js or node service/${name}-service.js`,
-            body: `${name} offline for ${Math.round(offlineMs/1000)}s — :${cfg.port} not responding`,
+            body: `${name} offline for ${Math.round(offlineMs/1000)}s — :${cfg.port} not responding${pulseNote}`,
           };
           issues.push(gap);
 
