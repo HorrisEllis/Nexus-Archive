@@ -59,6 +59,7 @@ const MODULE_ID = 'idearium/repo/import-pipeline';
 // call site's convenience). Both files are ESM in the same package, so a
 // plain import costs nothing here.
 import { buildGraph, writeGraph } from './graph.js';
+import { makeEmitter } from './pipeline-events.js';
 
 // §MCO2 — the lazy L6-L8 pass. Same static-import reasoning as MCO1's
 // own note directly above: runImportPipeline() has 5 real synchronous
@@ -528,7 +529,22 @@ export function searchRepo(repoDir, query) {
  * compartment resolves (spec §34: parse -> atlas -> chunks -> verify ->
  * index -> compartment:import:ready).
  */
-export function runImportPipeline(repo, repoDir) {
+/**
+ * runImportPipeline(repo, repoDir, { onEvent }) — parse, atlas, chunk, verify, index, graph.
+ * §MCO4 2026-09-20 — `onEvent(e)` receives the §20 events catalogued in
+ * pipeline-events.js: { type, repository, at, payload }. Optional; without it
+ * nothing changes.
+ */
+export function runImportPipeline(repo, repoDir, opts = {}) {
+  const emit = makeEmitter(repo.uuid, opts.onEvent);
+  emit('repository:import:start', { fileCount: (repo.files || []).length });
+  const r = _runImportPipeline(repo, repoDir, emit);
+  if (r.state === 'FAULT') emit('repository:import:failed', { error: r.error || 'see verification tiers' });
+  else emit('repository:import:ready', { state: r.state, chunks: r.chunks?.count ?? null });
+  return r;
+}
+
+function _runImportPipeline(repo, repoDir, emit) {
   const result = { repository: repo.uuid, state: 'PARSING', startedAt: Date.now() };
 
   let parsed;
@@ -538,11 +554,19 @@ export function runImportPipeline(repo, repoDir) {
     return { ...result, state: 'FAULT', error: `parse failed: ${e.message}` };
   }
 
+  for (const p of parsed) {
+    if (p.status === 'failed') emit('parse:file:failed', { path: p.path, error: p.error || null });
+    else emit('parse:file:complete', { path: p.path, status: p.status });
+  }
+  emit('parse:batch:complete', { files: parsed.length, failed: parsed.filter(p => p.status === 'failed').length });
+
   result.state = 'MAPPING';
   let atlas;
   try {
+    emit('atlas:build:start', {});
     atlas = buildAtlas(repo, parsed);
     fs.writeFileSync(path.join(repoDir, 'atlas.json'), JSON.stringify(atlas, null, 2), 'utf8');
+    emit('atlas:build:complete', { fileCount: atlas.fileCount });
   } catch (e) {
     console.error(`[${MODULE_ID}] repository:atlas:failed — ${e.message}`);
     return { ...result, state: 'FAULT', parse: summarizeParse(parsed), error: `atlas failed: ${e.message}` };
@@ -552,6 +576,7 @@ export function runImportPipeline(repo, repoDir) {
   let chunks, chunkDir, incremental;
   let changedFilePaths = []; // §MCO2 — what the lazy L6-L8 pass scopes to
   try {
+    emit('chunk:decompose:start', {});
     chunkDir = path.join(repoDir, 'chunks');
     fs.mkdirSync(chunkDir, { recursive: true });
 
@@ -605,6 +630,7 @@ export function runImportPipeline(repo, repoDir) {
     incremental = { changed: changedFiles.length, unchanged: unchangedFiles.length, removed: removedPaths.length };
     changedFilePaths = changedFiles.map(f => f.path);
     fs.writeFileSync(path.join(chunkDir, 'index.json'), JSON.stringify(chunks.map(({ content, ...c }) => c), null, 2), 'utf8');
+    emit('chunk:decompose:complete', { chunks: chunks.length, incremental });
   } catch (e) {
     console.error(`[${MODULE_ID}] repository:chunk:failed — ${e.message}`);
     return { ...result, state: 'FAULT', parse: summarizeParse(parsed), atlas, error: `chunk failed: ${e.message}` };
@@ -615,6 +641,9 @@ export function runImportPipeline(repo, repoDir) {
   try {
     verification = { repository: repo.uuid, ...verify(repoDir, parsed, chunks) };
     fs.writeFileSync(path.join(repoDir, 'verification.json'), JSON.stringify(verification, null, 2), 'utf8');
+    // L0-L3 (the chunk/structure tiers). L4-L8 (semantic, dependency, lazy) are not evented.
+    const failedTiers = (verification.tiers || []).filter(t => !t.passed).map(t => t.level);
+    emit(failedTiers.length ? 'chunk:verify:failed' : 'chunk:verify:complete', { failedTiers });
   } catch (e) {
     console.error(`[${MODULE_ID}] repository:verification:failed — ${e.message}`);
     return { ...result, state: 'FAULT', parse: summarizeParse(parsed), atlas, chunks: chunks.length, error: `verify failed: ${e.message}` };
@@ -629,6 +658,7 @@ export function runImportPipeline(repo, repoDir) {
     fs.writeFileSync(path.join(idxDir, 'files.json'), JSON.stringify(indexes.files, null, 2), 'utf8');
     fs.writeFileSync(path.join(idxDir, 'symbols.json'), JSON.stringify(indexes.symbols, null, 2), 'utf8');
     fs.writeFileSync(path.join(idxDir, 'chunks.json'), JSON.stringify(indexes.chunks, null, 2), 'utf8');
+    emit('index:build:complete', { files: indexes.files.length, symbols: indexes.symbols.length });
   } catch (e) {
     console.error(`[${MODULE_ID}] repository:index:failed — ${e.message}`);
     return { ...result, state: 'FAULT', parse: summarizeParse(parsed), atlas, chunks: chunks.length, verification, error: `index failed: ${e.message}` };
@@ -660,6 +690,7 @@ export function runImportPipeline(repo, repoDir) {
       languagesUndetectedUpstream: graphObj.languagesUndetectedUpstream,
       written: written.ok, writeError: written.error || null,
     };
+    emit('graph:build:complete', { nodes: graphObj.nodeCount, edges: graphObj.edgeCount });
   } catch (e) {
     console.error(`[${MODULE_ID}] repository:graph:failed — ${e.message}`);
     graphSummary = { error: e.message, nodeCount: 0, edgeCount: 0 };
