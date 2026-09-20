@@ -148,6 +148,22 @@ function refreshOnEvent(ev) {
       toastProgress(p.repoUuid, `chunking "${p.sectionId}" — ${p.doneChunks}/${p.totalChunks} (${p.progress}%)`, p.progress);
     }
   }
+  // §FIXED 2026-09-20 — James: "is it hooked into the graph?" It wasn't;
+  // see idearium/api/index.js's repo.chunk.run for the real fix
+  // (makeBusForwarder wired in). These are the REAL pipeline stages —
+  // parse -> atlas -> chunk -> verify -> index -> graph, idearium/repo/
+  // pipeline-events.js's own 12-event catalog — not idearium.repo.chunk.
+  // progress above, which fires earlier, during repo creation itself
+  // (spec-engine's own per-file manifest chunks), a genuinely different
+  // phase from this pipeline. Both are real; this one is what actually
+  // answers "did it reach the graph."
+  if (_repoPipelineStage[t] && ev.payload?.repoUuid) {
+    const p = ev.payload;
+    if (_progressToasts.has(p.repoUuid)) {
+      const { label, pct } = _repoPipelineStage[t];
+      toastProgress(p.repoUuid, label, pct);
+    }
+  }
   if (t==='push.complete')     { loadSnapshots(); }
   if (t==='snr.update')        { loadStats(); }
   // §RESEQUENCED 2026-09-20 — chunking progress, whoever started it. The
@@ -2765,6 +2781,23 @@ function toastProgressDone(id, msg, type='ok') {
   if (entry) { entry.div.remove(); _progressToasts.delete(id); }
   toast(msg, type);
 }
+
+// §BUILT 2026-09-20 — the real, run-scoped stages of idearium/repo/
+// import-pipeline.js, per pipeline-events.js's own PIPELINE_EVENTS
+// catalog (source of truth — kept in the same order, same 6 run-scoped
+// stages; per-file parse:file:* deliberately excluded here, same
+// flood-control reasoning that file's own header already states).
+const _repoPipelineStage = {
+  'repository:import:start':  { label: 'starting import…',              pct: 2   },
+  'parse:batch:complete':     { label: 'parsed files',                  pct: 20  },
+  'atlas:build:start':        { label: 'building atlas…',               pct: 25  },
+  'atlas:build:complete':     { label: 'atlas built',                   pct: 40  },
+  'chunk:decompose:start':    { label: 'chunking…',                     pct: 45  },
+  'chunk:decompose:complete': { label: 'chunked',                       pct: 65  },
+  'chunk:verify:complete':    { label: 'verified',                      pct: 80  },
+  'index:build:complete':     { label: 'index built',                   pct: 90  },
+  'graph:build:complete':     { label: 'graph built',                   pct: 97  },
+};
 document.addEventListener('keydown', e => {
   if (e.key==='Escape') { closeModal(); closeNewSpecModal(); closeUploadProjectModal(); }
   if ((e.metaKey||e.ctrlKey) && e.key==='n') { e.preventDefault(); setView('ideas'); openModal(); }

@@ -217,6 +217,7 @@ import path from 'path';
 import fs from 'fs';
 import { loadTable, appendRow, deleteRow, syncTable } from '../lib/db.js';
 import { runImportPipeline } from '../repo/import-pipeline.js';
+import { makeBusForwarder } from '../repo/pipeline-events.js';
 
 // §PROJECTS 2026-07-19 — "a place to store projects, easily." A flat
 // binary shelf for whole project archives (zips built elsewhere — MASTERMIND
@@ -2319,9 +2320,23 @@ async function handle(req, res, route, query, body) {
       const fileCount = (repo.files || []).length;
       os.emit('idearium.repo.chunk.started', { repoUuid: params.uuid, name: repo.name, fileCount });
 
+      // §FIXED 2026-09-20 — James: "is it hooked into the graph?" It
+      // wasn't, and nothing else from the real pipeline was either.
+      // idearium/repo/pipeline-events.js's 12-event catalog (parse/atlas/
+      // chunk/verify/index/graph — including graph:build:complete, the
+      // actual answer to the question) and makeBusForwarder() (built,
+      // tested, for exactly this: "onEvent for ONE pipeline run") already
+      // existed — runImportPipeline() was just never called with a 3rd
+      // opts.onEvent argument here, so makeEmitter()'s own emit() silently
+      // no-op'd on every single stage event ("if (typeof onEvent !==
+      // 'function') return"). The only signal reaching the browser was
+      // the two coarse, hand-rolled .started/.done events immediately
+      // around this call — no parse/atlas/chunk/verify/graph stage ever
+      // surfaced anywhere.
+      const onPipelineEvent = makeBusForwarder((type, payload) => os.emit(type, payload));
       let pipeline;
       try {
-        pipeline = runImportPipeline(repo, dir);
+        pipeline = runImportPipeline(repo, dir, { onEvent: onPipelineEvent });
       } catch (e) {
         os.emit('idearium.repo.chunk.fault', { repoUuid: params.uuid, error: e.message });
         return err(res, 500, `chunking failed: ${e.message}`);
