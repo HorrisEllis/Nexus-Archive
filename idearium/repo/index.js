@@ -275,6 +275,26 @@ export class RepoLayer {
     const r = sourceFiles.setSourceFile(dir, relPath, buffer);
     return r.ok ? { ok: true } : { error: r.error };
   }
+  /**
+   * writeTextFile(repoUuid, relPath, text) — write one text file through the repo,
+   * whichever layer owns it. A file the source layer owns (an imported project's
+   * real files) is written as bytes, with its chunk kept in step; anything else
+   * goes through the chunk store. Materialized and reindexed once.
+   * §MCO-E 2026-09-20 — for the roadmap editor.
+   */
+  writeTextFile(repoUuid, relPath, text) {
+    if (typeof text !== 'string') return { error: 'text must be a string' };
+    if (this.isSourceOwned(repoUuid, relPath)) {
+      this.writeFile(repoUuid, relPath, text, { defer: true }); // chunk in step; a chunk problem is not this write's failure
+      const r = this.writeSourceBytes(repoUuid, relPath, Buffer.from(text, 'utf8'));
+      if (r.error) return { error: r.error };
+      this.refresh(repoUuid);
+      return { ok: true, via: 'source' };
+    }
+    const r = this.writeFile(repoUuid, relPath, text);
+    return r.error ? { error: r.error } : { ok: true, via: 'chunk', created: !!r.created };
+  }
+
   deleteSourceFile(repoUuid, relPath) {
     const dir = this._sourceDir(repoUuid); if (!dir) return { error: 'repo not found' };
     const r = sourceFiles.removeSourceFile(dir, relPath);

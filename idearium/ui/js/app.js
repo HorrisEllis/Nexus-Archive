@@ -82,7 +82,11 @@ async function api(path, opts={}, timeoutMs=6000) {
   const r = await fetchTimeout(API_BASE + path, { headers:{'Content-Type':'application/json'}, ...opts }, timeoutMs);
   let data = {};
   try { data = await r.json(); } catch(_) {}
-  if (!r.ok || data.ok === false) throw new Error(data.error || r.statusText || 'request failed');
+  if (!r.ok || data.ok === false) {
+    const e = new Error(data.error || r.statusText || 'request failed');
+    e.detail = data.detail; e.status = r.status; // §MCO-E — a caller can act on a stated code (e.g. DEPS_INCOMPLETE)
+    throw e;
+  }
   return data;
 }
 
@@ -154,6 +158,11 @@ function refreshOnEvent(ev) {
   // another window) refreshes the Versionium list if it is the open tab for
   // that repo. Placed before the generic 'repo.' branch, which would only
   // reload the file panel.
+  // §MCO-E — a roadmap edit from anywhere refreshes the Roadmap tab if it is open for that repo.
+  if (t === 'repo.roadmap.updated' && CURRENT_API_REPO && ev.payload?.repoUuid === CURRENT_API_REPO.uuid
+      && CURRENT_REPO_SUBTAB === 'roadmap' && !ROADMAP_EDITING) {
+    renderRepoRoadmap(CURRENT_API_REPO);
+  }
   if (t === 'repo.snapshot.committed' && CURRENT_API_REPO && ev.payload?.repoUuid === CURRENT_API_REPO.uuid
       && CURRENT_REPO_SUBTAB === 'versionium') {
     renderRepoVersionium(CURRENT_API_REPO);
@@ -1584,6 +1593,7 @@ function renderCurrentRepoSubtab() {
   else if (CURRENT_REPO_SUBTAB === 'files') renderApiRepoPanel(CURRENT_API_REPO);
   else if (CURRENT_REPO_SUBTAB === 'architect') renderRepoArchitect(CURRENT_API_REPO);
   else if (CURRENT_REPO_SUBTAB === 'phasemap') renderRepoPhasemap(CURRENT_API_REPO);
+  else if (CURRENT_REPO_SUBTAB === 'roadmap') renderRepoRoadmap(CURRENT_API_REPO);
   else if (CURRENT_REPO_SUBTAB === 'intelligence') renderRepoIntelligence(CURRENT_API_REPO);
   else if (CURRENT_REPO_SUBTAB === 'versionium') renderRepoVersionium(CURRENT_API_REPO);
   else if (CURRENT_REPO_SUBTAB === 'settings') renderRepoSettings(CURRENT_API_REPO);
@@ -1815,6 +1825,88 @@ async function reindexRepoThenScan(uuid) {
   if (CURRENT_API_REPO?.uuid === uuid && CURRENT_REPO_SUBTAB === 'intelligence') {
     renderRepoIntelligence(CURRENT_API_REPO);
   }
+}
+
+// ── ROADMAP (MCO-E) — the phases in this repo's phasemap files, dependency-ordered
+// (idearium/repo/roadmap.js, GET /api/repos/:uuid/roadmap). A phase's status
+// control edits the phasemap FILE — the row loom's scanner reads — and the server
+// refuses an edit loom cannot read back exactly. blocked is shown, not stored: a
+// phase is blocked when a dependency is not complete.
+let ROADMAP_EDITING = false; // true while an edit is in flight, so an SSE refresh does not repaint under it
+
+async function renderRepoRoadmap(repo) {
+  const el = document.getElementById('repo-subtab-roadmap');
+  if (!el) return;
+  const forUuid = repo.uuid;
+  const stale = () => CURRENT_API_REPO?.uuid !== forUuid || CURRENT_REPO_SUBTAB !== 'roadmap';
+  el.innerHTML = `<div class="detail-empty">reading phasemaps…</div>`;
+  let r;
+  try { r = await api(`/api/repos/${forUuid}/roadmap`, {}, 20000); }
+  catch (e) { if (stale()) return; el.innerHTML = `<div class="ds"><div class="ds-label">roadmap</div><div class="ds-mono">could not read the roadmap: ${escapeHtml(e.message)}</div></div>`; return; }
+  if (stale()) return;
+  paintRoadmap(el, forUuid, r);
+}
+
+function paintRoadmap(el, uuid, r) {
+  const rm = r.roadmap || { phases: [], maps: [], layers: [], warnings: [], summary: {} };
+  if (!rm.phases.length) {
+    const sk = (r.skipped || []).map(x => `${escapeHtml(x.path)} — ${escapeHtml(x.reason)}`).join('\n');
+    el.innerHTML = `<div class="ds"><div class="ds-label">roadmap</div>
+      <div class="ds-mono">no phases found.\n\nA roadmap is read from the phasemap files in this repo (any file named like *phasemap*.spec, with phases written as ids such as P1_name or MCO-A_name).${sk ? '\n\nSkipped:\n' + sk : ''}</div></div>`;
+    return;
+  }
+  const S = rm.summary;
+  const pct = S.total ? Math.round((S.complete / S.total) * 100) : 0;
+  const head = `<div class="ds"><div class="ds-label">roadmap · ${escapeHtml(String(S.total))} phases in ${rm.maps.length} phasemap${rm.maps.length === 1 ? '' : 's'}</div>
+    <div style="height:6px;background:var(--b0);border-radius:3px;overflow:hidden;margin:6px 0"><div style="height:100%;width:${pct}%;background:var(--mint)"></div></div>
+    <div class="ds-mono">${S.complete} complete · ${S.active} active · ${S.planned} planned   |   ${S.ready} ready to start · ${S.blocked} blocked   |   ${pct}%</div>
+    <div style="font-family:var(--mono);font-size:9.5px;color:var(--text3);margin-top:6px">changing a status edits the phasemap file itself (the row loom reads). The previous status is kept in the file. Read back and checked before it is reported.</div></div>`;
+
+  const byUuid = new Map(rm.phases.map(p => [p.uuid, p]));
+  const shortKey = (u) => (byUuid.get(u)?.phase_key || u.split(':').pop()).split('_')[0];
+  const color = { complete: 'var(--mint)', active: 'var(--sky)', planned: 'var(--text3)' };
+  const phaseRow = (p) => {
+    const chips = p.status === 'complete' ? '' : p.blocked_by.length
+      ? `<span style="color:var(--amber);font-size:9.5px">blocked by ${escapeHtml(p.blocked_by.map(shortKey).join(', '))}</span>`
+      : `<span style="color:var(--mint);font-size:9.5px">ready</span>`;
+    const deps = p.depends_on.length ? `<span style="color:var(--text3);font-size:9.5px">after ${escapeHtml(p.depends_on.map(shortKey).join(', '))}</span>` : '';
+    const opt = (v) => `<option value="${v}"${p.status === v ? ' selected' : ''}>${v}</option>`;
+    return `<div class="rm-row" style="display:flex;align-items:center;gap:10px;padding:6px 8px;border-bottom:1px solid var(--b0);border-left:3px solid ${color[p.status] || 'var(--b1)'}">
+      <select class="rm-status" data-uuid="${escapeHtml(uuid)}" data-map="${escapeHtml(p.map)}" data-phase="${escapeHtml(p.phase_key)}" data-prev="${escapeHtml(p.status)}"
+        onchange="setRoadmapPhaseStatus(this)" style="background:var(--b0);border:1px solid var(--b1);color:${color[p.status] || 'var(--text)'};font-family:var(--mono);font-size:10px;padding:3px 4px;border-radius:4px">${opt('planned')}${opt('active')}${opt('complete')}</select>
+      <span style="font-family:var(--mono);font-size:10.5px;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(p.map)}:${p.line}">${escapeHtml(p.title)}</span>
+      ${deps} ${chips}</div>`;
+  };
+
+  const layers = new Map();
+  for (const p of rm.phases) { const k = p.layer == null ? 'cycle' : p.layer; if (!layers.has(k)) layers.set(k, []); layers.get(k).push(p); }
+  const layerBlocks = [...layers.entries()].map(([k, ps]) => `<div class="ds"><div class="ds-label">${k === 'cycle' ? 'in a dependency cycle — no layer' : `layer ${k} — ${k === 0 ? 'no dependencies' : 'after layer ' + (k - 1) + ' and earlier'}`}${rm.maps.length > 1 ? '' : ''}</div>${ps.sort((a, b) => a.order - b.order).map(phaseRow).join('')}</div>`).join('');
+
+  const W = rm.warnings || [];
+  const label = { dependency_cycle: 'dependency cycle', unresolved_dependency: 'depends on something that is not a phase here', ambiguous_dependency: 'ambiguous dependency', duplicate_phase_id: 'phase id repeated in its file', self_dependency: 'depends on itself' };
+  const warnBlock = W.length ? `<div class="ds"><div class="ds-label">notes (${W.length})</div><div class="ds-mono" style="color:var(--text3);white-space:pre-wrap">${W.slice(0, 30).map(w => escapeHtml(`${label[w.type] || w.type}: ${w.phase || (w.phases || []).join(', ')}${w.token ? ' → ' + w.token : ''}${w.map ? '  (' + w.map + ')' : ''}`)).join('\n')}${W.length > 30 ? `\n…${W.length - 30} more` : ''}</div></div>` : '';
+  const skipBlock = (r.skipped || []).length ? `<div class="ds"><div class="ds-label">phasemap files not read</div><div class="ds-mono" style="color:var(--text3)">${(r.skipped).map(x => escapeHtml(x.path + ' — ' + x.reason)).join('\n')}</div></div>` : '';
+  el.innerHTML = head + layerBlocks + warnBlock + skipBlock;
+}
+
+async function setRoadmapPhaseStatus(sel, force = false) {
+  const uuid = sel.dataset.uuid, map = sel.dataset.map, phase = sel.dataset.phase, prev = sel.dataset.prev, status = sel.value;
+  if (status === prev) return;
+  ROADMAP_EDITING = true; sel.disabled = true;
+  const el = document.getElementById('repo-subtab-roadmap');
+  try {
+    const r = await api(`/api/repos/${uuid}/roadmap/phase`, { method: 'POST', body: JSON.stringify({ map, phase, status, force }) }, 30000);
+    toast(`${phase.split('_')[0]}: ${prev} → ${status} (written to ${map.split('/').pop()}, read back)`, 'ok');
+    if (el && CURRENT_API_REPO?.uuid === uuid && CURRENT_REPO_SUBTAB === 'roadmap') paintRoadmap(el, uuid, r);
+  } catch (e) {
+    sel.value = prev; sel.disabled = false;
+    if (e.detail && e.detail.code === 'DEPS_INCOMPLETE') {
+      ROADMAP_EDITING = false;
+      if (window.confirm(`${e.message}\n\nMark it complete anyway?`)) { sel.value = status; sel.dataset.prev = prev; await setRoadmapPhaseStatus(sel, true); }
+      return;
+    }
+    toast(`not changed: ${e.message}`, 'err');
+  } finally { ROADMAP_EDITING = false; sel.disabled = false; }
 }
 
 // ── VERSIONIUM — this repo's snapshots (MCO3, §33). GET/POST

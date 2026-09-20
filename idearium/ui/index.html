@@ -736,6 +736,7 @@ body{display:flex;flex-direction:column;position:relative}
             <button class="repo-subtab-btn" data-subtab="files" onclick="setRepoSubtab('files')">Files</button>
             <button class="repo-subtab-btn" data-subtab="architect" onclick="setRepoSubtab('architect')">Architect</button>
             <button class="repo-subtab-btn" data-subtab="phasemap" onclick="setRepoSubtab('phasemap')">Phasemap</button>
+            <button class="repo-subtab-btn" data-subtab="roadmap" onclick="setRepoSubtab('roadmap')">Roadmap</button>
             <button class="repo-subtab-btn" data-subtab="intelligence" onclick="setRepoSubtab('intelligence')">Intelligence</button>
             <button class="repo-subtab-btn" data-subtab="versionium" onclick="setRepoSubtab('versionium')">Versionium</button>
             <button class="repo-subtab-btn" data-subtab="settings" onclick="setRepoSubtab('settings')">Settings</button>
@@ -767,6 +768,14 @@ body{display:flex;flex-direction:column;position:relative}
                merged sync+lazy) and MCO1's dependency graph summary.
                GET /api/repos/:uuid/verification, GET .../graph. -->
           <div class="repo-subtab-panel" id="repo-subtab-phasemap">
+            <div class="detail-empty">← select a repo</div>
+          </div>
+
+          <!-- ROADMAP — the phases in this repo's *phasemap*.spec files as a
+               dependency-ordered roadmap (MCO-E). Edits change the phasemap file
+               itself, the row loom's scanner reads. GET /api/repos/:uuid/roadmap,
+               POST .../roadmap/phase. See js/app.js §ROADMAP. -->
+          <div class="repo-subtab-panel" id="repo-subtab-roadmap">
             <div class="detail-empty">← select a repo</div>
           </div>
 

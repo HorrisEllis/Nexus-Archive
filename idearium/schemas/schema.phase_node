@@ -14,8 +14,13 @@ tags: []
 exported_at: 1789564800000
 source: idearium-repository-overhaul-phasemap.spec:MCO-A
 payload:
-  status: OPEN
+  status: REAL
   source: >-
+    MCO-E (2026-09-20): idearium/repo/roadmap.js produces these on every read
+    of a repo's phasemap files (derived, never stored) and tests/modules/
+    test-moce-roadmap.js validates them against this schema. The edit path
+    (idearium.repo.roadmap.phase.update) writes the phasemap file, which is the
+    row loom reads. Status OPEN -> REAL on that. Original MCO-A note follows.
     Registered this pass. No real writer exists yet — will be written by
     idearium.roadmap.phase.update once MCO-E lands (this spec's own gate:
     MET when both schemas are indexed AND one real round-trip row passes
@@ -56,3 +61,33 @@ payload:
       type: string
       required: false
       description: "which zoom-level module (MCO-D) this phase belongs to, once that lands"
+    map:
+      type: string
+      required: false
+      description: "MCO-E - repo-relative path of the phasemap file this phase is read from"
+    phase_key:
+      type: string
+      required: false
+      description: "MCO-E - the phase's id in that file (e.g. MCO-E_roadmap_ui)"
+    line:
+      type: number
+      required: false
+      description: "MCO-E - 1-based line of the phase header in that file"
+    layer:
+      type: number
+      required: false
+      description: "MCO-E - dependency layer (0 = no dependency in this map); absent/null for a phase in a cycle"
+    blocked_by:
+      type: array
+      required: false
+      description: "MCO-E - uuids of dependencies that are not complete (derived, never stored)"
+      items: string
+    ready:
+      type: boolean
+      required: false
+      description: "MCO-E - not complete, and every resolved dependency is"
+    unresolved_deps:
+      type: array
+      required: false
+      description: "MCO-E - depends_on tokens that are not a phase in this map (a spec file name, an ambiguous key)"
+      items: string

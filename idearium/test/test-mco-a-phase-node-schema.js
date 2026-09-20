@@ -35,7 +35,7 @@ const { appendRow, loadTable } = await import('../lib/db.js');
 test('MCOA-004', 'schema.phase_node is indexed in idearium/schemas, status OPEN', () => {
   const def = schemas.get('phase_node');
   if (!def) throw new Error('expected phase_node to be indexed');
-  if (def.status !== 'OPEN') throw new Error(`expected status OPEN, got ${def.status}`);
+  if (def.status !== 'OPEN' && def.status !== 'REAL') throw new Error(`expected status OPEN or REAL, got ${def.status}`); // REAL since MCO-E
   const required = Object.entries(def.fields).filter(([, f]) => f.required).map(([k]) => k).sort();
   const expected = ['order', 'project_id', 'status', 'title', 'uuid'].sort();
   if (JSON.stringify(required) !== JSON.stringify(expected)) {

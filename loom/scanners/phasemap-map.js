@@ -33,7 +33,17 @@ const SYSTEMS = ['cortex', 'guardian', 'bridge', 'orchestrator', 'loom', 'copilo
   'clear-glass', 'idearium', 'emerge', 'architect', 'raid', 'intelligence',
   'gemini', 'agent', 'tablet', 'diagnostic', 'chunk', 'replay', 'snapshot'];
 
-const PHASE_RE = /^\s{2,6}([A-Z]{1,3}\d+_[A-Za-z0-9_]*):(.*)$/;   // P1_, AP1_, RR1_, SS0_, LP1_ — the underscore is load-bearing
+// §FIXED 2026-09-20 (MCO-E) — was /[A-Z]{1,3}\d+_.../, which cannot match a
+// hyphenated id like `MCO-A_schemas`, so the overhaul phasemaps' own phases
+// MCO-A..MCO-G were invisible to loom's roadmap (and therefore to anything
+// built on it). Measured across all phasemap specs in docs/ before changing:
+// 529 phases matched before, 543 after; the 14 added are exactly the MCO-A..G
+// phases of the two overhaul phasemaps and nothing else. The underscore is still
+// load-bearing (the drift-dict guard above): bare `MCO-A:` does not match.
+const PHASE_RE = /^\s{2,6}([A-Z]{1,3}(?:\d+|-[A-Z0-9]+)_[A-Za-z0-9_]*):(.*)$/;   // P1_, AP1_, RR1_, SS0_, LP1_, MCO-A_ — the underscore is load-bearing
+const PHASEMAP_FILE_RES = [/phase-?map.*\.spec$/, /phase-map\.spec$/];
+/** isPhasemapFile(basename) — the one definition of "this file is a phasemap". */
+function isPhasemapFile(name) { return PHASEMAP_FILE_RES.some(re => re.test(name)); }
 // §BUGFIX 2026-08-08 — same investigation as the _tagSystem fix above. The
 // prior regex (`[A-Za-z0-9_]*` — zero-or-more, no underscore required)
 // matched copilot-awareness-routing-phasemap.spec's drift_watch dict (bare
@@ -48,7 +58,7 @@ function _phasemapFiles() {
   let out = [];
   try {
     for (const f of fs.readdirSync(DOCS)) {
-      if (/phase-?map.*\.spec$/.test(f) || /phase-map\.spec$/.test(f)) out.push(path.join(DOCS, f));
+      if (isPhasemapFile(f)) out.push(path.join(DOCS, f));
     }
   } catch (_) {}
   return out;
@@ -69,17 +79,15 @@ function _tagSystem(text) {
 }
 
 /**
- * loadAll() — every phase across every phasemap, tagged + status'd.
- * @returns { phases:[{id,title,map,status,systems,dependsOn}], maps, bySystem }
+ * parsePhasemapText(text, mapName) — the phases of ONE phasemap's text, exactly
+ * as loadAll() reads them (same header regex, same status/depends_on rules).
+ * §MCO-E 2026-09-20 — loadAll()'s per-line loop, extracted UNCHANGED so a caller
+ * that has the text of a phasemap somewhere other than docs/ (an idearium repo's
+ * own roadmap) uses the same parser rather than a second one that could drift.
  */
-function loadAll() {
-  const phases = [];
-  const maps = [];
-  for (const file of _phasemapFiles()) {
-    const name = path.basename(file, '.spec');
-    maps.push(name);
-    let lines;
-    try { lines = fs.readFileSync(file, 'utf8').split('\n'); } catch (_) { continue; }
+function parsePhasemapText(text, name) {
+  const lines = String(text).split('\n');
+  const out = [];
     for (let i = 0; i < lines.length; i++) {
       const m = lines[i].match(PHASE_RE);
       if (!m) continue;
@@ -179,13 +187,35 @@ function loadAll() {
       // space-join because _tagSystem() genuinely wants one flat string.
       const bodyLines = phaseLines.join('\n');
       const dep = (bodyLines.match(/depends_on:\s*\[?([^\]\n]+)/) || [])[1] || '';
-      phases.push({
+      out.push({
         id, map: name,
         title: id.replace(/_/g, ' '),
         status,
         systems: _tagSystem(body),
         dependsOn: dep.trim().replace(/[\[\]]/g, '') || null,
+        // location, for callers that EDIT a phase (idearium/repo/roadmap.js):
+        // header line, the `status:` key's line (-1 if it has none) and the
+        // first line of the next phase. Not part of loadAll()'s output.
+        line: i, statusLine: sIdx === -1 ? -1 : i + sIdx, bodyEnd,
       });
+    }
+  return out;
+}
+
+/**
+ * loadAll() — every phase across every phasemap, tagged + status'd.
+ * @returns { phases:[{id,title,map,status,systems,dependsOn}], maps, bySystem }
+ */
+function loadAll() {
+  const phases = [];
+  const maps = [];
+  for (const file of _phasemapFiles()) {
+    const name = path.basename(file, '.spec');
+    maps.push(name);
+    let text;
+    try { text = fs.readFileSync(file, 'utf8'); } catch (_) { continue; }
+    for (const p of parsePhasemapText(text, name)) {
+      phases.push({ id: p.id, map: p.map, title: p.title, status: p.status, systems: p.systems, dependsOn: p.dependsOn });
     }
   }
   // group by system (LP2 — split by system).
@@ -310,4 +340,4 @@ function historyFor(map, id, opts = {}) {
   } catch (_) { return []; }
 }
 
-module.exports = { loadAll, forSystem, summary, persistHistory, historyFor, TABLE, MODULE_ID: 'loom-phasemap-map', VERSION: '1.0.0' };
+module.exports = { loadAll, parsePhasemapText, isPhasemapFile, forSystem, summary, persistHistory, historyFor, TABLE, MODULE_ID: 'loom-phasemap-map', VERSION: '1.0.0' };

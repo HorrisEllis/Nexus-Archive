@@ -171,7 +171,28 @@ spec:
   # ── MCO-E: roadmap UI from .phase nodes ──────────────────────────────
   MCO-E_roadmap_ui:
     depends_on: [MCO-A]
-    status: "NOT STARTED — verified 2026-09-20: no roadmap route, capability or UI exists (the Phasemap repo subtab shows verification tiers and graph counts, not a roadmap). schema.phase_node exists from MCO-A."
+    status: >
+      DONE 2026-09-20 (v0.39.179). Spec idearium/spec/idearium.repo-roadmap.spec. Built:
+      idearium/repo/roadmap.js (buildRoadmap, setPhaseStatus, collectPhasemaps), routes
+      repo.roadmap.get / repo.roadmap.phase.update, the Roadmap repo subtab, and
+      loom/scanners/phasemap-map.js parsePhasemapText() extracted from loadAll() so the
+      roadmap reads phasemaps with LOOM'S parser (not a second one). GATE MET over real
+      HTTP: the real overhaul phasemap, as a repo's project, renders as a dependency-
+      respecting roadmap (every dependency has a lower order; also 500 random graphs), and
+      an edit rewrites the phasemap FILE; loom's own scanner, run in its own process on that
+      file, reads the changed status and every other phase identical. Same for an imported
+      repo (source-layer file), and restoring its baseline snapshot puts it back exactly.
+      Tests: test-moce-roadmap 39/39, test-moce-roadmap-ui 17/17, mutation-checked. DECISIONS:
+      phase_node rows are a DERIVED view produced on every read and never stored (a stored copy
+      could disagree with the file); the named capabilities are the two routes; blocked is
+      derived and shown (blocked_by), not a stored status, because loom has no such value.
+      FOUND AND FIXED IN LOOM: its phase-header regex required digits after the letters, so
+      hyphenated ids (MCO-A_schemas) never matched; the overhaul phasemaps' own MCO-A..G were
+      invisible to loom's roadmap. Measured across docs/ first: 529 phases before, 543 after,
+      the 14 added being exactly those; 4 existing phases' `systems` tags shed words that came
+      from a neighbouring phase's text (statuses and dependencies identical).
+      NOT DONE: creating a phasemap or a phase, or editing depends_on, from the UI; module_path
+      (needs MCO-D); who made an edit is not recorded (a date is).
     does: Renders per-project roadmap from schema.phase_node rows, reusing loom.phasemap.capability for the scan — render layer only.
     adds: [idearium.roadmap.get.capability, idearium.roadmap.phase.update.capability]
     gate: MET when a real project's .phase nodes render as a dependency-respecting roadmap and edits update the same rows loom's scanner reads.

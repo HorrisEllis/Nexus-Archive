@@ -901,6 +901,10 @@ function matchRoute(method, url) {
     ['GET',    ['api','repos',    ':uuid','snapshots'],     'repo.snapshot.list'],
     ['GET',    ['api','repos',    ':uuid','snapshots',':commitId'], 'repo.snapshot.show'],
     ['POST',   ['api','repos',    ':uuid','snapshots',':commitId','restore'], 'repo.snapshot.restore'],
+    // §MCO-E 2026-09-20 — the repo's roadmap, from the phasemaps inside it
+    // (idearium/repo/roadmap.js; spec idearium/spec/idearium.repo-roadmap.spec).
+    ['GET',    ['api','repos',    ':uuid','roadmap'],        'repo.roadmap.get'],
+    ['POST',   ['api','repos',    ':uuid','roadmap','phase'], 'repo.roadmap.phase.update'],
     // §CI 2026-09-20 — CI/CD per compartment. cos/ci/index.js owns the
     // pipeline; these are idearium's surface onto it, scoped to a repo
     // (which is what carries the compartmentId).
@@ -2574,6 +2578,54 @@ async function handle(req, res, route, query, body) {
         return err(res, 404, `no snapshot ${params.commitId} for repo ${params.uuid}`);
       }
       return ok(res, { repoUuid: params.uuid, commitId: params.commitId, ts: st.commit?.wall ?? null, message: st.commit?.message ?? null, record: st.state });
+    }
+
+    // §MCO-E 2026-09-20 — GET: the roadmap (phase_node-shaped, dependency-ordered).
+    // 200 with maps:[] when the repo has no phasemap: an ordinary state, not an
+    // error (api() throws on ok:false and the UI renders the empty state).
+    case 'repo.roadmap.get': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const dir = _repoDiskDir(params.uuid);
+      if (!dir) return err(res, 500, 'could not resolve repo directory');
+      const { collectPhasemaps, buildRoadmap } = await import('../repo/roadmap.js');
+      const { maps, skipped } = collectPhasemaps(repo, dir);
+      return ok(res, { repoUuid: params.uuid, skipped, roadmap: buildRoadmap({ projectId: params.uuid, maps }) });
+    }
+
+    // POST {map, phase, status, force?} — change one phase's status in the
+    // phasemap file, proven by re-parsing with loom before and after the write.
+    case 'repo.roadmap.phase.update': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const dir = _repoDiskDir(params.uuid);
+      if (!dir) return err(res, 500, 'could not resolve repo directory');
+      const { collectPhasemaps, buildRoadmap, setPhaseStatus, RoadmapError } = await import('../repo/roadmap.js');
+      const { map, phase, status, force } = body || {};
+      if (!map || !phase || !status) return err(res, 400, 'map (repo-relative path), phase and status are required');
+      const found = collectPhasemaps(repo, dir).maps.find(m => m.path === map);
+      if (!found) return err(res, 404, `no phasemap ${map} in repo ${params.uuid}`);
+      let edit;
+      try { edit = setPhaseStatus({ text: found.text, mapName: map.split('/').pop().replace(/\.spec$/, ''), phaseId: phase, status, force: force === true }); }
+      catch (e) {
+        if (e instanceof RoadmapError) {
+          const code = e.code === 'NOT_FOUND' ? 404 : e.code === 'DEPS_INCOMPLETE' ? 409 : e.code === 'ROUNDTRIP_FAILED' ? 422 : 400;
+          return err(res, code, e.message, { code: e.code, blockers: e.blockers || null });
+        }
+        throw e;
+      }
+      const w = getRepoLayer().writeTextFile(params.uuid, map, edit.text);
+      if (w.error) return err(res, 500, `could not write ${map}: ${w.error}`, { code: 'WRITE_FAILED' });
+      // read it back from disk and parse it again: the response reports what is
+      // there, not what was intended
+      const back = collectPhasemaps(getRepoLayer().get(params.uuid) || repo, dir).maps.find(m => m.path === map);
+      const fresh = buildRoadmap({ projectId: params.uuid, maps: back ? [back] : [] }).phases.find(p => p.phase_key === phase);
+      if (!fresh || fresh.status !== status) {
+        return err(res, 500, `wrote ${map} but reading it back shows ${phase} as '${fresh && fresh.status}', not '${status}'`, { code: 'READBACK_MISMATCH' });
+      }
+      os.emit('idearium.repo.roadmap.updated', { repoUuid: params.uuid, map, phase, status, via: w.via });
+      const all = collectPhasemaps(getRepoLayer().get(params.uuid) || repo, dir);
+      return ok(res, { repoUuid: params.uuid, change: { map, phase, before: edit.before.status, after: status, via: w.via }, skipped: all.skipped, roadmap: buildRoadmap({ projectId: params.uuid, maps: all.maps }) });
     }
 
     // §MCO-B 2026-09-20 — restore a repo's files to a snapshot. dryRun defaults

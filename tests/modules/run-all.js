@@ -311,6 +311,8 @@ const SUITES = [
   'test-mcob-snapshot-restore.js',
   'test-mcoc-import-baseline.js',
   'test-mcof-config-gate.js',
+  'test-moce-roadmap.js',
+  'test-moce-roadmap-ui.js',
   'test-extract-code.js',
   'test-languages.js',
   'test-loom-phasemap-status.js',

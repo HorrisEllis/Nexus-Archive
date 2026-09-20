@@ -100,6 +100,8 @@ const COMPONENTS = [
   _comp('repo.snapshot.commit', 'POST', '/api/repos/:uuid/snapshot',        'Commit a section-33 snapshot of a repo (source hash, git commit, atlas/chunk/graph versions, dependency, environment, test and verification state) to versionium', { tags: ['snapshot', 'versionium'] }),
   _comp('repo.snapshot.list',   'GET',  '/api/repos/:uuid/snapshots',       'List a repo\'s versionium snapshots, newest first', { tags: ['snapshot', 'versionium'] }),
   _comp('repo.snapshot.show',   'GET',  '/api/repos/:uuid/snapshots/:commitId', 'Read one repo snapshot record back from versionium', { tags: ['snapshot', 'versionium'] }),
+  _comp('repo.roadmap.get',   'GET',  '/api/repos/:uuid/roadmap',        'A repo\'s roadmap: the phases in its phasemap files as dependency-ordered phase nodes (read with loom\'s parser)', { tags: ['roadmap'] }),
+  _comp('repo.roadmap.phase.update', 'POST', '/api/repos/:uuid/roadmap/phase', 'Change one phase\'s status in a repo\'s phasemap file; refused unless loom reads it back exactly', { tags: ['roadmap'] }),
   _comp('repo.snapshot.restore', 'POST', '/api/repos/:uuid/snapshots/:commitId/restore', 'Restore a repo\'s files to a snapshot (dry run by default; takes a pre-restore snapshot; verifies the result against disk)', { tags: ['snapshot', 'versionium'] }),
   _comp('repo.hat.show',   'GET',  '/api/repos/:uuid/hat',              "Show this repo's project agent (hat), if forged", { tags: ['agent'] }),
   _comp('repo.hat.ensure', 'POST', '/api/repos/:uuid/hat',              'Forge the project agent for this repo, constrained to its compartment', { tags: ['agent'] }),
