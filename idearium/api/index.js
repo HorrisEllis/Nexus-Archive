@@ -915,6 +915,20 @@ function matchRoute(method, url) {
     ['POST',   ['api','repos',    ':uuid','hat'],           'repo.hat.ensure'],
     ['POST',   ['api','repos',    ':uuid','hat','refresh'], 'repo.hat.refresh'],
     ['DELETE', ['api','repos',    ':uuid','hat'],           'repo.hat.revoke'],
+    // §REPO-AGENT 2026-09-20 — James: "an agent tab for the agent cli for
+    // the agent with the repo hat... each repo compartment in idearium."
+    // lib/repo-agent.js composes the hat's own persona and sends one
+    // ordinary prompt; it deliberately never calls copilot's
+    // /api/agent/switch, which would mutate the HOST's single global
+    // current agent and drag every other surface under this repo's hat.
+    // See that file's header for the capability-vs-behaviour limit.
+    ['GET',    ['api','repos',    ':uuid','agent'],           'repo.agent.status'],
+    ['POST',   ['api','repos',    ':uuid','agent','prompt'],  'repo.agent.prompt'],
+    ['GET',    ['api','repos',    ':uuid','agent','history'], 'repo.agent.history'],
+    ['DELETE', ['api','repos',    ':uuid','agent','history'], 'repo.agent.history.clear'],
+    ['GET',    ['api','repos',    ':uuid','agent','memory'],  'repo.agent.memory.list'],
+    ['POST',   ['api','repos',    ':uuid','agent','memory'],  'repo.agent.memory.record'],
+    ['DELETE', ['api','repos',    ':uuid','agent','memory',':obs'], 'repo.agent.memory.forget'],
     // §KEYS 2026-09-20 — compartment key/secret options, on the COS vault.
     // Values are NEVER returned by any of these; listings are names only.
     ['GET',    ['api','repos',    ':uuid','ci','keys'],        'repo.ci.keys.list'],
@@ -2421,6 +2435,94 @@ async function handle(req, res, route, query, body) {
       if (!r.ok) return err(res, 404, (r.errors || ['revoke failed']).join('; '));
       os.emit('idearium.repo.hat.revoked', { repoUuid: params.uuid, name: r.revoked });
       return ok(res, { repoUuid: params.uuid, revoked: r.revoked });
+    }
+
+    // ── §REPO-AGENT 2026-09-20 — the compartment's own agent ──────────────
+    // Every handler resolves the repo first: a repo uuid that does not
+    // exist must 404 here rather than reach repo-agent and be reported as
+    // an agent problem.
+    case 'repo.agent.status': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const RA = _require('../../lib/repo-agent.js');
+      return ok(res, RA.status({ repo, repoDir: _repoDiskDir(params.uuid) }));
+    }
+
+    case 'repo.agent.prompt': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      if (!body.message || !String(body.message).trim()) return err(res, 400, 'message is required');
+      const RA = _require('../../lib/repo-agent.js');
+      const r = await RA.dispatch({
+        repo, repoDir: _repoDiskDir(params.uuid),
+        message: body.message,
+        backend: body.backend || null,
+        agent: body.agent || null,
+      });
+      // A backend that is down is a real, reportable state, not a server
+      // error — 200 with ok:false so the CLI can print it in the transcript
+      // instead of api() throwing and losing the text.
+      return ok(res, r);
+    }
+
+    case 'repo.agent.history': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const RA = _require('../../lib/repo-agent.js');
+      const limit = Math.min(parseInt(query.limit || '50', 10) || 50, 500);
+      return ok(res, { repoUuid: params.uuid, exchanges: RA.history(params.uuid, limit) });
+    }
+
+    case 'repo.agent.history.clear': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const RA = _require('../../lib/repo-agent.js');
+      const r = RA.clearHistory(params.uuid);
+      if (!r.ok) return err(res, 500, (r.errors || ['clear failed']).join('; '));
+      return ok(res, { repoUuid: params.uuid, ...r });
+    }
+
+    case 'repo.agent.memory.list': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const MEM = _require('../../lib/repo-hat-memory.js');
+      return ok(res, {
+        repoUuid: params.uuid,
+        kinds: MEM.KINDS,
+        stats: MEM.stats(params.uuid),
+        observations: MEM.list(params.uuid, { limit: Math.min(parseInt(query.limit || '200', 10) || 200, 1000) }),
+      });
+    }
+
+    // Recording goes through repo-hat's learn(), not repo-hat-memory's
+    // record(), on purpose: learn() also re-composes the live hat, so an
+    // observation is active on the very next dispatch. record() alone would
+    // bank it into a table nothing reads at dispatch time.
+    case 'repo.agent.memory.record': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const RH = _require('../../lib/repo-hat.js');
+      const r = RH.learn({
+        repo, repoDir: _repoDiskDir(params.uuid),
+        kind: body.kind, text: body.text,
+        source: body.source || 'james', evidence: body.evidence || null,
+      });
+      if (!r.ok) return err(res, 400, (r.errors || ['record failed']).join('; '));
+      return ok(res, { repoUuid: params.uuid, ...r });
+    }
+
+    case 'repo.agent.memory.forget': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const MEM = _require('../../lib/repo-hat-memory.js');
+      const r = MEM.forget(params.obs);
+      if (!r.ok) return err(res, 400, (r.errors || ['forget failed']).join('; '));
+      // The observation is gone from the store; re-ground the hat so it is
+      // gone from the persona too, or the agent keeps being told a thing
+      // the person just deleted.
+      const RH = _require('../../lib/repo-hat.js');
+      const refreshed = RH.refreshRepoHatPersona({ repo, repoDir: _repoDiskDir(params.uuid) });
+      return ok(res, { repoUuid: params.uuid, ...r, hatUpdated: !!refreshed.ok, reason: refreshed.ok ? undefined : (refreshed.errors || []).join('; ') });
     }
 
     // ── §KEYS 2026-09-20 — compartment key/secret options ────────────────

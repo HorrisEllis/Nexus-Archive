@@ -528,6 +528,41 @@
     },
     {
       "method": "GET",
+      "path": "/api/repos/:uuid/agent",
+      "_action": "repo.agent.status"
+    },
+    {
+      "method": "POST",
+      "path": "/api/repos/:uuid/agent/prompt",
+      "_action": "repo.agent.prompt"
+    },
+    {
+      "method": "GET",
+      "path": "/api/repos/:uuid/agent/history",
+      "_action": "repo.agent.history"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/repos/:uuid/agent/history",
+      "_action": "repo.agent.history.clear"
+    },
+    {
+      "method": "GET",
+      "path": "/api/repos/:uuid/agent/memory",
+      "_action": "repo.agent.memory.list"
+    },
+    {
+      "method": "POST",
+      "path": "/api/repos/:uuid/agent/memory",
+      "_action": "repo.agent.memory.record"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/repos/:uuid/agent/memory/:obs",
+      "_action": "repo.agent.memory.forget"
+    },
+    {
+      "method": "GET",
       "path": "/api/repos/:uuid/ci/keys",
       "_action": "repo.ci.keys.list"
     },

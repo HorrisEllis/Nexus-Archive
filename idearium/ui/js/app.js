@@ -1478,6 +1478,7 @@ function openRepoFor(ideaUuid, specUuid, label) {
   document.getElementById('repo-back-btn').style.display = '';
   document.getElementById('repo-view-title').textContent = 'Repository';
   document.getElementById('repo-context').textContent = label ? `← ${label}` : '';
+  _setRepoToolbarMode('detail');
   const repo = API_REPOS.find(r =>
     (specUuid && r.promotedFromSpec === specUuid) ||
     (CURRENT_REPO_IDEA && r.ideaUuid === CURRENT_REPO_IDEA) ||
@@ -1597,6 +1598,7 @@ function enterRepoDetail(uuid) {
   document.getElementById('repo-wrap').classList.add('repo-open');
   document.getElementById('repo-back-btn').style.display = '';
   document.getElementById('repo-view-title').textContent = 'Repository';
+  _setRepoToolbarMode('detail');
   selectApiRepo(uuid);
 }
 // Back button: return to the landing grid. Closes whatever file was open —
@@ -1608,6 +1610,7 @@ function exitRepoDetail() {
   document.getElementById('repo-back-btn').style.display = 'none';
   document.getElementById('repo-view-title').textContent = 'Repository Library';
   document.getElementById('repo-context').textContent = '';
+  _setRepoToolbarMode('library');
   renderRepoLibrary();
 }
 function selectApiRepo(uuid) {
@@ -1661,6 +1664,7 @@ function renderCurrentRepoSubtab() {
   else if (CURRENT_REPO_SUBTAB === 'phasemap') renderRepoPhasemap(CURRENT_API_REPO);
   else if (CURRENT_REPO_SUBTAB === 'roadmap') renderRepoRoadmap(CURRENT_API_REPO);
   else if (CURRENT_REPO_SUBTAB === 'intelligence') renderRepoIntelligence(CURRENT_API_REPO);
+  else if (CURRENT_REPO_SUBTAB === 'agent') renderRepoAgent(CURRENT_API_REPO);
   else if (CURRENT_REPO_SUBTAB === 'versionium') renderRepoVersionium(CURRENT_API_REPO);
   else if (CURRENT_REPO_SUBTAB === 'settings') renderRepoSettings(CURRENT_API_REPO);
 }
@@ -2399,6 +2403,327 @@ function toggleTreeDir(path) {
   if (REPO_TREE_COLLAPSED.has(path)) REPO_TREE_COLLAPSED.delete(path); else REPO_TREE_COLLAPSED.add(path);
   renderApiRepoPanel(CURRENT_API_REPO);
 }
+// ════════════════════════════════════════════════════
+// §REPO TOOLBAR 2026-09-20 — James: "when you click the repo and enter it,
+// i want where the create repo and import repo buttons are to change to
+// run, branch, diagnose."
+//
+// Two <span> groups share the toolbar's right-hand slot; this swaps which
+// one is displayed. Called from the three real entry/exit points that
+// already exist (enterRepoDetail, openRepoFor, exitRepoDetail) rather than
+// tracking repo-open state a second time — REPO_DETAIL_OPEN stays the one
+// source of truth for "am I inside a repo".
+//
+// §HONEST STATE OF THE THREE ACTIONS, checked against the real route table
+// in idearium/api/index.js before any of this was wired:
+//   Branch   — REAL. POST /api/repos/:uuid/fork -> repo.fork -> RepoLayer
+//              .fork(). forkApiRepo() already existed and already works;
+//              this button is a second entry point to it, not a new path.
+//   Diagnose — REAL. GET /api/repos/:uuid/verification (the import
+//              pipeline's own L0-L8 tiers, with verify-lazy's L6-L8 merged
+//              server-side) + GET /api/repos/:uuid/scan (repo/scan.js).
+//   Run      — NOT REAL, and deliberately not faked. There is no test-env
+//              runner anywhere in this codebase: grep for spawn/exec across
+//              idearium finds only tar (spec-engine archive/restore) and
+//              agent-suite's CLI shell-out. Nothing executes a materialised
+//              repo. The button ships in its final position wearing
+//              .tb-unwired and says so on click.
+// ════════════════════════════════════════════════════
+function _setRepoToolbarMode(mode) {
+  const lib = document.getElementById('repo-tb-library');
+  const det = document.getElementById('repo-tb-detail');
+  if (!lib || !det) return; // tolerate the markup not being present
+  const detail = mode === 'detail';
+  lib.style.display = detail ? 'none' : '';
+  det.style.display = detail ? '' : 'none';
+}
+
+// Guard shared by all three: every one of them needs a repo uuid, and
+// CURRENT_API_REPO is null both before a repo is selected and for the
+// openRepoFor() path where no repo exists for that idea/spec yet.
+function _requireCurrentRepo(action) {
+  if (!CURRENT_API_REPO || !CURRENT_API_REPO.uuid) {
+    toast(`${action}: no repo selected`, 'err');
+    return null;
+  }
+  return CURRENT_API_REPO;
+}
+
+function repoBranch() {
+  const repo = _requireCurrentRepo('branch');
+  if (repo) forkApiRepo(repo.uuid);
+}
+
+function repoRun() {
+  const repo = _requireCurrentRepo('run');
+  if (!repo) return;
+  toast('run: no test-env runner exists yet — nothing to call', 'err');
+}
+
+// Diagnose — two real reads, rendered exactly as returned. A repo that has
+// never been through the import pipeline gets a real 404 from
+// /verification with the server's own message naming reindex as the fix;
+// that is surfaced verbatim rather than rewritten into something vaguer.
+let _diagnoseRepoUuid = null;
+async function repoDiagnose() {
+  const repo = _requireCurrentRepo('diagnose');
+  if (!repo) return;
+  _diagnoseRepoUuid = repo.uuid;
+  document.getElementById('repo-diagnose-title').textContent = `Diagnose — ${repo.name || repo.uuid}`;
+  const body = document.getElementById('repo-diagnose-body');
+  body.innerHTML = '<div style="opacity:.6">reading verification + scan…</div>';
+  document.getElementById('repo-diagnose-modal').classList.add('open');
+
+  const [ver, scan] = await Promise.all([
+    api(`/api/repos/${repo.uuid}/verification`).catch(e => ({ __error: e.message })),
+    api(`/api/repos/${repo.uuid}/scan`).catch(e => ({ __error: e.message })),
+  ]);
+
+  let html = '';
+
+  html += '<div style="margin-bottom:6px;opacity:.7">VERIFICATION (import pipeline L0–L8)</div>';
+  if (ver.__error) {
+    html += `<div style="color:var(--bad);margin-bottom:14px">${escapeHtml(ver.__error)}</div>`;
+  } else if (Array.isArray(ver.tiers) && ver.tiers.length) {
+    html += `<div style="margin-bottom:6px">status: <b>${escapeHtml(String(ver.status || 'unknown'))}</b>`
+         +  (ver.level ? ` · first failing tier: <b>${escapeHtml(String(ver.level))}</b>` : '') + '</div>';
+    for (const t of ver.tiers) {
+      const mark = t.passed ? '✓' : '✗';
+      const col  = t.passed ? 'var(--ok, #4ade80)' : 'var(--bad, #f87171)';
+      html += `<div><span style="color:${col}">${mark}</span> ${escapeHtml(String(t.level || '?'))} — ${escapeHtml(String(t.name || ''))}`;
+      const fails = Array.isArray(t.failures) ? t.failures : [];
+      if (fails.length) html += ` <span style="opacity:.7">(${fails.length} failure${fails.length === 1 ? '' : 's'})</span>`;
+      html += '</div>';
+      for (const f of fails.slice(0, 5)) {
+        html += `<div style="padding-left:18px;opacity:.7">· ${escapeHtml(typeof f === 'string' ? f : JSON.stringify(f))}</div>`;
+      }
+      if (fails.length > 5) html += `<div style="padding-left:18px;opacity:.5">· …${fails.length - 5} more</div>`;
+    }
+    html += '<div style="height:14px"></div>';
+  } else {
+    html += '<div style="opacity:.6;margin-bottom:14px">no tiers reported</div>';
+  }
+
+  html += '<div style="margin-bottom:6px;opacity:.7">SCAN</div>';
+  if (scan.__error) {
+    html += `<div style="color:var(--bad)">${escapeHtml(scan.__error)}</div>`;
+  } else {
+    // scan.js's shape varies by what it finds; render its real keys rather
+    // than assuming a fixed set and silently dropping the rest.
+    const skip = new Set(['ok', 'repoUuid', 'repoName']);
+    const keys = Object.keys(scan).filter(k => !skip.has(k));
+    if (!keys.length) html += '<div style="opacity:.6">scan returned nothing</div>';
+    for (const k of keys) {
+      const v = scan[k];
+      const rendered = Array.isArray(v) ? `${v.length} item${v.length === 1 ? '' : 's'}`
+                     : (v && typeof v === 'object') ? JSON.stringify(v).slice(0, 200)
+                     : String(v);
+      html += `<div>${escapeHtml(k)}: <span style="opacity:.75">${escapeHtml(rendered)}</span></div>`;
+      if (Array.isArray(v)) {
+        for (const item of v.slice(0, 5)) {
+          html += `<div style="padding-left:18px;opacity:.7">· ${escapeHtml(typeof item === 'string' ? item : JSON.stringify(item).slice(0, 160))}</div>`;
+        }
+        if (v.length > 5) html += `<div style="padding-left:18px;opacity:.5">· …${v.length - 5} more</div>`;
+      }
+    }
+  }
+
+  body.innerHTML = html;
+}
+
+function closeRepoDiagnose() {
+  document.getElementById('repo-diagnose-modal').classList.remove('open');
+}
+
+// POST /api/repos/:uuid/reindex — the real re-run of runImportPipeline().
+// This is what produces atlas.json/chunks/indexes/verification.json, so it
+// is also the fix for the "not verified yet" 404 above.
+async function repoDiagnoseReindex() {
+  if (!_diagnoseRepoUuid) return;
+  const btn = document.getElementById('repo-diagnose-reindex');
+  btn.disabled = true; btn.textContent = 're-running…';
+  try {
+    await api(`/api/repos/${_diagnoseRepoUuid}/reindex`, { method: 'POST' }, 120000);
+    toast('pipeline re-run complete', 'ok');
+    await repoDiagnose();
+  } catch (e) {
+    toast(`reindex failed: ${e.message}`, 'err');
+  } finally {
+    btn.disabled = false; btn.textContent = 're-run pipeline';
+  }
+}
+
+// ════════════════════════════════════════════════════
+// §REPO-AGENT 2026-09-20 — this compartment's own agent.
+// James: "an agent tab for the agent cli for the agent with the repo hat,
+// learns as it works, updating the .hat and .agent as models... each repo
+// compartment in idearium."
+//
+// Backed by lib/repo-agent.js through /api/repos/:uuid/agent*. The CLI does
+// NOT switch the host's global agent — the hat's persona is composed into
+// the prompt server-side. The persona is shown in full here on purpose: a
+// persona the person cannot read is one they cannot correct, and correcting
+// it is half of how this agent learns.
+// ════════════════════════════════════════════════════
+const AGENT_TRANSCRIPT = new Map(); // repoUuid -> [{ role, text, meta }]
+
+function _agentTranscript(uuid) {
+  if (!AGENT_TRANSCRIPT.has(uuid)) AGENT_TRANSCRIPT.set(uuid, []);
+  return AGENT_TRANSCRIPT.get(uuid);
+}
+
+async function renderRepoAgent(repo) {
+  const el = document.getElementById('repo-subtab-agent');
+  if (!el || !repo) return;
+  el.innerHTML = '<div class="detail-empty">loading agent…</div>';
+
+  let st;
+  try { st = await api(`/api/repos/${repo.uuid}/agent`); }
+  catch (e) { el.innerHTML = `<div class="detail-empty">agent unavailable: ${escapeHtml(e.message)}</div>`; return; }
+
+  // No compartment means no agent, and repo-hat refuses to forge one —
+  // surface that reason verbatim rather than an empty tab.
+  if (!st.compartmentId) {
+    el.innerHTML = `<div class="detail-empty">this repo has no compartment.<br><br>` +
+      `a project agent is constrained BY its compartment — one scoped to nothing would be a host-wide agent wearing this project's name.<br><br>` +
+      `import through the project-import flow (which creates a real COS compartment) or attach one first.</div>`;
+    return;
+  }
+
+  const mem = st.memory || { total: 0, byKind: {} };
+  const idx = st.index || {};
+  const kindCounts = Object.entries(mem.byKind || {}).map(([k, n]) => `${k} ${n}`).join(' · ');
+
+  const head = `
+    <div class="ds">
+      <div class="ds-label">compartment agent</div>
+      <div class="ds-mono">${st.exists ? escapeHtml(st.hat.name) : '(no hat forged yet)'}
+compartment ${escapeHtml(st.compartmentId)}
+session    ${escapeHtml(st.sessionId)}
+indexed    ${idx.indexed ? `${idx.fileCount ?? '?'} files · ${idx.chunkCount ?? '?'} chunks` : 'NOT indexed — run the pipeline from Diagnose'}
+learned    ${mem.total} observation${mem.total === 1 ? '' : 's'}${kindCounts ? ` (${kindCounts})` : ''}
+exchanges  ${st.exchanges || 0}</div>
+    </div>
+    <div style="margin:8px 0">
+      ${st.exists
+        ? `<button class="tb-btn" onclick="toggleAgentPersona()">show/hide persona</button>
+           <button class="tb-btn" style="margin-left:6px" onclick="agentTeach()">teach</button>
+           <button class="tb-btn" style="margin-left:6px" onclick="agentClearTranscript()">clear transcript</button>`
+        : `<button class="tb-btn" onclick="agentForgeHat()">forge this repo's agent</button>`}
+    </div>
+    <div id="agent-persona" style="display:none;white-space:pre-wrap;font-size:10px;opacity:.8;border:1px solid var(--b1);border-radius:3px;padding:8px;margin-bottom:8px;max-height:280px;overflow-y:auto">${st.exists ? escapeHtml(st.hat.personaPrompt || '(empty persona)') : ''}</div>`;
+
+  // Learned observations, each removable. The person's delete always wins,
+  // and the server re-grounds the hat so it leaves the persona too.
+  let memHtml = '';
+  if (mem.total) {
+    let obs = [];
+    try { obs = (await api(`/api/repos/${repo.uuid}/agent/memory`)).observations || []; } catch (_) { /* header already shows the count */ }
+    if (obs.length) {
+      memHtml = `<div class="ds"><div class="ds-label">learned</div><div style="font-size:10px;line-height:1.8">` +
+        obs.map(o => `<div>(${escapeHtml(o.kind)}) ${escapeHtml(o.text)}` +
+          `${(o.occurrences || 1) > 1 ? ` <span style="opacity:.6">[${o.occurrences}×]</span>` : ''}` +
+          `${o.evidence ? ` <span style="opacity:.6">[${escapeHtml(o.evidence)}]</span>` : ''}` +
+          ` <span style="cursor:pointer;opacity:.5" title="forget" onclick="agentForget('${o.uuid}')">×</span></div>`).join('') +
+        `</div></div>`;
+    }
+  }
+
+  const lines = _agentTranscript(repo.uuid);
+  const transcript = lines.length
+    ? lines.map(l => `<div style="margin-bottom:10px"><div style="opacity:.55;font-size:9px">${escapeHtml(l.role)}${l.meta ? ` · ${escapeHtml(l.meta)}` : ''}</div><div style="white-space:pre-wrap">${escapeHtml(l.text)}</div></div>`).join('')
+    : `<div style="opacity:.5">no exchanges in this session yet</div>`;
+
+  el.innerHTML = head + memHtml + `
+    <div class="ds"><div class="ds-label">cli</div>
+      <div id="agent-transcript" style="font-size:10px;max-height:320px;overflow-y:auto;padding:4px 0">${transcript}</div>
+      <textarea id="agent-input" class="field-textarea" rows="3" spellcheck="false" placeholder="ask this project's agent…"></textarea>
+      <div style="margin-top:6px">
+        <button class="tb-btn" onclick="agentSend()">send</button>
+        <span style="margin-left:10px;opacity:.5;font-size:9px">toolScope is not enforced on this path — the persona constrains behaviour, not capability</span>
+      </div>
+    </div>`;
+
+  const ta = document.getElementById('agent-input');
+  if (ta) ta.addEventListener('keydown', e => {
+    // Enter sends, Shift+Enter newlines — same convention as the idea composer.
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); agentSend(); }
+  });
+  const tr = document.getElementById('agent-transcript');
+  if (tr) tr.scrollTop = tr.scrollHeight;
+}
+
+function toggleAgentPersona() {
+  const p = document.getElementById('agent-persona');
+  if (p) p.style.display = p.style.display === 'none' ? '' : 'none';
+}
+
+async function agentForgeHat() {
+  if (!CURRENT_API_REPO) return;
+  try {
+    const r = await api(`/api/repos/${CURRENT_API_REPO.uuid}/hat`, { method: 'POST', body: JSON.stringify({}) });
+    toast(r.created ? `agent forged: ${r.hat.name}` : `agent already existed: ${r.hat.name}`, 'ok');
+    renderRepoAgent(CURRENT_API_REPO);
+  } catch (e) { toast(`forge failed: ${e.message}`, 'err'); }
+}
+
+async function agentSend() {
+  if (!CURRENT_API_REPO) return;
+  const ta = document.getElementById('agent-input');
+  const message = (ta?.value || '').trim();
+  if (!message) return;
+  const uuid = CURRENT_API_REPO.uuid;
+  const lines = _agentTranscript(uuid);
+
+  lines.push({ role: 'you', text: message });
+  lines.push({ role: 'agent', text: 'thinking…', meta: null });
+  ta.value = '';
+  renderRepoAgent(CURRENT_API_REPO);
+
+  let r;
+  // 120s: a real dispatch through copilot's cascade routinely outlives
+  // api()'s 6s default — the same too-short-timeout bug already fixed once
+  // in ui/lib/api.js (0.39.118), not repeated here.
+  try { r = await api(`/api/repos/${uuid}/agent/prompt`, { method: 'POST', body: JSON.stringify({ message }) }, 120000); }
+  catch (e) { r = { ok: false, error: e.message }; }
+
+  lines.pop(); // drop the placeholder
+  lines.push(r.ok
+    ? { role: 'agent', text: r.text, meta: [r.hatName, r.modelUsed, r.elapsedMs ? `${Math.round(r.elapsedMs / 100) / 10}s` : null].filter(Boolean).join(' · ') }
+    : { role: 'agent — failed', text: r.error || 'no response', meta: r.hatName || null });
+
+  renderRepoAgent(CURRENT_API_REPO);
+}
+
+function agentClearTranscript() {
+  if (!CURRENT_API_REPO) return;
+  AGENT_TRANSCRIPT.set(CURRENT_API_REPO.uuid, []);
+  renderRepoAgent(CURRENT_API_REPO);
+}
+
+// Teaching is a `correction` by default — it came from the person, and the
+// persona ranks a correction above anything the agent concluded itself.
+async function agentTeach() {
+  if (!CURRENT_API_REPO) return;
+  const text = await themedPrompt('what should this agent know about this project?', 'teach the agent');
+  if (!text) return;
+  try {
+    const r = await api(`/api/repos/${CURRENT_API_REPO.uuid}/agent/memory`, {
+      method: 'POST', body: JSON.stringify({ kind: 'correction', text, source: 'james' }),
+    });
+    toast(r.hatUpdated ? 'learned — persona updated' : `stored, but persona not updated: ${r.reason || 'unknown'}`, r.hatUpdated ? 'ok' : 'err');
+    renderRepoAgent(CURRENT_API_REPO);
+  } catch (e) { toast(`teach failed: ${e.message}`, 'err'); }
+}
+
+async function agentForget(obsUuid) {
+  if (!CURRENT_API_REPO) return;
+  try {
+    await api(`/api/repos/${CURRENT_API_REPO.uuid}/agent/memory/${obsUuid}`, { method: 'DELETE' });
+    renderRepoAgent(CURRENT_API_REPO);
+  } catch (e) { toast(`forget failed: ${e.message}`, 'err'); }
+}
+
 // §NEW 2026-09-17 — repo.fork existed as a real API endpoint
 // (idearium/interaction-contract.json's repo.fork) with no UI ever
 // wired to it.

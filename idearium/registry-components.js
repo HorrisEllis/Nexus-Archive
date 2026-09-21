@@ -107,6 +107,16 @@ const COMPONENTS = [
   _comp('repo.hat.ensure', 'POST', '/api/repos/:uuid/hat',              'Forge the project agent for this repo, constrained to its compartment', { tags: ['agent'] }),
   _comp('repo.hat.refresh','POST', '/api/repos/:uuid/hat/refresh',      "Re-ground the project agent's persona against the repo's current index", { tags: ['agent'] }),
   _comp('repo.hat.revoke', 'DELETE','/api/repos/:uuid/hat',             "Revoke this repo's project agent", { tags: ['agent'] }),
+  // §REPO-AGENT 2026-09-20 — the compartment's own agent CLI. lib/repo-agent.js
+  // composes the hat's persona into an ordinary prompt; it never switches the
+  // host's global current agent (see that file's header).
+  _comp('repo.agent.status',        'GET',   '/api/repos/:uuid/agent',              "This compartment's agent: hat, index state, learned count, session", { tags: ['agent'] }),
+  _comp('repo.agent.prompt',        'POST',  '/api/repos/:uuid/agent/prompt',       "Dispatch one message as this compartment's agent, wearing its repo hat", { tags: ['agent'] }),
+  _comp('repo.agent.history',       'GET',   '/api/repos/:uuid/agent/history',      "This compartment's own exchange log, newest first", { tags: ['agent'] }),
+  _comp('repo.agent.history.clear', 'DELETE','/api/repos/:uuid/agent/history',      "Clear this compartment's exchange log", { tags: ['agent'] }),
+  _comp('repo.agent.memory.list',   'GET',   '/api/repos/:uuid/agent/memory',       'What this agent has learned working on the project', { tags: ['agent'] }),
+  _comp('repo.agent.memory.record', 'POST',  '/api/repos/:uuid/agent/memory',       "Teach this agent something, and re-compose its live persona", { tags: ['agent'] }),
+  _comp('repo.agent.memory.forget', 'DELETE','/api/repos/:uuid/agent/memory/:obs',  'Forget one observation, and drop it from the persona', { tags: ['agent'] }),
   _comp('repo.ci.keys.list',    'GET',   '/api/repos/:uuid/ci/keys',          "List SSH key aliases registered to this compartment (never key material)", { tags: ['ci','keys'] }),
   _comp('repo.ci.keys.register','POST',  '/api/repos/:uuid/ci/keys',          'Register an SSH key BY PATH under an alias, in the compartment vault', { tags: ['ci','keys'] }),
   _comp('repo.ci.keys.remove',  'DELETE','/api/repos/:uuid/ci/keys/:alias',   'Remove an SSH key alias from this compartment', { tags: ['ci','keys'] }),

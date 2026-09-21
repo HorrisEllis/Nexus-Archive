@@ -72,6 +72,11 @@ body{display:flex;flex-direction:column;position:relative}
 .tb-btn{font-family:var(--mono);font-size:10px;padding:3px 9px;border-radius:3px;border:1px solid var(--b1);background:none;color:var(--text2);cursor:pointer;transition:all .15s}
 .tb-btn:hover{border-color:var(--b2);color:var(--text)}
 .tb-btn.active{background:rgba(56,189,248,.1);border-color:var(--b2);color:var(--sky)}
+/* §BUILT 2026-09-20 — a control that is present but has no backend yet.
+   Visibly distinct from an enabled button so it never reads as working;
+   still clickable, because a dead disabled button explains nothing. */
+.tb-btn.tb-unwired{border-style:dashed;opacity:.55}
+.tb-btn.tb-unwired:hover{opacity:.8;color:var(--text2)}
 
 /* APP SHELL — nav rail + view area */
 .app-shell{flex:1;display:flex;flex-direction:column;overflow:hidden}
@@ -744,8 +749,27 @@ body{display:flex;flex-direction:column;position:relative}
              already-working zip-import + real compartment flow used
              elsewhere in this UI) and one real Create (openCreateRepoModal()
              — genuinely new, see repo.ingest's bare:true path). -->
-        <button class="tb-btn" style="margin-left:auto" onclick="openUploadProjectModal()">Import repo</button>
-        <button class="tb-btn" style="margin-left:6px" onclick="openCreateRepoModal()">Create repo</button>
+        <!-- §BUILT 2026-09-20 — James: "when you click the repo and enter it,
+             i want where the create repo and import repo buttons are to
+             change to run, branch, diagnose." Two groups occupying the same
+             slot; _setRepoToolbarMode() in js/app.js swaps which is shown,
+             driven by the SAME enterRepoDetail()/exitRepoDetail() pair that
+             already owns every other detail-vs-library transition (the back
+             button, the rail collapse, the view title) rather than a second,
+             parallel notion of "am I in a repo". -->
+        <span class="repo-tb-group" id="repo-tb-library" style="margin-left:auto">
+          <button class="tb-btn" onclick="openUploadProjectModal()">Import repo</button>
+          <button class="tb-btn" style="margin-left:6px" onclick="openCreateRepoModal()">Create repo</button>
+        </span>
+        <span class="repo-tb-group" id="repo-tb-detail" style="margin-left:auto;display:none">
+          <!-- Run carries .tb-unwired on purpose: there is no test-env
+               runner in this codebase yet (confirmed — zero spawn/exec
+               against a materialised repo dir anywhere in idearium). It
+               reports that plainly on click instead of appearing to work. -->
+          <button class="tb-btn tb-unwired" id="repo-tb-run" onclick="repoRun()">Run</button>
+          <button class="tb-btn" style="margin-left:6px" onclick="repoBranch()">Branch</button>
+          <button class="tb-btn" style="margin-left:6px" onclick="repoDiagnose()">Diagnose</button>
+        </span>
         <input type="file" id="repo-drop-input" multiple style="display:none" onchange="ingestDroppedFiles(this.files)">
       </div>
       <div class="repo-wrap" id="repo-wrap">
@@ -768,6 +792,7 @@ body{display:flex;flex-direction:column;position:relative}
             <button class="repo-subtab-btn" data-subtab="phasemap" onclick="setRepoSubtab('phasemap')">Phasemap</button>
             <button class="repo-subtab-btn" data-subtab="roadmap" onclick="setRepoSubtab('roadmap')">Roadmap</button>
             <button class="repo-subtab-btn" data-subtab="intelligence" onclick="setRepoSubtab('intelligence')">Intelligence</button>
+            <button class="repo-subtab-btn" data-subtab="agent" onclick="setRepoSubtab('agent')">Agent</button>
             <button class="repo-subtab-btn" data-subtab="versionium" onclick="setRepoSubtab('versionium')">Versionium</button>
             <button class="repo-subtab-btn" data-subtab="settings" onclick="setRepoSubtab('settings')">Settings</button>
           </nav>
@@ -816,6 +841,14 @@ body{display:flex;flex-direction:column;position:relative}
                repo's own real atlas/graph/verification artifacts — see
                GET /api/repos/:uuid/scan. -->
           <div class="repo-subtab-panel" id="repo-subtab-intelligence">
+            <div class="detail-empty">← select a repo</div>
+          </div>
+
+          <!-- AGENT — this compartment's own agent. The CLI composes this
+               repo's hat persona (lib/repo-agent.js) and sends one ordinary
+               prompt; it never switches the host's global agent. Three
+               stacked regions: status/persona, transcript, composer. -->
+          <div class="repo-subtab-panel" id="repo-subtab-agent">
             <div class="detail-empty">← select a repo</div>
           </div>
 
@@ -1864,6 +1897,22 @@ async function saveToIdearium(){
     <div class="modal-actions">
       <button class="modal-btn" onclick="closePromptModal(null)">cancel</button>
       <button class="modal-btn confirm" onclick="closePromptModal(document.getElementById('prompt-modal-input').value)">ok</button>
+    </div>
+  </div>
+</div>
+
+<!-- §BUILT 2026-09-20 — Diagnose results. Reads two endpoints that already
+     exist and already return real data: GET /api/repos/:uuid/verification
+     (the import pipeline's own L0-L8 tier results, merged with verify-lazy's
+     L6-L8) and GET /api/repos/:uuid/scan (repo/scan.js). Nothing computed
+     client-side — if a tier is absent, it says absent. -->
+<div class="modal-overlay" id="repo-diagnose-modal">
+  <div class="modal" style="max-width:720px">
+    <div class="modal-title" id="repo-diagnose-title">Diagnose</div>
+    <div id="repo-diagnose-body" style="max-height:60vh;overflow-y:auto;font-size:11px;line-height:1.7"></div>
+    <div class="modal-actions">
+      <button class="modal-btn" onclick="closeRepoDiagnose()">close</button>
+      <button class="modal-btn confirm" id="repo-diagnose-reindex" onclick="repoDiagnoseReindex()">re-run pipeline</button>
     </div>
   </div>
 </div>
