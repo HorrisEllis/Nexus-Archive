@@ -443,8 +443,7 @@ function captureAll({ job, text, dir, stage = true } = {}) {
     } else {
       // A path stated inside the fence's own info string, e.g.
       // ```js src/x.js  or  ```js title="src/x.js"
-      const m = (b.info || '').match(/(?:^|\s)(?:title=)?["']?([\w./-]+\.[A-Za-z0-9]+)["']?\s*$/);
-      const stated = m && m[1] && m[1] !== b.tag ? _safeRelative(m[1]) : null;
+      const stated = fenceDeclaredPath(b);
       if (stated) { name = stated; source = 'fence-declared'; }
       else {
         const ext = b.syntax ? _languages.extFor(b.syntax) : null;
@@ -561,8 +560,23 @@ function onJobComplete({ job, text, bus } = {}) {
   return result;
 }
 
+/**
+ * fenceDeclaredPath(block) -> safe repo-relative path | null
+ * §2026-09-21 — extracted verbatim from captureAll()'s inline match so
+ * lib/repo-inject.js addresses compartment writes with the SAME rule rather
+ * than a second regex that drifts (§10.3). A path the agent states in the
+ * fence info string (```js src/x.js  or  ```js title="src/x.js") is the
+ * agent's own claim about where the code goes; it still passes through
+ * _safeRelative, so ../escape.js yields null, never a write outside the tree.
+ */
+function fenceDeclaredPath(b) {
+  const m = ((b && b.info) || '').match(/(?:^|\s)(?:title=)?["']?([\w./-]+\.[A-Za-z0-9]+)["']?\s*$/);
+  return m && m[1] && m[1] !== b.tag ? _safeRelative(m[1]) : null;
+}
+
 module.exports = {
   MODULE_ID,
+  fenceDeclaredPath,
   captureAll,
   onJobComplete,
   recordAgentResponse,

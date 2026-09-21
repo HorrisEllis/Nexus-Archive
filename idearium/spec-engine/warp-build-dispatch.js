@@ -190,7 +190,14 @@ export function createWarpChunkDispatch(as, { raid = null, axioms = [], pollTime
     try {
       const result = await warpDispatch(record, opts.axioms || axioms);
       if (!result.ok) {
-        return { ok: false, error: `axiom/cascade failure after ${result.attempts} attempt(s)` };
+        // §2026-09-21 — say WHY, per attempt: which provider, and what it
+        // threw or which hard axioms its output failed. "after 3 attempt(s)"
+        // alone was all a stalled chunk could report; the reasons existed in
+        // runCascade and were dropped on the way out.
+        const why = (result.attemptLog || []).map(a =>
+          `${a.provider}: ${a.error ? a.error : (a.failures && a.failures.length ? `failed axiom(s) ${a.failures.join(', ')}` : 'rejected')}`
+        ).join(' | ');
+        return { ok: false, error: `axiom/cascade failure after ${result.attempts} attempt(s)${why ? ` — ${why}` : ''}`, attempts: result.attemptLog || [] };
       }
       // §OBSERVABILITY 2026-07-09 — surface WARP's own provenance. Without
       // this the caller cannot distinguish a zero-token exact-cache hit

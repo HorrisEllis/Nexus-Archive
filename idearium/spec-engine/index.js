@@ -625,6 +625,55 @@ export function createSpec({ name, type = 'component', description = '', agent =
   return _buildManifest({ name, type, description, agent, sectionAgents, warpPrimitives, author, templateId, templateIds, sections: SPEC_SECTIONS, buildEngine, ideaUuid, dependsOn });
 }
 
+// §FILE-TREE-FIRST 2026-09-21 — James: "the file tree needs to be generated
+// first with the list of files, the kernel, engine and runtime."
+// A spec whose chunks ARE the project's files (from lib/file-tree-plan.js),
+// not the 10 document sections. Built through the same _buildManifest every
+// other spec uses; each chunk then carries realPath (so the build path's
+// existing expectCode/extractCode switch applies and the repo materialises
+// real files) and `file` {path, layer, purpose} for the file-aware prompt.
+//
+// Build order is bottom-up by construction, through the dependsOn gate the
+// build already honours: every engine file waits on all kernel files, every
+// runtime file on all engine files, tests on runtime. A layer with no files
+// is skipped over, not waited on. PLAN.md (the tree itself) and every file a
+// COS template supplied are completed at creation — they cost no dispatch.
+export function createFileTreeSpec({ name, description = '', plan, planMarkdown = null, agent = null, author = 'nexus', ideaUuid = null, templateId = null } = {}) {
+  if (!plan || !Array.isArray(plan.files) || !plan.files.length) throw new Error('createFileTreeSpec: plan.files is required and non-empty');
+  const order = ['kernel', 'engine', 'runtime', 'test'];
+  const files = [...plan.files];
+  const slug = (p) => String(p).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 80) || 'file';
+  const used = new Set();
+  const sid = (p) => { let id = slug(p), n = 2; while (used.has(id)) id = `${slug(p)}-${n++}`; used.add(id); return id; };
+  const sections = [];
+  if (planMarkdown) sections.push({ id: sid('PLAN.md'), title: 'PLAN.md', desc: 'The planned file tree', _file: { path: 'PLAN.md', layer: 'plan', purpose: 'the planned file tree', content: planMarkdown } });
+  for (const f of files) sections.push({ id: sid(f.path), title: f.path, desc: `${f.layer} · ${f.purpose || ''}`.trim(), _file: f });
+  const byLayer = {};
+  for (const sct of sections) (byLayer[sct._file.layer] = byLayer[sct._file.layer] || []).push(sct.id);
+  const dependsOn = {};
+  for (const sct of sections) {
+    const li = order.indexOf(sct._file.layer);
+    if (li <= 0) continue;
+    for (let j = li - 1; j >= 0; j--) { if (byLayer[order[j]] && byLayer[order[j]].length) { dependsOn[sct.id] = [...byLayer[order[j]]]; break; } }
+  }
+  const manifest = _buildManifest({ name, type: 'filetree', description, agent, sectionAgents: {}, warpPrimitives: [], author, templateId: null, templateIds: null, sections, buildEngine: 'auto', ideaUuid, dependsOn });
+  // dependsOn stays as SECTION ids — _chunkDependenciesSatisfied() resolves
+  // edges by sectionId, the same key every other spec's edges use.
+  const fileBySid = new Map(sections.map(x => [x.id, x._file]));
+  for (const c of manifest.chunks) {
+    const f = fileBySid.get(c.sectionId);
+    c.realPath = f.path;
+    c.file = { path: f.path, layer: f.layer, purpose: f.purpose || null, source: f.source || (f.layer === 'plan' ? 'plan' : null) };
+  }
+  manifest.fileTree = { planSource: plan.planSource || null, template: plan.template || null, templateId, layers: Object.fromEntries(order.map(l => [l, (byLayer[l] || []).length])) };
+  saveSpec(manifest);
+  for (const c of manifest.chunks) {
+    const f = fileBySid.get(c.sectionId);
+    if (typeof f.content === 'string' && f.content.length) completeChunk(manifest.uuid, c.uuid, f.content, { preserveWhitespace: true });
+  }
+  return loadSpec(manifest.uuid);
+}
+
 // §BUILT 2026-09-03 — edit a spec's declared WARP primitives after
 // creation. Same real validation as at creation time — a bad name is a
 // loud error, never silently dropped or accepted.
@@ -1137,7 +1186,44 @@ export async function expandSpec(specUuid) {
 
 // ── Build prompt for a chunk — gives agent full context ───────────────────────
 // Agents get: system context, spec metadata, previous chunks, their section task
+// §FILE-TREE-FIRST 2026-09-21 — a file chunk is asked for a FILE: its full
+// content, in its layer, against the plan and the finished files it builds
+// on. The lower layers it may import are included (bounded), because a
+// runtime file written without seeing the engine it wires is a guess.
+function _buildFilePrompt(manifest, chunk, systemContext = '') {
+  const order = { plan: -1, kernel: 0, engine: 1, runtime: 2, test: 3 };
+  const mine = order[chunk.file.layer] ?? 2;
+  const plan = manifest.chunks.find(c => c.file && c.file.layer === 'plan');
+  const below = manifest.chunks
+    .filter(c => c.file && c.status === CHUNK_STATES.COMPLETE && c.uuid !== chunk.uuid && (order[c.file.layer] ?? 9) < mine && c.file.layer !== 'plan')
+    .slice(0, 12);
+  let budget = 24000;
+  const shown = [];
+  for (const c of below) {
+    const body = String(c.content || '');
+    if (!budget) break;
+    const take = body.slice(0, Math.min(budget, 4000));
+    budget -= take.length;
+    shown.push(`--- ${c.realPath} [${c.file.layer}]${take.length < body.length ? ' (truncated)' : ''}\n${take}`);
+  }
+  return [
+    `Write the complete file \`${chunk.realPath}\` for the project "${manifest.name}".`,
+    ``,
+    `Layer: ${chunk.file.layer}${chunk.file.purpose ? ` — ${chunk.file.purpose}` : ''}`,
+    manifest.description ? `Project: ${manifest.description}` : '',
+    ``,
+    `Layers: kernel = core state/types/invariants, no I/O · engine = domain logic on the kernel · runtime = entrypoints, I/O, wiring, config · test = tests.`,
+    `A file may only depend on its own layer and the layers below it.`,
+    ``,
+    systemContext ? `SYSTEM STATE:\n${systemContext}\n` : '',
+    plan && plan.content ? `THE PLAN:\n${String(plan.content).slice(0, 6000)}\n` : '',
+    shown.length ? `FILES ALREADY BUILT BELOW THIS LAYER:\n${shown.join('\n\n')}\n` : '',
+    `Output ONLY the file's full content in one fenced code block. Real, working code — no placeholders, no TODO stubs, no "rest of implementation" comments.`,
+  ].filter(Boolean).join('\n');
+}
+
 export function buildChunkPrompt(manifest, chunk, systemContext = '') {
+  if (chunk.file && chunk.realPath) return _buildFilePrompt(manifest, chunk, systemContext);
   const completedChunks = manifest.chunks
     .filter(c => c.status === CHUNK_STATES.COMPLETE && c.chunkIdx < chunk.chunkIdx)
     .map(c => `### ${c.sectionTitle}\n${c.content || ''}`)
@@ -1180,7 +1266,7 @@ export default {
   // live endpoint, not by reading the file.
   listTemplates, getTemplate, readSeed,
   findByDedupKey, findPriorSection, importSpec,
-  createSpec, loadSpec, saveSpec, listSpecs,
+  createSpec, createFileTreeSpec, loadSpec, saveSpec, listSpecs,
   nextPendingChunk, markChunkBuilding, completeChunk, failChunk, setChunkAgent, recordDispatchJob, setWarpPrimitives,
   recoverOrphanedChunks,
   buildChunkPrompt, archiveSpec, expandSpec, deleteSpec, restoreSpec,
@@ -1284,7 +1370,7 @@ export function findByRootHash(rootHash) {
 // content store of its own to add a file TO except through spec-engine.
 // Same disk-write/rootHash-recompute path as every other chunk — this is
 // not a second mechanism, just a chunk list that can grow after creation.
-export function addChunk(specUuid, { sectionId, title = null, content = '', realPath = null, repoUuid = null, dependsOn = [] } = {}) {
+export function addChunk(specUuid, { sectionId, title = null, content = '', realPath = null, repoUuid = null, dependsOn = [], preserveWhitespace = false } = {}) {
   if (!sectionId) throw new Error('addChunk: sectionId required');
   const manifest = loadSpec(specUuid);
   // §FIXED 2026-09-20 (MCO-B) — this counted REMOVED chunks. removeChunk()
@@ -1346,7 +1432,7 @@ export function addChunk(specUuid, { sectionId, title = null, content = '', real
   // callers (repo/index.js's writeFile) doing `fresh.chunks.find(...)` on
   // an object with no .chunks property at all — reliable crash on every
   // "add a new file with content" call. Always return the fresh manifest.
-  if (content && content.trim()) completeChunk(specUuid, chunkUuid, content, { repoUuid });
+  if (content && content.trim()) completeChunk(specUuid, chunkUuid, content, { repoUuid, preserveWhitespace }); // §2026-09-21 opt-in, default unchanged
   return loadSpec(specUuid);
 }
 

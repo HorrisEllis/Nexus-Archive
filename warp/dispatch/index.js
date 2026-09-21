@@ -223,6 +223,11 @@ async function unifiedDispatch({
     source: pregenReuse ? 'pre-generation-reuse' : 'generated',
     fitness,
     attempts: cascadeResult.attempts?.length ?? 1,
+    // §2026-09-21 — the per-attempt record (provider, passed, failures,
+    // error) runCascade already keeps. `attempts` stays a count for every
+    // existing caller; this carries the WHY, which was being dropped here —
+    // so a failed chunk could only ever say "failed after 3 attempt(s)".
+    attemptLog: Array.isArray(cascadeResult.attempts) ? cascadeResult.attempts : [],
     digest,
   };
 }

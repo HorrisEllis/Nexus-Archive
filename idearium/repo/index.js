@@ -282,16 +282,20 @@ export class RepoLayer {
    * goes through the chunk store. Materialized and reindexed once.
    * §MCO-E 2026-09-20 — for the roadmap editor.
    */
-  writeTextFile(repoUuid, relPath, text) {
+  // §2026-09-21 opts.preserveWhitespace — opt-in byte fidelity, passed through
+  // to spec-engine's completeChunk (whose default trims, per its own
+  // §BYTE-FIDELITY note). Source code written by lib/repo-inject.js needs the
+  // exact bytes; every existing caller passes nothing and is unchanged.
+  writeTextFile(repoUuid, relPath, text, opts = {}) {
     if (typeof text !== 'string') return { error: 'text must be a string' };
     if (this.isSourceOwned(repoUuid, relPath)) {
-      this.writeFile(repoUuid, relPath, text, { defer: true }); // chunk in step; a chunk problem is not this write's failure
+      this.writeFile(repoUuid, relPath, text, { defer: true, preserveWhitespace: !!opts.preserveWhitespace }); // chunk in step; a chunk problem is not this write's failure
       const r = this.writeSourceBytes(repoUuid, relPath, Buffer.from(text, 'utf8'));
       if (r.error) return { error: r.error };
       this.refresh(repoUuid);
       return { ok: true, via: 'source' };
     }
-    const r = this.writeFile(repoUuid, relPath, text);
+    const r = this.writeFile(repoUuid, relPath, text, { preserveWhitespace: !!opts.preserveWhitespace });
     return r.error ? { error: r.error } : { ok: true, via: 'chunk', created: !!r.created };
   }
 
@@ -652,7 +656,7 @@ export class RepoLayer {
       if (chunk) {
         // existing file — edit in place via the same completeChunk every
         // other content write goes through (disk-verified, rootHash recomputed)
-        this.se.completeChunk(manifest.uuid, chunk.uuid, content, { repoUuid });
+        this.se.completeChunk(manifest.uuid, chunk.uuid, content, { repoUuid, preserveWhitespace: !!opts.preserveWhitespace });
         if (!opts.defer) this._materializeQuiet(repoUuid); // §BUILT 2026-09-06 — keep the real, physical projection honestly in sync, never stale
         return { ok: true, path: chunk.realPath || chunk.fileName, created: false };
       }
@@ -661,7 +665,7 @@ export class RepoLayer {
       // human-readable in the repo's file list. realPath preserves the
       // real relative path/extension for materialize() (§REALPATH).
       const sectionId = clean.replace(/\.[a-zA-Z0-9]+$/, '').replace(/[^a-zA-Z0-9_-]/g, '-').toLowerCase() || `file-${Date.now()}`;
-      const fresh = this.se.addChunk(manifest.uuid, { sectionId, title: clean, content, realPath: clean, repoUuid });
+      const fresh = this.se.addChunk(manifest.uuid, { sectionId, title: clean, content, realPath: clean, repoUuid, preserveWhitespace: !!opts.preserveWhitespace });
       const newChunk = fresh.chunks.find(c => c.sectionId === sectionId && c.status !== 'removed');
       if (!opts.defer) this._materializeQuiet(repoUuid);
       return { ok: true, path: newChunk?.realPath || newChunk?.fileName || clean, created: true };

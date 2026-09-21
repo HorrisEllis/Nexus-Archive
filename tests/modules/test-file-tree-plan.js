@@ -1,0 +1,140 @@
+'use strict';
+/**
+ * tests/modules/test-file-tree-plan.js
+ * §2026-09-21 — file tree first (James: "the file tree needs to be generated
+ * first with the list of files, the kernel, engine and runtime... all the
+ * templates from cos available for the promote to spec menu"), plus the two
+ * defects his boot log showed: chunk failures that gave no reason, and a
+ * stalled spec re-reported every 15s forever.
+ *
+ * Real modules throughout: the COS registries, the real spec-engine (under a
+ * temp IDEARIUM_DATA_DIR), and the real WARP cascade with a generator that
+ * fails the way a missing provider tab does.
+ */
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+
+const ROOT = path.resolve(__dirname, '..', '..');
+process.env.IDEARIUM_DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'ftp-idearium-'));
+
+let pass = 0, fail = 0;
+function check(n, c, d = '') { if (c) { pass++; console.log(`  ✓ ${n}`); } else { fail++; console.log(`  ✗ ${n}${d ? ` — ${d}` : ''}`); } }
+
+async function run() {
+  console.log('\ntest-file-tree-plan\n');
+  const P = require(path.join(ROOT, 'lib', 'file-tree-plan.js'));
+  const A = require(path.join(ROOT, 'cos', 'archetype', 'index.js'));
+  const B = require(path.join(ROOT, 'cos', 'blueprint', 'index.js'));
+
+  // ── every COS template is offered, read live ──
+  const cos = P.listCosTemplates();
+  check('every COS archetype is offered', cos.filter(t => t.source === 'cos-archetype').length === A.listArchetypes().length);
+  check('every COS blueprint is offered', cos.filter(t => t.source === 'cos-blueprint').length === B.listBlueprints().length);
+  check('COS entries use the picker\'s own shape (id, label, description)', cos.every(t => t.id && t.label && typeof t.description === 'string'));
+  check('COS ids are namespaced so they never collide with spec-document templates', cos.every(t => P.isCosTemplate(t.id)));
+
+  // ── a COS archetype yields real files, {{name}} substituted ──
+  const ag = P.fromCosTemplate('cos-archetype:ai-agent', { name: 'drumpad' });
+  check('an archetype yields its real files', ag.ok && ['agent.js', 'system-prompt.txt', 'tools.json', '.env.example'].every(p => ag.files.some(f => f.path === p)));
+  check('template content is carried, with {{name}} substituted', ag.files.every(f => typeof f.content === 'string') && !ag.files.some(f => /\{\{name\}\}/.test(f.content)));
+  const fsA = P.fromCosTemplate('cos-blueprint:fullstack-app', { name: 'drumpad' });
+  check('a blueprint lays out one directory per role', fsA.ok && ['frontend/', 'api/', 'db/'].every(d => fsA.files.some(f => f.path.startsWith(d))));
+  check('a blueprint file carries its role\'s stated purpose', fsA.files.some(f => /Serves the user-facing UI/.test(f.purpose)));
+  check('an unknown COS template is refused, not guessed', P.fromCosTemplate('cos-archetype:nope').ok === false);
+
+  // ── layering of template files ──
+  check('tests → test', P.layerFor('test/index.test.js') === 'test');
+  check('entrypoints and config → runtime', ['index.js', 'package.json', '.env.example', 'api/server.js'].every(p => P.layerFor(p) === 'runtime'));
+  check('other template code → engine (kernel is never invented)', P.layerFor('processor.js') === 'engine' && P.layerFor('queue.js') === 'engine');
+
+  // ── parsing the agent's plan ──
+  const good = P.parsePlan('Sure!\n```json\n[{"path":"src/kernel/pattern.js","layer":"kernel","purpose":"step grid"},{"path":"src/engine/sequencer.js","layer":"engine","purpose":"plays patterns"}]\n```');
+  check('a fenced/prose-wrapped JSON plan is read', good.files.length === 2 && good.files[0].layer === 'kernel');
+  const bad = P.parsePlan('[{"path":"../x.js","layer":"kernel"},{"path":"a.js","layer":"middleware"},{"path":"b.js","layer":"engine"},{"path":"b.js","layer":"engine"}]');
+  check('unsafe paths, unknown layers and duplicates are rejected with reasons',
+    bad.files.length === 1 && bad.rejected.length === 3 && bad.rejected.every(r => r.reason));
+  check('a reply with no JSON is reported, not thrown', P.parsePlan('I cannot do that').rejected[0].reason.includes('no JSON array'));
+
+  // ── plan(): template + agent ──
+  let asked = null;
+  const ask = async (prompt) => { asked = prompt; return JSON.stringify([
+    { path: 'src/kernel/pattern.js', layer: 'kernel', purpose: 'the step grid' },
+    { path: 'src/engine/sequencer.js', layer: 'engine', purpose: 'plays patterns' },
+    { path: 'agent.js', layer: 'runtime', purpose: 'agent entry (template has it)' },
+    { path: 'test/sequencer.test.js', layer: 'test', purpose: 'sequencer tests' },
+  ]); };
+  const pl = await P.plan({ name: 'drumpad', description: 'a DAW for my drumpad', templateIds: ['cos-archetype:ai-agent'], ask });
+  check('plan succeeds from template + agent', pl.ok && pl.planSource === 'template + agent', JSON.stringify(pl.errors));
+  check('the agent is told the template files and the four layers', /agent\.js \[runtime\]/.test(asked) && /kernel:/.test(asked) && /engine:/.test(asked) && /runtime:/.test(asked));
+  check('a template file wins a path clash — its real content is kept', pl.files.find(f => f.path === 'agent.js').content !== null);
+  check('files are ordered kernel → engine → runtime → test', pl.files.map(f => P.LAYER_ORDER[f.layer]).every((v, i, a) => i === 0 || a[i - 1] <= v));
+
+  const noAgent = await P.plan({ name: 'x', templateIds: ['cos-archetype:ai-agent'], ask: async () => { throw new Error('chatgpt tab not connected'); } });
+  check('agent unreachable → template files only, and the reason is reported', noAgent.ok && noAgent.planSource === 'template only' && /tab not connected/.test(noAgent.agentError));
+  const nothing = await P.plan({ name: 'x', ask: async () => 'nope' });
+  check('no template and no usable plan → refused, never padded with an invented skeleton', nothing.ok === false);
+  const clash = await P.plan({ name: 'x', templateIds: ['cos-archetype:web-server', 'cos-archetype:api-server'], ask: null });
+  check('two COS templates writing the same path are refused with both named', clash.ok === false && /index\.js is provided by both/.test(clash.errors[0]));
+
+  // ── the spec: chunks ARE the files ──
+  const se = await import(path.join(ROOT, 'idearium', 'spec-engine', 'index.js'));
+  const md = P.planMarkdown({ name: 'drumpad', description: 'a DAW', template: pl.template, files: pl.files, planSource: pl.planSource });
+  const m = se.createFileTreeSpec({ name: 'drumpad', description: 'a DAW', plan: pl, planMarkdown: md });
+  check('the spec is a file tree, not document sections', m.type === 'filetree' && !m.chunks.some(c => c.sectionId === 'axioms'));
+  check('every planned file is a chunk with its real path', pl.files.every(f => m.chunks.some(c => c.realPath === f.path)));
+  check('PLAN.md is a real file in the tree, complete at creation', (c => c && c.status === 'complete' && /## kernel/.test(c.content))(m.chunks.find(c => c.realPath === 'PLAN.md')));
+  const agentJs = m.chunks.find(c => c.realPath === 'agent.js');
+  check('template files are complete at creation with their exact bytes', agentJs.status === 'complete' && agentJs.content === pl.files.find(f => f.path === 'agent.js').content);
+  check('agent-planned files start pending', m.chunks.find(c => c.realPath === 'src/kernel/pattern.js').status === 'pending');
+  const seq = m.chunks.find(c => c.realPath === 'src/engine/sequencer.js');
+  const kern = m.chunks.find(c => c.realPath === 'src/kernel/pattern.js');
+  check('engine waits on the kernel (bottom-up, via the existing dependsOn gate)', seq.dependsOn.includes(kern.sectionId));
+  check('the next buildable file is a kernel file, not engine', se.nextPendingChunk(m.uuid).realPath === 'src/kernel/pattern.js');
+  check('the layer summary is recorded on the spec', m.fileTree && m.fileTree.layers.kernel === 1 && m.fileTree.layers.engine === 1);
+
+  const prompt = se.buildChunkPrompt(se.loadSpec(m.uuid), seq);
+  check('a file chunk is asked for the FILE, not a "section of a spec"', prompt.includes('Write the complete file `src/engine/sequencer.js`') && !prompt.includes('section of a NEXUS component spec'));
+  check('the file prompt carries its layer, the rules, and the plan', prompt.includes('Layer: engine') && prompt.includes('may only depend on its own layer') && prompt.includes('THE PLAN'));
+  se.completeChunk(m.uuid, kern.uuid, 'export const STEPS = 16;\n', { preserveWhitespace: true });
+  const prompt2 = se.buildChunkPrompt(se.loadSpec(m.uuid), seq);
+  check('once the kernel is built, the engine file is shown it', prompt2.includes('export const STEPS = 16;'));
+  check('after the kernel is built, the engine file becomes buildable', se.nextPendingChunk(m.uuid).realPath === 'src/engine/sequencer.js');
+
+  const doc = se.createSpec({ name: 'doc-spec', type: 'system' });
+  check('document-section specs are unchanged', doc.type === 'system' && doc.chunks.some(c => c.sectionId === 'axioms') && !doc.chunks.some(c => c.file));
+  const docPrompt = se.buildChunkPrompt(doc, doc.chunks[1]);
+  check('document chunks keep their original prompt', docPrompt.includes('section of a NEXUS component spec'));
+
+  // ── failures say why ──
+  const { createWarpDispatch } = require(path.join(ROOT, 'lib', 'seam', 'adapters', 'warp-cascade.js'));
+  const { FlatFileCrystallizer } = require(path.join(ROOT, 'warp', 'plugins', 'crystallizer-flatfile.js'));
+  const { PopulationStore } = require(path.join(ROOT, 'warp', 'dispatch', 'population.js'));
+  const d = createWarpDispatch({ generate: async (prov) => { throw new Error(`${prov} tab not connected`); },
+    crystallizer: new FlatFileCrystallizer({ path: path.join(process.env.IDEARIUM_DATA_DIR, 'c.json') }), population: new PopulationStore({ maxPerClass: 8 }), maxAttempts: 3 });
+  const r = await d({ seam_uuid: `t:${Date.now()}`, seam_id: 't', description: 't', preferredProvider: 'claude', contract: { exports: [] } }, [{ id: 'x', severity: 'hard', check: () => true }]);
+  check('a failed cascade still reports its attempt count (existing callers unchanged)', r.ok === false && r.attempts === 3);
+  check('…and now carries each attempt\'s provider and error', Array.isArray(r.attemptLog) && r.attemptLog.length === 3 && r.attemptLog[0].provider === 'claude' && /tab not connected/.test(r.attemptLog[0].error));
+  const WBD = fs.readFileSync(path.join(ROOT, 'idearium', 'spec-engine', 'warp-build-dispatch.js'), 'utf8');
+  check('the chunk failure message includes the per-attempt reasons', /attemptLog[\s\S]{0,400}a\.provider[\s\S]{0,200}a\.error/.test(WBD));
+
+  // ── routes + stall reporting (structural: they live inside the running server) ──
+  const API = fs.readFileSync(path.join(ROOT, 'idearium', 'api', 'index.js'), 'utf8');
+  check('the templates route merges COS templates into the picker list', /listCosTemplates\(\)[\s\S]{0,200}\[\.\.\.se\.listTemplates\(\), \.\.\.cos\]/.test(API));
+  check('create branches to a file-tree spec for a COS template or fileTree:true', /body\.fileTree === true \|\| cosIds\.length/.test(API) && /createFileTreeSpec\(/.test(API));
+  check('the plan goes through the same WARP dispatch the build uses', /getWarpChunkDispatch\(\)[\s\S]{0,300}chunkTitle: `plan: \$\{name\}`/.test(API));
+  check('the poller skips a spec with nothing buildable after reporting it once', /_stallReported\.get\(s\.uuid\) === sig\) continue/.test(API) && /c\.status === 'pending'/.test(API));
+
+  // ── UI ──
+  const HTML = fs.readFileSync(path.join(ROOT, 'idearium', 'ui', 'index.html'), 'utf8');
+  const APP = fs.readFileSync(path.join(ROOT, 'idearium', 'ui', 'js', 'app.js'), 'utf8');
+  check('the picker has a file-tree-first switch, on by default', /id="ns-file-tree" checked/.test(HTML));
+  check('the picker groups COS archetypes, COS blueprints and document templates', APP.includes("'cos-archetype'") && APP.includes("'cos-blueprint'") && APP.includes('spec-document templates'));
+  check('create sends fileTree and waits long enough for a real plan', /fileTree \}\),\s*\}, fileTree \? 180000/.test(APP));
+
+  fs.rmSync(process.env.IDEARIUM_DATA_DIR, { recursive: true, force: true });
+  console.log(`\n  ${pass} passed, ${fail} failed\n`);
+  process.exitCode = fail === 0 ? 0 : 1;
+  setTimeout(() => process.exit(process.exitCode), 200);
+}
+run().catch(e => { console.log('  ! crashed:', e.stack); process.exit(1); });

@@ -1005,6 +1005,16 @@ function matchRoute(method, url) {
     ['GET',    ['api','repos',    ':uuid','agent','memory'],  'repo.agent.memory.list'],
     ['POST',   ['api','repos',    ':uuid','agent','memory'],  'repo.agent.memory.record'],
     ['DELETE', ['api','repos',    ':uuid','agent','memory',':obs'], 'repo.agent.memory.forget'],
+    // §INJECT 2026-09-21 — .inject nodes: agent code into this compartment (lib/repo-inject.js)
+    ['GET',    ['api','repos',    ':uuid','injects'],               'repo.inject.list'],
+    ['POST',   ['api','repos',    ':uuid','injects'],               'repo.inject.create'],
+    ['GET',    ['api','repos',    ':uuid','injects',':id'],         'repo.inject.get'],
+    ['PUT',    ['api','repos',    ':uuid','injects',':id'],         'repo.inject.edit'],
+    ['POST',   ['api','repos',    ':uuid','injects',':id','apply'], 'repo.inject.apply'],
+    ['POST',   ['api','repos',    ':uuid','injects',':id','reject'],'repo.inject.reject'],
+    ['POST',   ['api','repos',    ':uuid','injects',':id','revert'],'repo.inject.revert'],
+    ['GET',    ['api','repos',    ':uuid','agent','settings'],      'repo.agent.settings.get'],
+    ['POST',   ['api','repos',    ':uuid','agent','settings'],      'repo.agent.settings.set'],
     // §REPO-AGENT-NODE 2026-09-20 — the agent as portable node files.
     // .hat + .agent (as of 0.39.190 RAID's health snapshot is .health, so .agent is free for this;
     // see lib/repo-agent-node.js's header for the collision).
@@ -2564,6 +2574,59 @@ async function handle(req, res, route, query, body) {
       return ok(res, RA.status({ repo, repoDir: _repoDiskDir(params.uuid) }));
     }
 
+    // ── §INJECT 2026-09-21 — .inject nodes ─────────────────────────────────
+    case 'repo.inject.list': case 'repo.inject.create': case 'repo.inject.get':
+    case 'repo.inject.edit': case 'repo.inject.apply': case 'repo.inject.reject':
+    case 'repo.inject.revert': case 'repo.agent.settings.get': case 'repo.agent.settings.set': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const RI = _require('../../lib/repo-inject.js');
+      const layer = getRepoLayer();
+      // An inject id that belongs to another repo is a 404 here, never an
+      // action on the wrong compartment.
+      const owned = () => { const n = RI.get(params.id); return n && n.repoUuid === params.uuid ? n : null; };
+      const done = (r, okExtra = {}) => r.ok ? ok(res, { ...r, ...okExtra })
+        : err(res, r.conflict ? 409 : 400, (r.errors || ['failed']).join('; '), { conflict: !!r.conflict });
+      switch (action) {
+        case 'repo.inject.list':
+          return ok(res, { repoUuid: params.uuid, mode: RI.getMode(params.uuid), injects: RI.list(params.uuid, { status: query.status || null }) });
+        case 'repo.inject.create': {
+          const RH = _require('../../lib/repo-hat.js');
+          // body.asAgent:true attributes it to this repo's hat; default is the person.
+          const hat = body.asAgent ? RH.getRepoHat(params.uuid) : null;
+          const r = RI.propose({ layer, repo, hat, path: body.path, content: body.content, syntax: body.syntax || null, source: { kind: hat ? 'agent' : 'person' } });
+          if (r.ok && body.apply) return done(RI.apply(r.inject.uuid, { layer, force: !!body.force }));
+          return done(r);
+        }
+        case 'repo.inject.get':
+          return owned() ? ok(res, { inject: owned(), current: (layer.readFile(params.uuid, owned().path) || {}).content ?? null })
+                         : err(res, 404, `inject not found in this repo: ${params.id}`);
+        case 'repo.inject.edit':
+          if (!owned()) return err(res, 404, `inject not found in this repo: ${params.id}`);
+          return done(RI.edit(params.id, body.content));
+        case 'repo.inject.apply': {
+          if (!owned()) return err(res, 404, `inject not found in this repo: ${params.id}`);
+          const r = RI.apply(params.id, { layer, force: !!body.force });
+          if (r.ok) os.emit('idearium.repo.inject.applied', { repoUuid: params.uuid, inject: params.id, path: r.inject.path });
+          return done(r);
+        }
+        case 'repo.inject.reject':
+          if (!owned()) return err(res, 404, `inject not found in this repo: ${params.id}`);
+          return done(RI.reject(params.id, { reason: body.reason || null }));
+        case 'repo.inject.revert': {
+          if (!owned()) return err(res, 404, `inject not found in this repo: ${params.id}`);
+          const r = RI.revert(params.id, { layer, force: !!body.force });
+          if (r.ok) os.emit('idearium.repo.inject.reverted', { repoUuid: params.uuid, inject: params.id, path: r.inject.path });
+          return done(r);
+        }
+        case 'repo.agent.settings.get':
+          return ok(res, { repoUuid: params.uuid, injectMode: RI.getMode(params.uuid), modes: RI.MODES });
+        case 'repo.agent.settings.set':
+          return done(RI.setMode(params.uuid, body.injectMode));
+      }
+      return err(res, 500, `unhandled inject route ${action}`);
+    }
+
     case 'repo.agent.prompt': {
       const repo = getRepoLayer().get(params.uuid);
       if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
@@ -2574,6 +2637,8 @@ async function handle(req, res, route, query, body) {
         message: body.message,
         backend: body.backend || null,
         agent: body.agent || null,
+        noContext: body.noContext === true,
+        layer: getRepoLayer(),   // §INJECT — addressed code blocks land in this repo through the one real write path
       });
       // A backend that is down is a real, reportable state, not a server
       // error — 200 with ok:false so the CLI can print it in the transcript
@@ -3034,7 +3099,14 @@ async function handle(req, res, route, query, body) {
     case 'speceng.templates': {
       const se = getSpecEngine();
       if (!se) return err(res, 503, 'spec-engine not ready');
-      try { return ok(res, { templates: se.listTemplates() }); }
+      // §FILE-TREE-FIRST 2026-09-21 — every COS archetype and blueprint is
+      // offered alongside the spec-document templates, read live from cos/.
+      try {
+        let cos = [];
+        try { cos = _require('../../lib/file-tree-plan.js').listCosTemplates(); }
+        catch (e) { console.warn(`[speceng.templates] COS templates unavailable: ${e.message}`); }
+        return ok(res, { templates: [...se.listTemplates(), ...cos] });
+      }
       catch (e) { return err(res, 500, e.message); }
     }
 
@@ -3061,7 +3133,33 @@ async function handle(req, res, route, query, body) {
         // An unknown templateId/templateIds (or buildEngine) throws inside
         // createSpec (§1.2) and surfaces as a 400 here rather than silently
         // creating an unseeded / mis-configured spec.
-        const manifest = se.createSpec({ name, type, description, agent, sectionAgents: sectionAgents || {}, warpPrimitives: warpPrimitives || [], templateId, templateIds, buildEngine: buildEngine || 'auto', ideaUuid: ideaUuid || null });
+        // §FILE-TREE-FIRST 2026-09-21 — James: "the file tree needs to be
+        // generated first with the list of files, the kernel, engine and
+        // runtime." A COS template, or body.fileTree, makes the spec's
+        // chunks the project's FILES, planned before anything is built:
+        // the COS template supplies real files, the agent plans the rest
+        // through the same WARP dispatch the build uses. Document-section
+        // specs are unchanged when neither is asked for.
+        const FTP = _require('../../lib/file-tree-plan.js');
+        const allIds = Array.isArray(templateIds) ? templateIds : (templateId ? [templateId] : []);
+        const cosIds = allIds.filter(id => FTP.isCosTemplate(id));
+        const docIds = allIds.filter(id => !FTP.isCosTemplate(id));
+        let manifest, planInfo = null;
+        if (body.fileTree === true || cosIds.length) {
+          const warpFn = await getWarpChunkDispatch();
+          const ask = warpFn ? async (prompt) => {
+            const r = await warpFn(prompt, { chunkTitle: `plan: ${name}`, expectCode: false, preferAgent: agent || null });
+            if (!r || !r.ok) throw new Error((r && r.error) || 'plan dispatch failed');
+            return r.text;
+          } : null;
+          const planned = await FTP.plan({ name, description, templateIds: cosIds, ask });
+          if (!planned.ok) return err(res, 422, (planned.errors || ['file tree could not be planned']).join('; '), { agentError: planned.agentError || null });
+          const md = FTP.planMarkdown({ name, description, template: planned.template, files: planned.files, planSource: planned.planSource, rejected: planned.rejected });
+          manifest = se.createFileTreeSpec({ name, description, plan: planned, planMarkdown: md, agent: agent || null, ideaUuid: ideaUuid || null, templateId: cosIds.join(',') || null });
+          planInfo = { planSource: planned.planSource, files: planned.files.length, rejected: planned.rejected.length, agentError: planned.agentError || null, layers: manifest.fileTree && manifest.fileTree.layers };
+        } else {
+          manifest = se.createSpec({ name, type, description, agent, sectionAgents: sectionAgents || {}, warpPrimitives: warpPrimitives || [], templateId, templateIds: docIds.length ? docIds : templateIds, buildEngine: buildEngine || 'auto', ideaUuid: ideaUuid || null });
+        }
         if (compartmentSeed) {
           const schemaChunk = (manifest.chunks || []).find(c => c.sectionId === 'schema');
           if (schemaChunk && schemaChunk.status === 'pending') {
@@ -3140,7 +3238,7 @@ async function handle(req, res, route, query, body) {
             }
           }
         }
-        return ok(res, { manifest, repoUuid: autoRepoUuid });
+        return ok(res, { manifest, repoUuid: autoRepoUuid, plan: planInfo });
       } catch(e) { return err(res, 500, e.message); }
     }
 
@@ -3539,7 +3637,8 @@ function specToMarkdown(spec) {
 // self-request, not a second dispatch mechanism, so it goes through
 // dispatchChunkWithVerification's real retry ladder, WARP cache, and
 // RAID observability exactly like every other real build does.
-const BUILD_QUEUE_POLL_MS = 15000; // matches RAID's own real worker.js drain cadence
+const BUILD_QUEUE_POLL_MS = 15000;
+const _stallReported = new Map(); // specUuid -> signature of the terminal state last reported (see the poller) // matches RAID's own real worker.js drain cadence
 const _buildingSpecs = new Set(); // real, in-memory guard — never trigger a second build for a spec that's already mid-build
 
 function _startBuildQueuePoller(port) {
@@ -3590,6 +3689,24 @@ function _startBuildQueuePoller(port) {
       // build-queue concern; they are repaired by re-importing, and are visible
       // in the Repos tab (see _reconcileSpecRepos) so that can be done.
       if (s.type === 'codebase' || s.ingesting) continue;
+      // §2026-09-21 — a spec whose unfinished chunks are ALL terminal (failed/
+      // escalated, none pending) cannot progress: the build endpoint does not
+      // re-dispatch them, it answers 422 with the same stall. Re-triggering it
+      // every 15s printed the identical two lines forever (James's boot log:
+      // one stalled spec, ~40 repeats in 10 minutes) and spent a request and a
+      // manifest parse each time. Trigger once per distinct stalled state so
+      // the reason is still reported loudly, then stay quiet until something
+      // changes — a retried chunk goes back to pending and is picked up.
+      const chunks = Array.isArray(s.chunks) ? s.chunks : [];
+      const unfinished = chunks.filter(c => c.status !== 'complete');
+      const buildable = unfinished.some(c => c.status === 'pending');
+      if (unfinished.length && !buildable) {
+        const sig = unfinished.map(c => `${c.uuid}:${c.status}`).sort().join('|');
+        if (_stallReported.get(s.uuid) === sig) continue;
+        _stallReported.set(s.uuid, sig);
+      } else {
+        _stallReported.delete(s.uuid);
+      }
       // One build trigger in flight at a time. The queue used to fire a
       // self-request per unfinished spec every tick; on a machine already at
       // the memory-pressure line (see the resource-monitor lines in the boot
@@ -3639,7 +3756,7 @@ function _startBuildQueuePoller(port) {
   return timer; // real handle — lets a caller (or a test) stop this poller; startAPI() itself never needs to
 }
 
-export { _startBuildQueuePoller, _buildingSpecs, _reconcileSpecRepos };
+export { _startBuildQueuePoller, _buildingSpecs, _reconcileSpecRepos, getRepoLayer }; // getRepoLayer: the real layer, exported so tests exercise the production write path, not a fake
 
 export function startAPI() {
   const os = getIdeaOS();

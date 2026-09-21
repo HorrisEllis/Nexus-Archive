@@ -61,6 +61,8 @@ const SUITES = [
   'test-repo-agent.js',
   'test-repo-agent-node.js',
   'test-repo-agent-learn.js',
+  'test-repo-inject.js',
+  'test-file-tree-plan.js',
   'ollama-runtime.test.js',
   'flush-redundancy.test.js',
   'admin-server-routes.test.js',

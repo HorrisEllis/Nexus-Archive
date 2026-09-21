@@ -72,6 +72,10 @@ body{display:flex;flex-direction:column;position:relative}
 .tb-btn{font-family:var(--mono);font-size:10px;padding:3px 9px;border-radius:3px;border:1px solid var(--b1);background:none;color:var(--text2);cursor:pointer;transition:all .15s}
 .tb-btn:hover{border-color:var(--b2);color:var(--text)}
 .tb-btn.active{background:rgba(56,189,248,.1);border-color:var(--b2);color:var(--sky)}
+/* §INJECT 2026-09-21 — inject list */
+.inj-act{cursor:pointer;opacity:.7;border-bottom:1px dotted;margin-left:4px}.inj-act:hover{opacity:1}
+.inj-st{font-size:9px;padding:0 4px;border-radius:2px;border:1px solid var(--b1)}
+.inj-proposed{color:var(--sky,#38bdf8)}.inj-applied{color:var(--ok,#4ade80)}.inj-rejected,.inj-reverted{opacity:.55}
 /* §BUILT 2026-09-20 — a control that is present but has no backend yet.
    Visibly distinct from an enabled button so it never reads as working;
    still clickable, because a dead disabled button explains nothing. */
@@ -1795,9 +1799,17 @@ async function saveToIdearium(){
       <textarea class="field-textarea" id="ns-description" rows="2" placeholder="optional — more context for the agent-built chunks"></textarea>
     </div>
     <div class="field-group">
+      <!-- §FILE-TREE-FIRST 2026-09-21 — on by default: the spec's chunks are
+           the project's files (kernel / engine / runtime / test), planned
+           before any content is built. Off = the document-section spec. -->
+      <label style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;font-size:11px;cursor:pointer">
+        <input type="checkbox" id="ns-file-tree" checked onchange="onNewSpecTemplateChange()" style="margin-top:2px">
+        <span><b style="color:var(--text)">plan the file tree first</b><br>
+        <span style="color:var(--text3)">the agent lists every file by layer — kernel, engine, runtime, test — then builds them bottom-up. A COS template supplies real starting files.</span></span>
+      </label>
       <div class="field-label">architecture &amp; features — select any combination</div>
-      <div id="ns-templates" style="display:flex;flex-direction:column;gap:4px;max-height:220px;overflow-y:auto;border:1px solid var(--b1);border-radius:4px;padding:8px;background:var(--bg2)"></div>
-      <div class="field-hint" style="font-size:10px;color:var(--text3);margin-top:4px">each checked template seeds its own sections deterministically (no agent) — pick architecture + axioms + schemas + checklists + compartments together for one composed spec</div>
+      <div id="ns-templates" style="display:flex;flex-direction:column;gap:4px;max-height:320px;overflow-y:auto;border:1px solid var(--b1);border-radius:4px;padding:8px;background:var(--bg2)"></div>
+      <div class="field-hint" id="ns-templates-hint" style="font-size:10px;color:var(--text3);margin-top:4px">COS templates start the file tree with real files. Spec-document templates apply when "plan the file tree first" is off.</div>
     </div>
     <div class="field-group">
       <div class="field-label">build logic</div>
@@ -1923,6 +1935,26 @@ async function saveToIdearium(){
     <div class="modal-actions">
       <button class="modal-btn" onclick="closeRepoDiagnose()">close</button>
       <button class="modal-btn confirm" id="repo-diagnose-reindex" onclick="repoDiagnoseReindex()">re-run pipeline</button>
+    </div>
+  </div>
+</div>
+
+<!-- §INJECT 2026-09-21 — the .inject editor. Proposed content is editable
+     until applied; "current" shows the file as it is now for comparison.
+     Logic in js/app.js openInjectEditor(). -->
+<div class="modal-overlay" id="inject-editor-modal">
+  <div class="modal" style="max-width:900px;width:90vw">
+    <div class="modal-title" id="inj-ed-title">inject</div>
+    <div id="inj-ed-meta" style="font-size:9px;opacity:.6;margin-bottom:6px"></div>
+    <textarea id="inj-ed-content" spellcheck="false" style="width:100%;height:46vh;font-family:var(--mono,monospace);font-size:11px;line-height:1.5;tab-size:2;white-space:pre;background:var(--bg2,#0b1220);color:inherit;border:1px solid var(--b1);border-radius:3px;padding:8px;box-sizing:border-box"></textarea>
+    <pre id="inj-ed-current" style="display:none;max-height:28vh;overflow:auto;font-size:10px;opacity:.75;border:1px dashed var(--b1);border-radius:3px;padding:8px;margin-top:6px;white-space:pre"></pre>
+    <div class="modal-actions">
+      <button class="modal-btn" onclick="toggleInjectCurrent()">current file</button>
+      <button class="modal-btn" onclick="closeInjectEditor()">close</button>
+      <button class="modal-btn" id="inj-ed-reject" onclick="agentInjectAction(INJECT_EDITOR_ID,'reject')">reject</button>
+      <button class="modal-btn" id="inj-ed-revert" onclick="agentInjectAction(INJECT_EDITOR_ID,'revert')">revert</button>
+      <button class="modal-btn" id="inj-ed-save" onclick="saveInjectEditor(false)">save</button>
+      <button class="modal-btn confirm" id="inj-ed-apply" onclick="saveInjectEditor(true)">save + apply</button>
     </div>
   </div>
 </div>

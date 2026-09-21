@@ -1053,12 +1053,23 @@ async function openNewSpecModal({ name = '', description = '', ideaUuid = null }
 
   const templates = await loadNewSpecTemplates();
   const wrap = document.getElementById('ns-templates');
-  wrap.innerHTML = templates.map(t => `
-    <label style="display:flex;align-items:flex-start;gap:8px;padding:4px 2px;cursor:pointer;font-size:11px;color:var(--text2)">
-      <input type="checkbox" class="ns-tpl-check" value="${t.id}" onchange="onNewSpecTemplateChange()" style="margin-top:2px">
-      <span><b style="color:var(--text)">${escapeHtml(t.label||t.id)}</b>${t.hasSeed ? ' <span style="color:var(--mint)">· deterministic</span>' : ''}<br>
+  // §FILE-TREE-FIRST 2026-09-21 — grouped: COS templates (real files, start
+  // a file tree), COS blueprints (several roles), spec-document templates.
+  const row = t => `
+    <label class="ns-tpl-row" data-src="${escapeHtml(t.source || 'spec')}" style="display:flex;align-items:flex-start;gap:8px;padding:4px 2px;cursor:pointer;font-size:11px;color:var(--text2)">
+      <input type="checkbox" class="ns-tpl-check" value="${escapeHtml(t.id)}" onchange="onNewSpecTemplateChange()" style="margin-top:2px">
+      <span><b style="color:var(--text)">${escapeHtml(t.label||t.id)}</b>${t.hasSeed ? ' <span style="color:var(--mint)">· deterministic</span>' : ''}${typeof t.fileCount === 'number' ? ` <span style="color:var(--text3)">· ${t.fileCount} file${t.fileCount === 1 ? '' : 's'}</span>` : ''}<br>
       <span style="color:var(--text3)">${escapeHtml(t.description||'')}</span></span>
-    </label>`).join('');
+    </label>`;
+  const groups = [
+    ['COS archetypes — one compartment, real starting files', templates.filter(t => t.source === 'cos-archetype')],
+    ['COS blueprints — several roles, one directory each', templates.filter(t => t.source === 'cos-blueprint')],
+    ['spec-document templates', templates.filter(t => !String(t.source || '').startsWith('cos-'))],
+  ].filter(([, list]) => list.length);
+  wrap.innerHTML = groups.map(([title, list]) =>
+    `<div style="font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin:6px 0 2px">${escapeHtml(title)} · ${list.length}</div>` + list.map(row).join('')).join('');
+  document.getElementById('ns-file-tree').checked = true;
+  onNewSpecTemplateChange();
 
   document.getElementById('new-spec-modal').classList.add('open');
   document.getElementById('ns-name').focus();
@@ -1275,7 +1286,16 @@ function onNewSpecTemplateChange() {
   // combination would let someone promote a spec that's really just empty
   // TODOs with a name attached.
   const ids = selectedTemplateIds();
-  const mapWorthy = ids.includes('compartments') || ids.includes('axioms');
+  // A COS template IS a file tree — checking one turns file-tree mode on.
+  const tree = document.getElementById('ns-file-tree');
+  if (tree && ids.some(id => id.startsWith('cos-'))) tree.checked = true;
+  const treeOn = !!(tree && tree.checked);
+  // Spec-document templates only apply to a document spec; dim them in tree mode.
+  document.querySelectorAll('.ns-tpl-row').forEach(r => {
+    const doc = !String(r.dataset.src || '').startsWith('cos-');
+    r.style.opacity = treeOn && doc ? '.45' : '';
+  });
+  const mapWorthy = !treeOn && (ids.includes('compartments') || ids.includes('axioms'));
   document.getElementById('ns-map-btn').style.display = mapWorthy ? '' : 'none';
 }
 
@@ -1287,13 +1307,22 @@ async function submitNewSpec(mapToRepo) {
   const buildEngine = document.getElementById('ns-build-engine').value || 'auto';
   const ideaUuid = NS_IDEA_UUID; // §BUG FIXED 2026-07-11 — was captured on open, never sent
 
+  const fileTree = !!document.getElementById('ns-file-tree')?.checked;
   try {
+    if (fileTree) toast('planning the file tree — the agent is listing every file by layer…', 'ok');
     const r = await api('/api/spec-engine/specs', {
       method: 'POST',
-      body: JSON.stringify({ name, description, templateIds, buildEngine, ideaUuid: ideaUuid || undefined }),
-    });
+      // In tree mode only COS templates are sent: document templates do not
+      // apply to a file-tree spec, and sending them would read as if they did.
+      body: JSON.stringify({ name, description, templateIds: fileTree ? templateIds.filter(id => id.startsWith('cos-')) : templateIds, buildEngine, ideaUuid: ideaUuid || undefined, fileTree }),
+    }, fileTree ? 180000 : undefined);
     const manifest = r.manifest || r;
-    toast(`spec created${templateIds.length ? ` from [${templateIds.join(', ')}]` : ''} · build logic: ${buildEngine}`, 'ok');
+    if (r.plan) {
+      const L = r.plan.layers || {};
+      toast(`file tree planned (${r.plan.planSource}): ${r.plan.files} files — kernel ${L.kernel || 0} · engine ${L.engine || 0} · runtime ${L.runtime || 0} · test ${L.test || 0}${r.plan.rejected ? ` · ${r.plan.rejected} rejected` : ''}${r.plan.agentError ? ` · agent: ${r.plan.agentError}` : ''}`, r.plan.agentError ? 'err' : 'ok');
+    } else {
+      toast(`spec created${templateIds.length ? ` from [${templateIds.join(', ')}]` : ''} · build logic: ${buildEngine}`, 'ok');
+    }
 
     if (mapToRepo) {
       try {
@@ -2651,10 +2680,37 @@ exchanges  ${st.exchanges || 0}</div>
     ? lines.map(l => `<div style="margin-bottom:10px"><div style="opacity:.55;font-size:9px">${escapeHtml(l.role)}${l.meta ? ` · ${escapeHtml(l.meta)}` : ''}</div><div style="white-space:pre-wrap">${escapeHtml(l.text)}</div>${l.detail || ''}</div>`).join('')
     : `<div style="opacity:.5">no exchanges in this session yet</div>`;
 
-  el.innerHTML = head + memHtml + `
+  // §INJECT 2026-09-21 — this compartment's .inject nodes: agent (or person)
+  // proposed writes, each openable in the editor, applicable, rejectable and
+  // revertable. The mode switch decides whether an agent's addressed code
+  // blocks land as proposals (review) or are written at once (auto).
+  let injHtml = '';
+  try {
+    const IR = await api(`/api/repos/${repo.uuid}/injects`);
+    AGENT_INJECT_MODE.set(repo.uuid, IR.mode);
+    const inj = IR.injects || [];
+    const counts = inj.reduce((a, n) => (a[n.status] = (a[n.status] || 0) + 1, a), {});
+    injHtml = `<div class="ds"><div class="ds-label">injects · mode ` +
+      `<span style="cursor:pointer;border-bottom:1px dotted" title="toggle review/auto" onclick="agentSetMode('${IR.mode === 'auto' ? 'review' : 'auto'}')">${escapeHtml(IR.mode)}</span>` +
+      `${IR.mode === 'auto' ? ' <span style="opacity:.6">(agent code is written on arrival; every write is revertable)</span>' : ' <span style="opacity:.6">(agent code waits here for you)</span>'}` +
+      ` · <span style="cursor:pointer;border-bottom:1px dotted" onclick="agentNewInject()">+ new</span></div>` +
+      (inj.length ? `<div style="font-size:10px;line-height:1.9">` + inj.slice(0, 30).map(n => {
+        const acts = n.status === 'proposed'
+          ? `<span class="inj-act" onclick="agentInjectAction('${n.uuid}','apply')">apply</span> <span class="inj-act" onclick="agentInjectAction('${n.uuid}','reject')">reject</span>`
+          : n.status === 'applied' ? `<span class="inj-act" onclick="agentInjectAction('${n.uuid}','revert')">revert</span>` : '';
+        return `<div><span style="opacity:.55">${escapeHtml(n.uuid.slice(0, 8))}</span> ` +
+          `<span class="inj-st inj-${escapeHtml(n.status)}">${escapeHtml(n.status)}</span> ` +
+          `<span style="cursor:pointer;text-decoration:underline" onclick="openInjectEditor('${n.uuid}')">${escapeHtml(n.path)}</span>` +
+          `${n.creates ? ' <span style="opacity:.6">(new file)</span>' : ''} <span style="opacity:.55">by ${escapeHtml(n.hatName || 'you')}</span> ${acts}</div>`;
+      }).join('') + `</div><div style="opacity:.5;font-size:9px">${Object.entries(counts).map(([k, v]) => `${k} ${v}`).join(' · ')}</div>`
+        : `<div style="opacity:.5;font-size:10px">no injects yet — code the agent writes for this project lands here</div>`) +
+      `</div>`;
+  } catch (e) { injHtml = `<div class="ds"><div class="ds-label">injects</div><div style="opacity:.6;font-size:10px">unavailable: ${escapeHtml(e.message)}</div></div>`; }
+
+  el.innerHTML = head + memHtml + injHtml + `
     <div class="ds"><div class="ds-label">cli</div>
       <div id="agent-transcript" style="font-size:10px;max-height:320px;overflow-y:auto;padding:4px 0">${transcript}</div>
-      <textarea id="agent-input" class="field-textarea" rows="3" spellcheck="false" placeholder="ask this project's agent…"></textarea>
+      <textarea id="agent-input" class="field-textarea" rows="3" spellcheck="false" placeholder="ask this project's agent…   (/help for commands · ↑↓ history)"></textarea>
       <div style="margin-top:6px">
         <button class="tb-btn" onclick="agentSend()">send</button>
         <span style="margin-left:10px;opacity:.5;font-size:9px">toolScope is not enforced on this path — the persona constrains behaviour, not capability</span>
@@ -2664,7 +2720,17 @@ exchanges  ${st.exchanges || 0}</div>
   const ta = document.getElementById('agent-input');
   if (ta) ta.addEventListener('keydown', e => {
     // Enter sends, Shift+Enter newlines — same convention as the idea composer.
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); agentSend(); }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); agentSend(); return; }
+    // ↑/↓ recall this compartment's previous inputs, only when the caret is on
+    // the first/last line so multi-line editing still moves normally.
+    const hist = _agentInputHistory(repo.uuid);
+    if (e.key === 'ArrowUp' && ta.selectionStart === 0 && hist.length) {
+      e.preventDefault(); const i = Math.max(0, (AGENT_HIST_POS.get(repo.uuid) ?? hist.length) - 1);
+      AGENT_HIST_POS.set(repo.uuid, i); ta.value = hist[i];
+    } else if (e.key === 'ArrowDown' && ta.selectionStart === ta.value.length && AGENT_HIST_POS.has(repo.uuid)) {
+      e.preventDefault(); const i = AGENT_HIST_POS.get(repo.uuid) + 1;
+      if (i >= hist.length) { AGENT_HIST_POS.delete(repo.uuid); ta.value = ''; } else { AGENT_HIST_POS.set(repo.uuid, i); ta.value = hist[i]; }
+    }
   });
   const tr = document.getElementById('agent-transcript');
   if (tr) tr.scrollTop = tr.scrollHeight;
@@ -2691,6 +2757,8 @@ async function agentSend() {
   if (!message) return;
   const uuid = CURRENT_API_REPO.uuid;
   const lines = _agentTranscript(uuid);
+  _agentInputHistory(uuid).push(message); AGENT_HIST_POS.delete(uuid);
+  if (message.startsWith('/')) { ta.value = ''; return agentCommand(message); }
 
   lines.push({ role: 'you', text: message });
   lines.push({ role: 'agent', text: 'thinking…', meta: null });
@@ -2701,7 +2769,7 @@ async function agentSend() {
   // 120s: a real dispatch through copilot's cascade routinely outlives
   // api()'s 6s default — the same too-short-timeout bug already fixed once
   // in ui/lib/api.js (0.39.118), not repeated here.
-  try { r = await api(`/api/repos/${uuid}/agent/prompt`, { method: 'POST', body: JSON.stringify({ message }) }, 120000); }
+  try { r = await api(`/api/repos/${uuid}/agent/prompt`, { method: 'POST', body: JSON.stringify({ message, noContext: AGENT_NO_CONTEXT.has(uuid) }) }, 120000); }
   catch (e) { r = { ok: false, error: e.message }; }
 
   lines.pop(); // drop the placeholder
@@ -2733,6 +2801,18 @@ function _agentDetail(r) {
       (ids.length ? `<div style="padding-left:12px;opacity:.6">${ids.map(escapeHtml).join(', ')}</div>` : '') +
       `</details>`);
   }
+  const I = r.injects;
+  if (I) {
+    const rows = [
+      ...(I.injects || []).map(x => `<div style="padding-left:12px">${x.status === 'applied' ? '✎ wrote' : '◇ proposed'} <span style="cursor:pointer;text-decoration:underline" onclick="openInjectEditor('${escapeHtml(x.uuid)}')">${escapeHtml(x.path)}</span>${x.creates ? ' (new file)' : ''}` +
+        `${x.addressedBy ? ` <span style="opacity:.55" title="${escapeHtml(x.evidence || '')}">— ${x.addressedBy === 'fence' ? 'path stated' : x.addressedBy === 'symbols' ? `matched ${escapeHtml(x.evidence || 'symbols')}` : 'agent placed it'}</span>` : ''}` +
+        `${x.applyError ? ` <span style="color:var(--bad,#f87171)">— not applied: ${escapeHtml(x.applyError)}</span>` : ''}</div>`),
+      ...(I.refused || []).map(x => `<div style="padding-left:12px;color:var(--bad,#f87171)">refused: ${escapeHtml(x.reason)}</div>`),
+      ...(I.unresolved || []).map(x => `<div style="padding-left:12px;opacity:.65">not written: ${escapeHtml(x.reason)}</div>`),
+      ...(I.commands ? [`<div style="padding-left:12px;opacity:.6">${I.commands} shell block${I.commands === 1 ? '' : 's'} — commands, not files</div>`] : []),
+    ];
+    parts.push(`<details open style="margin-top:4px;font-size:9px"><summary style="cursor:pointer">injects${I.mode ? ` (${escapeHtml(I.mode)})` : ''}: ${(I.injects || []).length}</summary>${rows.join('')}</details>`);
+  }
   const L = r.learned;
   if (L) {
     const ok = (L.recorded || []).filter(x => x.ok);
@@ -2746,6 +2826,220 @@ function _agentDetail(r) {
     parts.push(`<details open style="margin-top:4px;font-size:9px"><summary style="cursor:pointer">learned: ${ok.length} recorded${failed.length ? `, ${failed.length} failed` : ''}${(L.rejected || []).length ? `, ${L.rejected.length} rejected` : ''}</summary>${rows.join('')}</details>`);
   }
   return parts.join('');
+}
+
+// ════════════════════════════════════════════════════
+// §AGENT-CLI 2026-09-21 — James: "need the full agent cli ui in the
+// compartment repo agent tab that interacts with the hat and agent model."
+// Anything starting with / is a command against this compartment's hat,
+// learned model, injects and settings; everything else is a prompt. Every
+// command is a thin client of a real route — nothing here is computed or
+// remembered client-side that the server does not also hold.
+// ════════════════════════════════════════════════════
+const AGENT_INJECT_MODE = new Map();   // repoUuid -> 'review' | 'auto' (display only; server is truth)
+const AGENT_NO_CONTEXT = new Set();    // repoUuids with retrieval switched off for this session
+const AGENT_INPUT_HIST = new Map();    // repoUuid -> [inputs]
+const AGENT_HIST_POS = new Map();
+function _agentInputHistory(uuid) { if (!AGENT_INPUT_HIST.has(uuid)) AGENT_INPUT_HIST.set(uuid, []); return AGENT_INPUT_HIST.get(uuid); }
+
+const AGENT_CLI_HELP = [
+  '/help                         this list',
+  '/status                       hat, compartment, index, mode, learned, exchanges',
+  '/hat                          the full persona this agent is sent',
+  '/forge                        forge this repo\'s agent (hat) if it has none',
+  '/memory [kind]                what the agent has learned',
+  '/learn <kind>: <text> [evidence: x]   teach it (kind default: correction)',
+  '/forget <id-prefix>           remove one observation',
+  '/mode review|auto             where agent code goes: waits for you, or written on arrival',
+  '/injects [status]             list .inject nodes',
+  '/inject <path>                open the editor on a new write to <path>',
+  '/open <id-prefix>             open an inject in the editor',
+  '/apply <id> [--force]   /reject <id>   /revert <id> [--force]',
+  '/context on|off               retrieval of repo chunks for your prompts',
+  '/history [n]                  this compartment\'s logged exchanges',
+  '/export   /import <path>      the agent as .agent + .hat node files',
+  '/clear                        clear this transcript',
+].join('\n');
+
+function _cli(uuid, text, meta = null) { _agentTranscript(uuid).push({ role: 'cli', text, meta }); }
+
+async function _injectByPrefix(uuid, prefix) {
+  if (!prefix) throw new Error('an inject id prefix is required');
+  const all = (await api(`/api/repos/${uuid}/injects`)).injects || [];
+  const hits = all.filter(n => n.uuid.startsWith(prefix));
+  if (!hits.length) throw new Error(`no inject matches "${prefix}"`);
+  if (hits.length > 1) throw new Error(`"${prefix}" is ambiguous (${hits.length} matches)`);
+  return hits[0];
+}
+
+async function agentCommand(line) {
+  const repo = CURRENT_API_REPO; if (!repo) return;
+  const uuid = repo.uuid;
+  _agentTranscript(uuid).push({ role: 'you', text: line });
+  const [cmd, ...rest] = line.slice(1).split(/\s+/);
+  const arg = line.slice(1 + cmd.length).trim();
+  const force = /(^|\s)--force(\s|$)/.test(arg);
+  const first = rest.filter(x => x !== '--force')[0];
+  try {
+    switch ((cmd || '').toLowerCase()) {
+      case 'help': case '?': _cli(uuid, AGENT_CLI_HELP); break;
+      case 'status': {
+        const st = await api(`/api/repos/${uuid}/agent`);
+        const mode = (await api(`/api/repos/${uuid}/agent/settings`)).injectMode;
+        _cli(uuid, [
+          `hat         ${st.exists ? st.hat.name : '(none — /forge)'}`,
+          `compartment ${st.compartmentId || '(none)'}`,
+          `index       ${st.index?.indexed ? `${st.index.fileCount} files · ${st.index.chunkCount} chunks` : 'not indexed'}`,
+          `mode        ${mode}`,
+          `context     ${AGENT_NO_CONTEXT.has(uuid) ? 'off (this session)' : 'on'}`,
+          `learned     ${st.memory?.total ?? 0}`,
+          `exchanges   ${st.exchanges ?? 0}`,
+          `toolScope   ${st.toolScopeEnforced ? 'enforced' : 'NOT enforced on this path'}`,
+        ].join('\n'));
+        break;
+      }
+      case 'hat': {
+        const st = await api(`/api/repos/${uuid}/agent`);
+        _cli(uuid, st.exists ? st.hat.personaPrompt || '(empty persona)' : 'no hat — /forge', st.exists ? st.hat.name : null);
+        break;
+      }
+      case 'forge': {
+        const r = await api(`/api/repos/${uuid}/hat`, { method: 'POST', body: JSON.stringify({}) });
+        _cli(uuid, r.created ? `forged ${r.hat.name}` : `already exists: ${r.hat.name}`); break;
+      }
+      case 'memory': {
+        const r = await api(`/api/repos/${uuid}/agent/memory`);
+        const obs = (r.observations || []).filter(o => !first || o.kind === first);
+        _cli(uuid, obs.length ? obs.map(o => `${o.uuid.slice(0, 8)}  (${o.kind}) ${o.text}${(o.occurrences || 1) > 1 ? ` [${o.occurrences}×]` : ''}${o.evidence ? ` [${o.evidence}]` : ''}  — ${o.source}`).join('\n') : 'nothing learned yet');
+        break;
+      }
+      case 'learn': {
+        const m = arg.match(/^(?:(fact|convention|pitfall|correction)\s*:\s*)?(.+?)(?:\s*\[evidence:\s*([^\]]+)\])?$/i);
+        if (!m || !m[2]) throw new Error('usage: /learn <kind>: <text> [evidence: x]');
+        const r = await api(`/api/repos/${uuid}/agent/memory`, { method: 'POST', body: JSON.stringify({ kind: (m[1] || 'correction').toLowerCase(), text: m[2], evidence: m[3] || null, source: 'james' }) });
+        _cli(uuid, `${r.deduped ? 'already known — occurrences +1' : 'learned'}${r.hatUpdated ? ' · persona updated' : ` · persona NOT updated: ${r.reason || '?'}`}`); break;
+      }
+      case 'forget': {
+        const r = await api(`/api/repos/${uuid}/agent/memory`);
+        const hits = (r.observations || []).filter(o => o.uuid.startsWith(first || '\u0000'));
+        if (hits.length !== 1) throw new Error(hits.length ? `"${first}" is ambiguous` : `no observation matches "${first || ''}"`);
+        await api(`/api/repos/${uuid}/agent/memory/${hits[0].uuid}`, { method: 'DELETE' });
+        _cli(uuid, `forgot: ${hits[0].text}`); break;
+      }
+      case 'mode': {
+        if (!['review', 'auto'].includes(first)) throw new Error('usage: /mode review|auto');
+        await api(`/api/repos/${uuid}/agent/settings`, { method: 'POST', body: JSON.stringify({ injectMode: first }) });
+        _cli(uuid, first === 'auto' ? 'mode auto — the agent\'s addressed code is written on arrival; each write is an .inject you can revert' : 'mode review — the agent\'s code waits as proposed injects'); break;
+      }
+      case 'injects': {
+        const r = await api(`/api/repos/${uuid}/injects${first ? `?status=${encodeURIComponent(first)}` : ''}`);
+        _cli(uuid, (r.injects || []).length ? r.injects.map(n => `${n.uuid.slice(0, 8)}  ${n.status.padEnd(8)} ${n.path}${n.creates ? ' (new)' : ''}  — ${n.hatName || 'you'}`).join('\n') : 'no injects', `mode ${r.mode}`); break;
+      }
+      case 'inject': { if (!first) throw new Error('usage: /inject <path>'); renderRepoAgent(repo); return openInjectEditor(null, first); }
+      case 'open': { const n = await _injectByPrefix(uuid, first); renderRepoAgent(repo); return openInjectEditor(n.uuid); }
+      case 'apply': case 'reject': case 'revert': {
+        const n = await _injectByPrefix(uuid, first);
+        const r = await api(`/api/repos/${uuid}/injects/${n.uuid}/${cmd}`, { method: 'POST', body: JSON.stringify({ force }) });
+        _cli(uuid, `${r.inject.status}: ${r.inject.path}`); break;
+      }
+      case 'context': {
+        if (first === 'off') AGENT_NO_CONTEXT.add(uuid); else if (first === 'on') AGENT_NO_CONTEXT.delete(uuid); else throw new Error('usage: /context on|off');
+        _cli(uuid, `context ${first} for this session`); break;
+      }
+      case 'history': {
+        const r = await api(`/api/repos/${uuid}/agent/history?limit=${parseInt(first, 10) || 10}`);
+        _cli(uuid, (r.exchanges || []).map(h => `${new Date(h.ts).toLocaleString()}  ${h.ok ? 'ok ' : 'ERR'}  ${String(h.message).slice(0, 80)}${h.injects?.length ? `  [${h.injects.length} inject]` : ''}`).join('\n') || 'no exchanges logged'); break;
+      }
+      case 'export': { await agentExport(); return; }
+      case 'import': {
+        if (!arg) throw new Error('usage: /import <path to .agent file>');
+        const r = await api(`/api/repos/${uuid}/agent/import`, { method: 'POST', body: JSON.stringify({ filePath: arg }) }, 30000);
+        _cli(uuid, `imported — ${r.restored} new, ${r.merged} merged${r.rejected ? `, ${r.rejected} rejected` : ''}`); break;
+      }
+      case 'clear': AGENT_TRANSCRIPT.set(uuid, []); break;
+      default: throw new Error(`unknown command /${cmd} — /help`);
+    }
+  } catch (e) { _agentTranscript(uuid).push({ role: 'cli — error', text: e.message }); }
+  renderRepoAgent(repo);
+}
+
+async function agentSetMode(mode) {
+  if (!CURRENT_API_REPO) return;
+  try { await api(`/api/repos/${CURRENT_API_REPO.uuid}/agent/settings`, { method: 'POST', body: JSON.stringify({ injectMode: mode }) }); }
+  catch (e) { toast(`mode failed: ${e.message}`, 'err'); }
+  renderRepoAgent(CURRENT_API_REPO);
+}
+
+async function agentInjectAction(id, action, force = false) {
+  if (!CURRENT_API_REPO) return;
+  try {
+    const r = await api(`/api/repos/${CURRENT_API_REPO.uuid}/injects/${id}/${action}`, { method: 'POST', body: JSON.stringify({ force }) });
+    toast(`${r.inject.status}: ${r.inject.path}`, 'ok');
+  } catch (e) {
+    // A conflict is a real, specific refusal; offer the override rather than hiding it.
+    // Typing the word is deliberate friction: forcing discards a newer edit.
+    if (/changed since/.test(e.message) && !force && (await themedPrompt(`${e.message}\n\ntype "force" to ${action} anyway:`, `${action} conflict`)) === 'force') return agentInjectAction(id, action, true);
+    toast(`${action} failed: ${e.message}`, 'err');
+  }
+  renderRepoAgent(CURRENT_API_REPO);
+  if (INJECT_EDITOR_ID === id) openInjectEditor(id);
+}
+
+function agentNewInject() {
+  themedPrompt('repo-relative path for the new write:', 'new inject').then(p => { if (p) openInjectEditor(null, p); });
+}
+
+// ── The .inject editor ──────────────────────────────────────────────────────
+// One modal: path, the proposed content (editable while proposed), and the
+// file as it is now for comparison. Saving a person-authored new inject
+// proposes it; saving an agent's proposal edits it in place before apply.
+let INJECT_EDITOR_ID = null;       // uuid, or null for a new inject
+let INJECT_EDITOR_PATH = null;
+async function openInjectEditor(id, newPath = null) {
+  if (!CURRENT_API_REPO) return;
+  const uuid = CURRENT_API_REPO.uuid;
+  const $ = x => document.getElementById(x);
+  INJECT_EDITOR_ID = id; INJECT_EDITOR_PATH = newPath;
+  let n = null, current = null;
+  try {
+    if (id) { const r = await api(`/api/repos/${uuid}/injects/${id}`); n = r.inject; current = r.current; }
+    else {
+      try { const f = await api(`/api/repos/${uuid}/file?path=${encodeURIComponent(newPath)}`); current = f.content ?? null; } catch (_) { current = null; }
+    }
+  } catch (e) { toast(`open failed: ${e.message}`, 'err'); return; }
+  const editable = !n || n.status === 'proposed';
+  $('inj-ed-title').textContent = n ? `${n.status} · ${n.path}` : `new · ${newPath}`;
+  $('inj-ed-meta').textContent = n
+    ? `${n.hatName ? `by ${n.hatName}` : 'by you'} · ${n.creates ? 'creates the file' : 'overwrites the file'} · ${n.uuid}` + (n.history ? ` · ${n.history.map(h => h.event).join(' → ')}` : '')
+    : (current === null ? 'creates the file' : 'overwrites the file');
+  $('inj-ed-content').value = n ? n.content : (current ?? '');
+  $('inj-ed-content').readOnly = !editable;
+  $('inj-ed-current').textContent = current === null ? '(file does not exist)' : current;
+  $('inj-ed-current').style.display = 'none';
+  $('inj-ed-save').style.display = editable ? '' : 'none';
+  $('inj-ed-apply').style.display = editable ? '' : 'none';
+  $('inj-ed-reject').style.display = n && n.status === 'proposed' ? '' : 'none';
+  $('inj-ed-revert').style.display = n && n.status === 'applied' ? '' : 'none';
+  $('inject-editor-modal').classList.add('open');
+}
+function closeInjectEditor() { document.getElementById('inject-editor-modal').classList.remove('open'); INJECT_EDITOR_ID = null; }
+function toggleInjectCurrent() { const c = document.getElementById('inj-ed-current'); c.style.display = c.style.display === 'none' ? '' : 'none'; }
+
+async function saveInjectEditor(andApply = false) {
+  if (!CURRENT_API_REPO) return;
+  const uuid = CURRENT_API_REPO.uuid;
+  const content = document.getElementById('inj-ed-content').value;
+  try {
+    let id = INJECT_EDITOR_ID;
+    if (!id) {
+      const r = await api(`/api/repos/${uuid}/injects`, { method: 'POST', body: JSON.stringify({ path: INJECT_EDITOR_PATH, content }) });
+      id = r.inject.uuid; INJECT_EDITOR_ID = id;
+    } else {
+      await api(`/api/repos/${uuid}/injects/${id}`, { method: 'PUT', body: JSON.stringify({ content }) });
+    }
+    if (andApply) return agentInjectAction(id, 'apply');
+    toast('saved', 'ok'); renderRepoAgent(CURRENT_API_REPO); openInjectEditor(id);
+  } catch (e) { toast(`save failed: ${e.message}`, 'err'); }
 }
 
 function agentClearTranscript() {
