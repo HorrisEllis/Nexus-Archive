@@ -44,7 +44,22 @@ async function main() {
   const U = repo.uuid;
   check('a real repo exists', !!U, JSON.stringify(repoRec).slice(0, 160));
   check('an unknown provider is refused with the list', RA.setProvider(U, 'bard').ok === false);
-  check('the default is auto', RA.getProvider(U) === 'auto');
+  // §DEFAULT-GUARDIAN 2026-09-21 — James: "needs to default to guardian".
+  // Was 'auto' (copilot's own routing, unobservable from the settings tab);
+  // deliberately changed, not silently — a fresh compartment now defaults
+  // to a real, named guardian agent, same as any explicitly-set one.
+  check('the default is a real guardian agent (chatgpt), not auto', RA.getProvider(U) === 'chatgpt' && RA.defaultProvider() === 'chatgpt');
+  check('isGuardianProvider is true for the default, false for auto/ollama', RA.isGuardianProvider(RA.getProvider(U)) === true && !RA.isGuardianProvider('auto') && !RA.isGuardianProvider('ollama'));
+  { // settingsView — the one derivation the switch+dropdown API route reads
+    const sv = RA.settingsView(U);
+    check('settingsView: fresh compartment is guardian-on, agent chatgpt', sv.useGuardian === true && sv.guardianAgent === 'chatgpt');
+    RA.setProvider(U, 'ollama');
+    const sv2 = RA.settingsView(U);
+    check('settingsView: ollama reports guardian-off, agent null', sv2.useGuardian === false && sv2.guardianAgent === null);
+    RA.setProvider(U, 'auto');
+    const sv3 = RA.settingsView(U);
+    check('settingsView: explicit auto reports guardian-on (not ollama), agent null — honest, not invented', sv3.useGuardian === true && sv3.guardianAgent === null);
+  }
 
   const bodies = [];
   let reply = '';
@@ -63,7 +78,12 @@ async function main() {
   try {
     reply = 'plain';
     await RA.dispatch({ repo, repoDir: null, message: 'hi', layer });
-    check('auto sends no backend/agent — copilot decides', bodies[0].backend === undefined && bodies[0].agent === undefined);
+    check('auto (explicitly set above) sends no backend/agent — copilot decides', bodies[0].backend === undefined && bodies[0].agent === undefined);
+
+    RA.setProvider(U, RA.defaultProvider());
+    bodies.length = 0; reply = 'plain';
+    await RA.dispatch({ repo, repoDir: null, message: 'hi', layer });
+    check('the default provider (chatgpt) really routes guardian → chatgpt end to end', bodies[0].backend === 'guardian' && bodies[0].agent === 'chatgpt');
 
     for (const prov of ['chatgpt', 'gemini', 'deepseek']) {
       RA.setProvider(U, prov);
@@ -98,7 +118,10 @@ async function main() {
   }
 
   const APP = fs.readFileSync(path.join(ROOT, 'idearium', 'ui', 'js', 'app.js'), 'utf8');
-  check('the Agent tab offers a provider select', APP.includes('id="agent-provider"') && APP.includes('agentSetProvider(this.value)'));
+  // §DEFAULT-GUARDIAN 2026-09-21 — the flat <select id="agent-provider"> is
+  // now a switch (guardian on/off) + a guardian-agent dropdown.
+  check('the Agent tab offers a guardian switch', APP.includes('id="agent-use-guardian"') && APP.includes('agentSetUseGuardian(this.checked)'));
+  check('the Agent tab offers a guardian-agent dropdown', APP.includes('id="agent-guardian-agent"') && APP.includes('agentSetGuardianAgent(this.value)'));
   check('the CLI has /provider, documented in /help', APP.includes("case 'provider':") && APP.includes("'/provider [name]"));
 
   fs.rmSync(process.env.NEXUS_INJECT_DIR, { recursive: true, force: true });

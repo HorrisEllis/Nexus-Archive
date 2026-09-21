@@ -1,0 +1,61 @@
+{
+  "repository": "nexus-id-repo-3a82e21b",
+  "generatedAt": 1790022783631,
+  "fileCount": 3,
+  "byLanguage": {
+    "javascript": 2,
+    "markdown": 1
+  },
+  "byKind": {
+    "component": 3
+  },
+  "failedCount": 0,
+  "tree": {
+    "src": {
+      "__dir": true,
+      "children": {
+        "a.js": {
+          "language": "javascript",
+          "status": "complete",
+          "symbolCount": 0,
+          "lineCount": 1,
+          "kind": "component"
+        },
+        "agent2.js": {
+          "language": "javascript",
+          "status": "complete",
+          "symbolCount": 0,
+          "lineCount": 2,
+          "kind": "component"
+        }
+      }
+    },
+    "README.md": {
+      "language": "markdown",
+      "status": "complete",
+      "symbolCount": 0,
+      "lineCount": 1,
+      "kind": "component"
+    }
+  },
+  "components": [
+    {
+      "path": "src/a.js",
+      "kind": "component",
+      "language": "javascript",
+      "symbolCount": 0
+    },
+    {
+      "path": "README.md",
+      "kind": "component",
+      "language": "markdown",
+      "symbolCount": 0
+    },
+    {
+      "path": "src/agent2.js",
+      "kind": "component",
+      "language": "javascript",
+      "symbolCount": 0
+    }
+  ]
+}

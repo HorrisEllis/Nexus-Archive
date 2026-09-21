@@ -451,8 +451,31 @@ async function main() {
   // run-all.js' as guaranteed two-truths drift).
   const _filterArg = process.argv.find(a => a.startsWith('--filter='));
   const _filter = _filterArg ? _filterArg.slice(9).toLowerCase() : null;
-  const _active = _filter ? SUITES.filter(s => s.toLowerCase().includes(_filter)) : SUITES;
+  let _active = _filter ? SUITES.filter(s => s.toLowerCase().includes(_filter)) : SUITES;
   if (_filter) console.log(`[run-all] filter '${_filter}' — ${_active.length} of ${SUITES.length} suites`);
+
+  // §CHUNK 2026-09-21 — James: "chunks need to know where they live." The
+  // full run does not fit one execution window in every environment (a
+  // real ceiling hit running this exact file: ~280s, ~30 of 304 suites
+  // short). --filter picks suites by NAME; nothing let a caller pick a
+  // bounded SLICE of the ordered list and be told, honestly, where in the
+  // list it landed — so a chunked caller had no way to know it covered
+  // the whole 304 across N calls versus silently double-running or
+  // skipping a range. --start=<n> (0-based, into the already-filtered
+  // list) + --count=<n> slice _active; every suite still logs through the
+  // SAME runSuite/parsing path, so a chunk's numbers sum exactly to a
+  // full run's. The chunk states its own span before running, so stitching
+  // several calls' totals is arithmetic on stated ranges, not inference
+  // from log-reading.
+  const _startArg = process.argv.find(a => a.startsWith('--start='));
+  const _countArg = process.argv.find(a => a.startsWith('--count='));
+  const _start = _startArg ? parseInt(_startArg.slice(8), 10) : 0;
+  const _count = _countArg ? parseInt(_countArg.slice(8), 10) : _active.length;
+  if (_startArg || _countArg) {
+    const _fullLen = _active.length;
+    _active = _active.slice(_start, _start + _count);
+    console.log(`[run-all] chunk [${_start}, ${_start + _active.length}) of ${_fullLen} suites — ${_active.length} in this run`);
+  }
   for (const suite of _active) {
     const fp = path.join(MODULES_DIR, suite);
     if (!fs.existsSync(fp)) {

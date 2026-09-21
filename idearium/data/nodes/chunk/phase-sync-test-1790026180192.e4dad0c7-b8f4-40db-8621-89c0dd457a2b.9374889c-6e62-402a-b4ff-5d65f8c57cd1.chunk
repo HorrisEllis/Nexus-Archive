@@ -1,0 +1,39 @@
+envelope: 1
+uuid: nexus-export-chunk-phase-sync-test-1790026180192.e4dad0c7-b8f4-40db-8621-89c0dd457a2b.9374889c-6e62-402a-b4ff-5d65f8c57cd1
+type: chunk
+id: phase-sync-test-1790026180192.e4dad0c7-b8f4-40db-8621-89c0dd457a2b.9374889c-6e62-402a-b4ff-5d65f8c57cd1
+context: idearium spec-engine chunk of spec e4dad0c7-b8f4-40db-8621-89c0dd457a2b
+intent: null
+summary: integration (complete)
+system: idearium
+tags:
+  - spec:e4dad0c7-b8f4-40db-8621-89c0dd457a2b
+  - status:complete
+  - section:integration
+  - specName:phase-sync-test-1790026180192
+  - agent:gemini
+exported_at: 1790026180242
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1790026180242
+lastSeenAt: 1790026180242
+fingerprint: null
+payload:
+  uuid: 9374889c-6e62-402a-b4ff-5d65f8c57cd1
+  specUuid: e4dad0c7-b8f4-40db-8621-89c0dd457a2b
+  sectionId: integration
+  sectionTitle: Integration Points
+  chunkIdx: 6
+  status: complete
+  realPath: null
+  fileName: 06-integration.md
+  filePath: /home/claude/work/package/Nexus_v0_39_205/base/idearium/data/specs/e4dad0c7-b8f4-40db-8621-89c0dd457a2b/06-integration-9374889c.md
+  agent: gemini
+  agentModel: null
+  attempts: 0
+  failureMode: null
+  byteSize: 433
+  contentHash: c61819d6c8f69a3d4476ac63a781b93f275a6d28c7f9678fbd49c6c25e0a81eb
+  createdAt: 1790026180197
+  updatedAt: 1790026180241
+  completedAt: 1790026180241

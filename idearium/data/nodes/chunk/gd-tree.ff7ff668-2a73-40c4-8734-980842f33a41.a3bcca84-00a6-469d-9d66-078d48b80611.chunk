@@ -1,0 +1,39 @@
+envelope: 1
+uuid: nexus-export-chunk-gd-tree.ff7ff668-2a73-40c4-8734-980842f33a41.a3bcca84-00a6-469d-9d66-078d48b80611
+type: chunk
+id: gd-tree.ff7ff668-2a73-40c4-8734-980842f33a41.a3bcca84-00a6-469d-9d66-078d48b80611
+context: idearium spec-engine chunk of spec ff7ff668-2a73-40c4-8734-980842f33a41
+intent: null
+summary: storage-data-gitkeep (complete)
+system: idearium
+tags:
+  - spec:ff7ff668-2a73-40c4-8734-980842f33a41
+  - status:complete
+  - section:storage-data-gitkeep
+  - specName:gd-tree
+  - agent:chatgpt
+exported_at: 1790026006068
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1790026006068
+lastSeenAt: 1790026006068
+fingerprint: null
+payload:
+  uuid: a3bcca84-00a6-469d-9d66-078d48b80611
+  specUuid: ff7ff668-2a73-40c4-8734-980842f33a41
+  sectionId: storage-data-gitkeep
+  sectionTitle: storage/data/.gitkeep
+  chunkIdx: 1
+  status: complete
+  realPath: storage/data/.gitkeep
+  fileName: 01-storage-data-gitkeep.md
+  filePath: /tmp/idearium-gd-5qZk69/specs/ff7ff668-2a73-40c4-8734-980842f33a41/01-storage-data-gitkeep-a3bcca84.txt
+  agent: chatgpt
+  agentModel: null
+  attempts: 0
+  failureMode: null
+  byteSize: 474
+  contentHash: 7c5c675d8f5e045cbc4c6dab8e13f9ea2c661f0da0f67cbcec1dc89c2b1d0e84
+  createdAt: 1790026006062
+  updatedAt: 1790026006066
+  completedAt: 1790026006066

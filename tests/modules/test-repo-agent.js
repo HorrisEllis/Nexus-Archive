@@ -122,8 +122,14 @@ async function run() {
       seen.sessions[0] === RA.sessionIdFor(REPO.uuid));
     check('the dispatch is tagged as coming from the repo agent',
       seen.channels[0] === 'idearium-repo-agent');
-    check('no hat/agent field is invented on the outgoing body',
-      seen.bodies[0].hat === undefined && seen.bodies[0].agent === undefined);
+    check('no raw hat field is invented on the outgoing body — the persona travels in the prompt text, never a separate field',
+      seen.bodies[0].hat === undefined);
+    // §DEFAULT-GUARDIAN 2026-09-21 — this repo has no stored provider, so it
+    // now takes the real default (guardian → chatgpt) rather than the old
+    // 'auto' default (agent left undefined). Deliberately updated, not a
+    // silent pass: was `agent === undefined`.
+    check('the fresh repo\'s dispatch carries the real default route (guardian → chatgpt), not an invented one',
+      seen.bodies[0].backend === 'guardian' && seen.bodies[0].agent === 'chatgpt');
 
     // ── Learning reaches the next dispatch ───────────────────────────────────
     RH.learn({ repo: REPO, repoDir: null, kind: 'correction',

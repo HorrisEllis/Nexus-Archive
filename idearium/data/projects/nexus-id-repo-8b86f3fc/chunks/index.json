@@ -1,0 +1,109 @@
+[
+  {
+    "id": "chunk-a43c022235e2b61f",
+    "repository": "nexus-id-repo-8b86f3fc",
+    "file": "src/helper.js",
+    "range": {
+      "start_line": 1,
+      "end_line": 2
+    },
+    "symbols": [
+      "helper_deepseek"
+    ],
+    "parent": null,
+    "tags": [],
+    "relations": [],
+    "dependencies": [],
+    "contracts": [],
+    "tests": [],
+    "hash": {
+      "content": "e66632c768b0374654732fa307ae14d2b73f9d8bcc7a72316413c160c49469e0"
+    },
+    "status": "complete",
+    "_file": "src__helper.js__0.json"
+  },
+  {
+    "id": "chunk-52f3abb764db6a46",
+    "repository": "nexus-id-repo-8b86f3fc",
+    "file": "src/a.js",
+    "range": {
+      "start_line": 1,
+      "end_line": 1
+    },
+    "symbols": [],
+    "parent": null,
+    "tags": [],
+    "relations": [],
+    "dependencies": [],
+    "contracts": [],
+    "tests": [],
+    "hash": {
+      "content": "cefd0dd07bfa670f7e0b825b372e76a33017fb39beaae3a4db0a742196bb99df"
+    },
+    "status": "complete",
+    "_file": "src__a.js__0.json"
+  },
+  {
+    "id": "chunk-c1e4064a116bab7a",
+    "repository": "nexus-id-repo-8b86f3fc",
+    "file": "src/chatgpt.js",
+    "range": {
+      "start_line": 1,
+      "end_line": 2
+    },
+    "symbols": [],
+    "parent": null,
+    "tags": [],
+    "relations": [],
+    "dependencies": [],
+    "contracts": [],
+    "tests": [],
+    "hash": {
+      "content": "c27b8c7bda99565dcd1dd8e1f970b859eba67d3c8dbd2743d653264c9001accc"
+    },
+    "status": "complete",
+    "_file": "src__chatgpt.js__0.json"
+  },
+  {
+    "id": "chunk-9418c45ccc72fa14",
+    "repository": "nexus-id-repo-8b86f3fc",
+    "file": "src/gemini.js",
+    "range": {
+      "start_line": 1,
+      "end_line": 2
+    },
+    "symbols": [],
+    "parent": null,
+    "tags": [],
+    "relations": [],
+    "dependencies": [],
+    "contracts": [],
+    "tests": [],
+    "hash": {
+      "content": "047031ce087876df9e3a91491a72893ab178534f90ae84ab6c7e5efffde53be0"
+    },
+    "status": "complete",
+    "_file": "src__gemini.js__0.json"
+  },
+  {
+    "id": "chunk-37887697bab280f6",
+    "repository": "nexus-id-repo-8b86f3fc",
+    "file": "src/deepseek.js",
+    "range": {
+      "start_line": 1,
+      "end_line": 2
+    },
+    "symbols": [],
+    "parent": null,
+    "tags": [],
+    "relations": [],
+    "dependencies": [],
+    "contracts": [],
+    "tests": [],
+    "hash": {
+      "content": "a20a7a538db00d4fe1f97e47eec2f1b7408b5559cce6050b09404dad33d43fb9"
+    },
+    "status": "complete",
+    "_file": "src__deepseek.js__0.json"
+  }
+]

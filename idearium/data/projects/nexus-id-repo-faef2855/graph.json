@@ -1,0 +1,115 @@
+{
+  "version": "1.0.0",
+  "repository": "nexus-id-repo-faef2855",
+  "generatedFrom": {
+    "atlasHash": "b2db1f5df2015feaadfc0cdbe17926d3b777d63a35046396784b4537509a18ab",
+    "fileCount": 5,
+    "chunkCount": 5,
+    "symbolCount": 1
+  },
+  "relationsSupported": [
+    "contains",
+    "belongs_to",
+    "imports",
+    "exports",
+    "depends_on",
+    "depended_on_by"
+  ],
+  "relationsDeclaredUnsupported": [
+    "calls",
+    "called_by",
+    "implements",
+    "implemented_by",
+    "extends",
+    "instantiates",
+    "produces",
+    "consumes",
+    "emits",
+    "handles",
+    "tested_by",
+    "tests",
+    "verified_by",
+    "exposes",
+    "wired_to",
+    "activates",
+    "generated_from",
+    "derived_from"
+  ],
+  "languagesSeen": [
+    "javascript"
+  ],
+  "languagesWithoutExtractors": [],
+  "languagesUndetectedUpstream": [],
+  "nodeCount": 11,
+  "edgeCount": 13,
+  "unresolvedCount": 0,
+  "relationCounts": {
+    "belongs_to": 6,
+    "contains": 6,
+    "exports": 1
+  },
+  "generatedAt": 1790022767202,
+  "persisted": "lean",
+  "omittedFromDisk": {
+    "reason": "derived from indexes/chunks.json and indexes/symbols.json, rebuilt by readGraph() (§10.2)",
+    "relations": [
+      "contains",
+      "belongs_to",
+      "exports"
+    ],
+    "nodeKinds": [
+      "chunk",
+      "symbol"
+    ],
+    "nodes": 6,
+    "edges": 13
+  },
+  "nodes": [
+    {
+      "id": "file:src/a.js",
+      "kind": "file",
+      "file": "src/a.js",
+      "language": "javascript",
+      "status": "complete",
+      "chunkCount": 1,
+      "contentHash": "cefd0dd07bfa670f7e0b825b372e76a33017fb39beaae3a4db0a742196bb99df"
+    },
+    {
+      "id": "file:src/chatgpt.js",
+      "kind": "file",
+      "file": "src/chatgpt.js",
+      "language": "javascript",
+      "status": "complete",
+      "chunkCount": 1,
+      "contentHash": "c27b8c7bda99565dcd1dd8e1f970b859eba67d3c8dbd2743d653264c9001accc"
+    },
+    {
+      "id": "file:src/deepseek.js",
+      "kind": "file",
+      "file": "src/deepseek.js",
+      "language": "javascript",
+      "status": "complete",
+      "chunkCount": 1,
+      "contentHash": "a20a7a538db00d4fe1f97e47eec2f1b7408b5559cce6050b09404dad33d43fb9"
+    },
+    {
+      "id": "file:src/gemini.js",
+      "kind": "file",
+      "file": "src/gemini.js",
+      "language": "javascript",
+      "status": "complete",
+      "chunkCount": 1,
+      "contentHash": "047031ce087876df9e3a91491a72893ab178534f90ae84ab6c7e5efffde53be0"
+    },
+    {
+      "id": "file:src/helper.js",
+      "kind": "file",
+      "file": "src/helper.js",
+      "language": "javascript",
+      "status": "complete",
+      "chunkCount": 1,
+      "contentHash": "e66632c768b0374654732fa307ae14d2b73f9d8bcc7a72316413c160c49469e0"
+    }
+  ],
+  "edges": []
+}

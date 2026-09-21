@@ -1,0 +1,37 @@
+envelope: 1
+uuid: nexus-export-repository-syn-i.js
+type: repository
+id: syn-i.js
+context: idearium repo undefined
+intent: null
+summary: 1 files, 0 chunks, READY
+system: idearium
+tags:
+  - spec:undefined
+  - state:READY
+  - verification:partial
+exported_at: 1790026258756
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1790026258756
+lastSeenAt: 1790026258756
+fingerprint: null
+payload:
+  uuid: syn-i.js
+  rootHash: null
+  parent: null
+  state: READY
+  fileCount: 1
+  byLanguage:
+    javascript: 1
+  failedCount: 1
+  chunkCount: 0
+  symbolCount: 1
+  verificationStatus: partial
+  verificationLevel: L2
+  paths:
+    atlas: /tmp/pipeline-syntax-aL47RX/r-NixiV6/atlas.json
+    chunks: /tmp/pipeline-syntax-aL47RX/r-NixiV6/chunks
+    indexes: /tmp/pipeline-syntax-aL47RX/r-NixiV6/indexes
+    verification: /tmp/pipeline-syntax-aL47RX/r-NixiV6/verification.json
+  generatedAt: 1790026258756

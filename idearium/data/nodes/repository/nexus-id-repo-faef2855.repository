@@ -1,0 +1,39 @@
+envelope: 1
+uuid: nexus-export-repository-nexus-id-repo-faef2855
+type: repository
+id: nexus-id-repo-faef2855
+context: idearium repo prov-1790022766991
+intent: null
+summary: 5 files, 5 chunks, READY
+system: idearium
+tags:
+  - spec:9ffb182b-c955-41e6-bd73-ce5ebaf6780a
+  - state:READY
+  - verification:passed
+exported_at: 1790022767203
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1790022767203
+lastSeenAt: 1790022767203
+fingerprint: null
+payload:
+  uuid: nexus-id-repo-faef2855
+  name: prov-1790022766991
+  specUuid: 9ffb182b-c955-41e6-bd73-ce5ebaf6780a
+  rootHash: e544fca9c3f2e1ac2c25dc404473165e3f3e127b1afff86630968e8cc2b342ad
+  parent: null
+  state: READY
+  fileCount: 5
+  byLanguage:
+    javascript: 5
+  failedCount: 0
+  chunkCount: 5
+  symbolCount: 1
+  verificationStatus: passed
+  verificationLevel: L5
+  paths:
+    atlas: /home/claude/work/package/Nexus_v0_39_204/base/idearium/data/projects/nexus-id-repo-faef2855/atlas.json
+    chunks: /home/claude/work/package/Nexus_v0_39_204/base/idearium/data/projects/nexus-id-repo-faef2855/chunks
+    indexes: /home/claude/work/package/Nexus_v0_39_204/base/idearium/data/projects/nexus-id-repo-faef2855/indexes
+    verification: /home/claude/work/package/Nexus_v0_39_204/base/idearium/data/projects/nexus-id-repo-faef2855/verification.json
+  generatedAt: 1790022767203

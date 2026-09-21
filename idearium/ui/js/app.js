@@ -2666,10 +2666,11 @@ learned    ${mem.total} observation${mem.total === 1 ? '' : 's'}${kindCounts ? `
 exchanges  ${st.exchanges || 0}</div>
     </div>
     <div style="margin:6px 0;font-size:10px">wearing the hat:
-      <select id="agent-provider" onchange="agentSetProvider(this.value)" style="font-size:10px;background:var(--bg2);color:var(--text);border:1px solid var(--b1);border-radius:3px;padding:1px 4px">
-        ${(AGENT_SETTINGS.get(repo.uuid)?.providers || ['auto']).map(p => `<option value="${escapeHtml(p)}"${p === AGENT_SETTINGS.get(repo.uuid)?.provider ? ' selected' : ''}>${escapeHtml(p)}</option>`).join('')}
+      <label style="cursor:pointer"><input type="checkbox" id="agent-use-guardian" ${AGENT_SETTINGS.get(repo.uuid)?.useGuardian !== false ? 'checked' : ''} onchange="agentSetUseGuardian(this.checked)"> guardian</label>
+      <select id="agent-guardian-agent" onchange="agentSetGuardianAgent(this.value)" ${AGENT_SETTINGS.get(repo.uuid)?.useGuardian === false ? 'disabled' : ''} style="font-size:10px;background:var(--bg2);color:var(--text);border:1px solid var(--b1);border-radius:3px;padding:1px 4px;margin-left:4px">
+        ${(AGENT_SETTINGS.get(repo.uuid)?.guardianProviders || []).map(p => `<option value="${escapeHtml(p)}"${p === AGENT_SETTINGS.get(repo.uuid)?.guardianAgent ? ' selected' : ''}>${escapeHtml(p)}</option>`).join('')}
       </select>
-      <span style="opacity:.55">— chatgpt/claude/gemini/deepseek/perplexity answer through their guardian tab; every output lands the same way</span>
+      <span style="opacity:.55">— on: chatgpt/claude/gemini/deepseek/perplexity answer through their guardian tab, every output lands the same way. off: ollama.</span>
     </div>
     <div style="margin:8px 0">
       ${st.exists
@@ -2859,10 +2860,23 @@ function _agentDetail(r) {
 // command is a thin client of a real route — nothing here is computed or
 // remembered client-side that the server does not also hold.
 // ════════════════════════════════════════════════════
-const AGENT_SETTINGS = new Map();     // repoUuid -> { provider, providers, injectMode } (display; server is truth)
-async function agentSetProvider(provider) {
+const AGENT_SETTINGS = new Map();     // repoUuid -> { provider, providers, useGuardian, guardianAgent, guardianProviders, injectMode } (display; server is truth)
+// §DEFAULT-GUARDIAN 2026-09-21 — the flat provider <select> (incl. 'auto')
+// became a switch (guardian on/off, off = ollama) + a dropdown of guardian
+// agents that only applies when the switch is on. Two calls, not one, so
+// flipping the switch never silently picks/loses a guardian agent choice —
+// each control sends only what it owns.
+async function agentSetUseGuardian(useGuardian) {
   if (!CURRENT_API_REPO) return;
-  try { await api(`/api/repos/${CURRENT_API_REPO.uuid}/agent/settings`, { method: 'POST', body: JSON.stringify({ provider }) }); toast(`${provider} now wears this repo's hat`, 'ok'); }
+  try { await api(`/api/repos/${CURRENT_API_REPO.uuid}/agent/settings`, { method: 'POST', body: JSON.stringify({ useGuardian }) });
+    toast(useGuardian ? 'guardian wears this repo\'s hat' : 'ollama wears this repo\'s hat', 'ok'); }
+  catch (e) { toast(`provider failed: ${e.message}`, 'err'); }
+  renderRepoAgent(CURRENT_API_REPO);
+}
+async function agentSetGuardianAgent(guardianAgent) {
+  if (!CURRENT_API_REPO) return;
+  try { await api(`/api/repos/${CURRENT_API_REPO.uuid}/agent/settings`, { method: 'POST', body: JSON.stringify({ useGuardian: true, guardianAgent }) });
+    toast(`${guardianAgent} now wears this repo's hat`, 'ok'); }
   catch (e) { toast(`provider failed: ${e.message}`, 'err'); }
   renderRepoAgent(CURRENT_API_REPO);
 }

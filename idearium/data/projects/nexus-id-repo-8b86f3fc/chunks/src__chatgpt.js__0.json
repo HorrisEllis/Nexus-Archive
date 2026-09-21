@@ -1,0 +1,21 @@
+{
+  "id": "chunk-c1e4064a116bab7a",
+  "repository": "nexus-id-repo-8b86f3fc",
+  "file": "src/chatgpt.js",
+  "range": {
+    "start_line": 1,
+    "end_line": 2
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "c27b8c7bda99565dcd1dd8e1f970b859eba67d3c8dbd2743d653264c9001accc"
+  },
+  "status": "complete",
+  "content": "export const who = 'chatgpt';\n"
+}

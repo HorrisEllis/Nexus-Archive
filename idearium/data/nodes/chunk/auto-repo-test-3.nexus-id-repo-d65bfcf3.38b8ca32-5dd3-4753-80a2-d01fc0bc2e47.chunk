@@ -1,0 +1,40 @@
+envelope: 1
+uuid: nexus-export-chunk-auto-repo-test-3.nexus-id-repo-d65bfcf3.38b8ca32-5dd3-4753-80a2-d01fc0bc2e47
+type: chunk
+id: auto-repo-test-3.nexus-id-repo-d65bfcf3.38b8ca32-5dd3-4753-80a2-d01fc0bc2e47
+context: idearium spec-engine chunk of spec aa411015-9059-41fe-b1b6-beaa7d06a1c8
+intent: null
+summary: meta (complete)
+system: idearium
+tags:
+  - spec:aa411015-9059-41fe-b1b6-beaa7d06a1c8
+  - status:complete
+  - section:meta
+  - specName:auto-repo-test-3
+  - agent:ollama
+  - repo:nexus-id-repo-d65bfcf3
+exported_at: 1790025993774
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1790025993774
+lastSeenAt: 1790025993774
+fingerprint: null
+payload:
+  uuid: 38b8ca32-5dd3-4753-80a2-d01fc0bc2e47
+  specUuid: aa411015-9059-41fe-b1b6-beaa7d06a1c8
+  sectionId: meta
+  sectionTitle: Meta & Identity
+  chunkIdx: 0
+  status: complete
+  realPath: null
+  fileName: 00-meta.md
+  filePath: /tmp/idearium-repo-autocreate-umpDTa/specs/aa411015-9059-41fe-b1b6-beaa7d06a1c8/00-meta-38b8ca32.md
+  agent: ollama
+  agentModel: null
+  attempts: 0
+  failureMode: null
+  byteSize: 411
+  contentHash: 2fa48bc34912501157128634589d35e0474147f17e4008e973ec3b4d50492817
+  createdAt: 1790025993767
+  updatedAt: 1790025993771
+  completedAt: 1790025993771

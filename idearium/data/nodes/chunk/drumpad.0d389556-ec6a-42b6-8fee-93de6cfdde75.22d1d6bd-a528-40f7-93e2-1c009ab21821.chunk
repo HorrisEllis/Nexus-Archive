@@ -1,0 +1,39 @@
+envelope: 1
+uuid: nexus-export-chunk-drumpad.0d389556-ec6a-42b6-8fee-93de6cfdde75.22d1d6bd-a528-40f7-93e2-1c009ab21821
+type: chunk
+id: drumpad.0d389556-ec6a-42b6-8fee-93de6cfdde75.22d1d6bd-a528-40f7-93e2-1c009ab21821
+context: idearium spec-engine chunk of spec 0d389556-ec6a-42b6-8fee-93de6cfdde75
+intent: null
+summary: system-prompt-txt (complete)
+system: idearium
+tags:
+  - spec:0d389556-ec6a-42b6-8fee-93de6cfdde75
+  - status:complete
+  - section:system-prompt-txt
+  - specName:drumpad
+  - agent:chatgpt
+exported_at: 1790025931029
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1790025931029
+lastSeenAt: 1790025931029
+fingerprint: null
+payload:
+  uuid: 22d1d6bd-a528-40f7-93e2-1c009ab21821
+  specUuid: 0d389556-ec6a-42b6-8fee-93de6cfdde75
+  sectionId: system-prompt-txt
+  sectionTitle: system-prompt.txt
+  chunkIdx: 4
+  status: complete
+  realPath: system-prompt.txt
+  fileName: 04-system-prompt-txt.md
+  filePath: /tmp/ftp-idearium-ElKPh4/specs/0d389556-ec6a-42b6-8fee-93de6cfdde75/04-system-prompt-txt-22d1d6bd.txt
+  agent: chatgpt
+  agentModel: null
+  attempts: 0
+  failureMode: null
+  byteSize: 431
+  contentHash: 75357d685f238b6afd7738be9786fdafde641eb6ca9a3be7471939715a68a4de
+  createdAt: 1790025931013
+  updatedAt: 1790025931028
+  completedAt: 1790025931028

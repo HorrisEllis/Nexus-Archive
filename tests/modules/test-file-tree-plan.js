@@ -131,7 +131,15 @@ async function run() {
   check('the templates route merges COS templates into the picker list', /listCosTemplates\(\)[\s\S]{0,200}\[\.\.\.se\.listTemplates\(\), \.\.\.cos\]/.test(API));
   check('create branches to a file-tree spec for a COS template or fileTree:true', /body\.fileTree === true \|\| cosIds\.length/.test(API) && /createFileTreeSpec\(/.test(API));
   check('the plan goes through the same WARP dispatch the build uses', /getWarpChunkDispatch\(\)[\s\S]{0,300}chunkTitle: `plan: \$\{name\}`/.test(API));
-  check('the poller skips a spec with nothing buildable after reporting it once', /_stallReported\.get\(s\.uuid\) === sig\) continue/.test(API) && /c\.status === 'pending'/.test(API));
+  // §STABILITY 2026-09-21 — this assertion pinned the OLD stall check
+  // (keyed on "any chunk pending", so a failed kernel file with pending
+  // DEPENDENTS still read as buildable and re-triggered every tick
+  // forever). Deliberately updated to the fixed pattern, found stale by
+  // this exact suite failing when run as part of the full 307-suite pass
+  // rather than in isolation — a real gap in the 0.39.204 regression
+  // check, not a false alarm.
+  check('the poller keys on the FULL chunk-status signature, not just "any pending"', /fullSig = chunks\.map\(c => `\$\{c\.uuid\}:\$\{c\.status\}`\)\.join\('\|'\)/.test(API));
+  check('a stalled spec is skipped until a chunk changes state or the retry window elapses', /prior\.sig === fullSig && \(Date\.now\(\) - prior\.ts\) < STALL_RETRY_MS\) continue/.test(API));
 
   // ── UI ──
   const HTML = fs.readFileSync(path.join(ROOT, 'idearium', 'ui', 'index.html'), 'utf8');

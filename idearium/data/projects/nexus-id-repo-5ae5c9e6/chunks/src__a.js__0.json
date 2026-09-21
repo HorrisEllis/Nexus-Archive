@@ -1,0 +1,21 @@
+{
+  "id": "chunk-5e04754feb8c7ffd",
+  "repository": "nexus-id-repo-5ae5c9e6",
+  "file": "src/a.js",
+  "range": {
+    "start_line": 1,
+    "end_line": 1
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "cefd0dd07bfa670f7e0b825b372e76a33017fb39beaae3a4db0a742196bb99df"
+  },
+  "status": "complete",
+  "content": "const a = 1;"
+}

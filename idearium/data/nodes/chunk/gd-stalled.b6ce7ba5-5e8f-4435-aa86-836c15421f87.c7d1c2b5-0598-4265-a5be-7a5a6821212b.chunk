@@ -1,0 +1,39 @@
+envelope: 1
+uuid: nexus-export-chunk-gd-stalled.b6ce7ba5-5e8f-4435-aa86-836c15421f87.c7d1c2b5-0598-4265-a5be-7a5a6821212b
+type: chunk
+id: gd-stalled.b6ce7ba5-5e8f-4435-aa86-836c15421f87.c7d1c2b5-0598-4265-a5be-7a5a6821212b
+context: idearium spec-engine chunk of spec b6ce7ba5-5e8f-4435-aa86-836c15421f87
+intent: null
+summary: src-kernel-a-js (escalated)
+system: idearium
+tags:
+  - spec:b6ce7ba5-5e8f-4435-aa86-836c15421f87
+  - status:escalated
+  - section:src-kernel-a-js
+  - specName:gd-stalled
+  - agent:chatgpt
+exported_at: 1790026006080
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1790026006080
+lastSeenAt: 1790026006080
+fingerprint: null
+payload:
+  uuid: c7d1c2b5-0598-4265-a5be-7a5a6821212b
+  specUuid: b6ce7ba5-5e8f-4435-aa86-836c15421f87
+  sectionId: src-kernel-a-js
+  sectionTitle: src/kernel/a.js
+  chunkIdx: 0
+  status: escalated
+  realPath: src/kernel/a.js
+  fileName: 00-src-kernel-a-js.md
+  filePath: /tmp/idearium-gd-5qZk69/specs/b6ce7ba5-5e8f-4435-aa86-836c15421f87/c7d1c2b5-0598-4265-a5be-7a5a6821212b.md
+  agent: chatgpt
+  agentModel: x
+  attempts: 3
+  failureMode: boom
+  byteSize: 0
+  contentHash: null
+  createdAt: 1790026006074
+  updatedAt: 1790026006080
+  completedAt: null

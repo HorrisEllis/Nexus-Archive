@@ -1,0 +1,99 @@
+{
+  "version": "1.0.0",
+  "repository": "nexus-id-repo-3a82e21b",
+  "generatedFrom": {
+    "atlasHash": "52ebba7baa013e64afb63883fffde7f45a90bdaf50df96ee6745be9d9c5af086",
+    "fileCount": 3,
+    "chunkCount": 3,
+    "symbolCount": 0
+  },
+  "relationsSupported": [
+    "contains",
+    "belongs_to",
+    "imports",
+    "exports",
+    "depends_on",
+    "depended_on_by"
+  ],
+  "relationsDeclaredUnsupported": [
+    "calls",
+    "called_by",
+    "implements",
+    "implemented_by",
+    "extends",
+    "instantiates",
+    "produces",
+    "consumes",
+    "emits",
+    "handles",
+    "tested_by",
+    "tests",
+    "verified_by",
+    "exposes",
+    "wired_to",
+    "activates",
+    "generated_from",
+    "derived_from"
+  ],
+  "languagesSeen": [
+    "javascript",
+    "markdown"
+  ],
+  "languagesWithoutExtractors": [
+    "markdown"
+  ],
+  "languagesUndetectedUpstream": [],
+  "nodeCount": 6,
+  "edgeCount": 6,
+  "unresolvedCount": 0,
+  "relationCounts": {
+    "belongs_to": 3,
+    "contains": 3
+  },
+  "generatedAt": 1790022783632,
+  "persisted": "lean",
+  "omittedFromDisk": {
+    "reason": "derived from indexes/chunks.json and indexes/symbols.json, rebuilt by readGraph() (§10.2)",
+    "relations": [
+      "contains",
+      "belongs_to",
+      "exports"
+    ],
+    "nodeKinds": [
+      "chunk",
+      "symbol"
+    ],
+    "nodes": 3,
+    "edges": 6
+  },
+  "nodes": [
+    {
+      "id": "file:README.md",
+      "kind": "file",
+      "file": "README.md",
+      "language": "markdown",
+      "status": "complete",
+      "chunkCount": 1,
+      "contentHash": "1f885426f5e09fe3c782a5a075fa09cbbbb0681b43370a82f4fe6ac33eb8d9f2"
+    },
+    {
+      "id": "file:src/a.js",
+      "kind": "file",
+      "file": "src/a.js",
+      "language": "javascript",
+      "status": "complete",
+      "chunkCount": 1,
+      "contentHash": "cefd0dd07bfa670f7e0b825b372e76a33017fb39beaae3a4db0a742196bb99df"
+    },
+    {
+      "id": "file:src/agent2.js",
+      "kind": "file",
+      "file": "src/agent2.js",
+      "language": "javascript",
+      "status": "complete",
+      "chunkCount": 1,
+      "contentHash": "63a25998a5e6941f50b00c3570f2e54d30457c4b4f9692710b416da010ef961d"
+    }
+  ],
+  "edges": []
+}

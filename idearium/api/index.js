@@ -2644,14 +2644,35 @@ async function handle(req, res, route, query, body) {
         case 'repo.agent.settings.get': {
           const RA = _require('../../lib/repo-agent.js');
           return ok(res, { repoUuid: params.uuid, injectMode: RI.getMode(params.uuid), modes: RI.MODES,
-                           provider: RA.getProvider(params.uuid), providers: RA.providers() });
+                           ...RA.settingsView(params.uuid) });
         }
         case 'repo.agent.settings.set': {
-          // Either or both: injectMode, provider. Each validated by its owner.
-          if (body.injectMode === undefined && body.provider === undefined) return err(res, 400, 'injectMode and/or provider required');
+          // injectMode, and/or the provider — set directly (body.provider,
+          // unchanged, for CLI/API power use including 'auto'), or via the
+          // switch+dropdown pair the Agent tab sends: useGuardian (bool) +
+          // guardianAgent (name, only meaningful when useGuardian is true).
+          // §DEFAULT-GUARDIAN 2026-09-21. If both provider and the pair are
+          // sent, provider wins — it is the more specific, explicit request.
+          if (body.injectMode === undefined && body.provider === undefined
+              && body.useGuardian === undefined && body.guardianAgent === undefined) {
+            return err(res, 400, 'injectMode, provider, and/or useGuardian/guardianAgent required');
+          }
+          const RA = _require('../../lib/repo-agent.js');
           let out = { ok: true, repoUuid: params.uuid };
           if (body.injectMode !== undefined) { const r = RI.setMode(params.uuid, body.injectMode); if (!r.ok) return done(r); out.injectMode = r.injectMode; }
-          if (body.provider !== undefined) { const r = _require('../../lib/repo-agent.js').setProvider(params.uuid, body.provider); if (!r.ok) return done(r); out.provider = r.provider; }
+          if (body.provider !== undefined) {
+            const r = RA.setProvider(params.uuid, body.provider); if (!r.ok) return done(r); out.provider = r.provider;
+          } else if (body.useGuardian !== undefined || body.guardianAgent !== undefined) {
+            const useGuardian = body.useGuardian !== undefined ? !!body.useGuardian : RA.settingsView(params.uuid).useGuardian;
+            let target;
+            if (!useGuardian) { target = 'ollama'; }
+            else if (body.guardianAgent) { target = body.guardianAgent; }
+            else {
+              const cur = RA.getProvider(params.uuid);
+              target = RA.isGuardianProvider(cur) ? cur : RA.defaultProvider();
+            }
+            const r = RA.setProvider(params.uuid, target); if (!r.ok) return done(r); out.provider = r.provider;
+          }
           return ok(res, out);
         }
       }
