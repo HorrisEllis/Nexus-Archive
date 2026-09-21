@@ -55,6 +55,7 @@ const SUITES = [
   'spec-container.test.js',
   'test-repo-agent.js',       // §0.39.190 — the 0.39.188 note said these were registered; they were not
   'test-repo-agent-node.js',
+  'test-repo-agent-learn.js',
   'test-repo-chunks-tool.js',
   'test-repo-context.js',
   'test-runtime-proof.js',

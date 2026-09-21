@@ -2648,7 +2648,7 @@ exchanges  ${st.exchanges || 0}</div>
 
   const lines = _agentTranscript(repo.uuid);
   const transcript = lines.length
-    ? lines.map(l => `<div style="margin-bottom:10px"><div style="opacity:.55;font-size:9px">${escapeHtml(l.role)}${l.meta ? ` · ${escapeHtml(l.meta)}` : ''}</div><div style="white-space:pre-wrap">${escapeHtml(l.text)}</div></div>`).join('')
+    ? lines.map(l => `<div style="margin-bottom:10px"><div style="opacity:.55;font-size:9px">${escapeHtml(l.role)}${l.meta ? ` · ${escapeHtml(l.meta)}` : ''}</div><div style="white-space:pre-wrap">${escapeHtml(l.text)}</div>${l.detail || ''}</div>`).join('')
     : `<div style="opacity:.5">no exchanges in this session yet</div>`;
 
   el.innerHTML = head + memHtml + `
@@ -2706,10 +2706,46 @@ async function agentSend() {
 
   lines.pop(); // drop the placeholder
   lines.push(r.ok
-    ? { role: 'agent', text: r.text, meta: [r.hatName, r.modelUsed, r.elapsedMs ? `${Math.round(r.elapsedMs / 100) / 10}s` : null].filter(Boolean).join(' · ') }
-    : { role: 'agent — failed', text: r.error || 'no response', meta: r.hatName || null });
+    ? { role: 'agent', text: r.text, meta: [r.hatName, r.modelUsed, r.elapsedMs ? `${Math.round(r.elapsedMs / 100) / 10}s` : null].filter(Boolean).join(' · '), detail: _agentDetail(r) }
+    : { role: 'agent — failed', text: r.error || 'no response', meta: r.hatName || null, detail: _agentDetail(r) });
 
   renderRepoAgent(CURRENT_API_REPO);
+}
+
+// §AGENT-DETAIL 2026-09-21 — what the agent was given, and what it learned.
+// v0.39.194 made dispatch hand the agent retrieved chunks, but the tab never
+// showed which — so an answer could not be checked against its evidence.
+// Both blocks render server data verbatim; nothing is inferred here. Built
+// as a string (escaped) and stored on the transcript line, so a re-render
+// shows the same evidence the answer arrived with.
+function _agentDetail(r) {
+  if (!r) return '';
+  const parts = [];
+  const c = r.context;
+  if (c) {
+    const files = Array.isArray(c.files) ? c.files : [];
+    const ids = Array.isArray(c.chunkIds) ? c.chunkIds : [];
+    const head = ids.length
+      ? `context: ${ids.length} chunk${ids.length === 1 ? '' : 's'} · ${files.length} file${files.length === 1 ? '' : 's'} · ${c.chars || 0} chars${c.dropped ? ` · ${c.dropped} dropped for budget` : ''}`
+      : `context: none${c.reason ? ` — ${c.reason}` : ''}`;
+    parts.push(`<details style="margin-top:4px;font-size:9px;opacity:.75"><summary style="cursor:pointer">${escapeHtml(head)}</summary>` +
+      (files.length ? files.map(f => `<div style="padding-left:12px">· ${escapeHtml(f)}</div>`).join('') : '') +
+      (ids.length ? `<div style="padding-left:12px;opacity:.6">${ids.map(escapeHtml).join(', ')}</div>` : '') +
+      `</details>`);
+  }
+  const L = r.learned;
+  if (L) {
+    const ok = (L.recorded || []).filter(x => x.ok);
+    const failed = (L.recorded || []).filter(x => !x.ok);
+    const rows = [
+      ...ok.map(x => `<div style="padding-left:12px">+ (${escapeHtml(x.kind)}) ${escapeHtml(x.text)}${x.deduped ? ' <span style="opacity:.6">[already known — occurrences +1]</span>' : ''}${x.evidence ? ` <span style="opacity:.6">[${escapeHtml(x.evidence)}${x.grounded ? '' : ' — ungrounded'}]</span>` : ' <span style="opacity:.6">[no evidence]</span>'}</div>`),
+      ...failed.map(x => `<div style="padding-left:12px;color:var(--bad,#f87171)">✗ (${escapeHtml(x.kind)}) ${escapeHtml(x.text)} — ${escapeHtml((x.errors || ['failed']).join('; '))}</div>`),
+      ...(L.rejected || []).map(x => `<div style="padding-left:12px;opacity:.6">rejected: ${escapeHtml(x.reason)}</div>`),
+      ...(L.dropped ? [`<div style="padding-left:12px;opacity:.6">${L.dropped} dropped over the per-reply cap</div>`] : []),
+    ];
+    parts.push(`<details open style="margin-top:4px;font-size:9px"><summary style="cursor:pointer">learned: ${ok.length} recorded${failed.length ? `, ${failed.length} failed` : ''}${(L.rejected || []).length ? `, ${L.rejected.length} rejected` : ''}</summary>${rows.join('')}</details>`);
+  }
+  return parts.join('');
 }
 
 function agentClearTranscript() {

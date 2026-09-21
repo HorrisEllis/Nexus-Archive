@@ -60,6 +60,7 @@ const SUITES = [
   'test-repo-hat-memory.js',
   'test-repo-agent.js',
   'test-repo-agent-node.js',
+  'test-repo-agent-learn.js',
   'ollama-runtime.test.js',
   'flush-redundancy.test.js',
   'admin-server-routes.test.js',
