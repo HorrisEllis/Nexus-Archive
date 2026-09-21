@@ -56,6 +56,7 @@ function loadJsonSafe(p, fallback = null) {
 const TEST_FILE_RE = /(?:(?:^|\/)(?:tests?|__tests__)\/.*\.[a-z0-9]+$)|(?:\.(?:test|spec)\.[cm]?[jt]sx?$)/i;
 
 function isTestPath(p) { return TEST_FILE_RE.test(p); }
+export { isTestPath }; // §runtime-proof 2026-09-21 — one definition of "a test file", shared with idearium/repo/runtime-proof.js
 
 function runL6(repoDir, coneFiles) {
   const candidates = coneFiles.filter(f => f.file && isTestPath(f.file));

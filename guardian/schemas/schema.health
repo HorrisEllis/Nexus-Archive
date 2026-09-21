@@ -1,18 +1,21 @@
 envelope: 1
-uuid: nexus-export-schema-agent
+uuid: nexus-export-schema-health
 type: schema
-id: agent
+id: health
 context: >-
-  ollama/schemas — sovereign local copy. Origin: lib/node-schemas/schema.agent (shared canonical
-  version, may have moved on independently since this copy was made — sovereignty means ollama does
-  not depend on it at runtime, not that the two can never drift).
+  guardian/schemas — sovereign local copy. Origin: lib/node-schemas/schema.health (shared canonical
+  version, may have moved on independently since this copy was made — sovereignty means guardian
+  does not depend on it at runtime, not that the two can never drift).
 intent: null
 summary: null
-system: ollama
+system: guardian
 tags: []
-exported_at: 1789235656522
+exported_at: 1789235656497
 source: nexus.lib.node-export
 payload:
+  renamed: >-
+    Was type `agent` until 2026-09-20. Renamed to `health` because `.agent` is for agent
+    models and personalities (an intent and commands); this is a provider health snapshot.
   status: REAL
   source: cortex/core/raid/index.js — _agentAvailable()'s real per-agent health snapshot fields
   fields:

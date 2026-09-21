@@ -44,7 +44,7 @@ async function main() {
 
   await test('NS-001', 'list() returns all 17 named types', async () => {
     const types = schemas.list().map(s => s.type);
-    const expected = ['hat','contract','component','cos','agent','model','schema',
+    const expected = ['hat','contract','component','cos','agent','health','model','schema',
       'crystal','failure_mode','ledger','nex','node','pat','gap','macro','tool','command'];
     for (const t of expected) {
       if (t === 'nex') continue; // .nex is real but intentionally NOT in SCHEMAS — its own established format, see node-export.js header

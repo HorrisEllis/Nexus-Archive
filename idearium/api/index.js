@@ -880,6 +880,9 @@ function matchRoute(method, url) {
     // before it touches anything). All read-only except reindex.
     ['GET',    ['api','repos',    ':uuid','map'],           'repo.map'],
     ['GET',    ['api','repos',    ':uuid','chunks'],        'repo.chunks.list'],
+    // §runtime-proof 2026-09-21 — which chunks ran under a PASSING test (V8 coverage, tied to chunk hash)
+    ['POST',   ['api','repos',    ':uuid','proof'],         'repo.proof.run'],
+    ['GET',    ['api','repos',    ':uuid','proof'],         'repo.proof.get'],
     ['GET',    ['api','repos',    ':uuid','chunks',':chunkId'], 'repo.chunks.get'],
     ['GET',    ['api','repos',    ':uuid','symbols'],       'repo.symbols'],
     // §24-26 graph (MCO1) — idearium/spec/idearium.repo-graph.spec
@@ -930,7 +933,7 @@ function matchRoute(method, url) {
     ['POST',   ['api','repos',    ':uuid','agent','memory'],  'repo.agent.memory.record'],
     ['DELETE', ['api','repos',    ':uuid','agent','memory',':obs'], 'repo.agent.memory.forget'],
     // §REPO-AGENT-NODE 2026-09-20 — the agent as portable node files.
-    // .hat + .repo_agent (NOT .agent — that type is RAID's health snapshot;
+    // .hat + .agent (as of 0.39.190 RAID's health snapshot is .health, so .agent is free for this;
     // see lib/repo-agent-node.js's header for the collision).
     ['POST',   ['api','repos',    ':uuid','agent','export'],  'repo.agent.export'],
     ['POST',   ['api','repos',    ':uuid','agent','import'],  'repo.agent.import'],
@@ -2264,6 +2267,35 @@ async function handle(req, res, route, query, body) {
         start: query.start,
         depth: Math.max(1, Math.min(20, parseInt(query.depth || '5', 10) || 5)),
       }));
+    }
+
+    // Runs the repo's runnable test files (the same selection and limits as L6) under V8 coverage and
+    // stores proof.json. Returns the summary and the tests, not every chunk: GET has those.
+    case 'repo.proof.run': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const dir = _repoDiskDir(params.uuid);
+      if (!dir) return err(res, 500, 'could not resolve repo directory');
+      const { computeRuntimeProof } = await import('../repo/runtime-proof.js');
+      const r = computeRuntimeProof({ repoDir: dir, repository: params.uuid });
+      if (!r.ok) return err(res, /not been indexed/.test(r.error) ? 409 : 500, r.error);
+      return ok(res, { repoUuid: params.uuid, summary: r.proof.summary, tests: r.proof.tests, generatedAt: r.proof.generatedAt });
+    }
+
+    // ?state=passed|failed|none|no_tests|unsupported|test  ?file=  ?chunk=  — each chunk carries `stale`.
+    case 'repo.proof.get': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const dir = _repoDiskDir(params.uuid);
+      if (!dir) return err(res, 500, 'could not resolve repo directory');
+      const { readRuntimeProof } = await import('../repo/runtime-proof.js');
+      const proof = readRuntimeProof(dir);
+      if (!proof) return ok(res, { repoUuid: params.uuid, proof: null, note: 'no runtime proof has been computed for this repo (POST /api/repos/:uuid/proof)' });
+      let chunks = proof.chunks;
+      if (query.state) chunks = chunks.filter(c => c.proof === query.state);
+      if (query.file) chunks = chunks.filter(c => c.file === query.file);
+      if (query.chunk) chunks = chunks.filter(c => c.chunkId === query.chunk);
+      return ok(res, { repoUuid: params.uuid, generatedAt: proof.generatedAt, summary: proof.summary, staleCount: proof.staleCount, tests: proof.tests, chunks, total: chunks.length });
     }
 
     case 'repo.chunks.list': {

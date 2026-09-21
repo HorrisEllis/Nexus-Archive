@@ -13,7 +13,7 @@ this session's fixes.
 | 2 | `contract` | REAL | cortex/core/raid queue rows |
 | 3 | `component` | REAL, broadened | `loom/schema/component.js` COMPONENT_SCHEMA — always language/syntax-agnostic (`id/namespace/name/version`, never JS-specific). Added optional `boundary` field this pass, grounded in `cos/kernel.js`'s real `Compartment.axioms` (1-5 identity-defining invariants) — a component can now optionally declare its own bounding invariants, same concept as a cos compartment, without being merged into `.cos` (a compartment is live/stateful; a component is a static declaration). |
 | 4 | `cos` | REAL | `cos/kernel.js` Compartment class |
-| 5 | `agent` | REAL | guardian KNOWN_PROVIDERS |
+| 5 | `agent` | REAL — re-grounded and given its writer 2026-09-20 | An agent **model and personality with an intent and commands** (a repo compartment's living agent: its `.hat` is the persona, its `.intent` what it is for, its commands what it may issue). Was RAID's provider-health snapshot, now `.health` (row below). Writer: `lib/repo-agent-node.js` (`materialise()`), proven by a real export/import round trip (`test-repo-agent-node`); the 0.39.189 `.repo_agent` type is LEGACY (still read, never written). Intent is the hat's responsibilities and commands are its toolScope until the repo's own `.intent`/`.command` binding is decided. guardian hosts the type (`guardian/lib/node-registry.js`). |
 | 6 | `model` | REAL | a hat's `model` field |
 | 7 | `schema` | REAL | this registry's own envelope |
 | 8 | `crystal` | REAL | `meta/crystal-lattice.js` |
@@ -48,6 +48,7 @@ this session's fixes.
 
 | 37 | `chunk` | REAL, built 2026-09-15 | Grounded in idearium/spec-engine/index.js's real chunk object. Written on every real transition (complete/fail/remove/ingest) via idearium/lib/chunk-nodes.js. See lib/node-schemas/schema.chunk. |
 | 38 | `response` | REAL, built 2026-09-15 | Guardian's durable response record — the primary fallback sink for GET /response/:jobId. Written via guardian/lib/response-sink.js's deliver(). See lib/node-schemas/schema.response. |
+| 39 | `health` | REAL | Renamed from `agent` 2026-09-20. `cortex/core/raid/index.js` `_agentAvailable()`'s real per-agent health snapshot (`dispatchName`, `online`, `consecutiveFails`, `callCount`, `successRate`, `role`): runtime reachability of a provider, not an agent's identity. No `.health` node files are written today (declaration only). Sovereign copies: `guardian/schemas`, `ollama/schemas`. |
 
 ## Explicitly not in this taxonomy: MCP tools
 

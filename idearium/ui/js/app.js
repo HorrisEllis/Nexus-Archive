@@ -2719,7 +2719,7 @@ async function agentTeach() {
 }
 
 // Export writes two real node files: the .hat (hat-forge's own envelope,
-// unchanged) and the .repo_agent bundle — hat definition + every learned
+// unchanged) and the .agent bundle — hat definition + every learned
 // observation + the exchange log. That bundle is what makes this agent
 // portable between machines.
 async function agentExport() {
@@ -2743,7 +2743,7 @@ async function agentExport() {
 // index, never the exported string, which described a different tree.
 async function agentImport() {
   if (!CURRENT_API_REPO) return;
-  const filePath = await themedPrompt('path to a .repo_agent file:', 'import agent');
+  const filePath = await themedPrompt('path to an .agent file:', 'import agent');
   if (!filePath) return;
   try {
     const r = await api(`/api/repos/${CURRENT_API_REPO.uuid}/agent/import`, { method: 'POST', body: JSON.stringify({ filePath }) }, 30000);

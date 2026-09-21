@@ -8,7 +8,7 @@
 // copilot/lib/agent-model.js's current hypothesis state and calls the
 // same shared nodeExport.exportToFile() every other real node type
 // uses. See lib/node-schemas/schema.agent_model, status:REAL, and its
-// own note on why this is a genuinely different type from schema.agent
+// own note on why this is a genuinely different type from schema.health
 // (RAID's real-time dispatch-availability snapshot) — the two were kept
 // deliberately separate, not merged, per that decision.
 

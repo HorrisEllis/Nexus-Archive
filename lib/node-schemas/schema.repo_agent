@@ -12,7 +12,9 @@ payload:
   status: REAL
   source: lib/repo-agent-node.js materialise() — the real construction site
   note: >-
-    Distinct from schema.agent, which is RAID's per-agent health snapshot
+    LEGACY 2026-09-20: superseded by `agent` (schema.agent). 0.39.189 wrote this type; it is
+    still READ by importAgent() and never written. Distinct from schema.health (RAID).
+    Distinct from schema.health, which is RAID's per-agent health snapshot
     (dispatchName/online/consecutiveFails/successRate). This is a portable
     compartment identity: the hat definition, its learned observation set,
     and optionally its exchange log. The hat uuid travels as _originUuid

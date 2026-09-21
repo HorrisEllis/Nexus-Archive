@@ -38,11 +38,11 @@ function run() {
   console.log('\ntest-repo-agent-node\n');
   try {
     // ── Type registration ────────────────────────────────────────────────────
-    check('repo_agent is a registered node type', NX.KNOWN_TYPES.includes('repo_agent'));
-    check('repo_agent did NOT displace the existing agent type — both exist',
-      NX.KNOWN_TYPES.includes('agent') && NX.KNOWN_TYPES.includes('repo_agent'));
-    check('the repo_agent schema was authored',
-      fs.existsSync(path.join(ROOT, 'lib', 'node-schemas', 'schema.repo_agent')));
+    check('agent is the export type, and the legacy repo_agent stays registered for reading', NX.KNOWN_TYPES.includes('agent') && NX.KNOWN_TYPES.includes('repo_agent') && NX.KNOWN_TYPES.includes('health'));
+    check('RAID\'s health snapshot is its own type (.health), so .agent is free',
+      fs.existsSync(path.join(ROOT, 'lib', 'node-schemas', 'schema.health')));
+    check('schema.agent is REAL and names the fields the bundle fills',
+      (() => { const s = fs.readFileSync(path.join(ROOT, 'lib', 'node-schemas', 'schema.agent'), 'utf8'); return /status: REAL/.test(s) && ['name','intent','commands','personality'].every(k => s.includes('\n    ' + k + ':')); })());
 
     // ── Refuses to serialise nothing ─────────────────────────────────────────
     const none = RAN.materialise({ repo: SRC, repoDir: null, destDir: DIR });
@@ -64,15 +64,15 @@ function run() {
     check('materialise succeeds', out.ok === true, JSON.stringify(out.errors));
     check('a real .hat file is written', !!out.hatFile && fs.existsSync(out.hatFile));
     check('a real .repo_agent file is written', !!out.agentFile && fs.existsSync(out.agentFile));
-    check('the .repo_agent file carries the repo_agent extension', /\.repo_agent$/.test(out.agentFile));
+    check('the file carries the .agent extension', /\.agent$/.test(out.agentFile));
     check('export reports what it carried', out.observations === 2);
 
     const env = NX.importFromFile(out.agentFile);
-    check('the export is a valid node envelope of the right type', env.type === 'repo_agent');
-    check('the bundle declares its own schema version', env.payload.schema === 'nexus.repo_agent/1');
-    check('the hat DEFINITION travels', !!env.payload.hat.baseAgent && typeof env.payload.hat.personaPrompt === 'string');
+    check('the export is a valid node envelope of the right type', env.type === 'agent');
+    check('the bundle declares its own schema version', env.payload.schema === 'nexus.agent/1');
+    check('the hat DEFINITION travels', !!env.payload.hat_definition.baseAgent && typeof env.payload.hat_definition.personaPrompt === 'string');
     check('the hat uuid travels as provenance only, under _originUuid',
-      !!env.payload.hat._originUuid && env.payload.hat.uuid === undefined);
+      !!env.payload.hat_definition._originUuid && env.payload.hat_definition.uuid === undefined);
     check('every observation travels', (env.payload.observations || []).length === 2);
     check('dedupKey travels so an import can merge rather than duplicate',
       env.payload.observations.every(o => typeof o.dedupKey === 'string' && o.dedupKey.length));
@@ -88,7 +88,7 @@ function run() {
     const srcHat = RH.getRepoHat(SRC.uuid);
     check('the target agent exists', !!dstHat);
     check('the target hat has its OWN uuid — no false claim of continuity',
-      dstHat.uuid !== srcHat.uuid && dstHat.uuid !== env.payload.hat._originUuid);
+      dstHat.uuid !== srcHat.uuid && dstHat.uuid !== env.payload.hat_definition._originUuid);
     check('the target hat carries the target repo\'s own role, not the source\'s',
       dstHat.seedKey === RH.seedKeyFor(DST.uuid));
 
@@ -108,7 +108,31 @@ function run() {
     check('memory did not double', MEM.list(DST.uuid).length === 2);
 
     // ── Guards ───────────────────────────────────────────────────────────────
-    check('import refuses a missing file', RAN.importAgent(path.join(DIR, 'nope.repo_agent'), { repo: DST }).ok === false);
+    // §0.39.190 — the bundle IS a schema.agent: name, intent, commands, personality present and typed
+    const NS = require(path.join(ROOT, 'lib', 'node-schemas.js'));
+    const chk = NS.checkPayload('agent', env.payload);
+    check('the bundle satisfies schema.agent (required fields present, types right)', chk.ok === true, JSON.stringify(chk));
+    check('name/personality/hat are the hat\'s own, commands are its toolScope, scope is the compartment',
+      env.payload.name === env.payload.hat && env.payload.personality === env.payload.hat_definition.personaPrompt
+      && JSON.stringify(env.payload.commands.map(c => c.split(':').slice(1).join(':'))) === JSON.stringify(env.payload.hat_definition.toolScope || [])
+      && env.payload.scope === (SRC.compartmentId || null));
+    check('every command says which registry it comes from (agent-tools / cos / idearium / guardian), none unknown',
+      env.payload.commands.length > 0 && env.payload.commands.every(c => /^(agent-tools|cos|idearium|guardian):/.test(c)), JSON.stringify(env.payload.commands.filter(c => !/^(agent-tools|cos|idearium|guardian):/.test(c))));
+    check('cos_ tools are labelled cos and the chunk tool idearium', env.payload.commands.includes('cos:cos_compartment') && env.payload.commands.includes('idearium:idearium.repo_chunks.tool'));
+    check('every command resolves to a tool in the LIVE registry', (() => {
+      const names = new Set(require(path.join(ROOT, 'lib', 'agent-tools', 'index.js')).getToolSchemas().map(s => s.name || (s.function && s.function.name)));
+      return env.payload.commands.every(c => names.has(c.split(':').slice(1).join(':')));
+    })());
+    check('intent is a non-empty statement, and learned mirrors the observation set',
+      typeof env.payload.intent === 'string' && env.payload.intent.length > 0 && env.payload.learned.length === env.payload.observations.length);
+    // a 0.39.189 export (.repo_agent, hat as an object) must still import
+    const legacy = NX.exportToFile('repo_agent', 'legacy-' + SRC.uuid, {
+      schema: 'nexus.repo_agent/1', repo: env.payload.repo, hat: env.payload.hat_definition,
+      observations: env.payload.observations, exchanges: [], indexAtExport: env.payload.indexAtExport, exportedAt: Date.now(),
+    }, { system: 'test.legacy-export', summary: 'a 0.39.189-style export' }, DIR);
+    const li = RAN.importAgent(legacy, { repo: DST, repoDir: null });
+    check('a legacy .repo_agent export is still readable and imports', li.ok === true, JSON.stringify(li.errors || li));
+    check('import refuses a missing file', RAN.importAgent(path.join(DIR, 'nope.agent'), { repo: DST }).ok === false);
     check('import refuses a node file of the wrong type',
       RAN.importAgent(out.hatFile, { repo: DST }).ok === false);
     check('import refuses without a target repo', RAN.importAgent(out.agentFile, {}).ok === false);

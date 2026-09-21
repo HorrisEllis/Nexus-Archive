@@ -22,7 +22,7 @@ const path = require('path');
 const nodeSchemas = require('../lib/node-schemas.js');
 
 const EXPECTED_TYPES = [
-  'hat', 'component', 'node', 'contract', 'agent', 'model', 'schema',
+  'hat', 'component', 'node', 'contract', 'agent', 'health', 'model', 'schema',
   'crystal', 'pat', 'gap', 'ledger', 'tool', 'command', 'cos', 'macro',
   'failure_mode', 'idea', 'framework', 'toolbox',
   'vector', 'artifact', 'resonance_crystal', 'interstitial_space',
@@ -33,7 +33,7 @@ const EXPECTED_TYPES = [
 // known-good field counts, from the pre-split monolith, to catch a
 // silent truncation during the move rather than trust the split blind
 const EXPECTED_FIELD_COUNTS = {
-  contract: 13, crystal: 10, pat: 10, gap: 14, ledger: 9, macro: 10, agent: 6,
+  contract: 13, crystal: 10, pat: 10, gap: 14, ledger: 9, macro: 10, health: 6,
 };
 
 function main() {
@@ -58,7 +58,7 @@ function main() {
     const actualCount = Object.keys(nodeSchemas.get(type).fields).length;
     if (actualCount !== expectedCount) throw new Error(`${type}: expected ${expectedCount} fields, got ${actualCount} -- the split may have dropped or duplicated a field`);
   }
-  console.log('PASS: field counts for contract/crystal/pat/gap/ledger/macro/agent match the pre-conversion content exactly');
+  console.log('PASS: field counts for contract/crystal/pat/gap/ledger/macro/health (was agent) match the pre-conversion content exactly');
 
   // -- checkPayload still works post-conversion -- contract specifically --
   const goodContract = {
