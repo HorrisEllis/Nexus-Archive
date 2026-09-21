@@ -680,6 +680,16 @@
       "method": "POST",
       "path": "/api/repos/:uuid/agent/settings",
       "_action": "repo.agent.settings.set"
+    },
+    {
+      "method": "POST",
+      "path": "/api/repos/:uuid/run",
+      "_action": "repo.run"
+    },
+    {
+      "method": "GET",
+      "path": "/api/repos/:uuid/run/capabilities",
+      "_action": "repo.run.capabilities"
     }
   ]
 }

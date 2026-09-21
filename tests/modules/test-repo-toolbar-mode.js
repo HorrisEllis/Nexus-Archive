@@ -77,8 +77,8 @@ check('library group does NOT start hidden',
 // Run must be visibly marked unwired for as long as no runner exists. If a
 // real runner ever lands, this assertion is the deliberate place to remove.
 const runBtn = doc.getElementById('repo-tb-run');
-check('Run carries .tb-unwired while no test-env runner exists',
-  !!runBtn && runBtn.classList.contains('tb-unwired'));
+check('Run is wired (no longer .tb-unwired) — COS test environment',
+  !!runBtn && !runBtn.classList.contains('tb-unwired'));
 check('.tb-unwired has a real CSS rule (not a class that styles nothing)',
   /\.tb-btn\.tb-unwired\s*\{/.test(HTML));
 
@@ -133,8 +133,7 @@ check("Diagnose's scan endpoint is a real registered route", API.includes("'repo
 check("Re-run's reindex endpoint is a real registered route", API.includes("'repo.reindex'"));
 check('repoBranch() delegates to the pre-existing forkApiRepo, not a second fork path',
   extractFn(APP, 'repoBranch').includes('forkApiRepo('));
-check('repoRun() makes no network call while unwired',
-  !/\bapi\s*\(/.test(extractFn(APP, 'repoRun')));
+check('repoRun() calls the real repo.run route', /\/run`/.test(extractFn(APP, 'repoRun')) && API.includes("'repo.run'"));
 
 console.log(`\n  ${pass} passed, ${fail} failed\n`);
 process.exitCode = fail === 0 ? 0 : 1;

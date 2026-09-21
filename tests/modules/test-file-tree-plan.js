@@ -17,6 +17,7 @@ const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 process.env.IDEARIUM_DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'ftp-idearium-'));
+process.env.NEXUS_FILETREE_DIR = path.join(process.env.IDEARIUM_DATA_DIR, 'filetree');
 
 let pass = 0, fail = 0;
 function check(n, c, d = '') { if (c) { pass++; console.log(`  ✓ ${n}`); } else { fail++; console.log(`  ✗ ${n}${d ? ` — ${d}` : ''}`); } }
@@ -79,11 +80,18 @@ async function run() {
 
   // ── the spec: chunks ARE the files ──
   const se = await import(path.join(ROOT, 'idearium', 'spec-engine', 'index.js'));
-  const md = P.planMarkdown({ name: 'drumpad', description: 'a DAW', template: pl.template, files: pl.files, planSource: pl.planSource });
-  const m = se.createFileTreeSpec({ name: 'drumpad', description: 'a DAW', plan: pl, planMarkdown: md });
+  const m = se.createFileTreeSpec({ name: 'drumpad', description: 'a DAW', plan: pl });
   check('the spec is a file tree, not document sections', m.type === 'filetree' && !m.chunks.some(c => c.sectionId === 'axioms'));
   check('every planned file is a chunk with its real path', pl.files.every(f => m.chunks.some(c => c.realPath === f.path)));
-  check('PLAN.md is a real file in the tree, complete at creation', (c => c && c.status === 'complete' && /## kernel/.test(c.content))(m.chunks.find(c => c.realPath === 'PLAN.md')));
+  check('NO markdown plan file in the tree', !m.chunks.some(c => /\.md$/i.test(c.realPath || '')));
+  check('the plan lives on the manifest as data', m.fileTree.files.length === pl.files.length);
+  const nodeFile = P.writeTreeNode(m);
+  const NX = require(path.join(ROOT, 'lib', 'node-export.js'));
+  const env = NX.importFromFile(nodeFile);
+  check('the plan is a .filetree NODE', /\.filetree$/.test(nodeFile) && env.type === 'filetree' && env.payload.layers.kernel.length === 1);
+  check('the node records bottom-up build order', JSON.stringify(env.payload.buildOrder) === JSON.stringify(['kernel', 'engine', 'runtime', 'test']));
+  const onDisk = fs.readdirSync(path.join(process.env.IDEARIUM_DATA_DIR, 'specs', m.uuid));
+  check('completed file chunks are stored under their real extension, not .md', onDisk.some(f => /agent-js-[0-9a-f]{8}\.js$/.test(f)) && !onDisk.some(f => /agent-js.*\.md$/.test(f)));
   const agentJs = m.chunks.find(c => c.realPath === 'agent.js');
   check('template files are complete at creation with their exact bytes', agentJs.status === 'complete' && agentJs.content === pl.files.find(f => f.path === 'agent.js').content);
   check('agent-planned files start pending', m.chunks.find(c => c.realPath === 'src/kernel/pattern.js').status === 'pending');
@@ -95,7 +103,7 @@ async function run() {
 
   const prompt = se.buildChunkPrompt(se.loadSpec(m.uuid), seq);
   check('a file chunk is asked for the FILE, not a "section of a spec"', prompt.includes('Write the complete file `src/engine/sequencer.js`') && !prompt.includes('section of a NEXUS component spec'));
-  check('the file prompt carries its layer, the rules, and the plan', prompt.includes('Layer: engine') && prompt.includes('may only depend on its own layer') && prompt.includes('THE PLAN'));
+  check('the file prompt carries its layer, the rules, and the tree', prompt.includes('Layer: engine') && prompt.includes('may only depend on its own layer') && prompt.includes('THE FILE TREE') && prompt.includes('src/kernel/pattern.js [kernel]'));
   se.completeChunk(m.uuid, kern.uuid, 'export const STEPS = 16;\n', { preserveWhitespace: true });
   const prompt2 = se.buildChunkPrompt(se.loadSpec(m.uuid), seq);
   check('once the kernel is built, the engine file is shown it', prompt2.includes('export const STEPS = 16;'));
@@ -131,6 +139,18 @@ async function run() {
   check('the picker has a file-tree-first switch, on by default', /id="ns-file-tree" checked/.test(HTML));
   check('the picker groups COS archetypes, COS blueprints and document templates', APP.includes("'cos-archetype'") && APP.includes("'cos-blueprint'") && APP.includes('spec-document templates'));
   check('create sends fileTree and waits long enough for a real plan', /fileTree \}\),\s*\}, fileTree \? 180000/.test(APP));
+
+  // One unparseable schema takes the whole tool registry down ("tool registry
+  // unavailable"), which is how a comma in schema.filetree's first draft broke
+  // four unrelated suites. Every schema must parse.
+  const yaml = require('js-yaml');
+  const badSchemas = [];
+  for (const d of ['lib/node-schemas', 'guardian/schemas', 'ollama/schemas']) {
+    const dir = path.join(ROOT, d); if (!fs.existsSync(dir)) continue;
+    for (const f of fs.readdirSync(dir)) if (f.startsWith('schema.')) { try { yaml.load(fs.readFileSync(path.join(dir, f), 'utf8')); } catch (e) { badSchemas.push(`${d}/${f}`); } }
+  }
+  check('every node schema parses as YAML', badSchemas.length === 0, badSchemas.join(', '));
+  check('schema.filetree exists and is REAL', /status: REAL/.test(fs.readFileSync(path.join(ROOT, 'lib', 'node-schemas', 'schema.filetree'), 'utf8')));
 
   fs.rmSync(process.env.IDEARIUM_DATA_DIR, { recursive: true, force: true });
   console.log(`\n  ${pass} passed, ${fail} failed\n`);

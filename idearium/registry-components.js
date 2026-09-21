@@ -126,6 +126,8 @@ const COMPONENTS = [
   _comp('repo.inject.apply',       'POST',  '/api/repos/:uuid/injects/:id/apply',     'Write a proposed .inject into the repo; refuses if the file changed', { tags: ['agent','inject'] }),
   _comp('repo.inject.reject',      'POST',  '/api/repos/:uuid/injects/:id/reject',    'Reject a proposed .inject', { tags: ['agent','inject'] }),
   _comp('repo.inject.revert',      'POST',  '/api/repos/:uuid/injects/:id/revert',    'Undo an applied .inject from its recorded prior content', { tags: ['agent','inject'] }),
+  _comp('repo.run',                'POST',  '/api/repos/:uuid/run',                  'Run or test this repo in a COS test environment (branch + sandbox)', { tags: ['run','cos'] }),
+  _comp('repo.run.capabilities',   'GET',   '/api/repos/:uuid/run/capabilities',     'Which COS test environments are available here, and why not', { tags: ['run','cos'] }),
   _comp('repo.agent.settings.get', 'GET',   '/api/repos/:uuid/agent/settings',        "This compartment agent's settings (inject mode)", { tags: ['agent'] }),
   _comp('repo.agent.settings.set', 'POST',  '/api/repos/:uuid/agent/settings',        'Set inject mode: review or auto', { tags: ['agent'] }),
   _comp('repo.agent.export',        'POST',  '/api/repos/:uuid/agent/export',       'Materialise this compartment agent as portable .hat + .repo_agent node files', { tags: ['agent'] }),

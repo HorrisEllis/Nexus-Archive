@@ -1013,6 +1013,9 @@ function matchRoute(method, url) {
     ['POST',   ['api','repos',    ':uuid','injects',':id','apply'], 'repo.inject.apply'],
     ['POST',   ['api','repos',    ':uuid','injects',':id','reject'],'repo.inject.reject'],
     ['POST',   ['api','repos',    ':uuid','injects',':id','revert'],'repo.inject.revert'],
+    // §RUN 2026-09-21 — run/test the repo in a COS test environment (lib/repo-run.js)
+    ['POST',   ['api','repos',    ':uuid','run'],                   'repo.run'],
+    ['GET',    ['api','repos',    ':uuid','run','capabilities'],    'repo.run.capabilities'],
     ['GET',    ['api','repos',    ':uuid','agent','settings'],      'repo.agent.settings.get'],
     ['POST',   ['api','repos',    ':uuid','agent','settings'],      'repo.agent.settings.set'],
     // §REPO-AGENT-NODE 2026-09-20 — the agent as portable node files.
@@ -2574,6 +2577,25 @@ async function handle(req, res, route, query, body) {
       return ok(res, RA.status({ repo, repoDir: _repoDiskDir(params.uuid) }));
     }
 
+    // §RUN 2026-09-21 — James: "use cos for the test environment." Forks the
+    // repo's files into a branch of its REAL COS compartment and runs there
+    // through COS's SandboxRunner (clean env, timeout, output cap).
+    case 'repo.run.capabilities': {
+      const TE = _require('../../cos/testenv/index.js');
+      return ok(res, TE.capabilities());
+    }
+    case 'repo.run': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const RR = _require('../../lib/repo-run.js');
+      const r = await RR.run({ repo, repoDir: _repoDiskDir(params.uuid), mode: body.mode === 'test' ? 'test' : 'run',
+        entry: body.entry || null, timeoutMs: Math.min(parseInt(body.timeoutMs, 10) || 30000, 300000), keepBranch: !!body.keepBranch,
+        testBackend: ['auto', 'process', 'vm'].includes(body.backend) ? body.backend : 'auto' });
+      if (!r.ok) return err(res, 422, (r.errors || ['run failed']).join('; '));
+      os.emit('idearium.repo.run', { repoUuid: params.uuid, mode: r.mode, passed: r.passed, failed: r.failed });
+      return ok(res, { repoUuid: params.uuid, ...r });
+    }
+
     // ── §INJECT 2026-09-21 — .inject nodes ─────────────────────────────────
     case 'repo.inject.list': case 'repo.inject.create': case 'repo.inject.get':
     case 'repo.inject.edit': case 'repo.inject.apply': case 'repo.inject.reject':
@@ -2619,10 +2641,19 @@ async function handle(req, res, route, query, body) {
           if (r.ok) os.emit('idearium.repo.inject.reverted', { repoUuid: params.uuid, inject: params.id, path: r.inject.path });
           return done(r);
         }
-        case 'repo.agent.settings.get':
-          return ok(res, { repoUuid: params.uuid, injectMode: RI.getMode(params.uuid), modes: RI.MODES });
-        case 'repo.agent.settings.set':
-          return done(RI.setMode(params.uuid, body.injectMode));
+        case 'repo.agent.settings.get': {
+          const RA = _require('../../lib/repo-agent.js');
+          return ok(res, { repoUuid: params.uuid, injectMode: RI.getMode(params.uuid), modes: RI.MODES,
+                           provider: RA.getProvider(params.uuid), providers: RA.providers() });
+        }
+        case 'repo.agent.settings.set': {
+          // Either or both: injectMode, provider. Each validated by its owner.
+          if (body.injectMode === undefined && body.provider === undefined) return err(res, 400, 'injectMode and/or provider required');
+          let out = { ok: true, repoUuid: params.uuid };
+          if (body.injectMode !== undefined) { const r = RI.setMode(params.uuid, body.injectMode); if (!r.ok) return done(r); out.injectMode = r.injectMode; }
+          if (body.provider !== undefined) { const r = _require('../../lib/repo-agent.js').setProvider(params.uuid, body.provider); if (!r.ok) return done(r); out.provider = r.provider; }
+          return ok(res, out);
+        }
       }
       return err(res, 500, `unhandled inject route ${action}`);
     }
@@ -2637,6 +2668,7 @@ async function handle(req, res, route, query, body) {
         message: body.message,
         backend: body.backend || null,
         agent: body.agent || null,
+        provider: body.provider || null,   // §PROVIDER — else this compartment's stored choice
         noContext: body.noContext === true,
         layer: getRepoLayer(),   // §INJECT — addressed code blocks land in this repo through the one real write path
       });
@@ -3154,8 +3186,10 @@ async function handle(req, res, route, query, body) {
           } : null;
           const planned = await FTP.plan({ name, description, templateIds: cosIds, ask });
           if (!planned.ok) return err(res, 422, (planned.errors || ['file tree could not be planned']).join('; '), { agentError: planned.agentError || null });
-          const md = FTP.planMarkdown({ name, description, template: planned.template, files: planned.files, planSource: planned.planSource, rejected: planned.rejected });
-          manifest = se.createFileTreeSpec({ name, description, plan: planned, planMarkdown: md, agent: agent || null, ideaUuid: ideaUuid || null, templateId: cosIds.join(',') || null });
+          manifest = se.createFileTreeSpec({ name, description, plan: planned, agent: agent || null, ideaUuid: ideaUuid || null, templateId: cosIds.join(',') || null });
+          // The plan as a node type (.filetree), not a markdown file.
+          try { FTP.writeTreeNode(manifest); }
+          catch (e) { console.warn(`[speceng.create] .filetree node write failed (spec still created): ${e.message}`); }
           planInfo = { planSource: planned.planSource, files: planned.files.length, rejected: planned.rejected.length, agentError: planned.agentError || null, layers: manifest.fileTree && manifest.fileTree.layers };
         } else {
           manifest = se.createSpec({ name, type, description, agent, sectionAgents: sectionAgents || {}, warpPrimitives: warpPrimitives || [], templateId, templateIds: docIds.length ? docIds : templateIds, buildEngine: buildEngine || 'auto', ideaUuid: ideaUuid || null });

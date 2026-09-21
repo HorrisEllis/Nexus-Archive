@@ -2498,10 +2498,25 @@ function repoBranch() {
   if (repo) forkApiRepo(repo.uuid);
 }
 
-function repoRun() {
+// §RUN 2026-09-21 — through COS: the repo is forked into a branch of its
+// compartment and run in COS's sandbox (lib/repo-run.js). Results render in
+// the diagnose modal: per target, exit code, time, and the tail of output.
+async function repoRun(mode = 'run') {
   const repo = _requireCurrentRepo('run');
   if (!repo) return;
-  toast('run: no test-env runner exists yet — nothing to call', 'err');
+  const body = document.getElementById('repo-diagnose-body');
+  document.getElementById('repo-diagnose-title').textContent = `${mode === 'test' ? 'Test' : 'Run'} — ${repo.name || repo.uuid} (COS test environment)`;
+  document.getElementById('repo-diagnose-reindex').style.display = 'none';
+  body.innerHTML = '<div style="opacity:.6">forking into a COS branch and running…</div>';
+  document.getElementById('repo-diagnose-modal').classList.add('open');
+  let r;
+  try { r = await api(`/api/repos/${repo.uuid}/run`, { method: 'POST', body: JSON.stringify({ mode }) }, 320000); }
+  catch (e) { body.innerHTML = `<div style="color:var(--bad,#f87171)">${escapeHtml(e.message)}</div>`; return; }
+  body.innerHTML = `<div style="margin-bottom:4px;opacity:.75">backend: <b>${escapeHtml(r.backend || '?')}</b> — ${escapeHtml(r.backendReason || '')}</div><div style="margin-bottom:8px">${escapeHtml(r.reason)} · compartment ${escapeHtml(String(r.compartmentId).slice(0, 8))} · branch ${escapeHtml(r.branchId)}${r.branchKept ? ' (kept)' : ' (discarded)'} · ` +
+    `<b style="color:${r.allPassed ? 'var(--ok,#4ade80)' : 'var(--bad,#f87171)'}">${r.passed} passed, ${r.failed} failed</b></div>` +
+    r.runs.map(x => `<div style="margin:10px 0 4px"><span style="color:${x.passed ? 'var(--ok,#4ade80)' : 'var(--bad,#f87171)'}">${x.passed ? '✓' : '✗'}</span> ${escapeHtml(x.file)} <span style="opacity:.6">[${escapeHtml(x.runtimeId)}] exit ${x.exitCode === null ? '—' : x.exitCode} · ${x.durationMs}ms${x.killedByTimeout ? ' · TIMED OUT' : ''}${x.killedByOutputLimit ? ' · OUTPUT LIMIT' : ''}</span></div>` +
+      (x.stdout ? `<pre style="white-space:pre-wrap;max-height:160px;overflow:auto;opacity:.8;margin:0">${escapeHtml(x.stdout.slice(-4000))}</pre>` : '') +
+      (x.stderr ? `<pre style="white-space:pre-wrap;max-height:160px;overflow:auto;color:var(--bad,#f87171);margin:0">${escapeHtml(x.stderr.slice(-4000))}</pre>` : '')).join('');
 }
 
 // Diagnose — two real reads, rendered exactly as returned. A repo that has
@@ -2515,6 +2530,7 @@ async function repoDiagnose() {
   _diagnoseRepoUuid = repo.uuid;
   document.getElementById('repo-diagnose-title').textContent = `Diagnose — ${repo.name || repo.uuid}`;
   const body = document.getElementById('repo-diagnose-body');
+  document.getElementById('repo-diagnose-reindex').style.display = '';
   body.innerHTML = '<div style="opacity:.6">reading verification + scan…</div>';
   document.getElementById('repo-diagnose-modal').classList.add('open');
 
@@ -2621,6 +2637,7 @@ async function renderRepoAgent(repo) {
   if (!el || !repo) return;
   el.innerHTML = '<div class="detail-empty">loading agent…</div>';
 
+  try { AGENT_SETTINGS.set(repo.uuid, await api(`/api/repos/${repo.uuid}/agent/settings`)); } catch (_) { /* select falls back to auto */ }
   let st;
   try { st = await api(`/api/repos/${repo.uuid}/agent`); }
   catch (e) { el.innerHTML = `<div class="detail-empty">agent unavailable: ${escapeHtml(e.message)}</div>`; return; }
@@ -2647,6 +2664,12 @@ session    ${escapeHtml(st.sessionId)}
 indexed    ${idx.indexed ? `${idx.fileCount ?? '?'} files · ${idx.chunkCount ?? '?'} chunks` : 'NOT indexed — run the pipeline from Diagnose'}
 learned    ${mem.total} observation${mem.total === 1 ? '' : 's'}${kindCounts ? ` (${kindCounts})` : ''}
 exchanges  ${st.exchanges || 0}</div>
+    </div>
+    <div style="margin:6px 0;font-size:10px">wearing the hat:
+      <select id="agent-provider" onchange="agentSetProvider(this.value)" style="font-size:10px;background:var(--bg2);color:var(--text);border:1px solid var(--b1);border-radius:3px;padding:1px 4px">
+        ${(AGENT_SETTINGS.get(repo.uuid)?.providers || ['auto']).map(p => `<option value="${escapeHtml(p)}"${p === AGENT_SETTINGS.get(repo.uuid)?.provider ? ' selected' : ''}>${escapeHtml(p)}</option>`).join('')}
+      </select>
+      <span style="opacity:.55">— chatgpt/claude/gemini/deepseek/perplexity answer through their guardian tab; every output lands the same way</span>
     </div>
     <div style="margin:8px 0">
       ${st.exists
@@ -2769,12 +2792,12 @@ async function agentSend() {
   // 120s: a real dispatch through copilot's cascade routinely outlives
   // api()'s 6s default — the same too-short-timeout bug already fixed once
   // in ui/lib/api.js (0.39.118), not repeated here.
-  try { r = await api(`/api/repos/${uuid}/agent/prompt`, { method: 'POST', body: JSON.stringify({ message, noContext: AGENT_NO_CONTEXT.has(uuid) }) }, 120000); }
+  try { r = await api(`/api/repos/${uuid}/agent/prompt`, { method: 'POST', body: JSON.stringify({ message, noContext: AGENT_NO_CONTEXT.has(uuid) }) }, 320000); }
   catch (e) { r = { ok: false, error: e.message }; }
 
   lines.pop(); // drop the placeholder
   lines.push(r.ok
-    ? { role: 'agent', text: r.text, meta: [r.hatName, r.modelUsed, r.elapsedMs ? `${Math.round(r.elapsedMs / 100) / 10}s` : null].filter(Boolean).join(' · '), detail: _agentDetail(r) }
+    ? { role: 'agent', text: r.text, meta: [r.hatName, r.providerUsed || r.provider, r.modelUsed, r.elapsedMs ? `${Math.round(r.elapsedMs / 100) / 10}s` : null].filter(Boolean).join(' · '), detail: _agentDetail(r) }
     : { role: 'agent — failed', text: r.error || 'no response', meta: r.hatName || null, detail: _agentDetail(r) });
 
   renderRepoAgent(CURRENT_API_REPO);
@@ -2836,6 +2859,13 @@ function _agentDetail(r) {
 // command is a thin client of a real route — nothing here is computed or
 // remembered client-side that the server does not also hold.
 // ════════════════════════════════════════════════════
+const AGENT_SETTINGS = new Map();     // repoUuid -> { provider, providers, injectMode } (display; server is truth)
+async function agentSetProvider(provider) {
+  if (!CURRENT_API_REPO) return;
+  try { await api(`/api/repos/${CURRENT_API_REPO.uuid}/agent/settings`, { method: 'POST', body: JSON.stringify({ provider }) }); toast(`${provider} now wears this repo's hat`, 'ok'); }
+  catch (e) { toast(`provider failed: ${e.message}`, 'err'); }
+  renderRepoAgent(CURRENT_API_REPO);
+}
 const AGENT_INJECT_MODE = new Map();   // repoUuid -> 'review' | 'auto' (display only; server is truth)
 const AGENT_NO_CONTEXT = new Set();    // repoUuids with retrieval switched off for this session
 const AGENT_INPUT_HIST = new Map();    // repoUuid -> [inputs]
@@ -2850,6 +2880,7 @@ const AGENT_CLI_HELP = [
   '/memory [kind]                what the agent has learned',
   '/learn <kind>: <text> [evidence: x]   teach it (kind default: correction)',
   '/forget <id-prefix>           remove one observation',
+  '/provider [name]              which model wears the hat (auto, ollama, chatgpt, claude, gemini, deepseek, perplexity)',
   '/mode review|auto             where agent code goes: waits for you, or written on arrival',
   '/injects [status]             list .inject nodes',
   '/inject <path>                open the editor on a new write to <path>',
@@ -2891,6 +2922,7 @@ async function agentCommand(line) {
           `compartment ${st.compartmentId || '(none)'}`,
           `index       ${st.index?.indexed ? `${st.index.fileCount} files · ${st.index.chunkCount} chunks` : 'not indexed'}`,
           `mode        ${mode}`,
+          `provider    ${(await api(`/api/repos/${uuid}/agent/settings`)).provider}`,
           `context     ${AGENT_NO_CONTEXT.has(uuid) ? 'off (this session)' : 'on'}`,
           `learned     ${st.memory?.total ?? 0}`,
           `exchanges   ${st.exchanges ?? 0}`,
@@ -2925,6 +2957,11 @@ async function agentCommand(line) {
         if (hits.length !== 1) throw new Error(hits.length ? `"${first}" is ambiguous` : `no observation matches "${first || ''}"`);
         await api(`/api/repos/${uuid}/agent/memory/${hits[0].uuid}`, { method: 'DELETE' });
         _cli(uuid, `forgot: ${hits[0].text}`); break;
+      }
+      case 'provider': {
+        if (!first) { const st = await api(`/api/repos/${uuid}/agent/settings`); _cli(uuid, `${st.provider} wears the hat · available: ${st.providers.join(', ')}`); break; }
+        await api(`/api/repos/${uuid}/agent/settings`, { method: 'POST', body: JSON.stringify({ provider: first }) });
+        _cli(uuid, `${first} now wears this repo's hat — same persona, context, learning and injects`); break;
       }
       case 'mode': {
         if (!['review', 'auto'].includes(first)) throw new Error('usage: /mode review|auto');

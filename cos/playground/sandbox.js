@@ -86,8 +86,16 @@ class SandboxRunner {
     const args      = [entryFile, ...(opts.args || []), ...(compartment.entryArgs || [])];
 
     const runId = `run-${crypto.randomUUID().slice(0, 8)}`;
+    // §2026-09-21 opts.cleanEnv — opt-in: the child gets only what a process
+    // needs to start (PATH, temp dirs, OS roots), never the parent's secrets.
+    // Default unchanged for every existing caller. Used by lib/repo-run.js,
+    // whose code under test may have been written by an agent.
+    const CLEAN_KEYS = ['PATH', 'Path', 'PATHEXT', 'SystemRoot', 'SYSTEMROOT', 'windir', 'TEMP', 'TMP', 'TMPDIR', 'HOME', 'USERPROFILE', 'LANG', 'ComSpec'];
+    const baseEnv = opts.cleanEnv
+      ? Object.fromEntries(CLEAN_KEYS.filter(k => process.env[k] != null).map(k => [k, process.env[k]]))
+      : process.env;
     const env   = {
-      ...process.env,
+      ...baseEnv,
       ...(opts.env || {}),
       NEXUS_SANDBOX:    '1',
       NEXUS_BRANCH_ID:  branchId,

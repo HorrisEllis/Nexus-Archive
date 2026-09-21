@@ -636,9 +636,9 @@ export function createSpec({ name, type = 'component', description = '', agent =
 // Build order is bottom-up by construction, through the dependsOn gate the
 // build already honours: every engine file waits on all kernel files, every
 // runtime file on all engine files, tests on runtime. A layer with no files
-// is skipped over, not waited on. PLAN.md (the tree itself) and every file a
+// is skipped over, not waited on. Every file a
 // COS template supplied are completed at creation — they cost no dispatch.
-export function createFileTreeSpec({ name, description = '', plan, planMarkdown = null, agent = null, author = 'nexus', ideaUuid = null, templateId = null } = {}) {
+export function createFileTreeSpec({ name, description = '', plan, agent = null, author = 'nexus', ideaUuid = null, templateId = null } = {}) {
   if (!plan || !Array.isArray(plan.files) || !plan.files.length) throw new Error('createFileTreeSpec: plan.files is required and non-empty');
   const order = ['kernel', 'engine', 'runtime', 'test'];
   const files = [...plan.files];
@@ -646,7 +646,6 @@ export function createFileTreeSpec({ name, description = '', plan, planMarkdown 
   const used = new Set();
   const sid = (p) => { let id = slug(p), n = 2; while (used.has(id)) id = `${slug(p)}-${n++}`; used.add(id); return id; };
   const sections = [];
-  if (planMarkdown) sections.push({ id: sid('PLAN.md'), title: 'PLAN.md', desc: 'The planned file tree', _file: { path: 'PLAN.md', layer: 'plan', purpose: 'the planned file tree', content: planMarkdown } });
   for (const f of files) sections.push({ id: sid(f.path), title: f.path, desc: `${f.layer} · ${f.purpose || ''}`.trim(), _file: f });
   const byLayer = {};
   for (const sct of sections) (byLayer[sct._file.layer] = byLayer[sct._file.layer] || []).push(sct.id);
@@ -663,9 +662,12 @@ export function createFileTreeSpec({ name, description = '', plan, planMarkdown 
   for (const c of manifest.chunks) {
     const f = fileBySid.get(c.sectionId);
     c.realPath = f.path;
-    c.file = { path: f.path, layer: f.layer, purpose: f.purpose || null, source: f.source || (f.layer === 'plan' ? 'plan' : null) };
+    c.file = { path: f.path, layer: f.layer, purpose: f.purpose || null, source: f.source || null };
   }
-  manifest.fileTree = { planSource: plan.planSource || null, template: plan.template || null, templateId, layers: Object.fromEntries(order.map(l => [l, (byLayer[l] || []).length])) };
+  // The plan is data on the manifest (and a .filetree node, written by the
+  // caller) — never a markdown file in the project.
+  manifest.fileTree = { planSource: plan.planSource || null, template: plan.template || null, templateId, layers: Object.fromEntries(order.map(l => [l, (byLayer[l] || []).length])),
+    files: files.map(f => ({ path: f.path, layer: f.layer, purpose: f.purpose || null, source: f.source || null })), rejected: (plan.rejected || []).length };
   saveSpec(manifest);
   for (const c of manifest.chunks) {
     const f = fileBySid.get(c.sectionId);
@@ -964,7 +966,11 @@ export function completeChunk(specUuid, chunkUuid, content, { preserveWhitespace
   if (!chunk) throw new Error(`chunk ${chunkUuid} not found`);
 
   const specDir  = path.join(SPECS_ROOT, specUuid);
-  const filePath = path.join(specDir, `${String(chunk.chunkIdx).padStart(2,'0')}-${chunk.sectionId}-${chunkUuid.slice(0,8)}.md`);
+  // §NO-MD 2026-09-21 — James: "no md files. only node types." A file
+  // chunk is stored under its real extension, not as markdown; document
+  // sections (no realPath) are unchanged.
+  const ext = chunk.realPath ? (path.extname(chunk.realPath) || '.txt') : '.md';
+  const filePath = path.join(specDir, `${String(chunk.chunkIdx).padStart(2,'0')}-${chunk.sectionId}-${chunkUuid.slice(0,8)}${ext}`);
 
   // §BYTE-FIDELITY FIX 2026-07-14 — this used to unconditionally .trim()
   // content here, downstream of every other caller's own choices about
@@ -1191,11 +1197,12 @@ export async function expandSpec(specUuid) {
 // on. The lower layers it may import are included (bounded), because a
 // runtime file written without seeing the engine it wires is a guess.
 function _buildFilePrompt(manifest, chunk, systemContext = '') {
-  const order = { plan: -1, kernel: 0, engine: 1, runtime: 2, test: 3 };
+  const order = { kernel: 0, engine: 1, runtime: 2, test: 3 };
   const mine = order[chunk.file.layer] ?? 2;
-  const plan = manifest.chunks.find(c => c.file && c.file.layer === 'plan');
+  const tree = (manifest.fileTree && manifest.fileTree.files) || [];
+  const planText = tree.map(f => `- ${f.path} [${f.layer}]${f.purpose ? ` — ${f.purpose}` : ''}`).join('\n');
   const below = manifest.chunks
-    .filter(c => c.file && c.status === CHUNK_STATES.COMPLETE && c.uuid !== chunk.uuid && (order[c.file.layer] ?? 9) < mine && c.file.layer !== 'plan')
+    .filter(c => c.file && c.status === CHUNK_STATES.COMPLETE && c.uuid !== chunk.uuid && (order[c.file.layer] ?? 9) < mine)
     .slice(0, 12);
   let budget = 24000;
   const shown = [];
@@ -1216,7 +1223,7 @@ function _buildFilePrompt(manifest, chunk, systemContext = '') {
     `A file may only depend on its own layer and the layers below it.`,
     ``,
     systemContext ? `SYSTEM STATE:\n${systemContext}\n` : '',
-    plan && plan.content ? `THE PLAN:\n${String(plan.content).slice(0, 6000)}\n` : '',
+    planText ? `THE FILE TREE:\n${planText.slice(0, 6000)}\n` : '',
     shown.length ? `FILES ALREADY BUILT BELOW THIS LAYER:\n${shown.join('\n\n')}\n` : '',
     `Output ONLY the file's full content in one fenced code block. Real, working code — no placeholders, no TODO stubs, no "rest of implementation" comments.`,
   ].filter(Boolean).join('\n');

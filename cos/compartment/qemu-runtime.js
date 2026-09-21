@@ -174,6 +174,15 @@ function resolveVmConfig(entryFile, env = {}, compartmentRoot = process.cwd()) {
     accelerator:   fileConfig.accelerator  || env.COS_VM_ACCEL        || null,
     machineType:   fileConfig.machineType  || env.COS_VM_MACHINE      || 'q35',
     vmStateDir:    path.join(compartmentRoot, '.cos-vm'),
+    // §2026-09-21 test environments (cos/testenv): both opt-in, default off,
+    // so every existing VM compartment boots exactly as before.
+    //   guestAgent — virtio-serial channel for qemu-guest-agent: the only way
+    //                to run a command in the guest and get exit code + output.
+    //   shareDir   — host dir exposed to the guest (9p virtfs on a Linux host,
+    //                mount_tag cos_share), so code under test reaches the guest
+    //                without being baked into the image.
+    guestAgent:    fileConfig.guestAgent !== undefined ? !!fileConfig.guestAgent : truthy(env.COS_VM_GUEST_AGENT),
+    shareDir:      resolveAgainst(fileConfig.shareDir || env.COS_VM_SHARE_DIR || null),
   };
 }
 
@@ -348,9 +357,36 @@ function buildQemuArgs(vmConfig, compartmentId, name) {
     qmp = { transport: 'unix', path: sockPath };
   }
 
+  let qga = null;
+  if (vmConfig.guestAgent) {
+    args.push('-device', 'virtio-serial');
+    if (process.platform === 'win32') {
+      const port = derivePort(compartmentId, 20000, 5000);
+      args.push('-chardev', `socket,id=qga0,host=127.0.0.1,port=${port},server=on,wait=off`);
+      qga = { transport: 'tcp', host: '127.0.0.1', port };
+    } else {
+      const qsock = path.join(vmConfig.vmStateDir, 'qga.sock');
+      fs.mkdirSync(vmConfig.vmStateDir, { recursive: true });
+      if (fs.existsSync(qsock)) fs.unlinkSync(qsock);
+      args.push('-chardev', `socket,id=qga0,path=${qsock},server=on,wait=off`);
+      qga = { transport: 'unix', path: qsock };
+    }
+    args.push('-device', 'virtserialport,chardev=qga0,name=org.qemu.guest_agent.0');
+  }
+  let share = null;
+  if (vmConfig.shareDir) {
+    if (process.platform === 'linux') {
+      args.push('-virtfs', `local,path=${vmConfig.shareDir},mount_tag=cos_share,security_model=none,id=cos_share`);
+      share = { kind: '9p', mountTag: 'cos_share' };
+    } else {
+      // virtfs exists only in Linux-host QEMU; elsewhere the dir is a virtual
+      // FAT drive (QEMU marks vvfat rw experimental — guest writes not relied on).
+      args.push('-drive', `file=fat:rw:${vmConfig.shareDir},format=raw,if=virtio`);
+      share = { kind: 'vvfat' };
+    }
+  }
   args.push('-pidfile', path.join(vmConfig.vmStateDir, 'qemu.pid'));
-
-  return { args, qmp, vncDisplayNum, accel, accelReason: reason };
+  return { args, qmp, qga, share, vncDisplayNum, accel, accelReason: reason };
 }
 
 // ─── QMP client ─────────────────────────────────────────────────────────────────
@@ -582,6 +618,7 @@ function reapOrphan(vmStateDir) {
 }
 
 module.exports = {
+  QEMU_BIN, QEMU_IMG_BIN,
   QemuRuntimeError,
   QMPClient,
   pickAccelerator,
