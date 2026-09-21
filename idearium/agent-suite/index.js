@@ -318,6 +318,11 @@ export async function buildChunkWithAgent(chunkPrompt, { preferAgent = 'ollama' 
   if (REAL_GUARDIAN_PROVIDERS.includes(preferAgent)) {
     const r = await _http(GUARDIAN_PORT, 'POST', '/command', {
       command: 'spec', provider: preferAgent, prompt: chunkPrompt,
+      // §FIXED 2026-09-21 — guardian's /command reads body.source (top level) for
+      // its RAID contract lookup; source only inside meta always resolved to the
+      // proof-gated _default and every chunk was denied. meta.source stays for the
+      // job's own provenance record.
+      source: 'idearium',
       meta: { source: 'idearium.agent-suite', task: 'spec_chunk' },
     }, 300000); // 5min — browser-agent NCP dispatch can be slow
     if (r.ok && r.data?.jobId) {

@@ -636,10 +636,30 @@ function _spawnKernel(kernel, color) {
   }, STABLE_MS);
   if (s.stableTimer.unref) s.stableTimer.unref();
 
+  const _spawnedAt = Date.now();
   proc.on('exit', (code, signal) => {
     s.proc = null;
     s.lastExit = { code, signal, ts: Date.now() };
     if (s.stableTimer) { clearTimeout(s.stableTimer); s.stableTimer = null; }
+
+    // §FIX 2026-09-21 — James's boot log: after a Ctrl-C the previous run's Clear
+    // Glass (Electron) survived and kept its single-instance lock + devtools port.
+    // Every new launch lost that lock, printed "another instance is genuinely
+    // already running ... exiting cleanly" and exited with code 0 — which this
+    // handler counted as crash 1/6..6/6 and tripped the breaker in ~50s, leaving
+    // the phase-3 gate "passing" against the ORPHAN (its /health still answered)
+    // while the orchestrator saw 30+ missed pulses and CFR coherence at 0.00.
+    // Exit 0 within seconds of spawn is a hand-off, not a crash: restarting into
+    // the same lock can never succeed, and counting it hides the real fault. Say
+    // what is actually wrong, once, and stop.
+    if (kernel.name === 'clear-glass' && code === 0 && (Date.now() - _spawnedAt) < 20000) {
+      s.status = 'external';
+      _warpEmit('autopilot.kernel.handoff', { kernel: kernel.name, code });
+      _log(`${color}[${kernel.name}]${RESET} \x1b[33mexited 0 within ${Math.round((Date.now() - _spawnedAt) / 1000)}s — an existing Clear Glass instance holds the single-instance lock.\x1b[0m ` +
+           `Not counted as a crash, not restarting. If that window is missing or the orchestrator reports missed clear-glass pulses, it is a leftover from the previous run: ` +
+           `quit it (tray icon > Quit) or end every "electron.exe" task in Task Manager (PowerShell: Get-Process electron | Stop-Process -Force), then restart autopilot.`);
+      return;
+    }
 
     // §FIX 2026-07-24 — an INTENTIONAL stop is not a crash. Two statuses mean
     // "autopilot did this on purpose": 'stopping' (global shutdown) and

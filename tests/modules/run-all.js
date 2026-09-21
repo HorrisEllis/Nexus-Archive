@@ -122,6 +122,7 @@ const SUITES = [
   'idearium-materialize-physical.test.js',
   'idearium-build-queue-poller.test.js',
   'idearium-ingest-stability.test.js',
+  'idearium-guardian-dispatch.test.js',
   'idearium-chunk-dependencies.test.js',
   'test-agent-mesh-guardian-coverage.js',
   'ncp-hostile-payload.test.js',

@@ -45,6 +45,24 @@ const CONTRACTS = {
     rate_limits:     { tool: { max: 30, windowMs: 60000 } },
   },
 
+  // §ADDED 2026-09-21 — James's boot log: every chatgpt/claude/gemini chunk
+  // build failed with "RAID denied dispatch: proof required, none supplied for
+  // 'chat'" while the same ChatGPT tab happily answered other jobs. Traced:
+  // idearium/agent-suite's POST to guardian /command carried its identity only
+  // in body.meta.source, and guardian's route reads body.source (the same
+  // nested-source bug the console block below documents), so every chunk fell
+  // to _default (proof_required:true). Idearium builds spec chunks through
+  // guardian by design; it is a registered internal system like copilot, not an
+  // anonymous caller — so it gets its own contract rather than a widened
+  // _default. No 'forge' / 'browser': chunk builds only ever ask for text.
+  idearium: {
+    trust_level:     'local',
+    allowed_actions: ['tool', 'chat', 'build'],
+    denied_actions:  ['forge', 'browser'],
+    proof_required:  false,
+    rate_limits:     { chat: { max: 120, windowMs: 60000 } },
+  },
+
   cli: {
     trust_level:     'operator',
     allowed_actions: ['tool', 'chat', 'build', 'diagnose', 'forge', 'ask', 'browser'],

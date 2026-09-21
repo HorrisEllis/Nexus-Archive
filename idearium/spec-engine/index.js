@@ -672,6 +672,16 @@ export function createFileTreeSpec({ name, description = '', plan, agent = null,
   for (const c of manifest.chunks) {
     const f = fileBySid.get(c.sectionId);
     if (typeof f.content === 'string' && f.content.length) completeChunk(manifest.uuid, c.uuid, f.content, { preserveWhitespace: true });
+    // §FIXED 2026-09-21 — a directory placeholder (.gitkeep / .keep) is empty by
+    // definition, so no template ever supplies content for it and it stayed
+    // PENDING: the build queue then asked ChatGPT to "write the complete file
+    // storage/data/.gitkeep" (James's log), burning a dispatch, a retry ladder and
+    // an escalation on a file whose whole purpose is to be empty. It needs no
+    // agent; a one-line note keeps it non-empty for the chunk contract and is
+    // harmless to git.
+    else if (/(^|\/)\.(gitkeep|keep)$/i.test(String(f.path || ''))) {
+      completeChunk(manifest.uuid, c.uuid, '# placeholder — keeps this directory in version control\n', { preserveWhitespace: true });
+    }
   }
   return loadSpec(manifest.uuid);
 }

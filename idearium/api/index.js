@@ -3672,7 +3672,8 @@ function specToMarkdown(spec) {
 // dispatchChunkWithVerification's real retry ladder, WARP cache, and
 // RAID observability exactly like every other real build does.
 const BUILD_QUEUE_POLL_MS = 15000;
-const _stallReported = new Map(); // specUuid -> signature of the terminal state last reported (see the poller) // matches RAID's own real worker.js drain cadence
+const _stallReported = new Map(); // specUuid -> { sig, ts } of the chunk-status picture a FAILED build last ran against (see the poller)
+const STALL_RETRY_MS = 10 * 60 * 1000;
 const _buildingSpecs = new Set(); // real, in-memory guard — never trigger a second build for a spec that's already mid-build
 
 function _startBuildQueuePoller(port) {
@@ -3732,15 +3733,20 @@ function _startBuildQueuePoller(port) {
       // the reason is still reported loudly, then stay quiet until something
       // changes — a retried chunk goes back to pending and is picked up.
       const chunks = Array.isArray(s.chunks) ? s.chunks : [];
-      const unfinished = chunks.filter(c => c.status !== 'complete');
-      const buildable = unfinished.some(c => c.status === 'pending');
-      if (unfinished.length && !buildable) {
-        const sig = unfinished.map(c => `${c.uuid}:${c.status}`).sort().join('|');
-        if (_stallReported.get(s.uuid) === sig) continue;
-        _stallReported.set(s.uuid, sig);
-      } else {
-        _stallReported.delete(s.uuid);
-      }
+      // §STABILITY 2026-09-21 — the terminal-state check above only fired when NO
+      // chunk was pending. A spec with a failed kernel file and 19 pending files
+      // that all depend on it (file-tree specs build bottom-up) IS "buildable" by
+      // that test yet cannot move: the build answers 422 with the same stall.
+      // James's log: one such spec re-triggered every 15s for two hours, ~500
+      // identical pairs of ERROR lines, a manifest parse and a self-request each.
+      // So key on the WHOLE chunk-status picture: after a build that fails, do not
+      // trigger that spec again until a chunk changes state (a retry, a manual
+      // reset, a dependency completing) — or 10 minutes pass, so a transient
+      // cause (guardian restarting, a tab reconnecting) still gets another try.
+      const fullSig = chunks.map(c => `${c.uuid}:${c.status}`).join('|');
+      const prior = _stallReported.get(s.uuid);
+      if (prior && prior.sig === fullSig && (Date.now() - prior.ts) < STALL_RETRY_MS) continue;
+      if (prior && prior.sig !== fullSig) _stallReported.delete(s.uuid);
       // One build trigger in flight at a time. The queue used to fire a
       // self-request per unfinished spec every tick; on a machine already at
       // the memory-pressure line (see the resource-monitor lines in the boot
@@ -3771,7 +3777,8 @@ function _startBuildQueuePoller(port) {
           if (res.statusCode >= 400) {
             let msg = respBody;
             try { msg = JSON.parse(respBody).error || respBody; } catch (_) { /* not JSON — use raw body */ }
-            console.error(`[idearium/build-queue] spec ${s.uuid} did NOT complete — ${msg}`);
+            console.error(`[idearium/build-queue] spec ${s.uuid} did NOT complete — ${msg} (will not retry until a chunk changes state, or in ${STALL_RETRY_MS / 60000} min)`);
+            _stallReported.set(s.uuid, { sig: fullSig, ts: Date.now() });
           }
         });
       });
