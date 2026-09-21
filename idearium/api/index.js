@@ -300,6 +300,79 @@ function _ensureCompartment(nameBase, purpose) {
   }
 }
 
+// §RECONCILE 2026-09-21 — James: "specs are supposed to use the same repo
+// compartments." Every spec-engine spec is supposed to BE a repo in a
+// compartment (speceng.create and _promoteSpecToRepo both create one), but
+// two paths can leave a spec with no repo at all:
+//   1. RepoLayer.ingest({files}) calls spec-engine's ingestFilesAsSpec()
+//      FIRST — that writes the manifest and every chunk — and only pushes
+//      the repo record after it returns. If the process dies inside that
+//      call the spec is on disk and no repo ever points at it. That is
+//      exactly what happened to "eravos-complete": idearium ran out of
+//      heap at chunk ~313 of 369 (the log shows the V8 heap-limit abort),
+//      the spec survived the restart, the repo never existed, and the
+//      Repos tab said "no repos yet" while the Spec Library listed it.
+//   2. Specs created before repo-first landed, or whose auto-repo step
+//      failed non-fatally (see speceng.create's own §1.2 note).
+// The Spec Library was the only place those specs were reachable. With it
+// gone they would be invisible, so boot adopts every repo-less spec into a
+// compartment-backed repo through the SAME RepoLayer.ingest() everything
+// else uses — no second mechanism, no new record shape.
+//
+// Idempotent: a spec any repo already points at (specUuid or
+// promotedFromSpec) is skipped, and so is one whose content is byte-
+// identical to an existing repo (RepoLayer.ingest's own content dedup would
+// return that repo anyway; checking first avoids minting a compartment
+// nothing will use). Never throws — a failure on one spec is logged and the
+// rest still run (§1.2, same rule as the auto-repo step it backstops).
+async function _reconcileSpecRepos() {
+  let se = getSpecEngine();
+  // getSpecEngine() kicks off an async import() and returns null until it
+  // resolves; give it a moment rather than skipping the whole reconcile.
+  for (let i = 0; !se && i < 10; i++) { await new Promise(r => setTimeout(r, 300)); se = getSpecEngine(); }
+  if (!se) { console.warn('[idearium/api] spec→repo reconcile skipped: spec-engine not ready'); return { adopted: [], skipped: 0, failed: [] }; }
+
+  const rl = getRepoLayer();
+  const repos = rl.list({ includeArchived: true });
+  const covered = new Set();
+  for (const r of repos) {
+    if (r.specUuid) covered.add(r.specUuid);
+    if (r.promotedFromSpec) covered.add(r.promotedFromSpec);
+  }
+  const liveHashes = new Set(repos.filter(r => r.status !== 'archived' && r.rootHash).map(r => r.rootHash));
+
+  const adopted = [], failed = [];
+  let skipped = 0;
+  let specs = [];
+  try { specs = se.listSpecs() || []; }   // soft-deleted specs are already excluded
+  catch (e) { console.warn(`[idearium/api] spec→repo reconcile: listSpecs failed: ${e.message}`); return { adopted, skipped, failed }; }
+
+  for (const s of specs) {
+    if (covered.has(s.uuid)) { skipped++; continue; }
+    try {
+      const manifest = se.loadSpec(s.uuid);
+      const hasRealContent = (manifest.chunks || []).some(c => c.status === 'complete' && c.content);
+      if (hasRealContent && manifest.rootHash && liveHashes.has(manifest.rootHash)) { skipped++; continue; }
+
+      const result = rl.ingest({
+        name: manifest.name,
+        specUuid: manifest.uuid,
+        source: 'spec.reconcile',
+        parent: manifest.ideaUuid || null,
+        compartmentId: _ensureCompartment(`idearium-repo-${manifest.uuid.slice(0, 8)}`, manifest.name),
+      });
+      if (result.error) { failed.push({ specUuid: manifest.uuid, name: manifest.name, error: result.error }); continue; }
+      adopted.push({ specUuid: manifest.uuid, name: manifest.name, repoUuid: result.repo?.uuid || null });
+      if (manifest.rootHash) liveHashes.add(manifest.rootHash);
+    } catch (e) {
+      failed.push({ specUuid: s.uuid, name: s.name, error: e.message });
+    }
+  }
+  if (adopted.length) console.log(`[idearium/api] spec→repo reconcile: adopted ${adopted.length} repo-less spec(s) into compartments: ${adopted.map(a => `"${a.name}"`).join(', ')}`);
+  for (const f of failed) console.warn(`[idearium/api] spec→repo reconcile: could not adopt "${f.name}" (${f.specUuid.slice(0, 8)}): ${f.error}`);
+  return { adopted, skipped, failed };
+}
+
 function _repoDiskDir(repoUuid) {
   const repo = getRepoLayer().get(repoUuid);
   if (!repo) return null;
@@ -1678,7 +1751,7 @@ async function handle(req, res, route, query, body) {
       // repo" (specUuid or files[], unchanged below). See RepoLayer.ingest()
       // for why this is safe — a bare repo is just a spec with nothing
       // built yet, same dedup-skip behavior as any other new spec.
-      const { name, files, source, ideaUuid, specUuid, compartmentId, bare } = body;
+      const { name, files, source, ideaUuid, specUuid, compartmentId, bare, ensureCompartment } = body;
       if (!name) return err(res, 400, 'name required');
       if (!specUuid && !bare && (!Array.isArray(files) || files.length === 0)) {
         return err(res, 400, 'specUuid, files[], or bare:true required');
@@ -1687,7 +1760,13 @@ async function handle(req, res, route, query, body) {
         name, specUuid: specUuid || undefined, files: files || [], bare: !!bare,
         source: source || (specUuid ? 'repo-first' : (bare ? 'create' : 'drop')),
         ideaUuid: ideaUuid || null,
-        compartmentId: compartmentId || null,
+        // §NEW 2026-09-21 — opt-in: a caller that is making a repo FOR A SPEC
+        // (the Spec Builder wizard) has no compartment to pass, and specs are
+        // meant to live in repo compartments (see _reconcileSpecRepos). Off by
+        // default so every existing caller — Create repo, file drops — behaves
+        // exactly as before.
+        compartmentId: compartmentId
+          || (ensureCompartment ? _ensureCompartment(`idearium-repo-${String(name).toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 24)}`, name) : null),
       });
       if (result.error) return err(res, 400, result.error);
       return ok(res, result);
@@ -3500,6 +3579,24 @@ function _startBuildQueuePoller(port) {
       if (s.deleted || s.status === 'archived') continue;
       if (s.doneChunks >= s.totalChunks) continue; // real, genuine "nothing pending" — not guessed from a stale flag
       if (_buildingSpecs.has(s.uuid)) continue; // already mid-build from a previous tick — avoid a real, racing double-dispatch
+      // §STABILITY 2026-09-21 — James: "idearium crashes when chunking, its not
+      // stable... working with guardian." An ingested project (type 'codebase',
+      // built by ingestFilesAsSpec from real files) has nothing an agent can
+      // generate: each chunk IS a file that already exists. A chunk of one still
+      // PENDING means the import was cut short (or the file had no text), and
+      // "building" it meant asking ChatGPT through guardian to invent that file
+      // from a section title — 50+ jobs for eravos-complete after its import
+      // died. `ingesting` marks an import that never finished. Neither is a
+      // build-queue concern; they are repaired by re-importing, and are visible
+      // in the Repos tab (see _reconcileSpecRepos) so that can be done.
+      if (s.type === 'codebase' || s.ingesting) continue;
+      // One build trigger in flight at a time. The queue used to fire a
+      // self-request per unfinished spec every tick; on a machine already at
+      // the memory-pressure line (see the resource-monitor lines in the boot
+      // log) that piles concurrent dispatches, guardian jobs and manifest
+      // re-parses on top of each other. Specs take turns; nothing is dropped —
+      // the next tick picks up the next one.
+      if (_buildingSpecs.size >= 1) break;
 
       _buildingSpecs.add(s.uuid);
       const body = JSON.stringify({});
@@ -3542,7 +3639,7 @@ function _startBuildQueuePoller(port) {
   return timer; // real handle — lets a caller (or a test) stop this poller; startAPI() itself never needs to
 }
 
-export { _startBuildQueuePoller, _buildingSpecs };
+export { _startBuildQueuePoller, _buildingSpecs, _reconcileSpecRepos };
 
 export function startAPI() {
   const os = getIdeaOS();
@@ -3873,10 +3970,18 @@ export function startAPI() {
       label:'Reconcile in-flight chunks + connect guardian job stream',
       fn: async () => {
         const se = getSpecEngine();
-        if (!se) { console.warn('[idearium] guardian.reconcile: spec-engine not ready, skipping'); return; }
-        const { reconcileInFlightChunks, connectGuardianStream } = _require('../lib/guardian-stream.cjs');
-        await reconcileInFlightChunks(se);
-        connectGuardianStream(se);
+        if (!se) console.warn('[idearium] guardian.reconcile: spec-engine not ready, skipping the guardian half');
+        else {
+          const { reconcileInFlightChunks, connectGuardianStream } = _require('../lib/guardian-stream.cjs');
+          await reconcileInFlightChunks(se);
+          connectGuardianStream(se);
+        }
+        // §RECONCILE 2026-09-21 — adopt any spec with no repo into a
+        // compartment (see _reconcileSpecRepos). Kept inside this phase, not
+        // a new one, so the boot sequence's phase count is unchanged; its own
+        // try/catch means a failure here can never fail the guardian half.
+        try { await _reconcileSpecRepos(); }
+        catch (e) { console.warn(`[idearium/api] spec→repo reconcile threw (non-fatal): ${e.message}`); }
       },
     });
 

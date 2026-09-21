@@ -67,8 +67,8 @@ const chk = (label, cond) => { console.log((cond?'  ok  ':'  FAIL')+'  '+label);
   const create = q('.tab-group[data-group="create"] .tab-group-btn').dataset.views;
   const build  = q('.tab-group[data-group="build"] .tab-group-btn').dataset.views;
   console.log('  Create =', create, '| Build =', build);
-  chk('Build carries the three canvases + spec library',
-      build === 'spec,eravos,architect-build,spec-wizard');
+  chk('Build carries the three canvases (Spec Library moved into repos)',
+      build === 'eravos,architect-build,spec-wizard');
   chk('Create is capture only', create === 'brainstorm,ideas');
   for (const v of (create+','+build).split(',')) chk('#view-'+v+' exists', !!q('#view-'+v));
   chk('global #view-architect removed', !q('#view-architect'));

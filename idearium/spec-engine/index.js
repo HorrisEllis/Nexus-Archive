@@ -32,7 +32,7 @@ import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
 import { getTemplate, listTemplates, readSeed } from './templates.js';
-import { loadTable, syncTable, migrateOnce } from '../lib/db.js';
+import { loadTable, syncTable, migrateOnce, jaaDB } from '../lib/db.js';
 import { getValue as getConfigValue } from '../lib/config.js';
 // §CHUNK-NODES 2026-09-15 — James: "chunks should be node types, .chunk,
 // look at the taxonomy." Every real chunk state transition below now
@@ -92,6 +92,40 @@ const SPECS_ROOT = process.env.IDEARIUM_DATA_DIR
 const MANIFEST_TABLE = 'idearium_spec_manifests';
 const CHUNK_TABLE     = 'idearium_spec_chunks';
 
+// §MEMORY 2026-09-21 — James: "idearium crashes when chunking, its not
+// stable." Measured, not guessed: ingesting 120 files left 210 MB live AFTER a
+// forced GC (17 MB at 20 files), growing with the square of the file count, so
+// a 369-file project passes the 1 GB heap cap autopilot gives every child.
+// Cause: saveSpec() mirrored the WHOLE manifest — every chunk's full `content`
+// — into the shared store on every save, and did it twice (the manifest row
+// carries chunks[].content, then the chunk table carries it again), each time
+// via loadTable() + full-table JSON.stringify diff. Disk is the source of
+// truth (§2.2; loadSpec reads manifest.json and the per-chunk .md files), and
+// nothing reads content back out of these tables — the only other readers take
+// uuid/specName/ts (nexus/autopilot.js's tail()) or nothing at all
+// (idearium/lib/cortex-listeners.js). So the mirror now holds METADATA ONLY,
+// and a save touches only the rows that changed.
+const _slimChunk = (c, specUuid) => {
+  const { content, ...rest } = c;
+  return { ...rest, specUuid, contentBytes: content ? Buffer.byteLength(content) : 0 };
+};
+const _slimManifest = (m) => {
+  const { chunks, ...rest } = m;
+  return { ...rest, chunkCount: (chunks || []).length };
+};
+// uuid -> JSON of the last row written, so an unchanged chunk costs one string
+// compare instead of a table scan + write. Process-local; a restart simply
+// re-writes each row once (they are small now).
+const _mirrorSig = new Map();
+function _mirrorRow(table, row, ord) {
+  const sig = JSON.stringify(row);
+  if (_mirrorSig.get(table + row.uuid) === sig) return;
+  // insert() keys on row.id and is a Map.set — an O(1) replace. upsert()
+  // scans the whole table for the key, which would put the quadratic back.
+  jaaDB.insert(table, { ...row, id: row.uuid, _ord: ord });
+  _mirrorSig.set(table + row.uuid, sig);
+}
+
 // One-time, non-destructive fold of whatever's already on disk into cortex —
 // same convention idearium/lib/db.js's migrateOnce() documents (never
 // overwrites rows already in the DB, never touches the source files).
@@ -110,17 +144,42 @@ function _migrateManifestsOnce() {
   }
   if (!legacy.length) return;
 
-  const migManifests = migrateOnce(MANIFEST_TABLE, legacy, 'uuid');
+  const migManifests = migrateOnce(MANIFEST_TABLE, legacy.map(_slimManifest), 'uuid');
   if (migManifests.migrated) {
     console.log(`[${MODULE_ID}] migrated ${migManifests.count} manifests -> cortex '${MANIFEST_TABLE}'`);
   }
-  const allChunks = legacy.flatMap(m => (m.chunks || []).map(c => ({ ...c, specUuid: m.uuid })));
+  const allChunks = legacy.flatMap(m => (m.chunks || []).map(c => _slimChunk(c, m.uuid)));
   const migChunks = migrateOnce(CHUNK_TABLE, allChunks, 'uuid');
   if (migChunks.migrated) {
     console.log(`[${MODULE_ID}] migrated ${migChunks.count} chunks -> cortex '${CHUNK_TABLE}'`);
   }
 }
 _migrateManifestsOnce(); // runs once at module load, mirrors repo/index.js's constructor-time _load()
+
+// One-time slimming of rows written before the mirror went metadata-only:
+// they still carry every chunk's content (5.4 MB each for the two tables on
+// the reporter's machine) and idearium loads both on boot. Idempotent — a row
+// with no `content` is already slim and is skipped, so this is a scan and no
+// writes on every boot after the first.
+function _slimExistingMirrorOnce() {
+  try {
+    let slimmed = 0;
+    for (const r of loadTable(CHUNK_TABLE)) {
+      if (!('content' in r)) continue;
+      const { _ord, ...row } = r;
+      jaaDB.insert(CHUNK_TABLE, { ..._slimChunk(row, row.specUuid), id: row.uuid, _ord });
+      slimmed++;
+    }
+    for (const r of loadTable(MANIFEST_TABLE)) {
+      if (!Array.isArray(r.chunks)) continue;
+      const { _ord, ...row } = r;
+      jaaDB.insert(MANIFEST_TABLE, { ..._slimManifest(row), id: row.uuid, _ord });
+      slimmed++;
+    }
+    if (slimmed) console.log(`[${MODULE_ID}] slimmed ${slimmed} mirror row(s) — content lives on disk, not in the shared store`);
+  } catch (e) { console.warn(`[${MODULE_ID}] mirror slimming skipped (non-fatal): ${e.message}`); }
+}
+_slimExistingMirrorOnce();
 
 // §BUILT 2026-09-03 — James: "list of primitives... for the spec being
 // made and use warps primitives." The real, current set — derived
@@ -553,7 +612,7 @@ function _buildManifest({ name, type = 'component', description = '', agent = nu
   }
 
   console.log(`[${MODULE_ID}] spec created: ${specUuid.slice(0,8)} "${name}" · ${chunks.length} chunks · agent:${manifest.agent}` +
-    (manifest.agent === 'auto' ? ` (per-block: ${chunks.map(c => `${c.sectionId}→${c.agent}`).join(', ')})` : ''));
+    (manifest.agent === 'auto' ? ` (per-block: ${chunks.slice(0, 6).map(c => `${c.sectionId}→${c.agent}`).join(', ')}${chunks.length > 6 ? `, … +${chunks.length - 6} more` : ''})` : ''));
   return manifest;
 }
 
@@ -619,13 +678,8 @@ export function saveSpec(manifest) {
   // Cortex mirror — queryable index over the same manifest, not a second
   // source of truth (§2.2 unchanged: disk is still what loadSpec() reads).
   try {
-    const manifestRows = loadTable(MANIFEST_TABLE).filter(m => m.uuid !== manifest.uuid);
-    manifestRows.push(manifest);
-    syncTable(MANIFEST_TABLE, manifestRows, 'uuid');
-
-    const chunkRows = loadTable(CHUNK_TABLE).filter(c => c.specUuid !== manifest.uuid);
-    for (const c of manifest.chunks) chunkRows.push({ ...c, specUuid: manifest.uuid });
-    syncTable(CHUNK_TABLE, chunkRows, 'uuid');
+    _mirrorRow(MANIFEST_TABLE, _slimManifest(manifest), 0);
+    (manifest.chunks || []).forEach((c, i) => _mirrorRow(CHUNK_TABLE, _slimChunk(c, manifest.uuid), i));
   } catch (e) {
     // §1.2 loud, non-fatal — disk write above already succeeded.
     console.error(`[${MODULE_ID}] cortex mirror sync failed for ${manifest.uuid}: ${e.message}`);
@@ -633,56 +687,83 @@ export function saveSpec(manifest) {
 }
 
 // ── List all specs ────────────────────────────────────────────────────────────
+// §PERF 2026-09-21 — listSpecs() JSON.parse'd EVERY manifest (each carries every
+// chunk's full content: 3.5 MB for one 369-file import) on every call, and it is
+// called from the build-queue poller every 15 s, from GET /api/specs, from the
+// boot reconcile and from repo lookups. Nothing in the summary changes unless the
+// manifest file does, so the summary is cached against the manifest's mtime+size
+// and only re-parsed when it moves. saveSpec() rewrites the file, which changes
+// both, so a stale summary cannot be served.
+const _summaryCache = new Map();   // dir name -> { mtimeMs, size, summary }
+function _summarize(manifest) {
+  return (
+{
+      uuid:        manifest.uuid,
+      name:        manifest.name,
+      type:        manifest.type,
+      status:      manifest.status,
+      progress:    manifest.progress,
+      totalChunks: manifest.totalChunks,
+      doneChunks:  manifest.doneChunks,
+      agent:       manifest.agent,
+      warpPrimitives: manifest.warpPrimitives || [],
+      createdAt:   manifest.createdAt,
+      updatedAt:   manifest.updatedAt,
+      version:     manifest.version,
+      deleted:     !!manifest.deleted,
+      deletedAt:   manifest.deletedAt || null,
+      // §NEW 2026-09-21 — true from creation until an ingest finishes. A spec still
+      // flagged after a restart is an interrupted import (see ingestFilesAsSpec); the
+      // build queue must never AI-"generate" its files.
+      ingesting:   !!manifest.ingesting,
+      // §2026-07-10 — lightweight per-section status for the UI's Spec Library
+      // chips. Id/title/done only, NOT content: the list must stay small even
+      // with many specs. The detail view loads full chunk content on demand.
+      //
+      // §BUG FOUND 2026-09-03 — this omitted chunk.uuid entirely. The new
+      // per-chunk agent <select> (ui/js/app.js) calls
+      // setChunkAgent(specUuid, c.uuid, agent) on change — with no uuid in
+      // this list, that call was always setChunkAgent(specUuid, undefined,
+      // agent), which fails on the very first real click ("chunk not
+      // found"). Caught by tracing the data source, not by clicking it in
+      // a browser (no live server here) — real gap either way, fixed at
+      // the source rather than patched around in the UI. agent/jobId/
+      // dispatchDir/dispatchedAt are the same story: all real scalars
+      // (never chunk .content), needed for the UI to show what's
+      // actually true instead of falling back to a default that isn't.
+      chunks: (manifest.chunks || []).map(c => ({
+        uuid: c.uuid, sectionId: c.sectionId, sectionTitle: c.sectionTitle,
+        chunkIdx: c.chunkIdx, status: c.status, byteSize: c.byteSize || 0,
+        agent: c.agent, agentModel: c.agentModel,
+        jobId: c.jobId || null, dispatchDir: c.dispatchDir || null, dispatchedAt: c.dispatchedAt || null,
+      })),
+      totalBytes: (manifest.chunks || []).reduce((sum, c) => sum + (c.byteSize || 0), 0),
+    }
+  );
+}
+
 export function listSpecs({ includeDeleted = false } = {}) {
   _ensureRoot();
   const specs = [];
+  const seen = new Set();
   for (const entry of fs.readdirSync(SPECS_ROOT, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue;
+    seen.add(entry.name);
     try {
-      const manifest = loadSpec(entry.name);
+      const mp = path.join(SPECS_ROOT, entry.name, 'manifest.json');
+      const st = fs.statSync(mp);
+      let hit = _summaryCache.get(entry.name);
+      if (!hit || hit.mtimeMs !== st.mtimeMs || hit.size !== st.size) {
+        hit = { mtimeMs: st.mtimeMs, size: st.size, summary: _summarize(loadSpec(entry.name)) };
+        _summaryCache.set(entry.name, hit);
+      }
       // §NEW 2026-07-16 — see deleteSpec() below. Soft-deleted specs stay on
       // disk (§7.4 nothing discarded) but drop out of the library by default.
-      if (manifest.deleted && !includeDeleted) continue;
-      specs.push({
-        uuid:        manifest.uuid,
-        name:        manifest.name,
-        type:        manifest.type,
-        status:      manifest.status,
-        progress:    manifest.progress,
-        totalChunks: manifest.totalChunks,
-        doneChunks:  manifest.doneChunks,
-        agent:       manifest.agent,
-        warpPrimitives: manifest.warpPrimitives || [],
-        createdAt:   manifest.createdAt,
-        updatedAt:   manifest.updatedAt,
-        version:     manifest.version,
-        deleted:     !!manifest.deleted,
-        deletedAt:   manifest.deletedAt || null,
-        // §2026-07-10 — lightweight per-section status for the UI's Spec Library
-        // chips. Id/title/done only, NOT content: the list must stay small even
-        // with many specs. The detail view loads full chunk content on demand.
-        //
-        // §BUG FOUND 2026-09-03 — this omitted chunk.uuid entirely. The new
-        // per-chunk agent <select> (ui/js/app.js) calls
-        // setChunkAgent(specUuid, c.uuid, agent) on change — with no uuid in
-        // this list, that call was always setChunkAgent(specUuid, undefined,
-        // agent), which fails on the very first real click ("chunk not
-        // found"). Caught by tracing the data source, not by clicking it in
-        // a browser (no live server here) — real gap either way, fixed at
-        // the source rather than patched around in the UI. agent/jobId/
-        // dispatchDir/dispatchedAt are the same story: all real scalars
-        // (never chunk .content), needed for the UI to show what's
-        // actually true instead of falling back to a default that isn't.
-        chunks: (manifest.chunks || []).map(c => ({
-          uuid: c.uuid, sectionId: c.sectionId, sectionTitle: c.sectionTitle,
-          chunkIdx: c.chunkIdx, status: c.status, byteSize: c.byteSize || 0,
-          agent: c.agent, agentModel: c.agentModel,
-          jobId: c.jobId || null, dispatchDir: c.dispatchDir || null, dispatchedAt: c.dispatchedAt || null,
-        })),
-        totalBytes: (manifest.chunks || []).reduce((sum, c) => sum + (c.byteSize || 0), 0),
-      });
+      if (hit.summary.deleted && !includeDeleted) continue;
+      specs.push(hit.summary);
     } catch (_) {}
   }
+  for (const k of _summaryCache.keys()) if (!seen.has(k)) _summaryCache.delete(k);
   return specs.sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
@@ -1326,60 +1407,124 @@ export function ingestFilesAsSpec({ name, files = [], author = 'ingest', repoUui
     return { id, title: rawPath, desc: `ingested file: ${rawPath}` };
   });
   const manifest = _buildManifest({ name, type: 'codebase', description: 'ingested from dropped files', author, sections });
+
+  // §MEMORY 2026-09-21 — James: "idearium crashes when chunking, its not
+  // stable." This loop used to run markChunkBuilding() + completeChunk() +
+  // loadSpec()/saveSpec() PER FILE. Each of those parses and re-serialises the
+  // whole manifest (every chunk's content is inside it) and, before the mirror
+  // went metadata-only, copied all of it into the shared store — so an import
+  // of N files did ~3N full-manifest round trips, quadratic in bytes moved
+  // (369 files: ~1.3 GB written to manifest.json alone) and it ran out of heap
+  // at chunk ~313. The files are all in hand, so the chunks are now completed
+  // in memory and the manifest is written ONCE.
+  //
+  // Same result per chunk as the old path — same .md file in the same place with
+  // the same front matter, same fields, same FAILED/ESCALATED handling for an
+  // empty file — checked by tests/modules/test-ingest-bulk.js against a chunk
+  // built the old way (completeChunk) from identical input.
+  //
+  // `ingesting` is the crash-safety half. It is set on the manifest at creation
+  // and only cleared by the single save at the end, so a process death midway
+  // leaves a spec that says so. The build queue skips it and the boot
+  // reconcile can tell it apart from a spec that is merely waiting to be
+  // built. (Before: a half-imported project looked like a spec with pending
+  // sections, and idearium's queue asked ChatGPT to "write" the missing files.)
+  manifest.ingesting = true;
+  saveSpec(manifest);
+
+  const specDir = path.join(SPECS_ROOT, manifest.uuid);
+  const now0 = Date.now();
   files.forEach((f, i) => {
     const chunk = manifest.chunks[i];
-    const hasContent = f.content && f.content.trim().length > 0;
-    markChunkBuilding(manifest.uuid, chunk.uuid, { agent: 'ingest', model: 'ingest:drop' });
-    // §FIXED 2026-09-19 — James: "it sometimes just makes a chunk with
-    // nothing in it." Root cause, found by reading this exact line: a
-    // file with no captured content used to fall through to a fabricated
-    // markdown-comment placeholder (`<!-- ${f.path}: no text content
-    // captured -->`) and got marked COMPLETE anyway — §1.2's own rule
-    // ("nothing silently fails") was being violated by the one function
-    // whose header cites it. An empty/uncaptured file is a real failure
-    // of this ingest, not content — it fails loudly via the same
-    // failChunk() lifecycle every other real failure in this module uses,
-    // never a fake markdown comment standing in for missing bytes.
-    if (!hasContent) {
-      failChunk(manifest.uuid, chunk.uuid, `no text content captured for ${f.path} — binary, empty, or unreadable at ingest time`, { repoUuid });
+    chunk.agent = 'ingest'; chunk.agentModel = 'ingest:drop';
+    chunk.attempts = (chunk.attempts || 0) + 1;
+    // §REALPATH 2026-09-15 — James: "idearium needs to import the files to the
+    // repo, not just chunk." repo/index.js and materialize() prefer realPath
+    // over the chunk store's numbered fileName, so a dropped file lands at its
+    // real path/extension. Sanitized: no leading '/', no '..' segment, so a
+    // crafted f.path cannot escape the materialize outDir.
+    const clean = String(f.path || '')
+      .replace(/^\/+/, '')
+      .split('/')
+      .filter((seg) => seg && seg !== '.' && seg !== '..')
+      .join('/');
+    chunk.realPath = clean || null;
+
+    // §FIXED 2026-09-19 — a file with no captured content is a real failure of
+    // this ingest, never a fabricated placeholder marked COMPLETE (§1.2).
+    if (!(f.content && f.content.trim().length > 0)) {
+      chunk.status = chunk.attempts >= 3 ? CHUNK_STATES.ESCALATED : CHUNK_STATES.FAILED;
+      chunk.failureMode = `no text content captured for ${f.path} — binary, empty, or unreadable at ingest time`;
+      chunk.jobId = null; chunk.dispatchDir = null;
+      chunk.updatedAt = Date.now();
+      console.warn(`[${MODULE_ID}] §1.2 chunk ${chunk.sectionId} ${chunk.status}: ${chunk.failureMode}`);
       return;
     }
-    completeChunk(manifest.uuid, chunk.uuid, f.content, { repoUuid });
-    const fresh = loadSpec(manifest.uuid);
-    const fc = fresh.chunks.find(c => c.uuid === chunk.uuid);
-    if (fc) {
-      fc.agent = 'ingest'; fc.agentModel = 'ingest:drop';
-      // §REALPATH 2026-09-15 — James: "idearium needs to import the files
-      // to the repo, not just chunk." A dropped file's real relative path
-      // (f.path — "lib/foo.js") is already captured as this chunk's
-      // sectionTitle, but repo/index.js's file listing was reading
-      // c.fileName (the chunk-store's own "01-lib-foo-js.md" naming)
-      // for EVERY chunk regardless of origin — so materialize() wrote
-      // dropped files to disk as numbered .md blobs instead of their
-      // real paths/extensions. realPath is additive and drop-only
-      // (null for authored .spec sections, where fileName's chunk
-      // naming is correct and there is no "real path" to preserve) —
-      // repo/index.js now prefers it when present. Sanitized: no
-      // leading '/', no '..' segment, so a crafted f.path can't escape
-      // the materialize outDir.
-      const clean = String(f.path || '')
-        .replace(/^\/+/, '')
-        .split('/')
-        .filter((seg) => seg && seg !== '.' && seg !== '..')
-        .join('/');
-      fc.realPath = clean || null;
+
+    const finalContent = f.content.trim();
+    const filePath = path.join(specDir, `${String(chunk.chunkIdx).padStart(2,'0')}-${chunk.sectionId}-${chunk.uuid.slice(0,8)}.md`);
+    const fileContent = [
+      `---`,
+      `chunk_uuid: ${chunk.uuid}`,
+      `spec_uuid: ${manifest.uuid}`,
+      `section: ${chunk.sectionId}`,
+      `title: ${chunk.sectionTitle}`,
+      `comp_id: ${chunk.comp_id}`,
+      `seam_id: ${chunk.seam_id}`,
+      `contract_id: ${chunk.contract_id}`,
+      `agent: ${chunk.agent}`,
+      `model: ${chunk.agentModel || 'unknown'}`,
+      `status: complete`,
+      `completed_at: ${new Date().toISOString()}`,
+      `---`,
+      ``,
+      finalContent,
+    ].join('\n');
+    fs.writeFileSync(filePath, fileContent, 'utf8');
+    // §1.1 — the artifact must exist on disk before the chunk is marked complete.
+    if (!fs.existsSync(filePath)) {
+      chunk.status = CHUNK_STATES.FAILED;
+      chunk.failureMode = 'file write verification failed — artifact not found after write';
+      chunk.updatedAt = Date.now();
+      return;
     }
-    saveSpec(fresh);
+    chunk.status      = CHUNK_STATES.COMPLETE;
+    chunk.filePath    = filePath;
+    chunk.content     = finalContent;
+    chunk.byteSize    = Buffer.byteLength(fileContent);
+    chunk.updatedAt   = Date.now();
+    chunk.completedAt = Date.now();
+    chunk.failureMode = null;
+    chunk.jobId = null; chunk.dispatchDir = null;
   });
-  // §CHUNK-NODE — one pass at the end rather than per-file inside the
-  // loop above: an ingest of tens of thousands of files would otherwise
-  // re-read the config once per file for no gain, and the per-chunk
-  // writes in completeChunk() above have already fired with the
-  // pre-realPath state anyway. This pass writes the final, correct
-  // shape (realPath included) over them.
-  const finalManifest = loadSpec(manifest.uuid);
-  chunkNodes.writeManifestChunkNodes(finalManifest, { repoUuid });
-  return finalManifest;
+
+  manifest.doneChunks   = manifest.chunks.filter(c => c.status === CHUNK_STATES.COMPLETE).length;
+  manifest.failedChunks = manifest.chunks.filter(c => c.status === CHUNK_STATES.FAILED || c.status === CHUNK_STATES.ESCALATED).length;
+  manifest.progress     = manifest.totalChunks ? Math.round((manifest.doneChunks / manifest.totalChunks) * 100) : 0;
+  manifest.rootHash     = computeRootHash(manifest);
+  if (manifest.doneChunks === manifest.totalChunks) {
+    manifest.status      = 'complete';
+    manifest.completedAt = Date.now();
+    _assembleFullSpec(manifest);
+    console.log(`[${MODULE_ID}] ✓ spec complete: ${manifest.uuid.slice(0,8)} "${manifest.name}" · ${manifest.totalChunks} chunks`);
+  }
+  delete manifest.ingesting;        // the ingest finished — this is the ONE save that says so
+  manifest.updatedAt = Date.now();
+  saveSpec(manifest);
+
+  // §CHUNK-NODE — one pass at the end, after the save it records (never before:
+  // a node claiming a completion that never persisted would be a lie).
+  chunkNodes.writeManifestChunkNodes(manifest, { repoUuid });
+  console.log(`[${MODULE_ID}] ✓ ingested ${manifest.doneChunks}/${manifest.totalChunks} file(s) into "${manifest.name}" in ${Date.now() - now0}ms`);
+  // One progress event, not one per file: the loop above is synchronous, so
+  // per-file events would only have queued up and flushed together anyway.
+  import('../index.js').then(({ getIdeaOS }) => {
+    getIdeaOS().emit('idearium.repo.chunk.progress', {
+      specUuid: manifest.uuid, repoUuid, sectionId: null, byteSize: 0,
+      doneChunks: manifest.doneChunks, totalChunks: manifest.totalChunks, progress: manifest.progress,
+    });
+  }).catch(e => console.warn(`[${MODULE_ID}] chunk-progress SSE emit failed (non-fatal): ${e.message}`));
+  return manifest;
 }
 
 // findPriorSection — the chunk-level lever. The WARP exact cache reuses a chunk

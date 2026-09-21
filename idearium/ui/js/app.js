@@ -232,7 +232,12 @@ async function loadGaps()     { try { GAPS  = (await api('/api/gaps')).gaps  || 
 // an open spec builder. An SSE-driven chunk/build event updated the spec
 // list and status chips but left a currently-open builder panel showing
 // stale chunk statuses until the user reselected the spec by hand.
-async function loadSpecs()    { try { SPECS = (await api('/api/specs')).specs|| []; renderSpecList(); if (CURRENT_REPO_SUBTAB === 'architect') renderCurrentRepoSubtab(); if (SELECTED_SPEC) { const s = SPECS.find(x=>x.uuid===SELECTED_SPEC); if (s) renderSpecBuilder(s); } } catch(e){ console.warn('[idearium] loadSpecs failed:', e.message); toast('failed to load specs: '+e.message,'err'); } }
+// §CHANGED 2026-09-21 — the Spec Library list is gone (specs are repos; see
+// renderRepoSpec). SPECS is still loaded: the Spec and Architect repo subtabs
+// read it, and the topbar count uses it. A refresh re-renders whichever of those
+// two subtabs is open, and only those — an open builder is no longer painted
+// into a hidden pane on every SSE chunk event.
+async function loadSpecs()    { try { SPECS = (await api('/api/specs')).specs|| []; if (CURRENT_REPO_SUBTAB === 'architect' || CURRENT_REPO_SUBTAB === 'spec') renderCurrentRepoSubtab(); } catch(e){ console.warn('[idearium] loadSpecs failed:', e.message); toast('failed to load specs: '+e.message,'err'); } }
 async function loadSnapshots(){ try { SNAPSHOTS = (await api('/api/snapshots')).snapshots || []; renderVersionium(); } catch(e){ console.warn('[idearium] loadSnapshots failed:', e.message); } }
 async function loadStats()    { try { STATS = (await api('/api/stats')).stats; } catch(e){ console.warn('[idearium] loadStats failed:', e.message); } updateStats(); }
 // Ideas/Repo merge: repos are no longer their own rail tab — they're looked
@@ -335,7 +340,6 @@ function updateStats() {
   document.getElementById('stat-ideas').textContent = IDEAS.filter(i=>i.phase!=='archived').length || 0;
   document.getElementById('stat-specs').textContent = SPECS.length || 0;
   document.getElementById('brain-count-badge').textContent = `${BRAINSTORMS.length} entries`;
-  document.getElementById('spec-count-badge').textContent  = `${SPECS.length} specs`;
   document.getElementById('snap-btn').disabled = !CONNECTED;
 }
 
@@ -499,7 +503,7 @@ function renderDetail(idea) {
   `;
 
   if (linkedSpec) {
-    html += `<div class="ds"><div class="ds-label">linked spec</div><div class="link-item" style="cursor:pointer" onclick="setView('spec');selectSpec('${linkedSpec.uuid}')"><span class="link-type resonance">spec</span><span>${escapeHtml(linkedSpec.name)}</span><span class="ic-uuid" style="margin-left:auto">${linkedSpec.phase}</span></div></div>`;
+    html += `<div class="ds"><div class="ds-label">linked spec</div><div class="link-item" style="cursor:pointer" onclick="openSpecRepo('${linkedSpec.uuid}')"><span class="link-type resonance">spec</span><span>${escapeHtml(linkedSpec.name)}</span><span class="ic-uuid" style="margin-left:auto">${linkedSpec.phase}</span></div></div>`;
   } else {
     html += `<div class="ds"><div class="ds-label">spec</div><button class="action-btn primary" onclick="createSpecForIdea('${idea.uuid}')">+ create spec from this idea</button></div>`;
   }
@@ -565,15 +569,18 @@ async function archiveIdea(uuid) {
 // deleteSpec just flips a flag — same §7.4/§M1 pattern as archiveIdea
 // above), so this doesn't need a themedPrompt reason like archiveIdea does.
 // A plain confirm() is enough since it's reversible via restoreSpec.
+// §CHANGED 2026-09-21 — reached from the repo's Spec subtab now, not a
+// library card. It is also the one way to STOP a spec being built: idearium's
+// build-queue poller (api/index.js _startBuildQueuePoller) skips soft-deleted
+// specs and nothing else, so archiving the repo alone does not stop pending
+// chunks being dispatched. The repo record stays; loadSpecs() then re-renders
+// the Spec subtab, which shows the removed state with a restore button.
 async function deleteSpec(uuid, name) {
-  if (!confirm(`remove "${name}" from the spec library?\n\nnothing on disk is deleted — this can be undone.`)) return;
+  if (!confirm(`remove spec "${name}"?\n\nit stops building and drops out of spec listings. the repo stays. nothing on disk is deleted — this can be undone from the repo's Spec tab.`)) return;
   try {
     await api(`/api/spec-engine/specs/${uuid}`, { method: 'DELETE' });
-    if (SELECTED_SPEC === uuid) {
-      SELECTED_SPEC = null;
-      document.getElementById('spec-builder').innerHTML = '<div class="detail-empty">select or create a spec to open the builder</div>';
-    }
-    toast('removed from library', 'ok');
+    if (SELECTED_SPEC === uuid) SELECTED_SPEC = null;
+    toast('spec removed', 'ok');
     await loadSpecs();
   } catch(e) { toast(e.message, 'err'); }
 }
@@ -592,10 +599,7 @@ async function archiveSpec(uuid, name) {
   if (!reason) return;
   try {
     await api(`/api/specs/${uuid}`, { method: 'DELETE', body: JSON.stringify({reason}) });
-    if (SELECTED_SPEC === uuid) {
-      SELECTED_SPEC = null;
-      document.getElementById('spec-builder').innerHTML = '<div class="detail-empty">select or create a spec to open the builder</div>';
-    }
+    if (SELECTED_SPEC === uuid) SELECTED_SPEC = null;
     toast('archived', 'ok');
     await loadSpecs();
   } catch(e) { toast(e.message, 'err'); }
@@ -731,51 +735,32 @@ function specGaps(spec) {
   return (spec.sections||[]).filter(s=>s.required && (!s.content || !s.content.trim()));
 }
 
-function renderSpecList() {
-  const list = document.getElementById('spec-list');
-  const q = (document.getElementById('spec-search').value||'').toLowerCase();
-  let pool = SPECS.filter(s => (s.name||'').toLowerCase().includes(q));
-  if (!pool.length) { list.innerHTML = `<div style="padding:20px;text-align:center;font-family:var(--mono);font-size:11px;color:var(--text3)">${CONNECTED ? 'no specs yet — open an idea and create one' : 'not connected to nexus'}</div>`; return; }
-  list.innerHTML = pool.map(spec => {
-    const conf = specConfidence(spec);
-    const gaps = specGaps(spec);
-    const chips = (spec.sections||[]).map(s=>`<span class="section-chip ${s.content?'done':(s.required?'missing':'')}" title="${s.title}">${s.id.slice(0,4)}</span>`).join('');
-    // §NEW 2026-07-16 — quick delete right on the card, not just inside the
-    // builder. `.chunks` is the same origin discriminator renderSpecBuilder
-    // uses (§BUG FIXED 2026-07-11) — legacy specs aren't spec-engine
-    // manifests and deleteSpec's DELETE route only knows about those, so the
-    // button only shows where it'll actually work.
-    // §FIXED 2026-07-16 — this used to only render for spec-engine specs
-    // (`.chunks` present), which is exactly why deleting the legacy
-    // e2e-check-spec/test junk (no .chunks — old 9-section format) had no
-    // button anywhere. Both origins get one now, routed to the function
-    // that matches their actual store.
-    const delBtn = spec.chunks
-      ? `<button class="action-btn danger" style="padding:1px 6px;font-size:9px" onclick="event.stopPropagation(); deleteSpec('${spec.uuid}', '${escapeHtml(spec.name).replace(/'/g,"\\'").slice(0,40)}')">×</button>`
-      : `<button class="action-btn danger" style="padding:1px 6px;font-size:9px" onclick="event.stopPropagation(); archiveSpec('${spec.uuid}', '${escapeHtml(spec.name).replace(/'/g,"\\'").slice(0,40)}')">×</button>`;
-    return `
-      <div class="spec-card${SELECTED_SPEC===spec.uuid?' selected':''}" onclick="selectSpec('${spec.uuid}')">
-        <div class="spec-card-top">
-          <span class="spec-name">${escapeHtml(spec.name)}</span>
-          <span style="display:flex;align-items:center;gap:6px">
-            <span class="ic-status st-${spec.phase}">${spec.phase}</span>
-            ${delBtn}
-          </span>
-        </div>
-        <div style="font-family:var(--mono);font-size:9px;color:var(--text3)">confidence ${conf}% · ${gaps.length} gap${gaps.length===1?'':'s'} · v${spec.version||'1.0.0'}</div>
-        <div class="section-grid">${chips}</div>
-      </div>`;
-  }).join('');
-}
-
+// §REMOVED 2026-09-21 — renderSpecList() (the Build > Spec Library card list)
+// lived here. Specs are repos in compartments now; the Repos tab is the list.
+//
+// selectSpec() no longer navigates or drives a list — it points the builder at
+// a spec. The builder mount (#spec-builder) is inside the repo Spec subtab, so
+// this is only meaningful while that subtab is showing; every existing caller
+// (createRepoThenBuild, the legacy save/check/build handlers) is already
+// running inside it.
 function selectSpec(uuid) {
   SELECTED_SPEC = uuid;
-  renderSpecList();
   const spec = SPECS.find(s=>s.uuid===uuid);
   if (!spec) return;
-  document.getElementById('spec-detail-title').textContent = spec.name;
   BUILDER_ACTIVE_SECTION = (spec.sections||[])[0]?.id || SECTION_IDS[0];
   renderSpecBuilder(spec);
+}
+
+// Idea detail's "linked spec" row, and anything else that has a spec uuid and
+// wants the person looking at it: a spec is a repo, so open that repo on its
+// Spec subtab. A spec with no repo (a legacy 9-section spec, or one not yet
+// reconciled) has nowhere to open, and says so instead of failing silently.
+function openSpecRepo(specUuid) {
+  const spec = SPECS.find(s => s.uuid === specUuid);
+  const repo = API_REPOS.find(r => r.specUuid === specUuid || r.promotedFromSpec === specUuid);
+  if (!repo) { toast(`"${spec?.name || specUuid}" has no repository yet — restart idearium so it is adopted into a compartment`, 'err'); return; }
+  openRepoFor(spec?.ideaUuid || null, specUuid, spec?.name || repo.name);
+  setRepoSubtab('spec');
 }
 
 function renderSpecBuilder(spec) {
@@ -840,7 +825,6 @@ function renderSpecEngineBuilder(spec) {
   // specUuid but never promotedFromSpec — specUuid is the real, always-set
   // correlation field either way (RepoLayer.ingest sets it on every path),
   // so it's the correct match regardless of how the repo came to exist.
-  const repo = API_REPOS.find(r => r.specUuid === spec.uuid);
   const building = !!BUILD_IN_PROGRESS[spec.uuid];
 
   wrap.innerHTML = `
@@ -901,18 +885,8 @@ function renderSpecEngineBuilder(spec) {
       </div>
       <div class="action-row">
         <button class="action-btn primary" ${building||done===chunks.length?'disabled':''} onclick="createRepoThenBuild('${spec.uuid}')">${building?'building…':(done===chunks.length?'all chunks built':'build remaining chunks')}</button>
-        ${
-          // §CHANGED 2026-09-03 — repo-first: `repo` is now real from the
-          // moment the spec was created (submitNewSpec), not only once
-          // every chunk is done, so this shows ALONGSIDE the build button
-          // rather than replacing it — the repo is genuinely open-able
-          // while chunks are still landing into it.
-          repo
-            ? `<button class="action-btn" onclick="openRepoFor('${spec.ideaUuid||''}', '${spec.uuid}', '${escapeHtml(spec.name).replace(/'/g,"\\'").slice(0,40)}')">open repository →</button>`
-            : ''
-        }
         <button class="action-btn" onclick="exportSpec('${spec.uuid}')">export markdown</button>
-        <button class="action-btn danger" onclick="deleteSpec('${spec.uuid}', '${escapeHtml(spec.name).replace(/'/g,"\\'").slice(0,40)}')">remove from library</button>
+        <button class="action-btn danger" onclick="deleteSpec('${spec.uuid}', '${escapeHtml(spec.name).replace(/'/g,"\\'").slice(0,40)}')">remove spec (stops building)</button>
       </div>
     </div>
   `;
@@ -1335,34 +1309,38 @@ async function submitNewSpec(mapToRepo) {
       } catch (e) { toast(`spec created, map-to-repo failed: ${e.message}`, 'err'); }
     }
 
-    // §BUILT 2026-09-03 — James: "create a repository, then send each
-    // chunk to the respective agent." Every spec now gets a real repo
-    // shell the moment it exists — not only once every chunk is done (the
-    // explicit "map to repo now" branch above, unchanged, still template-
-    // gated). RepoLayer._enrich() always resolves live off specUuid, so
-    // this same repo record shows chunks landing as each one completes —
-    // no second promote step needed once the build loop below finishes.
-    try {
-      const repoRes = await api('/api/repos', {
-        method: 'POST',
-        body: JSON.stringify({ name, specUuid: manifest.uuid, source: 'repo-first', ideaUuid: ideaUuid || undefined }),
-      });
-      if (repoRes.error) toast(`spec created, repo shell failed: ${repoRes.error}`, 'err');
-      else await loadApiRepos();
-    } catch (e) {
-      // §1.2 loud, non-fatal — the spec is real regardless; a failed repo
-      // shell is surfaced, not silently swallowed, and createRepoThenBuild()
-      // below self-heals this (creates it late) if the user builds anyway.
-      toast(`spec created, repo shell failed: ${e.message}`, 'err');
+    // §CHANGED 2026-09-21 — James: "specs are supposed to use the same repo
+    // compartments." speceng.create already makes the repo AND its compartment
+    // the moment the spec exists (api/index.js, §FOUND & FIXED 2026-09-06) and
+    // returns repoUuid. This block used to POST /api/repos a second time
+    // regardless — a second repo for the same spec, with no compartment (the
+    // client cannot make one). It now only runs as a fallback when the server
+    // reported no repo, and asks the server to make the compartment.
+    if (!r.repoUuid) {
+      try {
+        const repoRes = await api('/api/repos', {
+          method: 'POST',
+          body: JSON.stringify({ name, specUuid: manifest.uuid, source: 'repo-first', ideaUuid: ideaUuid || undefined, ensureCompartment: true }),
+        });
+        if (repoRes.error) toast(`spec created, repo shell failed: ${repoRes.error}`, 'err');
+      } catch (e) {
+        // §1.2 loud, non-fatal — the spec is real regardless; the boot-time
+        // reconcile (api/index.js _reconcileSpecRepos) adopts it on restart, and
+        // createRepoThenBuild() below self-heals it if the person builds first.
+        toast(`spec created, repo shell failed: ${e.message}`, 'err');
+      }
     }
 
     closeNewSpecModal();
-    await loadSpecs();
+    await Promise.all([loadSpecs(), loadApiRepos()]);
     if (ideaUuid) {
       await loadIdeas();
       const idea = IDEAS.find(i => i.uuid === ideaUuid);
       if (idea) renderDetail(idea); // reflect the new phase + linked-spec immediately, not on next reload
     }
+    // The Spec Library used to be where a new spec showed up. It is a repo
+    // now, so land in it — same as the "map to repo now" branch above.
+    openRepoFor(ideaUuid || null, manifest.uuid, name);
   } catch (e) { toast(e.message, 'err'); }
 }
 function createSpecForIdea(ideaUuid) {
@@ -1425,7 +1403,7 @@ async function renderRepoArchitect(repo) {
 
   const chunks = spec.chunks || [];
   if (!chunks.length) {
-    wrap.innerHTML = `<div class="detail-empty">spec "${escapeHtml(spec.name || specUuid)}" has no chunks yet — build it in the Spec Library and its blueprint appears here.</div>`;
+    wrap.innerHTML = `<div class="detail-empty">spec "${escapeHtml(spec.name || specUuid)}" has no chunks yet — build it from this repo's Spec tab and its blueprint appears here.</div>`;
     return;
   }
 
@@ -1661,12 +1639,49 @@ function renderCurrentRepoSubtab() {
   if (CURRENT_REPO_SUBTAB === 'home') renderRepoHome(CURRENT_API_REPO);
   else if (CURRENT_REPO_SUBTAB === 'files') renderApiRepoPanel(CURRENT_API_REPO);
   else if (CURRENT_REPO_SUBTAB === 'architect') renderRepoArchitect(CURRENT_API_REPO);
+  else if (CURRENT_REPO_SUBTAB === 'spec') renderRepoSpec(CURRENT_API_REPO);
   else if (CURRENT_REPO_SUBTAB === 'phasemap') renderRepoPhasemap(CURRENT_API_REPO);
   else if (CURRENT_REPO_SUBTAB === 'roadmap') renderRepoRoadmap(CURRENT_API_REPO);
   else if (CURRENT_REPO_SUBTAB === 'intelligence') renderRepoIntelligence(CURRENT_API_REPO);
   else if (CURRENT_REPO_SUBTAB === 'agent') renderRepoAgent(CURRENT_API_REPO);
   else if (CURRENT_REPO_SUBTAB === 'versionium') renderRepoVersionium(CURRENT_API_REPO);
   else if (CURRENT_REPO_SUBTAB === 'settings') renderRepoSettings(CURRENT_API_REPO);
+}
+
+// ── SPEC — this repo's spec-engine spec as a working surface: chunk status,
+// per-chunk agent (pending only), build-remaining, build history, export.
+// §MOVED 2026-09-21 — was the right-hand pane of Build > Spec Library. The
+// builder itself (renderSpecBuilder / renderSpecEngineBuilder) is unchanged and
+// still writes into #spec-builder; that element now lives in this subtab. This
+// function only decides WHICH spec to point it at, and toggles the empty-state
+// sibling — it must not touch the panel's innerHTML (that would delete the
+// mount). Same repo → spec link, in the same precedence renderRepoArchitect uses.
+function renderRepoSpec(repo) {
+  const empty = document.getElementById('repo-spec-empty');
+  const mount = document.getElementById('spec-builder');
+  if (!empty || !mount || !repo) return;
+  const say = (html) => { mount.style.display = 'none'; empty.style.display = ''; empty.innerHTML = html; };
+
+  const specUuid = repo.specUuid || repo.promotedFromSpec || null;
+  if (!specUuid) {
+    say(`this repo has no spec-engine spec attached — there is nothing to build here.<br><br>a spec comes from creating one (Welcome → Start new project, or an idea → create spec) or from Create repo; repos imported from a zip or dropped as files have none.`);
+    return;
+  }
+  const spec = SPECS.find(s => s.uuid === specUuid);
+  if (!spec) {
+    // Not in the active list: still loading, or soft-removed (deleteSpec keeps
+    // everything on disk and drops it from listings). Offer the undo rather
+    // than a dead end — restoreSpec() is the existing, real inverse.
+    say(`spec ${escapeHtml(specUuid.slice(0, 8))} is linked to this repo but is not in the active spec list — it was removed, or the list has not loaded yet.<br><br><button class="modal-btn confirm" onclick="restoreSpec('${specUuid}')">restore spec</button>`);
+    return;
+  }
+  empty.style.display = 'none';
+  mount.style.display = '';
+  if (SELECTED_SPEC !== spec.uuid) {
+    SELECTED_SPEC = spec.uuid;
+    BUILDER_ACTIVE_SECTION = (spec.sections||[])[0]?.id || SECTION_IDS[0];
+  }
+  renderSpecBuilder(spec);
 }
 
 // ── HOME — the repo's own README/.spec if it has one, else basic identity.
@@ -3219,7 +3234,7 @@ async function handleNexusDeepLink() {
 // INIT — no seed data. Connect to real nexus, render empty states until then.
 // ════════════════════════════════════════════════════
 window.addEventListener('load', () => {
-  renderIdeaList(); renderSpecList(); renderVersionium(); renderBrainstorms();
+  renderIdeaList(); renderVersionium(); renderBrainstorms();
   updateStats();
   nexusConnect();
   handleNexusDeepLink();

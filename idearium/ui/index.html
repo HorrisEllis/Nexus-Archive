@@ -575,15 +575,19 @@ body{display:flex;flex-direction:column;position:relative}
 
     <!-- §UI 2026-09-20 — James: "Move eravos, architect, and spec builder to
          build tab. Eravos the organism canvas. Architect the block building
-         canvas for architecture." Build is now the three canvases plus the
-         Spec Library that feeds them. The OLD Build entry "Architect" (the
-         read-only blueprint viewer, #view-architect) is deliberately NOT
-         here anymore — it moved to a per-repo subtab, because a blueprint
-         is a property of one repo, not a global destination. -->
+         canvas for architecture."
+         §UI 2026-09-21 — James: "specs are supposed to use the same repo
+         compartments... remove the spec library from the build tab." Build
+         is now just the three canvases. A spec IS a repo in a compartment,
+         so the Spec Library (a second, parallel list of the same things) is
+         gone: its chunk list / agent assignment / build loop moved into each
+         repo's own Spec subtab (#repo-subtab-spec), and any spec that lacked
+         a repo is adopted into one at boot (_reconcileSpecRepos in
+         api/index.js). The read-only blueprint viewer stays a per-repo
+         Architect subtab. -->
     <div class="tab-group" data-group="build">
-      <button class="tab-btn tab-group-btn" data-views="spec,eravos,architect-build,spec-wizard" onclick="toggleTabGroup(event,this)"><span class="tab-icon">▦</span>Build<span class="tab-caret">▾</span></button>
+      <button class="tab-btn tab-group-btn" data-views="eravos,architect-build,spec-wizard" onclick="toggleTabGroup(event,this)"><span class="tab-icon">▦</span>Build<span class="tab-caret">▾</span></button>
       <div class="tab-dropdown">
-        <button class="tab-sub" data-view="spec" onclick="setView('spec')"><span class="tab-icon">▦</span>Spec Library</button>
         <button class="tab-sub" data-view="eravos" onclick="setView('eravos')"><span class="tab-icon">◈</span>Eravos — organism canvas</button>
         <button class="tab-sub" data-view="architect-build" onclick="setView('architect-build')"><span class="tab-icon">⌘</span>Architect — block canvas</button>
         <button class="tab-sub" data-view="spec-wizard" onclick="setView('spec-wizard')"><span class="tab-icon">▤</span>Spec Builder</button>
@@ -692,27 +696,11 @@ body{display:flex;flex-direction:column;position:relative}
       </div>
     </section>
 
-    <!-- ══════════ SPEC LIBRARY / BUILDER / COMPILER ══════════ -->
-    <section class="view" id="view-spec">
-      <div class="ph"><span class="ph-title">Spec Library</span><span class="ph-badge" id="spec-count-badge">0 specs</span></div>
-      <div class="body2">
-        <div class="left">
-          <div class="spec-toolbar">
-            <input class="search-input" id="spec-search" placeholder="search specs..." oninput="renderSpecList()">
-            <button class="mode-btn" onclick="newSpecPrompt()">+ new spec</button>
-            <button class="mode-btn" onclick="openUploadProjectModal()">+ upload project</button>
-          </div>
-          <div class="spec-list" id="spec-list"></div>
-        </div>
-        <div class="right" style="grid-column: 1 / -1; display:none"></div>
-        <div class="right">
-          <div class="ph"><span class="ph-title" id="spec-detail-title">Select a spec</span></div>
-          <div class="spec-builder" id="spec-builder">
-            <div class="detail-empty">← select or create a spec to open the builder</div>
-          </div>
-        </div>
-      </div>
-    </section>
+    <!-- ══════════ SPEC LIBRARY — REMOVED 2026-09-21 ══════════
+         James: "specs are supposed to use the same repo compartments...
+         remove the spec library from the build tab." Specs are repos: list
+         them in Repos, work on one in that repo's Spec subtab
+         (#repo-subtab-spec, which hosts #spec-builder). -->
 
     <!-- ══════════ ARCHITECT ══════════ -->
     <!-- §MOVED 2026-09-20 — the "Architect" blueprint view that used to live
@@ -789,6 +777,7 @@ body{display:flex;flex-direction:column;position:relative}
             <button class="repo-subtab-btn active" data-subtab="home" onclick="setRepoSubtab('home')">Home</button>
             <button class="repo-subtab-btn" data-subtab="files" onclick="setRepoSubtab('files')">Files</button>
             <button class="repo-subtab-btn" data-subtab="architect" onclick="setRepoSubtab('architect')">Architect</button>
+            <button class="repo-subtab-btn" data-subtab="spec" onclick="setRepoSubtab('spec')">Spec</button>
             <button class="repo-subtab-btn" data-subtab="phasemap" onclick="setRepoSubtab('phasemap')">Phasemap</button>
             <button class="repo-subtab-btn" data-subtab="roadmap" onclick="setRepoSubtab('roadmap')">Roadmap</button>
             <button class="repo-subtab-btn" data-subtab="intelligence" onclick="setRepoSubtab('intelligence')">Intelligence</button>
@@ -817,6 +806,18 @@ body{display:flex;flex-direction:column;position:relative}
                view used, scoped to one repo via repo.specUuid. -->
           <div class="repo-subtab-panel" id="repo-subtab-architect">
             <div class="detail-empty">← select a repo</div>
+          </div>
+
+          <!-- SPEC — this repo's spec-engine spec, as a working surface: chunk
+               status, per-chunk agent for pending chunks, build-remaining, build
+               history, export. Was the right-hand pane of the Build > Spec
+               Library; the mount id (#spec-builder) is unchanged so every
+               renderSpecBuilder()/renderSpecEngineBuilder() caller keeps working.
+               renderRepoSpec() toggles the two children — it must never replace
+               this panel's innerHTML, or #spec-builder disappears. -->
+          <div class="repo-subtab-panel" id="repo-subtab-spec">
+            <div class="detail-empty" id="repo-spec-empty">← select a repo</div>
+            <div class="spec-builder" id="spec-builder" style="display:none"></div>
           </div>
 
           <!-- PHASEMAP — real data: MCO2's verification tiers (L0-L8,
@@ -1724,17 +1725,26 @@ refresh();
 async function saveToIdearium(){
   if (!S.meta.name) { toast('meta → name is required before saving','err'); goTo('meta'); return; }
   try {
-    const res = await api('/api/specs', { method:'POST', body: JSON.stringify({ name: S.meta.name }) });
-    const specUuid = res.spec && res.spec.uuid;
-    if (specUuid) {
-      const yaml = buildYAML();
-      const spec = res.spec;
-      const sections = spec.sections.map(s => s.id === 'intent' ? { ...s, content: yaml, complete: true } : s);
-      await api('/api/specs/' + specUuid, { method:'PATCH', body: JSON.stringify({ sections }) });
-    }
-    toast('saved "' + S.meta.name + '" to Idearium', 'ok');
-    await loadSpecs();
-    setView('spec');
+    // §CHANGED 2026-09-21 — James: "specs are supposed to use the same repo
+    // compartments." This used to POST /api/specs (the legacy 9-section store,
+    // which has no repo) then jump to the Spec Library. That library is gone,
+    // and a legacy spec is not reachable from a repo. The wizard's output is a
+    // real .spec document, so it is saved AS one: a repo, in its own
+    // compartment, holding <name>.spec. Same RepoLayer.ingest() every other
+    // repo goes through (POST /api/repos, files[]); ensureCompartment asks
+    // the server to make the compartment, exactly as it does for a spec made
+    // from an idea.
+    const fname = (S.meta.name.replace(/[^a-z0-9._-]+/gi, '-').replace(/^-+|-+$/g, '').toLowerCase() || 'spec') + '.spec';
+    const res = await api('/api/repos', { method:'POST', body: JSON.stringify({
+      name: S.meta.name,
+      files: [{ path: fname, content: buildYAML() }],
+      source: 'spec-wizard',
+      ensureCompartment: true,
+    }) });
+    toast('saved "' + S.meta.name + '" as a repo (' + fname + ')', 'ok');
+    await Promise.all([loadSpecs(), loadApiRepos()]);
+    setView('repo');                       // setView('repo') resets to the library grid...
+    if (res.repo && res.repo.uuid) enterRepoDetail(res.repo.uuid);   // ...so enter the new repo after it
   } catch(e) { toast('save failed: ' + e.message, 'err'); }
 }
 </script>
@@ -1924,7 +1934,7 @@ async function saveToIdearium(){
   <div class="modal">
     <div class="modal-title">Build a Spec</div>
     <div class="modal-actions" style="flex-direction:column;gap:8px;align-items:stretch">
-      <button class="modal-btn confirm" onclick="closeSpecChoice(); setView('spec')">quick — section grid (intent, api_callto, module_hooks…)</button>
+      <button class="modal-btn confirm" onclick="closeSpecChoice(); newSpecPrompt()">quick — pick templates; creates the spec as a repo in its own compartment</button>
       <button class="modal-btn confirm" onclick="closeSpecChoice(); setView('spec-wizard')">full wizard — meta, axioms, deps, modules, events, schemas, enforcement, seams</button>
       <button class="modal-btn" onclick="closeSpecChoice()">cancel</button>
     </div>
