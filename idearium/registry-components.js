@@ -117,6 +117,8 @@ const COMPONENTS = [
   _comp('repo.agent.memory.list',   'GET',   '/api/repos/:uuid/agent/memory',       'What this agent has learned working on the project', { tags: ['agent'] }),
   _comp('repo.agent.memory.record', 'POST',  '/api/repos/:uuid/agent/memory',       "Teach this agent something, and re-compose its live persona", { tags: ['agent'] }),
   _comp('repo.agent.memory.forget', 'DELETE','/api/repos/:uuid/agent/memory/:obs',  'Forget one observation, and drop it from the persona', { tags: ['agent'] }),
+  _comp('repo.agent.export',        'POST',  '/api/repos/:uuid/agent/export',       'Materialise this compartment agent as portable .hat + .repo_agent node files', { tags: ['agent'] }),
+  _comp('repo.agent.import',        'POST',  '/api/repos/:uuid/agent/import',       'Restore a compartment agent from a .repo_agent node file, merging its observations', { tags: ['agent'] }),
   _comp('repo.ci.keys.list',    'GET',   '/api/repos/:uuid/ci/keys',          "List SSH key aliases registered to this compartment (never key material)", { tags: ['ci','keys'] }),
   _comp('repo.ci.keys.register','POST',  '/api/repos/:uuid/ci/keys',          'Register an SSH key BY PATH under an alias, in the compartment vault', { tags: ['ci','keys'] }),
   _comp('repo.ci.keys.remove',  'DELETE','/api/repos/:uuid/ci/keys/:alias',   'Remove an SSH key alias from this compartment', { tags: ['ci','keys'] }),

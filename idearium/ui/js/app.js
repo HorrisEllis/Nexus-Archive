@@ -2608,6 +2608,8 @@ exchanges  ${st.exchanges || 0}</div>
       ${st.exists
         ? `<button class="tb-btn" onclick="toggleAgentPersona()">show/hide persona</button>
            <button class="tb-btn" style="margin-left:6px" onclick="agentTeach()">teach</button>
+           <button class="tb-btn" style="margin-left:6px" onclick="agentExport()">export agent</button>
+           <button class="tb-btn" style="margin-left:6px" onclick="agentImport()">import agent</button>
            <button class="tb-btn" style="margin-left:6px" onclick="agentClearTranscript()">clear transcript</button>`
         : `<button class="tb-btn" onclick="agentForgeHat()">forge this repo's agent</button>`}
     </div>
@@ -2714,6 +2716,41 @@ async function agentTeach() {
     toast(r.hatUpdated ? 'learned — persona updated' : `stored, but persona not updated: ${r.reason || 'unknown'}`, r.hatUpdated ? 'ok' : 'err');
     renderRepoAgent(CURRENT_API_REPO);
   } catch (e) { toast(`teach failed: ${e.message}`, 'err'); }
+}
+
+// Export writes two real node files: the .hat (hat-forge's own envelope,
+// unchanged) and the .repo_agent bundle — hat definition + every learned
+// observation + the exchange log. That bundle is what makes this agent
+// portable between machines.
+async function agentExport() {
+  if (!CURRENT_API_REPO) return;
+  try {
+    const r = await api(`/api/repos/${CURRENT_API_REPO.uuid}/agent/export`, { method: 'POST', body: JSON.stringify({}) }, 30000);
+    toast(`exported — ${r.observations} observation(s), ${r.exchanges} exchange(s)`, 'ok');
+    // The paths are the point of the action, so they go in the transcript
+    // rather than a toast that vanishes before it can be copied.
+    _agentTranscript(CURRENT_API_REPO.uuid).push({
+      role: 'export', text: `${r.agentFile}\n${r.hatFile}`,
+      meta: `${r.observations} observations · ${r.exchanges} exchanges`,
+    });
+    renderRepoAgent(CURRENT_API_REPO);
+  } catch (e) { toast(`export failed: ${e.message}`, 'err'); }
+}
+
+// Import merges rather than replaces — an observation this repo already
+// holds has its occurrences summed, so importing twice does not double a
+// project's memory. The persona is re-grounded against THIS machine's
+// index, never the exported string, which described a different tree.
+async function agentImport() {
+  if (!CURRENT_API_REPO) return;
+  const filePath = await themedPrompt('path to a .repo_agent file:', 'import agent');
+  if (!filePath) return;
+  try {
+    const r = await api(`/api/repos/${CURRENT_API_REPO.uuid}/agent/import`, { method: 'POST', body: JSON.stringify({ filePath }) }, 30000);
+    toast(`imported — ${r.restored} new, ${r.merged} merged${r.rejected ? `, ${r.rejected} rejected` : ''}`, 'ok');
+    if (!r.personaRegrounded) toast(`persona not re-grounded: ${r.personaReason || 'unknown'}`, 'err');
+    renderRepoAgent(CURRENT_API_REPO);
+  } catch (e) { toast(`import failed: ${e.message}`, 'err'); }
 }
 
 async function agentForget(obsUuid) {

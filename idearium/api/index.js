@@ -929,6 +929,11 @@ function matchRoute(method, url) {
     ['GET',    ['api','repos',    ':uuid','agent','memory'],  'repo.agent.memory.list'],
     ['POST',   ['api','repos',    ':uuid','agent','memory'],  'repo.agent.memory.record'],
     ['DELETE', ['api','repos',    ':uuid','agent','memory',':obs'], 'repo.agent.memory.forget'],
+    // §REPO-AGENT-NODE 2026-09-20 — the agent as portable node files.
+    // .hat + .repo_agent (NOT .agent — that type is RAID's health snapshot;
+    // see lib/repo-agent-node.js's header for the collision).
+    ['POST',   ['api','repos',    ':uuid','agent','export'],  'repo.agent.export'],
+    ['POST',   ['api','repos',    ':uuid','agent','import'],  'repo.agent.import'],
     // §KEYS 2026-09-20 — compartment key/secret options, on the COS vault.
     // Values are NEVER returned by any of these; listings are names only.
     ['GET',    ['api','repos',    ':uuid','ci','keys'],        'repo.ci.keys.list'],
@@ -2523,6 +2528,32 @@ async function handle(req, res, route, query, body) {
       const RH = _require('../../lib/repo-hat.js');
       const refreshed = RH.refreshRepoHatPersona({ repo, repoDir: _repoDiskDir(params.uuid) });
       return ok(res, { repoUuid: params.uuid, ...r, hatUpdated: !!refreshed.ok, reason: refreshed.ok ? undefined : (refreshed.errors || []).join('; ') });
+    }
+
+    case 'repo.agent.export': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const RAN = _require('../../lib/repo-agent-node.js');
+      const r = RAN.materialise({
+        repo, repoDir: _repoDiskDir(params.uuid),
+        includeLog: body.includeLog !== false,
+      });
+      if (!r.ok) return err(res, 400, (r.errors || ['export failed']).join('; '));
+      os.emit('idearium.repo.agent.exported', { repoUuid: params.uuid, observations: r.observations });
+      return ok(res, { repoUuid: params.uuid, ...r });
+    }
+
+    case 'repo.agent.import': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      if (!body.filePath) return err(res, 400, 'filePath is required');
+      const RAN = _require('../../lib/repo-agent-node.js');
+      const r = RAN.importAgent(body.filePath, {
+        repo, repoDir: _repoDiskDir(params.uuid), includeLog: !!body.includeLog,
+      });
+      if (!r.ok) return err(res, 400, (r.errors || ['import failed']).join('; '));
+      os.emit('idearium.repo.agent.imported', { repoUuid: params.uuid, restored: r.restored, merged: r.merged });
+      return ok(res, { repoUuid: params.uuid, ...r });
     }
 
     // ── §KEYS 2026-09-20 — compartment key/secret options ────────────────

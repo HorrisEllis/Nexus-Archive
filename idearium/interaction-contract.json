@@ -562,6 +562,16 @@
       "_action": "repo.agent.memory.forget"
     },
     {
+      "method": "POST",
+      "path": "/api/repos/:uuid/agent/export",
+      "_action": "repo.agent.export"
+    },
+    {
+      "method": "POST",
+      "path": "/api/repos/:uuid/agent/import",
+      "_action": "repo.agent.import"
+    },
+    {
       "method": "GET",
       "path": "/api/repos/:uuid/ci/keys",
       "_action": "repo.ci.keys.list"

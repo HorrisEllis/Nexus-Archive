@@ -59,6 +59,7 @@ const SUITES = [
   'test-repo-toolbar-mode.js',
   'test-repo-hat-memory.js',
   'test-repo-agent.js',
+  'test-repo-agent-node.js',
   'ollama-runtime.test.js',
   'flush-redundancy.test.js',
   'admin-server-routes.test.js',
