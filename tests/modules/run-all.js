@@ -124,6 +124,7 @@ const SUITES = [
   'idearium-ingest-stability.test.js',
   'idearium-guardian-dispatch.test.js',
   'idearium-brainstorm-assist.test.js',
+  'test-phasemap-diagnosis-facts.test.js',
   'architect-spec-builder-theme.test.js',
   'idearium-chunk-dependencies.test.js',
   'test-agent-mesh-guardian-coverage.js',
