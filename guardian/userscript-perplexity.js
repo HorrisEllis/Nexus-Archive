@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Guardian — Perplexity v10.0
 // @namespace    nexus.guardian.perplexity
-// @version      10.2.0
+// @version      10.3.0
 // @description  Guardian v10 — Perplexity: protocol parity with Claude/ChatGPT/Gemini
 //               v10 (NCP handshake, IndexedDB kernel, SHA-256 dedup, tab-claim, SEAM
 //               jobs, intelligence injection, usage detection) built around
@@ -29,7 +29,7 @@ const CORTEX_URL  = 'http://127.0.0.1:3748';
 const INTELLIGENCE_URL = 'http://127.0.0.1:3753'; // intelligence is its own sovereign system (moved out of cortex 2026-09-19)
 const ORCH_URL    = 'http://127.0.0.1:9000';
 const PROVIDER    = 'perplexity';
-const VERSION     = '10.1.0';
+const VERSION     = '10.3.0';
 // §P113: exponential backoff 3s→30s — eliminates SSE flood on disconnect
 const RECONNECT_MIN_MS = 3000;
 const RECONNECT_MAX_MS = 30000;
@@ -260,6 +260,13 @@ function handleSyncRequest(msg) {
 function findResponseEl() {
   const answers = document.querySelectorAll('.prose, [data-testid="answer"], .answer-text, .result__content');
   return answers.length ? answers[answers.length - 1] : null;
+}
+// §AN1 2026-09-22 — full, ordered list of real assistant-message containers.
+// startWatch() captures this list's LENGTH at inject time; the response is
+// whichever node the DOM appends at that index afterward. See the claude
+// adapter's identical helper for the full rationale.
+function _anchorMessageEls() {
+  return document.querySelectorAll('.prose, [data-testid="answer"], .answer-text, .result__content');
 }
 function _isGenerating() {
   return !!document.querySelector('.loading-dots, .streaming, [data-testid="stop-button"], .stop-generating');
@@ -495,15 +502,10 @@ const NO_REPLY_MS = parseInt((typeof GM_getValue === 'function' && GM_getValue('
 function startWatch(jobId, prompt, retryCount = 0) {
   stopWatch();
   currentJobId = jobId; jobActive = true; _watchStart = Date.now();
-  // §STALE-REPLY FIX 2026-09-22 — James: "it used the first response from the
-  // first job for the second attempt." findResponseEl() returns the LAST
-  // assistant message, which at job start is the PREVIOUS job's answer — already
-  // rendered, already stable, _isGenerating() false. checkStable() therefore hit
-  // its 3 stable passes against the old text and completed the new job with the
-  // old reply. Baseline what was on screen BEFORE this job and never accept it:
-  // a completion must be a different element, or different text.
-  const _baseEl   = findResponseEl();
-  const _baseText = _baseEl ? (_baseEl.innerText || _baseEl.textContent || '').trim() : '';
+  // §AN1 2026-09-22 — anchor the response, don't guard against the previous
+  // one. See the claude adapter's identical block for the full rationale.
+  const _anchorIndex = _anchorMessageEls().length;
+  let _anchorNode = null;
   const mode = detectSearchMode();
   const maxMs = mode === 'research' ? 600000 : 180000; // 10min research, 3min quick/pro
   let lastText = '', stableCount = 0, _lastChunkLen = 0;
@@ -511,26 +513,39 @@ function startWatch(jobId, prompt, retryCount = 0) {
   function checkStable() {
     if (!currentJobId || currentJobId !== jobId) return;
     if (Date.now() - _watchStart > maxMs) { _log('err', `Watch timeout (${mode})`, `${jobId.slice(0,8)}`); stopWatch(); send({ type:'GUARDIAN_ERROR', jobId, gate:'watch', error:`timeout after ${Math.round(maxMs/1000)}s (mode:${mode})` }); return; }
-    const el = findResponseEl();
-    if (!el) { _watchTimer = setTimeout(checkStable, 600); return; }
-    const text = (el.innerText || el.textContent || '').trim();
-    // Still showing the previous answer: this job has produced nothing yet.
-    // §1.2 — after NO_REPLY_MS say so loudly rather than return a stale reply.
-    if (el === _baseEl && text === _baseText) {
-      if (Date.now() - _watchStart > NO_REPLY_MS) {
-        const ms = Date.now() - _watchStart;
-        stopWatch();
-        _log('gap', 'No reply', `#${jobId.slice(0,8)} · ${Math.round(ms/1000)}s`);
-        send({ type:'GUARDIAN_ERROR', jobId, gate:'watch',
-               error:`no new response — the tab still shows the previous answer after ${Math.round(ms/1000)}s (nothing was injected, or the send never went through)`,
-               chatUrl:location.href, account:getAccount() });
-        return;
+
+    if (!_anchorNode) {
+      const els = _anchorMessageEls();
+      if (els.length > _anchorIndex) {
+        _anchorNode = els[_anchorIndex];
+      } else {
+        // Nothing appended yet — §1.2, loud no-reply rather than stale.
+        if (Date.now() - _watchStart > NO_REPLY_MS) {
+          const ms = Date.now() - _watchStart;
+          stopWatch();
+          _log('gap', 'No reply', `#${jobId.slice(0,8)} · ${Math.round(ms/1000)}s`);
+          send({ type:'GUARDIAN_ERROR', jobId, gate:'watch',
+                 error:`no new response — the tab still shows the previous answer after ${Math.round(ms/1000)}s (nothing was injected, or the send never went through)`,
+                 chatUrl:location.href, account:getAccount() });
+          return;
+        }
+        _watchTimer = setTimeout(checkStable, 600); return;
       }
-      _watchTimer = setTimeout(checkStable, 600); return;
     }
+
+    if (!_anchorNode.isConnected) {
+      stopWatch();
+      _log('err', 'Anchor node detached', `#${jobId.slice(0,8)}`);
+      send({ type:'GUARDIAN_ERROR', jobId, gate:'watch',
+             error:'anchor node was removed from the DOM before the response settled',
+             chatUrl:location.href, account:getAccount() });
+      return;
+    }
+
+    const text = (_anchorNode.innerText || _anchorNode.textContent || '').trim();
     if (text === lastText && !_isGenerating()) {
       stableCount++;
-      if (stableCount >= 3) { const ms = Date.now() - _watchStart; _onJobComplete(jobId, text, el, ms, prompt, retryCount, mode); return; }
+      if (stableCount >= 3) { const ms = Date.now() - _watchStart; _onJobComplete(jobId, text, _anchorNode, ms, prompt, retryCount, mode); return; }
     } else {
       if (text.length > _lastChunkLen) {
         const delta = text.slice(_lastChunkLen); _lastChunkLen = text.length;

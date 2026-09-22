@@ -29,17 +29,37 @@ function extractFn(src, name) {
 
 /**
  * Runs the REAL startWatch against a scripted tab.
+ *
+ * §AN1 2026-09-22 — startWatch no longer calls findResponseEl() to decide
+ * completion; it calls _anchorMessageEls() (the full, ordered message list)
+ * once to capture a starting length, then latches whichever node the list
+ * grows into at that index. The fake tab is modeled the same way: a growing
+ * `messages` array, not a single mutable element.
+ *
  * reply: null = the tab never answers (the previous answer just sits there);
- *        string = the new answer appears after `afterMs`.
+ *        string = a new message node is appended after `afterMs`.
+ * extra/extraAfterMs: an unrelated further append (e.g. a stray third node),
+ *        to prove the anchor doesn't move once latched.
+ * detachAfterMs: if set, the reply node's isConnected flips false this many
+ *        ms after it appears, to exercise the detached-anchor failure path.
  */
-function runWatch(src, { previous, reply = null, afterMs = 1700, noReplyMs = 6000, giveUpMs = 14000 }) {
+function runWatch(src, {
+  previous, reply = null, afterMs = 1700, noReplyMs = 6000, giveUpMs = 14000,
+  extra = null, extraAfterMs = null, detachAfterMs = null,
+}) {
   return new Promise((resolve) => {
     const sent = [];
-    let el = { innerText: previous };            // the PREVIOUS answer, already rendered
-    const started = Date.now();
-    if (reply !== null) setTimeout(() => { el = { innerText: reply }; }, afterMs);
+    let messages = [{ innerText: previous, isConnected: true }]; // PREVIOUS answer, already rendered
+    let replyNode = null;
+    if (reply !== null) setTimeout(() => {
+      replyNode = { innerText: reply, isConnected: true };
+      messages = [...messages, replyNode];
+      if (detachAfterMs !== null) setTimeout(() => { replyNode.isConnected = false; }, detachAfterMs);
+    }, afterMs);
+    if (extra !== null) setTimeout(() => { messages = [...messages, { innerText: extra, isConnected: true }]; }, extraAfterMs);
     const sandbox = {
-      findResponseEl: () => el,
+      findResponseEl: () => messages[messages.length - 1],
+      _anchorMessageEls: () => messages,
       _isGenerating: () => false,                 // settled, as a finished previous answer is
       send: (m) => { sent.push(m); if (m.type === 'GUARDIAN_ERROR') resolve({ sent, done: null }); },
       getAccount: () => 'acct',
@@ -85,6 +105,29 @@ async function main() {
     check(`${p}: a genuine new answer completes the job with ITS text`,
       good.done && good.done.text === 'SECOND JOB ANSWER', good.done && good.done.text);
     check(`${p}: the completed job is the one that was watched`, good.done && good.done.jobId === 'job-2');
+
+    // §AN1 — anchor exactness: once the new node exists and is latched, a
+    // LATER, unrelated append (a stray third node) must not move the
+    // goalposts. A "last of many" re-query (the pre-AN1 shape) would have
+    // picked up the third node instead and either mismatched or hung.
+    const anchored = await runWatch(src, {
+      previous: 'FIRST JOB ANSWER', reply: 'SECOND JOB ANSWER',
+      extra: 'THIRD UNRELATED NODE', extraAfterMs: 1900,
+    });
+    check(`${p}: AN1 — a later unrelated append does not change which node the job completes from`,
+      anchored.done && anchored.done.text === 'SECOND JOB ANSWER', anchored.done && anchored.done.text);
+
+    // §AN1 — nothing silently fails: if the anchored node is later removed
+    // from the DOM outright (re-render swapped it out) rather than mutated
+    // in place, the job must report loudly, never silently read whatever
+    // is on screen now.
+    const detached = await runWatch(src, {
+      previous: 'FIRST JOB ANSWER', reply: 'SECOND JOB ANSWER',
+      detachAfterMs: 200, noReplyMs: 6000, giveUpMs: 6000,
+    });
+    check(`${p}: AN1 — an anchored node later removed from the DOM fails loudly, not silently`,
+      detached.done === null && detached.sent.some(m => m.type === 'GUARDIAN_ERROR' && /removed from the DOM/.test(m.error)),
+      JSON.stringify(detached.sent.map(m => m.type)));
 
     check(`${p}: the userscript version was bumped so the fix is visible in guardian's report`,
       /const VERSION\s*=\s*'10\.[1-9]/.test(src));
