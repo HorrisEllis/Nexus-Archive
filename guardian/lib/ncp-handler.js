@@ -303,26 +303,42 @@ function createNCPMessageHandler(deps) {
             }
           }
 
-          // Server-side gap analysis — §LAW II: write before acting
-          const gaps = GapHunter.analyze(finalText);
-          const gapDrift = GapHunter.drift(gaps);
-          if (gaps.length > 0) {
-            for (const g of gaps) {
-              jaa.insert('gaps', { uuid: require('crypto').randomUUID(),
-                jobId, provider, type: g.type, domain: g.domain,
-                reason: g.reason, description: g.description,
-                score: g.score, evidence: g.evidence, ts: Date.now() });
+          // §FIX 2026-09-22 — James: "creates the job, dispatches the job,
+          // gets the acknowledgment but no completion." Root cause: this
+          // whole enrichment stretch (gap analysis through chat-log,
+          // ~130 lines) had no outer safety net, and guardian/lib/ncp.js's
+          // /result handler sends its HTTP 200 BEFORE onMessage() runs —
+          // so its own catch()'s res.headersSent guard is already true by
+          // the time an exception here would reach it. Any throw in here
+          // was silently swallowed: no log, no retry, job stuck at
+          // "dispatched" forever. GapHunter/Detector were the two calls
+          // with no try/catch at all (found first, by direct read); every
+          // step below is now individually guarded so a failure in ONE
+          // degrades that step, not the whole completion.
+          let gaps = [], gapDrift = null;
+          try {
+            gaps = GapHunter.analyze(finalText);
+            gapDrift = GapHunter.drift(gaps);
+            if (gaps.length > 0) {
+              for (const g of gaps) {
+                jaa.insert('gaps', { uuid: require('crypto').randomUUID(),
+                  jobId, provider, type: g.type, domain: g.domain,
+                  reason: g.reason, description: g.description,
+                  score: g.score, evidence: g.evidence, ts: Date.now() });
+              }
+              bus.emit('guardian.gaps', { jobId, gaps, drift: gapDrift, provider });
             }
-            bus.emit('guardian.gaps', { jobId, gaps, drift: gapDrift, provider });
-          }
+          } catch (e) { console.error(`[guardian] gap analysis failed for job ${jobId} (completion continues without it): ${e.message}`); }
 
           // Server-side detector — only if we have a SEAM chunk to compare against
           let detection = null;
-          if (job?.seam_chunk_content) {
-            const profile = Detector.profile(job.seam_chunk_content);
-            detection = Detector.evaluate(finalText, job.seam_chunk_content, profile, job.axioms || []);
-            bus.emit('guardian.detection', { jobId, ...detection });
-          }
+          try {
+            if (job?.seam_chunk_content) {
+              const profile = Detector.profile(job.seam_chunk_content);
+              detection = Detector.evaluate(finalText, job.seam_chunk_content, profile, job.axioms || []);
+              bus.emit('guardian.detection', { jobId, ...detection });
+            }
+          } catch (e) { console.error(`[guardian] detector failed for job ${jobId} (completion continues without it): ${e.message}`); }
 
           updateJob(jobId, {
             status: 'complete', response: finalText, completedAt: Date.now(),
@@ -341,18 +357,14 @@ function createNCPMessageHandler(deps) {
             console.warn(`[guardian] code-artifact listener failed for job ${jobId} (non-fatal): ${e.message}`);
           }
 
-          jaa.insert('artifacts', {
-            uuid: require('crypto').randomUUID(), jobId, provider: provider || 'unknown',
-            content: finalText.slice(0, 10000), ts: Date.now(), chatUrl, account,
-            gaps: gaps.length, gapDrift,
-            // null when the job never declared a file — the row shape is
-            // additive, existing readers are unaffected.
-            fileName: codeArtifact && codeArtifact.ok ? codeArtifact.fileName : null,
-            syntax:   codeArtifact && codeArtifact.ok ? codeArtifact.syntax   : null,
-            filePath: codeArtifact && codeArtifact.ok ? codeArtifact.path     : null,
-            fileSha256: codeArtifact && codeArtifact.ok ? codeArtifact.sha256 : null,
-            dropId:   codeArtifact && codeArtifact.ok ? codeArtifact.dropId   : null,
-          });
+          // §BUILT 2026-09-22 — James: "yes, do it" (route this completion
+          // through response-sink.js instead of a separate, parallel,
+          // less-robust implementation). The manual jaa.insert('artifacts',
+          // ...) this replaced is now writeLedger()'s own job inside
+          // deliver() below — same table, same shape, plus the codeArtifact
+          // fields passed through. Not called here: deliver() itself emits
+          // guardian.job.complete (see below) — this block now only feeds
+          // it codeArtifact for the artifacts row.
 
           // §CHAT-LOG: persist every exchange for context injection and querying
           // Queryable via GET /api/memory?table=chat_log
@@ -433,11 +445,33 @@ function createNCPMessageHandler(deps) {
 
           // §23.7 — include gapUuid and meta in the complete event so gap-loop's
           // closure verifier can find the gap and run verifyClosure immediately
+          //
+          // §BUILT 2026-09-22 — James: "verify the .response node or
+          // artifact on disk using downloads manager. or event ledger in
+          // clearglass" / "yes, do it." This used to be a manual
+          // bus.emit('guardian.job.complete', ...) — the ONE real place
+          // completion was signaled, with no other sink. Now routes
+          // through guardian/lib/response-sink.js's deliver(): the SAME
+          // event fires (emitToStream runs synchronously, first, inside
+          // deliver — the signal is not delayed by anything below), PLUS
+          // three more independent, durable sinks that never existed for
+          // an NCP-dispatched job before this: a .response node under
+          // guardian/data/nodes/response/ (survives a guardian restart,
+          // where jobs — an in-memory Map — would not), Clear Glass's own
+          // downloads manager, and the CFR ledger. Any one of node/ledger
+          // being durable means synthesize(jobId) (response-sink.js) can
+          // reconstruct a stuck-looking job's real answer even if this
+          // whole process died before doing anything else. deliver() is
+          // NOT awaited — its own sinks run and report independently;
+          // this handler has never awaited completion side-effects, and
+          // the one thing that MUST happen synchronously (the bus.emit)
+          // already does, by the time this call returns control.
           const jobRec2 = jobs.get(jobId);
-          bus.emit('guardian.job.complete', {
-            jobId, provider, chars: finalText.length,
-            gaps: gaps.length, gapDrift,
+          require('./response-sink.js').deliver({
+            jobId, provider, text: finalText, status: 'complete', source: 'ncp',
+            prompt: jobRec2?.prompt || null, chatUrl, gaps: gaps.length, gapDrift,
             command: jobRec2?.command || null,
+            codeArtifact: codeArtifact && codeArtifact.ok ? codeArtifact : null,
             meta: {
               gapUuid:     jobRec2?.gapUuid    || null,
               gapType:     jobRec2?.gapType    || null,
@@ -445,7 +479,8 @@ function createNCPMessageHandler(deps) {
               source:      jobRec2?.source     || 'guardian',
               contractUuid:jobRec2?.contractUuid||null,
             },
-          });
+          }, { bus, jaa, evLedger, updateJob }).catch(e =>
+            console.error(`[guardian] response-sink.deliver failed for job ${jobId} (the completion SIGNAL already fired — this only affects the extra durable sinks): ${e.message}`));
           cockpitBroadcast({ type: 'job.complete', jobId, provider,
             chars: finalText.length, gaps: gaps.length, gapDrift, ts: Date.now() });
 

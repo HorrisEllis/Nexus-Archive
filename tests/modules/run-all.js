@@ -318,6 +318,7 @@ const SUITES = [
   'test-node-export.js',
   'test-node-schemas.js',
   'test-ncp-handler-sr3.js',
+  'test-response-sink-passthrough.test.js',
   'test-self-build-loop.js',
   'test-sr11-import-pipeline.js',
   // §2026-09-19 — MCO1 graph layer + the brace-balance false-positive it

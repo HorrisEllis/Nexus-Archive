@@ -173,6 +173,17 @@ function writeLedger(rec, { evLedger, jaa }) {
         // it is for.
         content: (rec.text || '').slice(0, 10000),
         ts: Date.now(), source: rec.source || 'response-sink',
+        gaps: rec.gaps !== undefined ? rec.gaps : undefined,
+        gapDrift: rec.gapDrift !== undefined ? rec.gapDrift : undefined,
+        // §BUILT 2026-09-22 — codeArtifact fields, when the caller found
+        // one (ncp-handler's own code-artifact.js onJobComplete result) —
+        // additive, so this one row carries what used to be a second,
+        // now-removed manual insert into this same table.
+        fileName:   rec.codeArtifact ? rec.codeArtifact.fileName   : undefined,
+        syntax:     rec.codeArtifact ? rec.codeArtifact.syntax     : undefined,
+        filePath:   rec.codeArtifact ? rec.codeArtifact.path       : undefined,
+        fileSha256: rec.codeArtifact ? rec.codeArtifact.sha256     : undefined,
+        dropId:     rec.codeArtifact ? rec.codeArtifact.dropId     : undefined,
       });
       detail.push('artifacts'); ok = true;
     }
@@ -245,9 +256,19 @@ function emitToStream(rec, { bus, done = true } = {}) {
       bus.emit('guardian.job.error', { jobId: rec.jobId, provider: rec.provider, error: rec.error || rec.text || 'job failed' });
     } else if (done) {
       if (rec.text) bus.emit('guardian.job.chunk', { jobId: rec.jobId, provider: rec.provider, text: rec.text });
+      // §BUILT 2026-09-22 — James: "do it" (route ncp-handler's completion
+      // through this module). gaps/gapDrift/command/meta are optional and
+      // additive — gap-loop's closure verifier reads meta.gapUuid off this
+      // exact event; every OTHER real caller of deliver() (the standalone
+      // POST /response/:jobId route) simply never passes them, so this is
+      // fully backward compatible, not a second event shape.
       bus.emit('guardian.job.complete', {
         jobId: rec.jobId, provider: rec.provider, chars: (rec.text || '').length,
         source: rec.source || 'response-sink',
+        ...(rec.gaps !== undefined ? { gaps: rec.gaps } : {}),
+        ...(rec.gapDrift !== undefined ? { gapDrift: rec.gapDrift } : {}),
+        ...(rec.command !== undefined ? { command: rec.command } : {}),
+        ...(rec.meta !== undefined ? { meta: rec.meta } : {}),
       });
     } else {
       // A real streaming increment — not terminal, so no complete event.
@@ -290,6 +311,12 @@ async function deliver(rec, deps = {}) {
     error: rec.error || null,
     synthesizedFrom: rec.synthesizedFrom || null,
     ts: Date.now(),
+    // §BUILT 2026-09-22 — optional, additive; see emitToStream's own note.
+    ...(rec.gaps !== undefined ? { gaps: rec.gaps } : {}),
+    ...(rec.gapDrift !== undefined ? { gapDrift: rec.gapDrift } : {}),
+    ...(rec.command !== undefined ? { command: rec.command } : {}),
+    ...(rec.meta !== undefined ? { meta: rec.meta } : {}),
+    ...(rec.codeArtifact !== undefined ? { codeArtifact: rec.codeArtifact } : {}),
   };
 
   const sinks = {};
@@ -404,8 +431,26 @@ function synthesize(jobId, deps = {}) {
     }
   } catch (_) {}
 
+  // 6. Clear Glass's downloads manager — a DIFFERENT real store than #2's
+  // node (guardian/data/nodes/response/ vs clear-glass's own responses/
+  // under its database-compartment root; both are real, independent
+  // ".response" files, named the same because they hold the same shape
+  // of thing, not because they're the same store). §BUILT 2026-09-22.
+  try {
+    const { ensureCompartment, findResponseByJobId } = require('../../clear-glass/src/downloads/artifact-chat-index.js');
+    const { createHost } = require('../../cos/host/index.js');
+    const compartment = ensureCompartment(createHost());
+    const root = compartment.fs?.root || compartment.root;
+    const found = findResponseByJobId(root, jobId);
+    if (found && found.raw?.response) {
+      return { ok: true, found: true, source: 'downloads', jobId,
+        response: found.raw.response, provider: found.provider || 'unknown',
+        status: 'complete', capturedAt: found.captured_at || null };
+    }
+  } catch (_) {}
+
   return { ok: false, found: false, jobId,
-    error: `no response recorded for job ${jobId} in any sink (job, node, ledger, artifacts, chat_log, intake)` };
+    error: `no response recorded for job ${jobId} in any sink (job, node, ledger, artifacts, chat_log, intake, downloads)` };
 }
 
 module.exports = {

@@ -338,6 +338,36 @@ function _scanResponses(p, { kind, provider, chatId, limit = 100 } = {}) {
 }
 
 /**
+ * findResponseByJobId(root, jobId) — James: "verify the .response node or
+ * artifact on disk using downloads manager." raw.jobId isn't an indexed
+ * column (kind/provider/chat_id are the only ones index.db carries), so
+ * this scans responses/*.response directly — the same real source of
+ * truth _scanResponses already falls back to, not a second store. Real
+ * use: a job stuck at "dispatched" (guardian's own completion signal
+ * lost, e.g. to an exception in enrichment) can still be verified/
+ * recovered from here, because recordResponse() already wrote this file
+ * BEFORE guardian's completion emit — this is the redundant, disk-based
+ * confirmation that a response genuinely arrived, independent of whether
+ * the in-process signal did.
+ */
+function findResponseByJobId(root, jobId) {
+  const p = _paths(root);
+  let names;
+  try { names = fs.readdirSync(p.responsesDir).filter(n => n.endsWith('.response')); }
+  catch (_) { return null; }
+  let best = null;
+  for (const name of names) {
+    let r;
+    try { r = JSON.parse(fs.readFileSync(path.join(p.responsesDir, name), 'utf8')); }
+    catch (_) { continue; } // unreadable — same honest skip _scanResponses uses for its own listing, but this is a targeted lookup, not a listing
+    if (r?.raw?.jobId === jobId) {
+      if (!best || (r.captured_at || 0) > (best.captured_at || 0)) best = r;
+    }
+  }
+  return best; // null if genuinely never captured — never fabricates a match
+}
+
+/**
  * backupSnapshot(host) — redundant backups via the REAL, existing COS
  * snapshot mechanism (cos/cli/commands/snapshot.js), not a second
  * bespoke backup path. A snapshot captures responses/ and index.db
@@ -351,4 +381,5 @@ function backupSnapshot(host) {
 module.exports = {
   MODULE_ID, COMPARTMENT_NAME,
   ensureCompartment, recordResponse, queryItems, rebuildIndexFromResponses, backupSnapshot,
+  findResponseByJobId,
 };

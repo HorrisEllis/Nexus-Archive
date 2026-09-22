@@ -574,6 +574,17 @@ function fenceDeclaredPath(b) {
   return m && m[1] && m[1] !== b.tag ? _safeRelative(m[1]) : null;
 }
 
+// §REMOVED 2026-09-22 — a verifyJobCompletion() lived here briefly, built
+// before finding guardian/lib/response-sink.js's own synthesize(jobId),
+// which already does this — more completely (5 sources, not 1) and
+// already real. Kept out rather than left as a second, inferior
+// implementation. See response-sink.js's synthesize() for the real one,
+// and findResponseByJobId() in clear-glass/src/downloads/artifact-chat-
+// index.js remains (synthesize() doesn't use it, but it's a real,
+// independently useful primitive — direct .response lookup by jobId —
+// not redundant with synthesize's own node-reading path, which reads a
+// different real store, guardian/data/nodes/response/).
+
 module.exports = {
   MODULE_ID,
   fenceDeclaredPath,

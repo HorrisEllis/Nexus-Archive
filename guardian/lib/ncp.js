@@ -264,7 +264,18 @@ function createNCPServer({ onMessage, onConnect, onDisconnect, busEmit } = {}) {
       res.end(JSON.stringify({ ok: true }));
       if (body.type) {
         busEmit?.('ncp.message.received', { type: body.type, provider: body.provider }, 'DEBUG');
-        onMessage?.(body);
+        // §FIX 2026-09-22 — James: "creates the job, dispatches the job,
+        // gets the acknowledgment but no completion." onMessage() runs
+        // AFTER res.end() above — the response is already sent, so the
+        // .catch() below's `if (res.headersSent) return;` guard was
+        // ALWAYS true by the time an exception from onMessage (guardian/
+        // lib/ncp-handler.js's _handleNCPMessage) reached it: silently
+        // swallowed, no log, nothing. The real completion pipeline is now
+        // internally guarded (see ncp-handler.js's own 2026-09-22 fix) so
+        // this should no longer fire in practice — kept as the real,
+        // logged last resort rather than trusting that alone.
+        try { onMessage?.(body); }
+        catch (e) { console.error(`[guardian NCP] onMessage threw for a real ${body.type} message (jobId=${body.jobId || 'unknown'}) — was previously silent: ${e.message}`); }
       }
     }).catch(e => {
       if (res.headersSent) return;
