@@ -1,0 +1,39 @@
+envelope: 1
+uuid: nexus-export-chunk-loop-proof-1790089095059.a47b33be-ee94-4e12-8445-3452d498918e.871e95e2-934c-4796-a0ef-45263231e8aa
+type: chunk
+id: loop-proof-1790089095059.a47b33be-ee94-4e12-8445-3452d498918e.871e95e2-934c-4796-a0ef-45263231e8aa
+context: idearium spec-engine chunk of spec a47b33be-ee94-4e12-8445-3452d498918e
+intent: null
+summary: meta (complete)
+system: idearium
+tags:
+  - spec:a47b33be-ee94-4e12-8445-3452d498918e
+  - status:complete
+  - section:meta
+  - specName:loop-proof-1790089095059
+  - agent:ollama
+exported_at: 1790089095071
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1790089095071
+lastSeenAt: 1790089095071
+fingerprint: null
+payload:
+  uuid: 871e95e2-934c-4796-a0ef-45263231e8aa
+  specUuid: a47b33be-ee94-4e12-8445-3452d498918e
+  sectionId: meta
+  sectionTitle: Meta & Identity
+  chunkIdx: 0
+  status: complete
+  realPath: null
+  fileName: 00-meta.md
+  filePath: /home/claude/work/package/Nexus_v0_39_211/base/idearium/data/specs/a47b33be-ee94-4e12-8445-3452d498918e/00-meta-871e95e2.md
+  agent: ollama
+  agentModel: null
+  attempts: 0
+  failureMode: null
+  byteSize: 767
+  contentHash: db3c894d42d129bd3d831fe5f81d1e294f823493318b2ba4bd0c2f5d69f7ab10
+  createdAt: 1790089095060
+  updatedAt: 1790089095065
+  completedAt: 1790089095065

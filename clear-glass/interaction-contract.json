@@ -1,6 +1,6 @@
 {
   "id": "clear-glass-v1",
-  "version": "3.1.0",
+  "version": "3.9.0",
   "namespace": "clear-glass",
   "_built_2026_09_20": "Built for MCO7f/P2 — derived directly from clear-glass/registry-components.js (module.exports.components), never hand-authored. Port ambiguity RESOLVED (was left open in an earlier pass of this same file): clear-glass/src/main/index.js:1513-1514 confirms directly — the orchestrator contract-handshake polls /contract on SSE_PORT (7701), not IPC_PORT (7702, what registry-components.js itself declares as 'port') or WIRE_PORT (7704, what compartment.json declares). sse:7701 is the real handshake port; the other three are real but serve other purposes. §NOTE: this static file mirrors clear-glass/registry-components.js at the time it was built — the LIVE /contract endpoint (clear-glass/src/main/index.js:1519,1577) serves that module directly, always fresh. This file will drift if registry-components.js changes and this file is not regenerated; it is documentation, not the source of truth.",
   "ports": {
@@ -350,6 +350,66 @@
       "method": "IPC",
       "path": "bgtab:list",
       "_componentId": "cg.bgtab.list"
+    },
+    {
+      "method": "IPC",
+      "path": "autofill:profile:list",
+      "_componentId": "cg.autofill.listProfiles"
+    },
+    {
+      "method": "IPC",
+      "path": "autofill:profile:get",
+      "_componentId": "cg.autofill.getProfile"
+    },
+    {
+      "method": "IPC",
+      "path": "autofill:profile:create",
+      "_componentId": "cg.autofill.createProfile"
+    },
+    {
+      "method": "IPC",
+      "path": "autofill:profile:update",
+      "_componentId": "cg.autofill.updateProfile"
+    },
+    {
+      "method": "IPC",
+      "path": "autofill:profile:delete",
+      "_componentId": "cg.autofill.deleteProfile"
+    },
+    {
+      "method": "IPC",
+      "path": "autofill:detect",
+      "_componentId": "cg.autofill.detect"
+    },
+    {
+      "method": "IPC",
+      "path": "autofill:fill",
+      "_componentId": "cg.autofill.fill"
+    },
+    {
+      "method": "IPC",
+      "path": "screen-qa:detect",
+      "_componentId": "cg.screenQa.detect"
+    },
+    {
+      "method": "IPC",
+      "path": "screen-qa:answer",
+      "_componentId": "cg.screenQa.answer"
+    },
+    {
+      "method": "IPC",
+      "path": "screen-qa:inject",
+      "_componentId": "cg.screenQa.inject"
+    },
+    {
+      "method": "IPC",
+      "path": "screen-qa:element-at",
+      "_componentId": "cg.screenQa.elementAt"
+    },
+    {
+      "method": "IPC",
+      "path": "screen-qa:derive-question",
+      "_componentId": "cg.screenQa.deriveQuestion"
     }
   ]
 }

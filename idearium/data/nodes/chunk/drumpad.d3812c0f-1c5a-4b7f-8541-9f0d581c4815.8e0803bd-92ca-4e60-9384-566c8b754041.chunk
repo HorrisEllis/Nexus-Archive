@@ -1,0 +1,39 @@
+envelope: 1
+uuid: nexus-export-chunk-drumpad.d3812c0f-1c5a-4b7f-8541-9f0d581c4815.8e0803bd-92ca-4e60-9384-566c8b754041
+type: chunk
+id: drumpad.d3812c0f-1c5a-4b7f-8541-9f0d581c4815.8e0803bd-92ca-4e60-9384-566c8b754041
+context: idearium spec-engine chunk of spec d3812c0f-1c5a-4b7f-8541-9f0d581c4815
+intent: null
+summary: tools-json (complete)
+system: idearium
+tags:
+  - spec:d3812c0f-1c5a-4b7f-8541-9f0d581c4815
+  - status:complete
+  - section:tools-json
+  - specName:drumpad
+  - agent:chatgpt
+exported_at: 1790080756661
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1790080756661
+lastSeenAt: 1790080756661
+fingerprint: null
+payload:
+  uuid: 8e0803bd-92ca-4e60-9384-566c8b754041
+  specUuid: d3812c0f-1c5a-4b7f-8541-9f0d581c4815
+  sectionId: tools-json
+  sectionTitle: tools.json
+  chunkIdx: 5
+  status: complete
+  realPath: tools.json
+  fileName: 05-tools-json.md
+  filePath: /tmp/ftp-idearium-HySnO5/specs/d3812c0f-1c5a-4b7f-8541-9f0d581c4815/05-tools-json-8e0803bd.json
+  agent: chatgpt
+  agentModel: null
+  attempts: 0
+  failureMode: null
+  byteSize: 377
+  contentHash: 4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945
+  createdAt: 1790080756640
+  updatedAt: 1790080756660
+  completedAt: 1790080756660

@@ -1,11 +1,22 @@
 spec:
   meta:
     name:        idearium
-    version:     4.1.0   # §5.4 drift fix 2026-09-13 — was 3.2.0, out of sync with
+    version:     4.2.0   # §5.4 drift fix 2026-09-13 — was 3.2.0, out of sync with
                          # idearium/package.json's 4.1.0 since at least the
                          # 2026-09-03 "idearium 3.3.0" session. package.json is
                          # the one actually bumped per-release; this field had
                          # simply stopped being updated alongside it.
+                         # §2026-09-22 — real bump, not drift correction this time:
+                         # eravos mods (28 real ones, read live from eravos/ui/mods/)
+                         # joined COS archetypes/blueprints as a third selectable
+                         # category in the New Spec modal's "architecture & features"
+                         # picker (lib/file-tree-plan.js's listEravosMods/fromEravosMod),
+                         # and Brainstorm gained real AI assistance through the
+                         # previously-uncalled copilot-adapter gate (POST /api/copilot/
+                         # suggest) — an "assist" button on the capture row, a "refine"
+                         # button on every unpromoted card, brainstorm.promote gained an
+                         # optional text override. Full detail in lib/version.js's own
+                         # 0.39.208/0.39.209 changelog entries.
     foundation:  nexus-system-foundation@1.0.0
     port:        4800
     uuid:        nexus-idearium-v3-0000-2026-0615-jamesbrooks-001
@@ -152,3 +163,32 @@ spec:
       No real caller in this system's own dispatch orchestration (index.js/api/index.js) yet builds a
       build_order chunk or calls emitStructure() as part of a real spec's own lifecycle — proven standalone,
       not yet wired end-to-end without a human calling it directly.
+
+  built_2026_09_22_eravos_mods_and_brainstorm_ai:
+    what: >-
+      James: "add eravos organisms to architecture & features — select any combination" and "brainstorm
+      should have full ai assistance." (1) lib/file-tree-plan.js gained listEravosMods()/fromEravosMod(),
+      reading live from eravos/ui/mods/<name>/ (28 real, complete mods — a schema/schema.json +
+      <name>.engine.js pair each; nexus-shared correctly excluded, no schema.json) exactly the way
+      listCosTemplates() already reads live from cos/ — a third selectable category in the New Spec
+      modal's "architecture & features" picker, alongside COS archetypes and blueprints. speceng.create's
+      COS-only file-tree check widened to isFileTreeTemplate (either catalog). (2) brainstorm.promote
+      gained an optional body.text override; the Brainstorm capture row and every unpromoted card gained
+      an "assist"/"refine" action routing through the REAL, already-existing copilot-adapter gate (POST
+      /api/copilot/suggest) — which had zero UI callers anywhere before this despite its own comment
+      claiming "the wizard's 'ask copilot' button hits this."
+    why_no_new_routes: >-
+      Neither change added a route. Eravos mods ride the existing speceng.templates/speceng.create actions
+      (already in this spec's routes:); brainstorm's AI assist calls copilot.suggest, a real route that
+      already existed and is unrelated to idearium's own routes: list. Nothing here needed a
+      registry-components.js entry for the same reason — see clear-glass.spec's own 2026-09-22 entry for
+      where that class of gap DID need real registry work, on the clear-glass side of this same session.
+    honest_gap: >-
+      This spec's modules: list (idea-store/project-repo/lattice/queue-listener) and routes: list (11
+      entries) both predate essentially everything idearium has become since — spec-engine, repos,
+      compartment agents, the New Spec picker, Brainstorm, none of it is named there. Backfilling that is
+      a real, separate, much larger pass than this one; this entry documents only what changed this
+      session, not a reconciliation of the whole file against current reality.
+    tests: >-
+      tests/modules/test-file-tree-plan.js 63/63 (30 new eravos-mod checks), tests/modules/idearium-
+      brainstorm-assist.test.js 17/17. Full detail in lib/version.js's 0.39.208/0.39.209 entries.

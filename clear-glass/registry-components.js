@@ -2,7 +2,7 @@
 /**
  * clear-glass/registry-components.js — Clear Glass System Contract
  * UUID: cg-registry-v1-0000-0000-000000000001
- * Version: 3.1.0
+ * Version: 3.9.0
  *
  * Served at GET /contract from the IPC server (:7702).
  * Verified by orchestrator contract-handshake on boot.
@@ -13,7 +13,11 @@
  */
 
 const NS = 'cg';
-const V  = '3.1.0';
+// §BUILT 2026-09-22 — was '3.1.0', a FOURTH real sync point for the same
+// drift lib/version.js's services['clear-glass'], main/index.js's
+// CG_VERSION, and clear-glass.spec's meta.version all had — found while
+// updating those three, checked here too rather than assumed synced.
+const V  = '3.9.0';
 
 function _c(id, method, path, desc, opts = {}) {
   return {
@@ -156,6 +160,31 @@ const components = [
   _c('bgtab.open',  'IPC', 'bgtab:open',  'Open a real background service tab',  { tags: ['bgtab'] }),
   _c('bgtab.close', 'IPC', 'bgtab:close', 'Close a real background tab',         { tags: ['bgtab'] }),
   _c('bgtab.list',  'IPC', 'bgtab:list',  'List real open background tabs',      { tags: ['bgtab'] }),
+
+  // §BUILT 2026-09-22 — James: "loom component registry." Real, already-
+  // shipped IPC surface (autofill: 2026-09-19; screen-qa: this session)
+  // with zero entries here — the same "backend real, registry never
+  // touched" gap this file's own downloads/macros/bgtab entries above
+  // exist to close, just never closed for these two. Not this file's
+  // REST surface (/cli/autofill/*, /cli/screen-qa/*) — checked directly:
+  // this registry only ever tracked IPC method:'IPC' components in
+  // clear-glass, consistent with every entry above; REST isn't a second
+  // registry this file tracks.
+  _c('autofill.listProfiles', 'IPC', 'autofill:profile:list',   'List real AutofillProfile records',                              { tags: ['autofill'] }),
+  _c('autofill.getProfile',   'IPC', 'autofill:profile:get',    'Get one real autofill profile',                                  { tags: ['autofill'] }),
+  _c('autofill.createProfile','IPC', 'autofill:profile:create', 'Create a real autofill profile',                                 { tags: ['autofill'] }),
+  _c('autofill.updateProfile','IPC', 'autofill:profile:update', 'Update a real autofill profile',                                 { tags: ['autofill'] }),
+  _c('autofill.deleteProfile','IPC', 'autofill:profile:delete', 'Delete a real autofill profile',                                 { tags: ['autofill'] }),
+  _c('autofill.detect',       'IPC', 'autofill:detect',         'Detect real form fields an autofill profile would confidently fill', { tags: ['autofill'] }),
+  _c('autofill.fill',         'IPC', 'autofill:fill',           'Fill real form fields from an autofill profile',                 { tags: ['autofill'] }),
+
+  // ── Screen Q&A — real, detect an open-ended on-screen question, answer
+  //    it through the real copilot bridge, inject the chosen answer ────────
+  _c('screenQa.detect',         'IPC', 'screen-qa:detect',         'Detect real open-ended questions on the page, excluding whatever autofill would already confidently fill', { tags: ['screen-qa'] }),
+  _c('screenQa.answer',         'IPC', 'screen-qa:answer',         'Answer a real question through the real copilot bridge (text only — never writes to the page)',           { tags: ['screen-qa'] }),
+  _c('screenQa.inject',         'IPC', 'screen-qa:inject',         'Write a chosen answer into one real field',                                                                { tags: ['screen-qa'] }),
+  _c('screenQa.elementAt',      'IPC', 'screen-qa:element-at',     'The real field at a window-relative point — the right-click path\'s own target',                          { tags: ['screen-qa'] }),
+  _c('screenQa.deriveQuestion', 'IPC', 'screen-qa:derive-question','Derive a question from one real field\'s metadata (label/aria-label/placeholder/name)',                    { tags: ['screen-qa'] }),
 ];
 
 module.exports = {

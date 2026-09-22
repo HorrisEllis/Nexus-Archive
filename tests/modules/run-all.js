@@ -142,6 +142,7 @@ const SUITES = [
   'clear-glass-library-ui.test.js',
   'clear-glass-screen-qa.test.js',
   'clear-glass-screen-qa-ui.test.js',
+  'version-sync-and-registry.test.js',
   'test-provider-host-respawn.js',
   'test-userscript-mixed-content-fix.js',
   'test-contract-handshake-paths.js',
@@ -312,6 +313,7 @@ const SUITES = [
   // the freeze-thaw branch — 29 real tests, invisible to the project's
   // own tally until this line was added.
   'test-hat-forge.js',
+  'test-hat-forge-cross-process.test.js',
   'test-artifact-namer.js',
   'test-node-export.js',
   'test-node-schemas.js',

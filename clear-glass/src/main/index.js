@@ -56,7 +56,13 @@ const { createBus, emit, on, Event } = require('../core/bus');
 
 const MODULE_ID   = 'clear-glass';
 const MODULE_UUID = randomUUID();
-const CG_VERSION  = '3.1.0';
+// §BUILT 2026-09-22 — was '3.1.0' since 2026-09-01, drifted from
+// package.json's own 3.8.0 (the field actually bumped per real release)
+// — same drift lib/version.js's services['clear-glass'] and clear-
+// glass.spec's meta.version independently exhibited. All three synced
+// to 3.9.0 (3.8.0 baseline + this session's real additions) together;
+// see clear-glass.spec's version_history for what's actually new.
+const CG_VERSION  = '3.9.0';
 
 // ── Headless / tray-only mode ─────────────────────────────────────────────
 // CG_HEADLESS=1  OR  --headless in argv → no BrowserWindow, tray only.
