@@ -178,7 +178,12 @@ async function askSync(prompt, opts = {}, deps = {}) {
         .map(t => ({ name: t.name, description: (t.description || '').split('\n')[0].slice(0, 140) }));
       if (!resolvedTools.length) resolvedTools = null;
     }
-    job = createJob({ command: opts.command || 'ask', provider: resolved, prompt, content: opts.content || '', tools: resolvedTools });
+    // §TR1 2026-09-22 — the last confirmed real gap in this chain: jobs.js's
+    // createJob() already has a real agentId field (agentId: agentId || null),
+    // this call just never passed one. opts.agentId traced back through
+    // guardian/server.js, copilot/lifeline.js, copilot/server.js, to
+    // idearium's lib/repo-agent.js — every hop now forwards it.
+    job = createJob({ command: opts.command || 'ask', provider: resolved, prompt, content: opts.content || '', tools: resolvedTools, agentId: opts.agentId || undefined });
     dispatchJob(job);
   } catch (e) {
     return { ok: false, error: `failed to enqueue job: ${e.message}` };

@@ -2344,7 +2344,12 @@ const server = http.createServer(async (req, res) => {
     if (body.backend === 'guardian' || body.backend === 'ollama') {
       const dispatchFn = body.backend === 'guardian' ? _lifeline.dispatchToNcpAgent : _lifeline.dispatchToOllama;
       try {
-        const result = await dispatchFn(prompt, { provider: body.agent || undefined, requestId, sessionId });
+        // §TR1 2026-09-22 — traced directly: this handler previously read
+        // only provider/requestId/sessionId from body, silently dropping
+        // any agentId a caller sent (idearium's lib/repo-agent.js now
+        // sends one — see that file's own §TR1 note). ollama has no tab
+        // to pick between, so agentId is only meaningful for 'guardian'.
+        const result = await dispatchFn(prompt, { provider: body.agent || undefined, agentId: body.backend === 'guardian' ? (body.agentId || undefined) : undefined, requestId, sessionId });
         if (result?.ok || result?.text) {
           json(res, 200, { ok: true, text: result.text, provider_used: body.backend === 'guardian' ? (result.provider || body.agent) : 'ollama', requestId });
         } else {

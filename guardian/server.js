@@ -2904,6 +2904,12 @@ function handleExtendedRoutes(req, res, url, method) {
         timeoutMs: body.timeoutMs,
         command:   'ask',
         tools:     Array.isArray(body.tools) ? body.tools : undefined,
+        // §TR1 2026-09-22 — jobs.js's createJob() already accepts and
+        // stores agentId (confirmed directly: `agentId: agentId || null`
+        // in its real signature) — this handler just never read it from
+        // the request body. Forwarded now; askSync itself still needs
+        // its own patch to pass this through to createJob (see ask.js).
+        agentId:   body.agentId || undefined,
       }, {
         createJob,
         dispatchJob,

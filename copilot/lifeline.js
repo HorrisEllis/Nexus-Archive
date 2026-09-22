@@ -276,6 +276,12 @@ async function _tryGuardian(prompt, opts = {}) {
     const result = await _post(`${GD_URL}/api/copilot/prompt`, {
       prompt,
       provider:   ragProvider,
+      // §TR1 2026-09-22 — forward a caller-supplied agentId through to
+      // guardian's own /api/copilot/prompt, which (via ask.js's
+      // createJob) already has a real agentId field, just never fed —
+      // confirmed by direct trace, not assumed. Only meaningful for a
+      // guardian-routed (browser-tab) dispatch.
+      agentId:    opts.agentId || undefined,
       requestId:  opts.requestId,
       sessionId:  opts.sessionId,
       channel:    'lifeline',

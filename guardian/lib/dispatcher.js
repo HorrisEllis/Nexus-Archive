@@ -400,12 +400,39 @@ function createDispatcher(deps) {
     // one client currently tracked as active for this provider — see
     // guardian/lib/ncp.js's own §FIXED note on why nothing gets force-
     // closed to make that true, just correctly aimed.
-    const sent = ncp.pushActive(job.provider, {
+    //
+    // §TR1 2026-09-22 — a job carrying a real, repo-derived agentId
+    // (idearium's lib/repo-agent.js, traced end to end this pass) should
+    // reach that repo's OWN dedicated tab, not whichever tab happens to
+    // be "active" for the provider — the actual bug tab-per-repo exists
+    // to fix (two repos' jobs contending in one shared tab). ncp.js's
+    // own handleChannel already lets a connecting tab register under any
+    // caller-chosen tabId (`url.searchParams.get('tabId') || randomUUID()`)
+    // — so a clear-glass background tab opened FOR this repo, connecting
+    // with `tabId=job.agentId`, is reachable via pushTab() directly, no
+    // new registry needed: agentId and tabId are the same string by
+    // convention. Falls back to pushActive() — unchanged existing
+    // behavior — when no tab has registered under that id yet, so a
+    // repo with no dedicated tab open still dispatches, exactly the
+    // "fail open when there's no evidence yet" pattern already used
+    // elsewhere in this file (see the ping-gate comment above).
+    // NOT yet confirmed this pass: whether clear-glass's own bgTab-open
+    // code actually connects with tabId=agentId — that's the other half
+    // of this fix, on clear-glass's side, not read this session.
+    let sent = job.agentId ? (ncp.pushTab(job.provider, job.agentId, {
       type: 'GUARDIAN_JOB', jobId: job.id, command: job.command,
       provider: job.provider, prompt: job.prompt, content: job.content,
       tools: job.tools || null,
       hat: job.hat || null,
-    });
+    }) ? 1 : 0) : 0;
+    if (!sent) {
+      sent = ncp.pushActive(job.provider, {
+        type: 'GUARDIAN_JOB', jobId: job.id, command: job.command,
+        provider: job.provider, prompt: job.prompt, content: job.content,
+        tools: job.tools || null,
+        hat: job.hat || null,
+      });
+    }
     if (sent === 0) {
       if (!pendingQueue.has(job.provider)) pendingQueue.set(job.provider, []);
       pendingQueue.get(job.provider).push(job);
