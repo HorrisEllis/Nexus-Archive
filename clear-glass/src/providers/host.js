@@ -279,6 +279,16 @@ class ProviderHost {
       skipTaskbar: true,
       webPreferences: {
         partition,
+        // §FIXED 2026-09-22 — James: "it injected when i have the ui open, can
+        // you make sure it's still able to work without needing clearglass
+        // render open." THIS is why it needed the window visible: Electron
+        // throttles renderer timers in hidden/occluded windows, and the
+        // guardian userscript's response watch is a 300-600ms setTimeout loop
+        // (startWatch/checkStable). Throttled to ~1/minute, a job's reply is
+        // never observed to settle, so nothing comes back. The note above is
+        // still right that throttling does not save the memory that mattered
+        // there — it only ever cost correctness here.
+        backgroundThrottling:        false,
         nodeIntegration:             false,
         contextIsolation:            true,
         webSecurity:                 true,
