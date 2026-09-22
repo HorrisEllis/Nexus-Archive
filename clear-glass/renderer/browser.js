@@ -2782,6 +2782,118 @@
     } catch (_) {}
   });
 
+  // ════════════════════════════════════════════════════════════════════
+  // SCREEN Q&A — James: "clearglass needs to help me with job
+  // applications, answering on screen questions... using hotkey. right
+  // click, answer question context option." Backend kernel (detector.js,
+  // the /cli/screen-qa/* + screen-qa:* IPC surface, the isolated
+  // notification) already real; this wires the two trigger paths
+  // (hotkey = whole page, right-click = one field — James's own choice)
+  // through the SAME real functions, into the SAME preview surface
+  // (the Co-pilot panel's addMsg — James's own choice, "show it first in
+  // the co pilot cli").
+  // ════════════════════════════════════════════════════════════════════
+
+  // §HONEST LIMIT — an autofill profile's documents.resume is a file
+  // REFERENCE ({path, filename}), not extracted text; reading and
+  // parsing an uploaded resume (PDF/doc) into prompt-ready text is real,
+  // separate scope (a document-parsing pipeline) not attempted here. A
+  // profile's own field values (name, email, a free-text "summary" field
+  // if one exists, etc.) ARE included — a resume being on file is named,
+  // not silently dropped, so the person knows it wasn't actually read.
+  async function _screenQaContext() {
+    let settings = {};
+    try { settings = await cg.api.get(); } catch (_) { /* falls through to context-only below */ }
+    const parts = [];
+    if (settings.screenQaProfileId) {
+      try {
+        const profile = await cg.autofill.getProfile(settings.screenQaProfileId);
+        if (profile) {
+          const fieldLines = Object.entries(profile.fields || {}).map(([k, v]) => `${k}: ${v}`);
+          if (fieldLines.length) parts.push(fieldLines.join('\n'));
+          if (profile.documents && profile.documents.resume) {
+            parts.push(`(a resume file is on record — ${profile.documents.resume.filename || 'unnamed'} — its contents are NOT included here, only the profile fields above)`);
+          }
+        }
+      } catch (_) { /* profile fetch failed — context continues with whatever else is real */ }
+    }
+    if (settings.screenQaContext) parts.push(settings.screenQaContext);
+    return { text: parts.join('\n\n'), minConfidence: settings.screenQaMinConfidence || 'medium', profileId: settings.screenQaProfileId || null, enabled: settings.screenQaEnabled !== false };
+  }
+
+  // One shared render for both trigger paths — a single question/answer
+  // pair, preview-first: "use" is a real, separate click that calls
+  // cg.screenQa.inject; nothing is written to the page from this render
+  // alone. Same discipline as autofill's own fill preview.
+  function _screenQaRenderAnswer({ cgId, question, answer, error }) {
+    const safeQ = question.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const id = `sqa-${cgId}-${Date.now()}`;
+    if (error) {
+      addMsg('assistant', `<div class="sqa-block"><div class="sqa-q">✨ "${safeQ}"</div><div class="sqa-err">✗ ${error.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))}</div></div>`, true);
+      return;
+    }
+    const safeA = answer.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    addMsg('assistant', `<div class="sqa-block" id="${id}"><div class="sqa-q">✨ "${safeQ}"</div><div class="sqa-a">${safeA}</div>` +
+      `<div class="sqa-actions"><button class="sqa-use">use this</button><button class="sqa-dismiss">dismiss</button></div></div>`, true);
+    const block = document.getElementById(id);
+    block.querySelector('.sqa-use').addEventListener('click', async () => {
+      try {
+        const r = await cg.screenQa.inject(cgId, answer, agentId);
+        block.querySelector('.sqa-actions').innerHTML = r && !r.error ? '<span class="sqa-done">✓ filled</span>' : `<span class="sqa-err">✗ ${(r && r.error) || 'inject failed'}</span>`;
+      } catch (e) { block.querySelector('.sqa-actions').innerHTML = `<span class="sqa-err">✗ ${e.message}</span>`; }
+    });
+    block.querySelector('.sqa-dismiss').addEventListener('click', () => { block.remove(); });
+  }
+
+  // Right-click path — one field, from screen-qa:element-at + the SAME
+  // deriveQuestion() the whole-page scan uses, not a second copy of it.
+  async function screenQaAnswerAt(x, y) {
+    const ctx = await _screenQaContext();
+    if (!ctx.enabled) { addMsg('assistant', '<div class="sqa-block"><div class="sqa-err">Screen Q&amp;A is off — enable it in Settings.</div></div>', true); return; }
+    let field;
+    try { field = await cg.screenQa.elementAt(x, y, agentId); }
+    catch (e) { addMsg('assistant', `<div class="sqa-block"><div class="sqa-err">✗ ${e.message}</div></div>`, true); return; }
+    if (!field) { addMsg('assistant', '<div class="sqa-block"><div class="sqa-err">No element at that point.</div></div>', true); return; }
+    const derived = await cg.screenQa.deriveQuestion(field);
+    if (!derived) { addMsg('assistant', '<div class="sqa-block"><div class="sqa-err">Nothing here looks like a question — no label, aria-label, placeholder, or field name to go on.</div></div>', true); return; }
+    addMsg('assistant', `<div class="sqa-block"><div class="sqa-q">✨ "${derived.question}"</div>thinking…</div>`, true);
+    try {
+      const r = await cg.screenQa.answer(derived.question, ctx.text, agentId);
+      _screenQaRenderAnswer({ cgId: field.id, question: derived.question, answer: r.answer, error: r.ok ? null : r.error });
+    } catch (e) { _screenQaRenderAnswer({ cgId: field.id, question: derived.question, answer: null, error: e.message }); }
+  }
+
+  // Hotkey path — the whole page, every open-shaped field detectOpenQuestions
+  // finds (already excludes whatever autofill would confidently fill).
+  async function screenQaScanPage() {
+    const ctx = await _screenQaContext();
+    if (!ctx.enabled) { addMsg('assistant', '<div class="sqa-block"><div class="sqa-err">Screen Q&amp;A is off — enable it in Settings.</div></div>', true); return; }
+    let result;
+    try { result = await cg.screenQa.detect(ctx.profileId, agentId); }
+    catch (e) { addMsg('assistant', `<div class="sqa-block"><div class="sqa-err">✗ ${e.message}</div></div>`, true); return; }
+    if (result.error) { addMsg('assistant', `<div class="sqa-block"><div class="sqa-err">✗ ${result.error}</div></div>`, true); return; }
+    const questions = result.questions || [];
+    if (!questions.length) { addMsg('assistant', '<div class="sqa-block">No open-ended questions found on this page.</div>', true); return; }
+    addMsg('assistant', `<div class="sqa-block">Found ${questions.length} question${questions.length === 1 ? '' : 's'} — answering…</div>`, true);
+    for (const q of questions) {
+      try {
+        const r = await cg.screenQa.answer(q.question, ctx.text, agentId);
+        _screenQaRenderAnswer({ cgId: q.cgId, question: q.question, answer: r.answer, error: r.ok ? null : r.error });
+      } catch (e) { _screenQaRenderAnswer({ cgId: q.cgId, question: q.question, answer: null, error: e.message }); }
+    }
+  }
+
+  // §BUILT 2026-09-21 — free key combo, checked directly against every
+  // existing binding in this file before picking it (Ctrl+T/W/Tab/1-9/
+  // L/R/D/H/J/P/F, Alt+Left/Right, F5, F11 — none use Shift+A).
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'a') {
+      e.preventDefault();
+      copilotVisible = true; copilotPane.classList.remove('hidden'); copilotToggle.classList.add('active');
+      screenQaScanPage();
+    }
+  });
+
   // ── Right-click context menu ──────────────────────────────────────────
   const ctxMenu = document.getElementById('ctx-menu');
   // §NEW 2026-08-30 — which pinned toolbar command (if any) the current
@@ -2795,6 +2907,13 @@
   // independent of whether it hit a *pinned* command specifically.
   // Drives the new "Customize Toolbar…" row's visibility.
   let ctxIsChrome = false;
+  // §BUILT 2026-09-21 — the last right-click's WEBVIEW-relative point
+  // (deliberately NOT window-relative — that's what showCtxMenu's own
+  // §FIX above adds separately for menu positioning). elementAt() runs
+  // document.elementFromPoint INSIDE the page's own coordinate space,
+  // via wv.executeJavaScript, so it needs the page's own numbers, not
+  // the window-adjusted ones.
+  let ctxPageXY = null;
 
   function _findPinnedCommandAt(target) {
     return TOOLBAR_COMMANDS.find(c => {
@@ -2823,6 +2942,7 @@
     e.preventDefault();
     ctxPinTarget = _findPinnedCommandAt(e.target);
     ctxIsChrome = true;
+    ctxPageXY = null; // a chrome-bar right-click has no page point
     showCtxMenu(e.clientX, e.clientY);
   });
 
@@ -2830,7 +2950,19 @@
     e.preventDefault();
     ctxPinTarget = null; // page content is never a pinned toolbar command
     ctxIsChrome = false;
-    showCtxMenu(e.x, e.y);
+    // §FIX 2026-09-21 — James: "right click is stuck in the corner." Root
+    // cause: <webview>'s own context-menu event reports e.x/e.y relative
+    // to the WEBVIEW's content area, not the outer window — confirmed
+    // against Electron's WebContents 'context-menu' params directly, not
+    // assumed. #ctx-menu is position:fixed (window-relative), so every
+    // page right-click landed short by exactly the chrome bar's own
+    // height/width — reading as "stuck in the corner" regardless of
+    // where on the page the click actually was. Adding the webview's own
+    // offset within the window converts it to window-relative, the same
+    // coordinate space showCtxMenu()'s Math.min clamp already assumes.
+    const r = wv.getBoundingClientRect();
+    ctxPageXY = { x: e.x, y: e.y };
+    showCtxMenu(r.left + e.x, r.top + e.y);
   });
 
   ctxMenu.addEventListener('click', async (e) => {
@@ -2871,6 +3003,12 @@
       case 'snapshot': {
         await cg.rewind.snapshot(agentId, { label: 'manual' });
         addMsg('assistant', '📍 Snapshot saved.');
+        break;
+      }
+      case 'answer-question': {
+        copilotVisible = true; copilotPane.classList.remove('hidden'); copilotToggle.classList.add('active');
+        if (!ctxPageXY) { addMsg('assistant', '<div class="sqa-block"><div class="sqa-err">Right-click a page element, not the toolbar.</div></div>', true); break; }
+        screenQaAnswerAt(ctxPageXY.x, ctxPageXY.y);
         break;
       }
       case 'find': {

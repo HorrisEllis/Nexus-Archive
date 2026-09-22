@@ -12,10 +12,14 @@
 
 const http    = require('http');
 const express = require('express');
-const { ipcMain, session } = require('electron');
+const { ipcMain, session, Notification } = require('electron');
 const { emit, on, Event, getBus } = require('../core/bus');
 const { randomUUID: uuidv4 } = require('crypto'); // §BUGFIX 2026-08-23 — the real 'uuid' npm package was never installed (checked node_modules and package.json directly); this crashed every real file that required it, including boot-critical ones. Node's own built-in produces the identical UUID format, zero dependency.
 const { detectFields: _autofillDetect, fillFields: _autofillFill } = require('../autofill/matcher.js');
+const {
+  detectOpenQuestions: _screenQaDetect, answerQuestion: _screenQaAnswer, injectAnswer: _screenQaInject,
+  deriveQuestion: _screenQaDeriveQuestion,
+} = require('../screen-qa/detector.js');
 
 class IpcBridge {
   constructor({ port, sse, ctxMgr, vault, apiSettings, urlListener, mesh, diag, fp, options, minimizeFn, hideFn, openFn, maximizeFn, openSettingsFn, closeSettingsFn, bookmarks, rewind, providerHost, userscripts, siteSettings, downloads, passwordVault, speech, macroTool, errorCapture, copilot, postEvent, pluginHost, history, autofillStore, dom }) {
@@ -253,6 +257,12 @@ class IpcBridge {
     // own list({agentId, state}) had no route at all.
     this.app.get('/cli/downloads', (req, res) => res.json({ downloads: this.downloads?.list(req.query) || [] }));
     this.app.delete('/cli/downloads/:id', (req, res) => res.json(this.downloads?.clearItem(req.params.id) || { error: 'downloads unavailable' }));
+    // §BUILT 2026-09-21 — found while wiring library-app.js's downloads
+    // tab: downloads:clearCompleted has been a real IPC handler since
+    // 2026-09-19 (this.downloads.clearCompleted(), same store as the two
+    // routes above) but had no /cli/* door, the same gap macros/autofill
+    // had — library-app.js has no IPC access at all, only fetch().
+    this.app.post('/cli/downloads/clear-completed', (req, res) => res.json({ removed: this.downloads?.clearCompleted() ?? 0 }));
     this.app.get('/cli/site-settings',      (req, res) => res.json({ settings: this.siteSettings?.getAllForOrigin(req.query.url) || null }));
     this.app.get('/cli/rewind',             (req, res) => res.json({ snapshots: this.rewind?.list(req.query.agentId, req.query.limit ? +req.query.limit : undefined) || [] }));
     this.app.get('/cli/passwords',          (req, res) => res.json({ passwords: this.passwordVault?.list() || [] }));
@@ -262,6 +272,107 @@ class IpcBridge {
       catch (e) { res.status(500).json({ error: e.message }); }
     });
     this.app.get('/cli/bgtab', (req, res) => res.json({ tabs: require('../main/index').listBackgroundTabs?.() || [] }));
+
+    // §BUILT 2026-09-21 — James: "the clearglass macros, autofill, keyboard
+    // shortcuts... build them, then expand the ui, like it should have
+    // been." Macros and autofill each had a complete, real IPC surface
+    // (macros:*, autofill:*, both already wired above/below) and ZERO
+    // reach from anywhere a person could actually click — ui/library's own
+    // header comment says "Reached by plain fetch() to clear-glass's own
+    // :7702 /cli/* REST surface, NOT the IPC bridge (that's only
+    // privileged inside ClearGlass's main renderer)", but library-app.js
+    // itself was never written (referenced by index.html's <script src>,
+    // the file did not exist) and neither macros nor autofill had a /cli/*
+    // route at all — only IPC. These close that gap for both.
+    //
+    // /cli/agents — new. Needed by BOTH panels: running a macro or an
+    // autofill fill/detect targets a specific live browser SESSION
+    // (agentId), and library-app.js runs in its own standalone window,
+    // not inside any one agent's chrome — it has no "current tab" to
+    // assume. listOpenAgents() already existed (wired only to IPC's
+    // window:list), reused as-is, not reimplemented.
+    this.app.get('/cli/agents', (req, res) => res.json(require('../main/index').listOpenAgents?.() || { windows: [], bgTabs: [] }));
+
+    // /cli/autofill/* — new. Same real functions the autofill:* IPC
+    // handlers below already call (_autofillDetect/_autofillFill,
+    // this.autofillStore's CRUD) — one implementation, a second door.
+    this.app.get('/cli/autofill/field-types', (req, res) => {
+      const { FIELD_TYPES, DOCUMENT_FIELDS } = require('../autofill/store.js');
+      res.json({ fieldTypes: FIELD_TYPES, documentFields: DOCUMENT_FIELDS });
+    });
+    this.app.get('/cli/autofill/profiles', (req, res) => res.json({ profiles: this.autofillStore?.listProfiles() || [] }));
+    this.app.get('/cli/autofill/profiles/:id', (req, res) => {
+      const p = this.autofillStore?.getProfile(req.params.id);
+      return p ? res.json({ profile: p }) : res.status(404).json({ error: `no autofill profile "${req.params.id}"` });
+    });
+    this.app.post('/cli/autofill/profiles', (req, res) => {
+      if (!this.autofillStore) return res.status(503).json({ error: 'autofill unavailable' });
+      const r = this.autofillStore.createProfile(req.body || {});
+      return r.error ? res.status(400).json(r) : res.json({ profile: r });
+    });
+    this.app.put('/cli/autofill/profiles/:id', (req, res) => {
+      if (!this.autofillStore) return res.status(503).json({ error: 'autofill unavailable' });
+      const r = this.autofillStore.updateProfile(req.params.id, req.body || {});
+      return r.error ? res.status(r.error.startsWith('no autofill profile') ? 404 : 400).json(r) : res.json({ profile: r });
+    });
+    this.app.delete('/cli/autofill/profiles/:id', (req, res) => {
+      if (!this.autofillStore) return res.status(503).json({ error: 'autofill unavailable' });
+      const r = this.autofillStore.deleteProfile(req.params.id);
+      return r.error ? res.status(404).json(r) : res.json(r);
+    });
+    // Same real risk/scope note as macros:run above — detect/fill drive a
+    // live agent tab; exposed deliberately so library-app.js (which has
+    // no IPC access) can reach the same real functions the in-browser
+    // path would use, not a second implementation of either.
+    this.app.post('/cli/autofill/detect', async (req, res) => {
+      if (!this.dom || !this.autofillStore) return res.status(503).json({ error: 'autofill unavailable' });
+      try { res.json(await _autofillDetect(this.dom, this.autofillStore, { agentId: req.body?.agentId || 'default', profileId: req.body?.profileId })); }
+      catch (e) { res.status(500).json({ error: e.message }); }
+    });
+    this.app.post('/cli/autofill/fill', async (req, res) => {
+      if (!this.dom || !this.autofillStore) return res.status(503).json({ error: 'autofill unavailable' });
+      try {
+        res.json(await _autofillFill(this.dom, this.autofillStore, {
+          agentId: req.body?.agentId || 'default', profileId: req.body?.profileId, minConfidence: req.body?.minConfidence || 'medium',
+        }));
+      } catch (e) { res.status(500).json({ error: e.message }); }
+    });
+
+    // §BUILT 2026-09-21 — James: "answering on screen questions." Backend
+    // kernel only this pass (see clear-glass/src/screen-qa/detector.js's
+    // own header for the honest list of what's still unbuilt on top of
+    // it: hotkey, right-click menu, element-picker mode, settings UI,
+    // dual preview). Preview-first, never auto-fills: detect -> answer
+    // (text only, nothing written to the page) -> a SEPARATE explicit
+    // inject call, matching James: "show it first... you approve or
+    // edit, then it fills."
+    this.app.get('/cli/screen-qa/detect', async (req, res) => {
+      if (!this.dom) return res.status(503).json({ error: 'dom bridge unavailable' });
+      try { res.json(await _screenQaDetect(this.dom, this.autofillStore, { agentId: req.query?.agentId || 'default', profileId: req.query?.profileId || null })); }
+      catch (e) { res.status(500).json({ error: e.message }); }
+    });
+    this.app.post('/cli/screen-qa/answer', async (req, res) => {
+      if (!this.copilot) return res.status(503).json({ error: 'copilot bridge not initialized' });
+      const { question, context, agentId } = req.body || {};
+      const send = async (message) => {
+        const r = await this.copilot.send({ message, agentId: agentId || 'default' });
+        return (r && (r.text || r.reply || r.message)) || '';
+      };
+      // §BUILT 2026-09-21 — no native notification on this REST path,
+      // deliberately: it's ui/library's door (and this suite's own
+      // tests), not the interactive hotkey/right-click/picker flow the
+      // "isolated toast" was asked for — that flow goes through the
+      // IPC handler above, which fires one. Firing an OS notification
+      // for every programmatic call to this endpoint would be surprising
+      // noise, not the reliability guarantee James asked for.
+      res.json(await _screenQaAnswer({ question, context }, send));
+    });
+    this.app.post('/cli/screen-qa/inject', async (req, res) => {
+      if (!this.dom) return res.status(503).json({ error: 'dom bridge unavailable' });
+      const { agentId, cgId, text } = req.body || {};
+      try { res.json(await _screenQaInject(this.dom, { agentId: agentId || 'default', cgId, text })); }
+      catch (e) { res.status(500).json({ error: e.message }); }
+    });
 
     // §COMMAND-INDEX 2026-08-30 — the real, live index itself, servable
     // directly (not just the on-disk copy) so a caller always gets the
@@ -898,6 +1009,66 @@ class IpcBridge {
     ipcMain.handle('autofill:fill', async (e, { agentId = 'default', profileId, minConfidence = 'medium' } = {}) => {
       if (!this.dom || !this.autofillStore) return { error: 'autofill unavailable' };
       return _autofillFill(this.dom, this.autofillStore, { agentId, profileId, minConfidence });
+    });
+
+    // §BUILT 2026-09-21 — screen-qa's UI layer (hotkey, right-click menu,
+    // element picker) all runs inside the main renderer, which HAS real
+    // IPC access — unlike ui/library's standalone page, which is why
+    // this reaches the same real detector.js functions via IPC here
+    // rather than the /cli/screen-qa/* REST doors those still exist for.
+    // One implementation (clear-glass/src/screen-qa/detector.js), two
+    // real doors, same as autofill's own IPC + REST split above.
+    ipcMain.handle('screen-qa:detect', async (e, { agentId = 'default', profileId = null } = {}) => {
+      if (!this.dom) return { error: 'dom bridge unavailable' };
+      return _screenQaDetect(this.dom, this.autofillStore, { agentId, profileId });
+    });
+    // Right-click's own real target: which field is at this window-
+    // relative point (the coordinates the §FIX in renderer/browser.js's
+    // context-menu handler already converts to window-relative). Direct
+    // and awaited, not the fire-and-forget dom:query/rendererEmit(SSE)
+    // path elsewhere in this file — same shape as every other real
+    // screen-qa/autofill handler here, deliberately, not an accident.
+    ipcMain.handle('screen-qa:element-at', async (e, { agentId = 'default', x, y } = {}) => {
+      if (!this.dom) return { error: 'dom bridge unavailable' };
+      return this.dom.handleQuery({ agentId, x, y });
+    });
+    // The right-click path's own question derivation — the SAME real
+    // deriveQuestion() detectOpenQuestions uses for a whole-page scan,
+    // called here for exactly one already-picked field (from
+    // screen-qa:element-at above) rather than reimplemented for a
+    // single-field case.
+    ipcMain.handle('screen-qa:derive-question', async (e, { fieldMeta } = {}) => {
+      if (!fieldMeta) return null;
+      return _screenQaDeriveQuestion(fieldMeta);
+    });
+    ipcMain.handle('screen-qa:answer', async (e, { question, context, agentId = 'default' } = {}) => {
+      if (!this.copilot) return { ok: false, error: 'copilot bridge not initialized' };
+      const send = async (message) => {
+        const r = await this.copilot.send({ message, agentId });
+        return (r && (r.text || r.reply || r.message)) || '';
+      };
+      const result = await _screenQaAnswer({ question, context }, send);
+      // §BUILT 2026-09-21 — James: "a toast isolated from clearglass
+      // process." Fired from the MAIN process (Electron's own Notification,
+      // a real OS notification, not an in-page toast()) rather than as a
+      // step the renderer has to reach — the slow part (this.copilot.send
+      // above) already ran here in main, so this fires regardless of
+      // whether the renderer or webview is still responsive by the time
+      // it would otherwise show a result. Never claims success dishonestly:
+      // an error also notifies, with the real reason, not silence.
+      if (Notification.isSupported()) {
+        try {
+          new Notification({
+            title: result.ok ? 'Clear Glass — answer ready' : 'Clear Glass — answer failed',
+            body: result.ok ? String(result.answer).slice(0, 200) : String(result.error).slice(0, 200),
+          }).show();
+        } catch (_) { /* notification failing is never allowed to fail the real answer */ }
+      }
+      return result;
+    });
+    ipcMain.handle('screen-qa:inject', async (e, { agentId = 'default', cgId, text } = {}) => {
+      if (!this.dom) return { error: 'dom bridge unavailable' };
+      return _screenQaInject(this.dom, { agentId, cgId, text });
     });
 
     // §TX16 2026-08-28 — real, persistent listener config. Same pattern as

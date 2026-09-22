@@ -97,8 +97,41 @@ const DOM_OBSERVER_SCRIPT = `
     return el.__cgId;
   }
 
+  // §BUILT 2026-09-21 — James: "answering on screen questions." Found
+  // while building it: buildMeta had no associated-<label> text for a
+  // field, only its own attributes — enough for autofill (which matches
+  // on autocomplete/name/placeholder tokens) but not enough to know what
+  // an OPEN-ENDED question ("Why do you want to work here?") actually
+  // asks, since that text usually lives in a separate <label> element,
+  // not an attribute of the field itself. Real, standard label
+  // association, in the order a browser itself would resolve it: an
+  // explicit <label for="id">, a wrapping <label>, then aria-labelledby.
+  // Never guesses from unrelated nearby text — an honest null is better
+  // than a wrong question.
+  function _labelFor(el) {
+    if (el.id) {
+      // No template literal here on purpose — this function's own source
+      // lives inside DOM_OBSERVER_SCRIPT, itself one big template literal
+      // (see its opening backtick above); a nested, unescaped backtick
+      // would close that outer string early and break every real caller
+      // of this whole page script, not just this function.
+      const sel = 'label[for="' + (CSS && CSS.escape ? CSS.escape(el.id) : el.id) + '"]';
+      const explicit = document.querySelector(sel);
+      if (explicit && explicit.innerText) return explicit.innerText.trim().slice(0, 300);
+    }
+    const wrapping = el.closest && el.closest('label');
+    if (wrapping && wrapping.innerText) return wrapping.innerText.trim().slice(0, 300);
+    const labelledBy = el.getAttribute && el.getAttribute('aria-labelledby');
+    if (labelledBy) {
+      const parts = labelledBy.split(/\s+/).map(id => document.getElementById(id)?.innerText).filter(Boolean);
+      if (parts.length) return parts.join(' ').trim().slice(0, 300);
+    }
+    return null;
+  }
+
   function buildMeta(el) {
     const r = el.getBoundingClientRect ? el.getBoundingClientRect() : {};
+    const isField = ['input', 'textarea', 'select'].includes(el.tagName?.toLowerCase());
     return {
       id:       el.__cgId || null,
       tag:      el.tagName?.toLowerCase() || '#text',
@@ -114,6 +147,7 @@ const DOM_OBSERVER_SCRIPT = `
       value:    el.value !== undefined ? el.value : null,
       name:     el.name || null,
       type:     el.type || null,
+      label:    isField ? _labelFor(el) : null,
     };
   }
 
@@ -190,6 +224,20 @@ const DOM_OBSERVER_SCRIPT = `
     getById(cgId) {
       const el = document.querySelector('[__cgId="' + cgId + '"]') ||
                  [...document.querySelectorAll('*')].find(e => e.__cgId === cgId);
+      return el ? { ...buildMeta(el), id: nodeId(el) } : null;
+    },
+
+    // §BUILT 2026-09-21 — James: "right click, answer question context
+    // option." A right-click's own coordinates (already real and window-
+    // relative as of the §FIX above in renderer/browser.js) tell us WHERE
+    // on the page, not WHICH element — Electron's webview context-menu
+    // params carry no live element reference across the process boundary.
+    // elementAt closes that gap the same way the browser's own click
+    // handling would: document.elementFromPoint at the real coordinates,
+    // then the same nodeId() every other real caller here already uses —
+    // not a second id-assignment scheme.
+    elementAt(x, y) {
+      const el = document.elementFromPoint(x, y);
       return el ? { ...buildMeta(el), id: nodeId(el) } : null;
     },
 
@@ -342,7 +390,7 @@ class DomArchaeology {
   }
 
   // ── Query ─────────────────────────────────────────────────────────────
-  async handleQuery({ agentId = 'default', selector, cgId, tree = false }) {
+  async handleQuery({ agentId = 'default', selector, cgId, tree = false, x, y }) {
     const wc = this._getWebContents(agentId);
     if (!wc) return { error: 'No webcontents' };
 
@@ -355,7 +403,13 @@ class DomArchaeology {
     if (selector) {
       return wc.executeJavaScript(`window.__cgDomMesh?.query(${JSON.stringify(selector)})`, true);
     }
-    return { error: 'selector, cgId, or tree required' };
+    // §BUILT 2026-09-21 — the real caller for screen-qa's right-click
+    // path: which element is AT this window-relative point, not which
+    // elements match a selector.
+    if (typeof x === 'number' && typeof y === 'number') {
+      return wc.executeJavaScript(`window.__cgDomMesh?.elementAt(${JSON.stringify(x)}, ${JSON.stringify(y)})`, true);
+    }
+    return { error: 'selector, cgId, x/y, or tree required' };
   }
 
   // ── Mutate ────────────────────────────────────────────────────────────

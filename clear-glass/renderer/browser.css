@@ -848,6 +848,18 @@
     color: var(--accent);
   }
 
+  /* §BUILT 2026-09-21 — Screen Q&A preview blocks, rendered inside the
+     existing .msg.assistant container via addMsg's html=true path.
+     Preview-first: "use" is the only thing that ever touches the page. */
+  .sqa-block { display: flex; flex-direction: column; gap: 6px; }
+  .sqa-q { color: var(--accent); font-weight: 600; }
+  .sqa-a { color: var(--text); }
+  .sqa-err { color: var(--red); }
+  .sqa-actions { display: flex; gap: 6px; margin-top: 2px; }
+  .sqa-actions button { font-size: 10px; padding: 3px 8px; border-radius: 4px; border: 1px solid var(--border); background: var(--bg-0); color: var(--text); cursor: pointer; }
+  .sqa-actions .sqa-use { border-color: var(--accent); color: var(--accent); }
+  .sqa-done { color: var(--accent2); font-size: 10px; }
+
   #copilot-input-wrap {
     padding: 10px;
     border-top: 1px solid var(--border);

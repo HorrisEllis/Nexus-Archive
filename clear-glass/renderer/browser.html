@@ -340,6 +340,12 @@
   <div class="ctx-item" data-action="bookmark">★ Bookmark this page</div>
   <div class="ctx-item" data-action="snapshot">📍 Rewind snapshot</div>
   <div class="ctx-item" data-action="pick">◎ Pick element</div>
+  <!-- §BUILT 2026-09-21 — James: "right click, answer question context
+       option." Always shown, same as "pick" right above it — neither is
+       hidden for a chrome-bar right-click (only unpin/customize-toolbar
+       are); the action itself refuses cleanly (below) when ctxPageXY is
+       null, same honest-refusal shape as every other real handler here. -->
+  <div class="ctx-item" data-action="answer-question">✨ Answer this question</div>
   <div class="ctx-item sep"></div>
   <div class="ctx-item" data-action="copilot-page">✦ Ask Co-pilot about this page</div>
   <div class="ctx-item" data-action="tokens">⛏ Scan page tokens</div>

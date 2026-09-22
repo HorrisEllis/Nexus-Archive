@@ -79,3 +79,40 @@ body {
   font-family: var(--mono); border: 1px solid var(--border2); color: var(--text2);
 }
 .badge.status-active { color: var(--ok); border-color: var(--ok); }
+
+/* §BUILT 2026-09-21 — modal host + form controls, added for Accounts'
+   create, Macros' run (params + agent picker), and Autofill's create/
+   edit/detect/fill. Same token set as the rest of this file, no new
+   colors invented. */
+.modal-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,.55);
+  align-items: center; justify-content: center; z-index: 50;
+}
+.modal-overlay.act { display: flex; }
+.modal-box {
+  background: var(--bg2); border: 1px solid var(--border2); border-radius: 6px;
+  width: 420px; max-width: calc(100vw - 40px); max-height: calc(100vh - 40px);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.modal-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px; border-bottom: 1px solid var(--border); font-size: 12px; font-weight: 600;
+}
+.modal-close { cursor: pointer; color: var(--text2); font-size: 13px; }
+.modal-close:hover { color: var(--text); }
+.modal-body { padding: 14px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+.modal-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 10px 14px; border-top: 1px solid var(--border); }
+.field-row { display: flex; flex-direction: column; gap: 4px; }
+.field-row label { font-size: 9px; letter-spacing: .05em; color: var(--text2); text-transform: uppercase; }
+.field-row input[type="text"], .field-row input[type="url"], .field-row textarea, .field-row select {
+  background: var(--bg); border: 1px solid var(--border2); color: var(--text);
+  font-family: var(--mono); font-size: 11px; padding: 6px 8px; border-radius: 3px; width: 100%;
+}
+.field-row textarea { resize: vertical; min-height: 50px; }
+.result-line { font-size: 10px; font-family: var(--mono); padding: 3px 0; }
+.result-line.ok { color: var(--ok); }
+.result-line.err { color: var(--danger); }
+.confidence-badge { font-size: 8px; padding: 1px 5px; border-radius: 6px; border: 1px solid var(--border2); }
+.confidence-badge.high { color: var(--ok); border-color: var(--ok); }
+.confidence-badge.medium { color: var(--text); border-color: var(--border3); }
+.confidence-badge.low { color: var(--text2); }

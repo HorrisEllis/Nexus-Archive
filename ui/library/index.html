@@ -14,11 +14,26 @@
   bridge (that's only privileged inside ClearGlass's main renderer —
   same real reason BrainOS itself uses fetch(), not window.ClearGlass).
 
-  Six real tabs, matching James's own named list exactly: Bookmarks,
-  History, Downloads, Accounts, Macros, Passwords. Every one backed by
-  a real, already-existing (or, for bookmarks/accounts/downloads-list,
-  just-added this same pass) /cli/* route — no tab here calls anything
-  that doesn't already have a real backend.
+  Seven real tabs, matching James's own named list exactly: Bookmarks,
+  History, Downloads, Accounts, Macros, Passwords, Autofill. Every one
+  backed by a real, already-existing (or, for bookmarks/accounts/
+  downloads-list, added 2026-09-19; for macros/autofill's own /cli/*
+  routes and this file itself, library-app.js, added 2026-09-21) /cli/*
+  route — no tab here calls anything that doesn't already have a real
+  backend.
+
+  §BUILT 2026-09-21 — James: "the clearglass macros, autofill, keyboard
+  shortcuts... build them, then expand the ui, like it should have
+  been." This shell existed with all six original tabs marked up but
+  library-app.js (the <script> below) did not exist — every panel was a
+  permanent "loading…" placeholder, unreachable from the running app at
+  all (no menu entry called openAgentWindow for this page either — both
+  gaps this pass closes). Autofill is the 7th tab, added here rather
+  than folded into an existing one: it has its own real store (a
+  person's AutofillProfiles, distinct from Accounts' NEXUS identities)
+  and its own real actions (detect/fill against a live agent tab, not
+  just CRUD), the same shape Macros already established for
+  "management list + act against a chosen live agent."
 -->
 <link rel="stylesheet" href="/ui/library/library-app.css">
 </head>
@@ -32,6 +47,7 @@
     <div class="tnav" data-tab="downloads">DOWNLOADS</div>
     <div class="tnav" data-tab="accounts">ACCOUNTS</div>
     <div class="tnav" data-tab="macros">MACROS</div>
+    <div class="tnav" data-tab="autofill">AUTOFILL</div>
     <div class="tnav" data-tab="passwords">PASSWORDS</div>
   </div>
   <div class="spacer"></div>
@@ -60,6 +76,7 @@
   <div class="panel" id="panel-downloads">
     <div class="panel-head">
       <span>Downloads</span>
+      <button class="hbtn" id="downloads-clear-completed">CLEAR COMPLETED</button>
       <button class="hbtn" id="downloads-refresh">↻ REFRESH</button>
     </div>
     <div class="list" id="downloads-list"><div class="empty-state">loading…</div></div>
@@ -82,6 +99,16 @@
     <div class="list" id="macros-list"><div class="empty-state">loading…</div></div>
   </div>
 
+  <div class="panel" id="panel-autofill">
+    <div class="panel-head">
+      <span>Autofill</span>
+      <span class="honest-note">Job applications, contact forms, checkout — not login credentials (see Passwords).</span>
+      <button class="hbtn g" id="autofill-new">+ NEW PROFILE</button>
+      <button class="hbtn" id="autofill-refresh">↻ REFRESH</button>
+    </div>
+    <div class="list" id="autofill-list"><div class="empty-state">loading…</div></div>
+  </div>
+
   <div class="panel" id="panel-passwords">
     <div class="panel-head">
       <span>Passwords</span>
@@ -91,6 +118,18 @@
     <div class="list" id="passwords-list"><div class="empty-state">loading…</div></div>
   </div>
 
+</div>
+
+<!-- §BUILT 2026-09-21 — one real modal host, reused by every tab that
+     needs a form or a confirmation (Accounts' + NEW ACCOUNT, Macros' run
+     with params/agent picker, Autofill's + NEW PROFILE / edit / detect /
+     fill) rather than a separate ad hoc dialog per tab. -->
+<div id="modal-overlay" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-head"><span id="modal-title"></span><span class="modal-close" id="modal-close">✕</span></div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-foot" id="modal-foot"></div>
+  </div>
 </div>
 
 <script src="/ui/library/library-app.js"></script>

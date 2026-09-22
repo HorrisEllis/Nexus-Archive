@@ -44,6 +44,21 @@ async function run() {
   check('a blueprint file carries its role\'s stated purpose', fsA.files.some(f => /Serves the user-facing UI/.test(f.purpose)));
   check('an unknown COS template is refused, not guessed', P.fromCosTemplate('cos-archetype:nope').ok === false);
 
+  // ── §BUILT 2026-09-21 — eravos mods offered the same way, read live ──
+  const realMods = fs.readdirSync(path.join(ROOT, 'eravos', 'ui', 'mods'), { withFileTypes: true })
+    .filter(d => d.isDirectory() && fs.existsSync(path.join(ROOT, 'eravos', 'ui', 'mods', d.name, 'schema', 'schema.json'))).map(d => d.name);
+  const eros = P.listEravosMods();
+  check('every real, complete eravos mod is offered', eros.length === realMods.length && realMods.every(n => eros.some(t => t.name === n)));
+  check('nexus-shared is excluded — no schema.json, not itself a spawnable mod', !eros.some(t => t.name === 'nexus-shared'));
+  check('eravos ids are namespaced so they never collide with COS or spec-document ids', eros.every(t => P.isEravosMod(t.id) && !P.isCosTemplate(t.id)));
+  check('isFileTreeTemplate covers both real catalogs', P.isFileTreeTemplate('cos-archetype:ai-agent') && P.isFileTreeTemplate(eros[0].id) && !P.isFileTreeTemplate('00-meta'));
+  const modR = P.fromEravosMod('eravos-mod:sample-player', { name: 'my-daw' });
+  check('a mod yields its real two files (schema + engine)', modR.ok && modR.files.some(f => f.path === 'schema/schema.json') && modR.files.some(f => f.path === 'sample-player.engine.js'));
+  check('the schema file lands as runtime, the engine file as engine — layerFor is not duplicated for mods', modR.files.find(f => f.path === 'schema/schema.json').layer === 'runtime' && modR.files.find(f => f.path.endsWith('.engine.js')).layer === 'engine');
+  check('an unknown eravos mod is refused, not guessed', P.fromEravosMod('eravos-mod:nope').ok === false);
+  const modClash = await P.plan({ name: 'x', templateIds: ['eravos-mod:sample-player', 'cos-archetype:ai-agent'], ask: null });
+  check('a mod and a COS template merge in one plan() call when their files do not clash', modClash.ok && modClash.template.kind === 'combined');
+
   // ── layering of template files ──
   check('tests → test', P.layerFor('test/index.test.js') === 'test');
   check('entrypoints and config → runtime', ['index.js', 'package.json', '.env.example', 'api/server.js'].every(p => P.layerFor(p) === 'runtime'));
@@ -128,8 +143,10 @@ async function run() {
 
   // ── routes + stall reporting (structural: they live inside the running server) ──
   const API = fs.readFileSync(path.join(ROOT, 'idearium', 'api', 'index.js'), 'utf8');
-  check('the templates route merges COS templates into the picker list', /listCosTemplates\(\)[\s\S]{0,200}\[\.\.\.se\.listTemplates\(\), \.\.\.cos\]/.test(API));
-  check('create branches to a file-tree spec for a COS template or fileTree:true', /body\.fileTree === true \|\| cosIds\.length/.test(API) && /createFileTreeSpec\(/.test(API));
+  // §BUILT 2026-09-21 — updated: the route now also merges eravos mods.
+  check('the templates route merges COS templates AND eravos mods into the picker list', /\[\.\.\.se\.listTemplates\(\), \.\.\.cos, \.\.\.eros\]/.test(API));
+  check('spec creation treats an eravos-mod id the same as a COS id — the file-tree path, not the document-section path', /isFileTreeTemplate\(id\)/.test(API));
+  check('create branches to a file-tree spec for a COS template, an eravos mod, or fileTree:true', /body\.fileTree === true \|\| fileTreeIds\.length/.test(API) && /createFileTreeSpec\(/.test(API));
   check('the plan goes through the same WARP dispatch the build uses', /getWarpChunkDispatch\(\)[\s\S]{0,300}chunkTitle: `plan: \$\{name\}`/.test(API));
   // §STABILITY 2026-09-21 — this assertion pinned the OLD stall check
   // (keyed on "any chunk pending", so a failed kernel file with pending
@@ -146,6 +163,7 @@ async function run() {
   const APP = fs.readFileSync(path.join(ROOT, 'idearium', 'ui', 'js', 'app.js'), 'utf8');
   check('the picker has a file-tree-first switch, on by default', /id="ns-file-tree" checked/.test(HTML));
   check('the picker groups COS archetypes, COS blueprints and document templates', APP.includes("'cos-archetype'") && APP.includes("'cos-blueprint'") && APP.includes('spec-document templates'));
+  check('the New Spec modal groups eravos mods as their own "architecture & features" category', /Eravos mods.*real starting files/.test(APP));
   check('create sends fileTree and waits long enough for a real plan', /fileTree \}\),\s*\}, fileTree \? 180000/.test(APP));
 
   // One unparseable schema takes the whole tool registry down ("tool registry

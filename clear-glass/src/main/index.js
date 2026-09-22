@@ -1860,6 +1860,20 @@ function _rebuildTrayMenu(mesh) {
     // separate real host page (ui/brainos-float/), not a mode flag on
     // the full-page BrainOS app above.
     { label: '⬢ BrainOS Float',      click: () => openAgentWindow({ agentId: 'brainos-float', url: 'http://127.0.0.1:9000/ui/brainos-float/' }) },
+    // §BUILT 2026-09-21 — James: "the clearglass macros, autofill,
+    // keyboard shortcuts... build them, then expand the ui, like it
+    // should have been. index.html." ui/library/index.html (its shell,
+    // six tabs including Macros) has existed since 2026-09-19 with a
+    // header comment naming its own real precedent ("Same real
+    // pattern... as ui/brainos/'s exact real precedent... Reached by
+    // plain fetch()") and naming what was still missing: "library-app.js
+    // itself and the openAgentWindow menu entry are NOT yet built." This
+    // is that menu entry — library-app.js now exists (a 7th tab,
+    // Autofill, added alongside it), same real openAgentWindow()
+    // mechanism as every entry above, zero orchestrator changes needed
+    // (UI_ROOT already serves ui/library/ generically, confirmed
+    // directly against orchestrator.js before relying on it).
+    { label: '⬡ Library',            click: () => openAgentWindow({ agentId: 'nexus-library', url: 'http://127.0.0.1:9000/ui/library/' }) },
     { type: 'separator' },
     { label: 'NEXUS UI Audit',        click: () => emit('diag.nexus', { agentId: 'default' }) },
     { label: 'API Settings',          click: openSettingsWindow },

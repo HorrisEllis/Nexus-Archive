@@ -1195,6 +1195,13 @@ async function handle(req, res, route, query, body) {
       const rows = loadTable('idearium_brainstorms');
       const b = rows.find(r => r.uuid === params.uuid);
       if (!b) return err(res, 404, `brainstorm not found: ${params.uuid}`);
+      // §BUILT 2026-09-21 — James: "brainstorm should have full AI
+      // assistance." Optional text override, from the AI-refine preview
+      // in the UI — if given, the STORED row is updated to match what
+      // was actually promoted, not left silently diverging from the
+      // idea it became. Whoever calls this without a text still gets
+      // the exact original behavior (promotes b.text as stored).
+      if (typeof body.text === 'string' && body.text.trim()) b.text = body.text.trim();
       const ev = os.emit('idearium.idea.create', { text: b.text, tags: b.tags || [], compartment: null, source: 'brainstorm' });
       b.promoted = true;
       syncTable('idearium_brainstorms', rows, 'uuid');
@@ -3154,11 +3161,16 @@ async function handle(req, res, route, query, body) {
       if (!se) return err(res, 503, 'spec-engine not ready');
       // §FILE-TREE-FIRST 2026-09-21 — every COS archetype and blueprint is
       // offered alongside the spec-document templates, read live from cos/.
+      // §BUILT 2026-09-21 — eravos mods (real starting files, same shape
+      // as a COS archetype) offered the same way, read live from eravos/.
       try {
-        let cos = [];
-        try { cos = _require('../../lib/file-tree-plan.js').listCosTemplates(); }
+        const FTP = _require('../../lib/file-tree-plan.js');
+        let cos = [], eros = [];
+        try { cos = FTP.listCosTemplates(); }
         catch (e) { console.warn(`[speceng.templates] COS templates unavailable: ${e.message}`); }
-        return ok(res, { templates: [...se.listTemplates(), ...cos] });
+        try { eros = FTP.listEravosMods(); }
+        catch (e) { console.warn(`[speceng.templates] eravos mods unavailable: ${e.message}`); }
+        return ok(res, { templates: [...se.listTemplates(), ...cos, ...eros] });
       }
       catch (e) { return err(res, 500, e.message); }
     }
@@ -3195,19 +3207,22 @@ async function handle(req, res, route, query, body) {
         // specs are unchanged when neither is asked for.
         const FTP = _require('../../lib/file-tree-plan.js');
         const allIds = Array.isArray(templateIds) ? templateIds : (templateId ? [templateId] : []);
-        const cosIds = allIds.filter(id => FTP.isCosTemplate(id));
-        const docIds = allIds.filter(id => !FTP.isCosTemplate(id));
+        // §BUILT 2026-09-21 — isFileTreeTemplate covers both real catalogs
+        // (COS archetypes/blueprints and eravos mods); an id from either
+        // takes the file-tree path below, same as a COS-only id always did.
+        const fileTreeIds = allIds.filter(id => FTP.isFileTreeTemplate(id));
+        const docIds = allIds.filter(id => !FTP.isFileTreeTemplate(id));
         let manifest, planInfo = null;
-        if (body.fileTree === true || cosIds.length) {
+        if (body.fileTree === true || fileTreeIds.length) {
           const warpFn = await getWarpChunkDispatch();
           const ask = warpFn ? async (prompt) => {
             const r = await warpFn(prompt, { chunkTitle: `plan: ${name}`, expectCode: false, preferAgent: agent || null });
             if (!r || !r.ok) throw new Error((r && r.error) || 'plan dispatch failed');
             return r.text;
           } : null;
-          const planned = await FTP.plan({ name, description, templateIds: cosIds, ask });
+          const planned = await FTP.plan({ name, description, templateIds: fileTreeIds, ask });
           if (!planned.ok) return err(res, 422, (planned.errors || ['file tree could not be planned']).join('; '), { agentError: planned.agentError || null });
-          manifest = se.createFileTreeSpec({ name, description, plan: planned, agent: agent || null, ideaUuid: ideaUuid || null, templateId: cosIds.join(',') || null });
+          manifest = se.createFileTreeSpec({ name, description, plan: planned, agent: agent || null, ideaUuid: ideaUuid || null, templateId: fileTreeIds.join(',') || null });
           // The plan as a node type (.filetree), not a markdown file.
           try { FTP.writeTreeNode(manifest); }
           catch (e) { console.warn(`[speceng.create] .filetree node write failed (spec still created): ${e.message}`); }

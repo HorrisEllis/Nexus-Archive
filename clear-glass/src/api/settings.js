@@ -44,6 +44,14 @@ const DEFAULTS = {
   fallbackApiKey:  '',
   fallbackModel:   'claude-sonnet-4-6',
   fallbackEndpoint: 'https://api.anthropic.com/v1/messages',
+
+  // §BUILT 2026-09-21 — James: "clearglass needs to help me with job
+  // applications, answering on screen questions... full ui to
+  // configure this." Real, persistent — this file, not a second store.
+  screenQaEnabled:       true,
+  screenQaMinConfidence: 'medium', // a field autofill would fill at this confidence or higher is excluded from AI answers
+  screenQaProfileId:     '',       // optional autofill profile id used as context
+  screenQaContext:       '',       // free-text context, combined with the profile above
 };
 
 class ApiSettings {

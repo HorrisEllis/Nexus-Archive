@@ -4,26 +4,42 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>SPEC BUILDER · ARCHITECT</title>
+<!-- §BUILT 2026-09-21 — idearium's own real font import, from
+     idearium/ui/index.html directly, not guessed. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+/* §BUILT 2026-09-21 — James: "the spec builder html rebuild for
+   ideariums theme." Root tokens rebuilt from idearium/ui/index.html's
+   own real :root block, every value traced there — nothing invented.
+   HONEST LIMIT, named not implied fixed: idearium's palette has 6 named
+   accents (sky/mint/amber/coral/violet/rose); this file's z-layer band
+   colors (L0–L7, ~line 489) and several node-type/edge/chip colors are
+   hardcoded hex OUTSIDE this block — in CSS rules and in JS data — used
+   to keep 8+ distinct hues apart. Remapping all of those without a live
+   browser to actually look at the result (this sandbox has none) risks
+   getting the visual distinctness subtly wrong in a way nothing here
+   can catch. Left as-is, not touched, rather than guessed at. */
 :root{
-  --bg:#05080f;--bg1:#080d17;--bg2:#0b1120;--bg3:#0e1628;--bg4:#121d32;
-  --border:#1a2a40;--border2:#1e3050;--border3:#2a4060;
-  --c:#00d4ff;--c2:#0097bb;--g:#00ff88;--g2:#00bb66;
-  --r:#ff2d55;--y:#ffcc00;--o:#ff6b35;--m:#cc44ff;
-  --text:#b8cfe0;--text2:#5a7a96;--text3:#2e4a60;--text4:#1a2e42;
-  --mono:'DM Mono',monospace;--display:'Bebas Neue',sans-serif;--body:'Space Grotesk',sans-serif;
+  --bg:#07090e;--bg1:#0b0f18;--bg2:#0f1520;--bg3:#141c2e;--bg4:#1a2440;
+  --border:rgba(56,189,248,.14);--border2:rgba(56,189,248,.28);--border3:rgba(56,189,248,.4);
+  --c:#38bdf8;--c2:#7dd3fc;--g:#34d399;--g2:#2bb583;
+  --r:#f87171;--y:#fbbf24;--o:#fbbf24;--m:#a78bfa;
+  --text:#c4d4ee;--text2:#607898;--text3:#334560;--text4:#22304a;
+  --mono:'IBM Plex Mono',monospace;--display:'IBM Plex Mono',monospace;--body:'IBM Plex Sans',sans-serif;
   --rad:3px;--tf:.15s;
-  /* node colors by type */
-  --nl:#0a0d2e;--nb:#534ab7;
-  --ng:#020d1e;--ngb:#1a6aff;
-  --nn:#021a10;--nnb:#00cc66;
-  --nc:#1a0d00;--ncb:#ff7a00;
-  --ns:#0a0a14;--nsb:#334466;
+  /* node colors by type — dark tints derived from idearium's OWN real
+     accents at low opacity, the same technique idearium's own --b0/
+     --b1/--b2 use to derive tints from --sky. Bright borders are
+     idearium's real named accents directly, not invented hues. */
+  --nl:rgba(167,139,250,.08);--nb:#a78bfa;
+  --ng:rgba(56,189,248,.08);--ngb:#38bdf8;
+  --nn:rgba(52,211,153,.08);--nnb:#34d399;
+  --nc:rgba(251,191,36,.08);--ncb:#fbbf24;
+  --ns:#0f1520;--nsb:#334560;
   /* z-layer tint multiplier — applied via js */
-  --conf-green:#00ff88;--conf-amber:#ffcc00;--conf-red:#ff2d55;--conf-black:#334466;
+  --conf-green:#34d399;--conf-amber:#fbbf24;--conf-red:#f87171;--conf-black:#334560;
 }
 html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
   font-family:var(--mono);font-size:12px;line-height:1.5}
@@ -371,6 +387,20 @@ select.pinp{cursor:pointer}
             <div><div class="plbl">Fail mode</div><input class="pinp" id="p-fail" type="text" placeholder="type error"></div>
           </div>
           <div class="prow"><div class="plbl">Notes</div><input class="pinp" id="p-notes" type="text"></div>
+          <!-- §BUILT 2026-09-21 — James: "add ai assistance." Routes
+               through the same real gate idearium's own Brainstorm
+               assist now uses (POST :4800/api/copilot/suggest ->
+               idearium/copilot-adapter/index.js's real backend), called
+               directly since this page is served by architect (:3747),
+               a different system — same cross-origin fetch this file
+               already does for guardian/idearium elsewhere (forgeDispatchAll,
+               btn-sendi). Preview-first: never overwrites Notes on its
+               own — "use" is a real, separate click, same discipline as
+               every other AI-touches-real-content feature this session. -->
+          <div class="prow">
+            <button class="rtab" style="width:100%;font-size:10px" id="btn-node-assist" onclick="assistNode()">✨ assist (from Label + Description)</button>
+            <div id="node-assist-preview" style="display:none;margin-top:6px;padding:8px;background:var(--bg2);border:1px solid var(--c);border-radius:var(--rad);font-size:11px;color:var(--text)"></div>
+          </div>
           <!-- Z-axis depth -->
           <div class="prow">
             <div class="plbl">Z-axis: Architectural Layer (L0–L7)</div>
@@ -482,6 +512,9 @@ select.pinp{cursor:pointer}
 const ARCH_PORT = location.port || 3747;
 const BASE = `http://127.0.0.1:${ARCH_PORT}`;
 const GUARDIAN = `http://127.0.0.1:7820`;
+// §BUILT 2026-09-21 — real copilot-adapter gate, idearium's own default
+// port (matches i-port's own default value='4800' below).
+const IDEARIUM = `http://127.0.0.1:4800`;
 
 // ── Z-LAYER CONFIG ────────────────────────────────────────────────────────────
 // L0=JAA/persist  L1=SISO  L2=data  L3=logic  L4=agents  L5=seam  L6=UI  L7=SNR
@@ -730,6 +763,41 @@ $('p-z').addEventListener('input',function(){
   styleNode(n);renderEdges();
 });
 
+// §BUILT 2026-09-21 — James: "add ai assistance." Same real gate,
+// same preview-first shape idearium's own Brainstorm assist uses
+// (idearium/ui/js/app.js's _askCopilotSuggest/_renderAssistPreview) —
+// a second, independent caller of the one real backend, not a second
+// implementation of the AI call itself.
+async function assistNode(){
+  if(!sel){log('select a node first');return;}
+  const n=nodes.find(x=>x.id===sel);if(!n)return;
+  const label=$('p-label').value.trim(),sub=$('p-sub').value.trim();
+  if(!label&&!sub){log('give the node a Label or Description first');return;}
+  const el=$('node-assist-preview');
+  el.style.display='';el.textContent='thinking…';
+  $('btn-node-assist').disabled=true;
+  try{
+    const goal=`Write a short, concrete implementation note for a real architecture node in a spec.\nLabel: ${label||'(none)'}\nDescription: ${sub||'(none)'}\nType: ${n.type}`;
+    const r=await fetch(`${IDEARIUM}/api/copilot/suggest`,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({goal,current_gate:'spec-builder-node',context:{}})});
+    const d=await r.json();
+    if(!r.ok){el.textContent=`idearium :4800 unreachable or returned HTTP ${r.status}`;return;}
+    if(d.connected===false){el.textContent=d.reason||'no copilot backend connected';return;}
+    const text=(d.suggestions||[])[0];
+    if(!text){el.textContent=d.reason||'copilot returned no suggestion';return;}
+    el.innerHTML='';
+    const label2=document.createElement('div');label2.style.cssText='color:var(--c);font-size:9px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px';label2.textContent='✨ copilot suggests';
+    const body=document.createElement('div');body.textContent=text;
+    const actions=document.createElement('div');actions.style.cssText='display:flex;gap:6px;margin-top:8px';
+    const useBtn=document.createElement('button');useBtn.className='rtab';useBtn.style.fontSize='10px';useBtn.textContent='use this';
+    useBtn.onclick=()=>{ $('p-notes').value=text; n.notes=text; el.style.display='none'; log('node notes updated from AI suggestion'); };
+    const dismissBtn=document.createElement('button');dismissBtn.className='rtab';dismissBtn.style.fontSize='10px';dismissBtn.textContent='dismiss';
+    dismissBtn.onclick=()=>{ el.style.display='none'; };
+    actions.append(useBtn,dismissBtn);
+    el.append(label2,body,actions);
+  }catch(e){el.textContent=`idearium :4800 unreachable: ${e.message}`;}
+  finally{$('btn-node-assist').disabled=false;}
+}
 function deleteNode(id){
   nodes=nodes.filter(n=>n.id!==id);edges=edges.filter(e=>e.from!==id&&e.to!==id);
   const el=document.getElementById(id);if(el)el.remove();

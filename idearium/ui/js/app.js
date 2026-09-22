@@ -711,11 +711,78 @@ function renderBrainstorms() {
       </div>
       <div class="action-row">
         ${b.promoted ? `<span class="ic-tag" style="color:var(--mint)">promoted ✓</span>` : `<button class="action-btn primary" onclick="promoteBrainstorm('${b.uuid}')">promote → idea</button>`}
+        ${b.promoted ? '' : `<button class="action-btn" onclick="assistBrainstormCard('${b.uuid}')">✨ refine</button>`}
         <button class="action-btn" onclick='openNewSpecModal({name:${JSON.stringify(b.text.slice(0,60))}, description:${JSON.stringify(b.text)}})'>+ spec</button>
         <button class="action-btn danger" onclick="deleteBrainstorm('${b.uuid}')">discard</button>
       </div>
+      <div class="brain-assist-preview" id="brain-assist-card-${b.uuid}" style="display:none"></div>
     </div>
   `).join('');
+}
+
+// ════════════════════════════════════════════════════
+// BRAINSTORM AI ASSISTANCE — James: "brainstorm should have full ai
+// assistance." Routes through the real, already-wired copilot-adapter
+// gate (POST /api/copilot/suggest — idearium/copilot-adapter/index.js's
+// own real backend, copilot's adaptive-fulfillment endpoint at :3750).
+// That gate existed with zero UI callers anywhere in this file before
+// this — its own comment claimed "the wizard's 'ask copilot' button
+// hits this," but no such button existed (checked directly). Preview-
+// first everywhere: a suggestion is shown, never silently applied —
+// same discipline as autofill's fill preview and screen-qa's
+// answer/inject split.
+// ════════════════════════════════════════════════════
+async function _askCopilotSuggest(goal, currentGate) {
+  const r = await api('/api/copilot/suggest', { method: 'POST', body: JSON.stringify({ goal, current_gate: currentGate, context: {} }) });
+  if (r.connected === false) return { ok: false, error: r.reason || 'no copilot backend connected' };
+  const text = (r.suggestions || [])[0];
+  if (!text) return { ok: false, error: r.reason || 'copilot returned no suggestion' };
+  return { ok: true, text };
+}
+
+function _renderAssistPreview(el, { loading, ok, text, error, onUse }) {
+  el.style.display = '';
+  if (loading) { el.innerHTML = `<div class="bap-label">✨ copilot</div>thinking…`; return; }
+  if (!ok) { el.innerHTML = `<div class="bap-label">✨ copilot</div><span class="bap-err">${escapeHtml(error)}</span><div class="bap-actions"><button class="action-btn" onclick="this.closest('.brain-assist-preview').style.display='none'">dismiss</button></div>`; return; }
+  el.innerHTML = `<div class="bap-label">✨ copilot suggests</div>${escapeHtml(text)}<div class="bap-actions"></div>`;
+  const btnUse = document.createElement('button');
+  btnUse.className = 'action-btn primary'; btnUse.textContent = 'use this';
+  btnUse.onclick = () => onUse(text);
+  const btnDismiss = document.createElement('button');
+  btnDismiss.className = 'action-btn'; btnDismiss.textContent = 'dismiss';
+  btnDismiss.onclick = () => { el.style.display = 'none'; };
+  el.querySelector('.bap-actions').append(btnUse, btnDismiss);
+}
+
+async function assistBrainstormDraft() {
+  const draft = document.getElementById('brain-text').value.trim();
+  if (!draft) { toast('write a raw thought first', 'err'); return; }
+  const el = document.getElementById('brain-assist-preview');
+  _renderAssistPreview(el, { loading: true });
+  const r = await _askCopilotSuggest(draft, 'brainstorm');
+  _renderAssistPreview(el, { ok: r.ok, text: r.text, error: r.error, onUse: (text) => {
+    document.getElementById('brain-text').value = text;
+    el.style.display = 'none';
+  }});
+}
+
+async function assistBrainstormCard(uuid) {
+  const b = BRAINSTORMS.find(x => x.uuid === uuid);
+  if (!b) return;
+  const el = document.getElementById(`brain-assist-card-${uuid}`);
+  _renderAssistPreview(el, { loading: true });
+  const r = await _askCopilotSuggest(b.text, 'brainstorm');
+  _renderAssistPreview(el, { ok: r.ok, text: r.text, error: r.error, onUse: async (text) => {
+    // The refined text is used to promote directly — see brainstorm.promote's
+    // optional body.text (§BUILT 2026-09-21): the stored row is updated to
+    // match what was actually promoted, not left silently diverging.
+    if (!CONNECTED) { toast('connect to nexus to promote', 'err'); return; }
+    try {
+      await api(`/api/brainstorms/${uuid}/promote`, { method: 'POST', body: JSON.stringify({ text }) });
+      await loadBrainstorms();
+      toast('promoted to idea', 'ok');
+    } catch (e) { toast(e.message, 'err'); }
+  }});
 }
 
 // ════════════════════════════════════════════════════
@@ -1064,7 +1131,12 @@ async function openNewSpecModal({ name = '', description = '', ideaUuid = null }
   const groups = [
     ['COS archetypes — one compartment, real starting files', templates.filter(t => t.source === 'cos-archetype')],
     ['COS blueprints — several roles, one directory each', templates.filter(t => t.source === 'cos-blueprint')],
-    ['spec-document templates', templates.filter(t => !String(t.source || '').startsWith('cos-'))],
+    // §BUILT 2026-09-21 — James: "add eravos organisms to architecture &
+    // features — select any combination." Same real shape as a COS
+    // archetype (one compartment, real starting files), read live from
+    // eravos/ui/mods/ by lib/file-tree-plan.js's listEravosMods().
+    ['Eravos mods — one mod, real starting files (schema + engine)', templates.filter(t => t.source === 'eravos-mod')],
+    ['spec-document templates', templates.filter(t => !String(t.source || '').startsWith('cos-') && t.source !== 'eravos-mod')],
   ].filter(([, list]) => list.length);
   wrap.innerHTML = groups.map(([title, list]) =>
     `<div style="font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin:6px 0 2px">${escapeHtml(title)} · ${list.length}</div>` + list.map(row).join('')).join('');

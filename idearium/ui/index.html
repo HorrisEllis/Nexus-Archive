@@ -307,6 +307,13 @@ body{display:flex;flex-direction:column;position:relative}
 .brain-textarea:focus{border-color:var(--b2)}
 .brain-row-actions{display:flex;gap:8px;align-items:center}
 .brain-tags-input{flex:1;background:var(--bg2);border:1px solid var(--b1);border-radius:4px;padding:6px 10px;font-family:var(--mono);font-size:10px;color:var(--text);outline:none}
+/* §BUILT 2026-09-21 — AI-assist preview, capture-time and per-card. Same
+   preview-first shape everywhere: the suggestion sits here until the
+   person explicitly uses or dismisses it, never auto-applied. */
+.brain-assist-preview{background:var(--bg2);border:1px solid var(--sky);border-radius:6px;padding:10px 12px;margin-top:8px;font-size:12px;color:var(--text);line-height:1.55}
+.brain-assist-preview .bap-label{font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--sky2);margin-bottom:4px}
+.brain-assist-preview .bap-actions{display:flex;gap:8px;margin-top:8px}
+.brain-assist-preview .bap-err{color:var(--coral)}
 .brain-grid{flex:1;overflow-y:auto;padding:14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;align-content:start}
 .brain-card{background:var(--bg2);border:1px solid var(--b0);border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:8px}
 .brain-card-text{font-size:12px;color:var(--text);line-height:1.55}
@@ -659,9 +666,18 @@ body{display:flex;flex-direction:column;position:relative}
           <textarea class="brain-textarea" id="brain-text" placeholder="type a raw thought... no structure needed yet"></textarea>
           <div class="brain-row-actions">
             <input class="brain-tags-input" id="brain-tags" placeholder="tags, comma, separated">
+            <!-- §BUILT 2026-09-21 — James: "brainstorm should have full AI
+                 assistance." Routes through the real, already-wired
+                 copilot-adapter gate (POST /api/copilot/suggest) — that
+                 gate existed with zero UI callers anywhere before this.
+                 Preview-first: the suggestion never overwrites the draft
+                 on its own, same discipline as every other AI-touches-
+                 real-content feature this session (autofill, screen-qa). -->
+            <button class="action-btn" id="brain-assist-btn" onclick="assistBrainstormDraft()">✨ assist</button>
             <button class="modal-btn confirm" onclick="addBrainstorm()">+ capture</button>
           </div>
         </div>
+        <div class="brain-assist-preview" id="brain-assist-preview" style="display:none"></div>
         <div class="brain-grid" id="brain-grid"></div>
       </div>
     </section>

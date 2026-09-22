@@ -235,6 +235,38 @@
   </div>
 </div>
 
+<!-- §BUILT 2026-09-21 — James: "clearglass needs to help me with job
+     applications, answering on screen questions... full ui to
+     configure this." Real, persistent settings (ApiSettings' own
+     file-backed store, the same one every field on this page already
+     uses) — not a fourth, competing config mechanism. -->
+<div class="section">
+  <div class="section-header"><h2>Screen Q&amp;A (job-application answers)</h2></div>
+  <div class="section-body">
+    <div class="toggle-row">
+      <span style="font-size:12px;">Enabled — Ctrl+Shift+A scans the page, right-click offers "Answer this question"</span>
+      <button class="toggle" id="toggle-screenqa"></button>
+    </div>
+    <div class="field" style="margin-top:12px;">
+      <label>Minimum confidence to surface a field as autofill-covered (excluded from AI answers below this)</label>
+      <select id="screenQaMinConfidence">
+        <option value="high">High only</option>
+        <option value="medium">Medium and up</option>
+        <option value="low">Low and up</option>
+      </select>
+    </div>
+    <div class="field" style="margin-top:12px;">
+      <label>Autofill profile to use as context (optional)</label>
+      <select id="screenQaProfileId"><option value="">— none —</option></select>
+    </div>
+    <div class="field" style="margin-top:12px;">
+      <label>Extra context (added to every answer, alongside the profile above)</label>
+      <textarea id="screenQaContext" rows="4" placeholder="e.g. 5 years backend engineering, Node.js and distributed systems, based in Austin TX..." style="width:100%;font-family:inherit;font-size:12px;padding:8px;background:var(--bg2,#0b1120);border:1px solid var(--border,#1a2a40);border-radius:4px;color:inherit;resize:vertical"></textarea>
+    </div>
+    <p class="note">Every answer is shown in the Co-pilot panel and a native notification before anything is typed into a page — nothing fills a field on its own.</p>
+  </div>
+</div>
+
 <button class="btn" id="save" style="margin-top:8px;">Save Settings</button>
 
 <div class="status-msg ok" id="save-status">✓ Settings saved</div>
@@ -264,6 +296,21 @@
     const tr = document.getElementById('toggle-raid');
     tc.classList.toggle('on', s.useCortex !== false);
     tr.classList.toggle('on', s.raidEnabled !== false);
+
+    // §BUILT 2026-09-21 — screen-qa settings
+    document.getElementById('toggle-screenqa').classList.toggle('on', s.screenQaEnabled !== false);
+    document.getElementById('screenQaMinConfidence').value = s.screenQaMinConfidence || 'medium';
+    document.getElementById('screenQaContext').value = s.screenQaContext || '';
+    try {
+      const profiles = await cg.autofill.listProfiles();
+      const sel = document.getElementById('screenQaProfileId');
+      (profiles || []).forEach((p) => {
+        const opt = document.createElement('option');
+        opt.value = p.id; opt.textContent = p.label;
+        sel.appendChild(opt);
+      });
+      sel.value = s.screenQaProfileId || '';
+    } catch (_) { /* autofill unavailable — dropdown stays at "— none —" */ }
   }
 
   // ── Save ──────────────────────────────────────────────────────────────
@@ -283,6 +330,10 @@
       fallbackModel:    document.getElementById('fallbackModel').value,
       useCortex:        document.getElementById('toggle-cortex').classList.contains('on'),
       raidEnabled:      document.getElementById('toggle-raid').classList.contains('on'),
+      screenQaEnabled:        document.getElementById('toggle-screenqa').classList.contains('on'),
+      screenQaMinConfidence:  document.getElementById('screenQaMinConfidence').value,
+      screenQaProfileId:      document.getElementById('screenQaProfileId').value,
+      screenQaContext:        document.getElementById('screenQaContext').value,
     };
     if (key) payload.fallbackApiKey = key;
     await cg.api.set(payload);

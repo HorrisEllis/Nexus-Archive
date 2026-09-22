@@ -256,6 +256,17 @@ contextBridge.exposeInMainWorld('ClearGlass', {
     fill:   (profileId, agentId, minConfidence) => ipcRenderer.invoke('autofill:fill', { profileId, agentId, minConfidence }),
   },
 
+  // §BUILT 2026-09-21 — James: "clearglass needs to help me with job
+  // applications, answering on screen questions... using hotkey.
+  // right click, answer question context option."
+  screenQa: {
+    detect:     (profileId, agentId)          => ipcRenderer.invoke('screen-qa:detect', { profileId, agentId }),
+    answer:     (question, context, agentId)  => ipcRenderer.invoke('screen-qa:answer', { question, context, agentId }),
+    inject:     (cgId, text, agentId)         => ipcRenderer.invoke('screen-qa:inject', { cgId, text, agentId }),
+    elementAt:  (x, y, agentId)               => ipcRenderer.invoke('screen-qa:element-at', { x, y, agentId }),
+    deriveQuestion: (fieldMeta)               => ipcRenderer.invoke('screen-qa:derive-question', { fieldMeta }),
+  },
+
   // ── Rewind ────────────────────────────────────────────────────────────
   rewind: {
     list:     (agentId, limit) => ipcRenderer.invoke('rewind:list',     { agentId, limit }),
