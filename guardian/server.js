@@ -2169,7 +2169,14 @@ function handleExtendedRoutes(req, res, url, method) {
       const provider = body.provider;
       if (!provider) { pRes(res, 400, { ok: false, error: 'provider required' }); return; }
       if (!ncp.isConnected(provider)) { pRes(res, 409, { ok: false, error: `provider "${provider}" not connected` }); return; }
-      const result = await requestSync(provider, body.timeoutMs || 15000);
+      // §FIX 2026-09-22 — optional, additive: body.agentId targets a
+      // specific repo's own tab (see chat-sync.js's own 2026-09-22 note)
+      // instead of the broadcast every existing caller still gets when
+      // it's omitted. isConnected() above only proves SOME tab for this
+      // provider is live — a real, tab-specific miss (this agentId's tab
+      // isn't one of them) is still reported honestly via requestSync's
+      // own 0-sent path, not assumed connected here.
+      const result = await requestSync(provider, body.timeoutMs || 15000, body.agentId || null);
       pRes(res, result.ok ? 200 : 502, result);
     }).catch(e => pRes(res, 400, { ok: false, error: e.message }));
     return true;

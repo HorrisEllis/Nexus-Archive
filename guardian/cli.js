@@ -167,7 +167,7 @@ async function watchSeam(queueId, timeoutMs = 600_000) {
 
 // ── command: send a job ───────────────────────────────────────────────────────
 
-async function sendCommand(raw) {
+async function sendCommand(raw, agentId = null) {
   // Check if content is piped via stdin
   let stdinContent = null;
   if (!process.stdin.isTTY) {
@@ -175,8 +175,8 @@ async function sendCommand(raw) {
   }
 
   const body = stdinContent
-    ? { raw, content: stdinContent }
-    : { raw };
+    ? { raw, content: stdinContent, agentId }
+    : { raw, agentId };
 
   const result = await post('/command', body);
 
@@ -195,7 +195,7 @@ async function sendCommand(raw) {
 
 // ── command: send a file as content ──────────────────────────────────────────
 
-async function sendFile(provider, filePath, extraPrompt) {
+async function sendFile(provider, filePath, extraPrompt, agentId = null) {
   const abs = path.resolve(filePath);
   if (!fs.existsSync(abs)) {
     console.error(`File not found: ${abs}`);
@@ -211,6 +211,7 @@ async function sendFile(provider, filePath, extraPrompt) {
     prompt,
     content,
     source: 'cli',
+    agentId,
   });
 
   if (!result.ok) { console.error('Error:', result.error); process.exit(1); }
@@ -310,7 +311,12 @@ Server info:
   seam resume <queueId>  Force-retry the active chunk in a stalled queue
 
 Options:
-  --no-watch    Don't wait for the response after sending
+  --no-watch          Don't wait for the response after sending
+  --agent <agentId>   Target one repo's own dedicated tab (repo-<uuid>,
+                       the TR1/TR2 convention) instead of the shared
+                       provider tab. Works on /code, /ask, /paste, /file,
+                       and sync. A repo with no live tab of its own fails
+                       loudly rather than silently falling back.
 
 Providers: claude, chatgpt, gemini, ollama
 
@@ -342,7 +348,10 @@ Examples:
     // ── /file ────────────────────────────────────────────────────────────────
     if (args[0] === '/file') {
       const [, provider, filePath, ...rest] = args;
-      await sendFile(provider, filePath, rest.join(' ') || null);
+      const agentFlagIdx = rest.indexOf('--agent');
+      let fileAgentId = null;
+      if (agentFlagIdx !== -1) { fileAgentId = rest[agentFlagIdx + 1] || null; rest.splice(agentFlagIdx, 2); }
+      await sendFile(provider, filePath, rest.join(' ') || null, fileAgentId);
       return;
     }
 
@@ -399,9 +408,15 @@ Examples:
     // recordResponse()) — this is the actual "synchronize" step, not
     // just a print. --no-store skips that write for a dry-run look.
     if (args[0] === 'sync') {
-      if (!args[1]) { console.error('Usage: guardian sync <provider> [--no-store]'); process.exit(1); }
+      if (!args[1]) { console.error('Usage: guardian sync <provider> [--agent <agentId>] [--no-store]'); process.exit(1); }
       const provider = args[1];
-      const result = await post('/sync', { provider });
+      // §FIX 2026-09-22 — James: "the cli in clearglass to stream the dom
+      // to the agent tabs of the repos." --agent <agentId> targets one
+      // repo's own dedicated tab (repo-<uuid>, the TR1/TR2 convention)
+      // instead of every connected tab for the provider.
+      const agentFlagIdx = args.indexOf('--agent');
+      const agentId = agentFlagIdx !== -1 ? args[agentFlagIdx + 1] : null;
+      const result = await post('/sync', { provider, agentId });
       if (!result.ok) { console.error(`Sync failed: ${result.reason || result.error}`); process.exit(1); }
 
       const chat = result.chat;
@@ -490,7 +505,18 @@ ${interrupted.length} interrupted chunk(s):
 
     // ── /code /ask /paste /spec (raw command) ────────────────────────────────
     if (args[0].startsWith('/')) {
-      await sendCommand(args.join(' '));
+      // §FIX 2026-09-22 — James: "maybe the job created from the cli
+      // needs to use the agentid." guardian/server.js's /command handler
+      // already reads body.agentId and threads it into createJob() (the
+      // exact same field TR1's dispatcher.js/lib/repo-agent.js path
+      // uses) — the CLI itself never sent one. Stripped out of the args
+      // BEFORE building the raw command string, so it never corrupts the
+      // actual prompt text sent to the parser.
+      const cmdArgs = [...args];
+      const agentFlagIdx = cmdArgs.indexOf('--agent');
+      let agentId = null;
+      if (agentFlagIdx !== -1) { agentId = cmdArgs[agentFlagIdx + 1] || null; cmdArgs.splice(agentFlagIdx, 2); }
+      await sendCommand(cmdArgs.join(' '), agentId);
       return;
     }
 

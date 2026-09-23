@@ -30,11 +30,26 @@
 
 function createChatSync({ bus, ncp }) {
   /**
-   * requestSync(provider, timeoutMs) -> Promise<{ok, chat?, reason?}>
+   * requestSync(provider, timeoutMs, agentId) -> Promise<{ok, chat?, reason?}>
    * chat (when ok) is whatever the userscript's _nexusGetFullChat()
    * returned: { provider, chatId, url, extractedAt, messages, partial? }.
+   *
+   * §FIX 2026-09-22 — James: "the cli in clearglass to stream the dom to
+   * the agent tabs of the repos." This module predates TR1/TR2's agentId
+   * routing (its own header quotes an earlier version of this same ask,
+   * 2026-09-17) and still called ncp.push(provider, ...) — a BROADCAST to
+   * every connected tab for that provider, same one shared tab every sync
+   * always resolved to, exactly the class of gap TR1 closed for job
+   * dispatch but never reached this file. agentId is now optional: when
+   * given, uses ncp.pushTab(provider, agentId, ...) — the SAME real,
+   * already-proven per-tab routing dispatcher.js uses (pushTab is keyed
+   * `${provider}:${tabId}`, and TR1's _stampAgent() is what makes a
+   * repo's own tab register under tabId===agentId in the first place, so
+   * this is the same mechanism, not a new one). No agentId -> unchanged,
+   * real broadcast behavior, so every existing caller (bare `guardian
+   * sync claude`) is unaffected.
    */
-  function requestSync(provider, timeoutMs = 15000) {
+  function requestSync(provider, timeoutMs = 15000, agentId = null) {
     return new Promise((resolve) => {
       const syncId = require('crypto').randomUUID();
       let settled = false;
@@ -57,7 +72,9 @@ function createChatSync({ bus, ncp }) {
       }, timeoutMs);
 
       bus.on('guardian.ncp.sync_result', onResult);
-      const sent = ncp.push(provider, { type: 'GUARDIAN_SYNC_REQUEST', syncId });
+      const sent = agentId
+        ? (ncp.pushTab(provider, agentId, { type: 'GUARDIAN_SYNC_REQUEST', syncId }) ? 1 : 0)
+        : ncp.push(provider, { type: 'GUARDIAN_SYNC_REQUEST', syncId });
       if (sent === 0) {
         // Same real-evidence short-circuit as _pingProvider — no client
         // received the write, no reason to wait out the timeout.
@@ -65,7 +82,9 @@ function createChatSync({ bus, ncp }) {
         settled = true;
         clearTimeout(timer);
         bus.off('guardian.ncp.sync_result', onResult);
-        resolve({ ok: false, reason: 'sync write reached 0 clients — provider not connected' });
+        resolve({ ok: false, reason: agentId
+          ? `sync write reached no client for tab ${agentId} — that repo has no live tab (see TR2's own real gap: nothing calls ensureAgentTab yet, so one may never have been opened)`
+          : 'sync write reached 0 clients — provider not connected' });
       }
     });
   }
