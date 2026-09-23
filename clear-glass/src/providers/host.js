@@ -65,6 +65,18 @@ class ProviderHost {
 
     this._scriptCache = new Map(); // providerId → { source, mtimeMs }
     this.windows      = new Map(); // providerId → BrowserWindow
+    // §TR2 2026-09-22 — per-agent tabs live in their OWN registry, keyed
+    // `${providerId}::${agentId}`, deliberately NOT in this.windows: every
+    // existing consumer of that map (status, stop, _sweepIdle, getProvider
+    // lookups) assumes the key IS a provider id, and a composite key there
+    // would quietly break all of them. Policy: open on first dispatch and
+    // STAY open — a provider page load is slow and the chat itself is the
+    // conversation lane sessionId assumes, so open/dispatch/close would
+    // throw the session away each call. Bounded, because "a tab per repo
+    // forever" is the real cost TR1 named: LRU cap + idle close.
+    this.agentTabs    = new Map(); // `${providerId}::${agentId}` → { win, agentId, providerId, lastUsed }
+    this.AGENT_TAB_MAX     = parseInt(process.env.CG_AGENT_TAB_MAX || '6', 10);
+    this.AGENT_IDLE_MS     = parseInt(process.env.CG_AGENT_TAB_IDLE_MS || String(15 * 60 * 1000), 10);
     this._status      = new Map(); // providerId → { status, url, injectedAt, health }
 
     // §BL24 2026-08-23 — James: "disable opening in the background on
@@ -142,6 +154,7 @@ class ProviderHost {
    */
   _sweepIdle() {
     const now = Date.now();
+    this._sweepIdleAgentTabs(now);
     for (const [providerId, win] of this.windows) {
       if (win.isDestroyed()) { this.windows.delete(providerId); continue; }
       const last = this._lastUsed.get(providerId);
@@ -193,7 +206,21 @@ class ProviderHost {
   }
 
   // ── Inject GM shim + userscript into a window ───────────────────────────
-  async _inject(providerId, win) {
+  // §TR1 2026-09-22 — stamp the agent this tab belongs to BEFORE the
+  // userscript runs, so the script registers with guardian under
+  // tabId=agentId and guardian's dispatcher (pushTab(provider, job.agentId))
+  // reaches exactly this tab. Optional: a window opened without an agentId
+  // is a normal shared provider tab and nothing changes for it.
+  async _stampAgent(win, agentId) {
+    if (!agentId) return false;
+    const js = `(function(){ try { window.__NEXUS_AGENT_ID = ${JSON.stringify(String(agentId))};
+      sessionStorage.setItem('gd_agent_id', window.__NEXUS_AGENT_ID); return true; } catch (e) { return false; } })();`;
+    try { return !!(await win.webContents.executeJavaScript(js)); }
+    catch (e) { _logWarn(`[ProviderHost] could not stamp agentId=${agentId}: ${e.message}`); return false; }
+  }
+
+  async _inject(providerId, win, agentId = null) {
+    await this._stampAgent(win, agentId);
     const gmShim  = buildGmShim();
     const wake    = this._loadSharedPrelude();
     const script  = this.loadUserscript(providerId);
@@ -229,9 +256,80 @@ class ProviderHost {
     }
   }
 
+  // ── Per-agent tabs (TR2) ─────────────────────────────────────────────────
+  /**
+   * ensureAgentTab(providerId, agentId) — the tab a repo's jobs land in.
+   * Idempotent: the same agentId always returns the same live tab, which is
+   * what makes guardian's pushTab(provider, job.agentId) hit. Hidden by
+   * default; showAgentTab() brings it forward on demand.
+   */
+  async ensureAgentTab(providerId, agentId, opts = {}) {
+    if (!providerId || !agentId) return { ok: false, error: 'providerId and agentId are both required' };
+    return this.start(providerId, { show: false, ...opts, agentId });
+  }
+
+  showAgentTab(providerId, agentId) {
+    const e = this.agentTabs.get(`${providerId}::${agentId}`);
+    if (!e || e.win.isDestroyed()) return { ok: false, error: `no live tab for ${agentId} on ${providerId}` };
+    e.lastUsed = Date.now(); e.win.show(); e.win.focus();
+    return { ok: true, providerId, agentId };
+  }
+
+  closeAgentTab(providerId, agentId) {
+    const key = `${providerId}::${agentId}`;
+    const e = this.agentTabs.get(key);
+    if (!e) return { ok: false, error: `no tab for ${agentId} on ${providerId}` };
+    try { if (!e.win.isDestroyed()) e.win.destroy(); } catch (_) {}
+    this.agentTabs.delete(key);
+    return { ok: true, providerId, agentId };
+  }
+
+  listAgentTabs() {
+    const now = Date.now();
+    return [...this.agentTabs.entries()]
+      .filter(([, e]) => e.win && !e.win.isDestroyed())
+      .map(([key, e]) => ({ key, providerId: e.providerId, agentId: e.agentId, idleMs: now - e.lastUsed, visible: (() => { try { return e.win.isVisible(); } catch (_) { return false; } })() }));
+  }
+
+  /** Least-recently-used close, so tabs cannot grow without bound. */
+  _enforceAgentTabCap() {
+    const live = [...this.agentTabs.entries()].filter(([, e]) => e.win && !e.win.isDestroyed());
+    if (live.length <= this.AGENT_TAB_MAX) return 0;
+    const byOldest = live.sort((a, b) => a[1].lastUsed - b[1].lastUsed);
+    let closed = 0;
+    for (const [, e] of byOldest.slice(0, live.length - this.AGENT_TAB_MAX)) {
+      _log(`[ProviderHost] agent-tab cap ${this.AGENT_TAB_MAX} reached — closing least-recently-used ${e.agentId} (${e.providerId}); it reopens on its next dispatch`);
+      this.closeAgentTab(e.providerId, e.agentId); closed++;
+    }
+    return closed;
+  }
+
+  /** Idle close — same reasoning as _sweepIdle for shared provider windows. */
+  _sweepIdleAgentTabs(now = Date.now()) {
+    let closed = 0;
+    for (const [key, e] of [...this.agentTabs]) {
+      if (!e.win || e.win.isDestroyed()) { this.agentTabs.delete(key); continue; }
+      if (now - e.lastUsed < this.AGENT_IDLE_MS) continue;
+      _log(`[ProviderHost] agent tab ${e.agentId} (${e.providerId}) idle ${Math.round((now - e.lastUsed) / 1000)}s — closing; reopens on next dispatch`);
+      this.closeAgentTab(e.providerId, e.agentId); closed++;
+    }
+    return closed;
+  }
+
   // ── Spawn one provider window ────────────────────────────────────────────
   async start(providerId, opts = {}) {
-    if (this.windows.has(providerId)) {
+    const agentId  = opts.agentId || null;
+    const agentKey = agentId ? `${providerId}::${agentId}` : null;
+    if (agentKey && this.agentTabs.has(agentKey)) {
+      const e = this.agentTabs.get(agentKey);
+      if (e.win && !e.win.isDestroyed()) {
+        e.lastUsed = Date.now();
+        if (opts.show) e.win.show();
+        return { ok: true, providerId, agentId, status: 'already-running' };
+      }
+      this.agentTabs.delete(agentKey);
+    }
+    if (!agentKey && this.windows.has(providerId)) {
       const existing = this.windows.get(providerId);
       if (!existing.isDestroyed()) {
         if (opts.show) existing.show();
@@ -308,8 +406,11 @@ class ProviderHost {
       title: `NEXUS NCP — ${def.name}`,
     });
 
-    this.windows.set(providerId, win);
-    this._status.set(providerId, {
+    if (agentKey) {
+      this.agentTabs.set(agentKey, { win, agentId, providerId, lastUsed: Date.now() });
+      this._enforceAgentTabCap();
+    } else this.windows.set(providerId, win);
+    if (!agentKey) this._status.set(providerId, {
       status: 'loading', url: def.url,
       providerId, name: def.name, color: def.color,
       startedAt: Date.now(), injectedAt: null, health: 100,
@@ -332,7 +433,7 @@ class ProviderHost {
 
       // Small delay — let SPA frameworks settle
       await new Promise(r => setTimeout(r, 800));
-      await this._inject(providerId, win);
+      await this._inject(providerId, win, agentId);
     });
 
     // Track navigation for health monitoring
@@ -448,6 +549,7 @@ class ProviderHost {
     });
 
     win.on('closed', () => {
+      if (agentKey && this.agentTabs.get(agentKey)?.win === win) this.agentTabs.delete(agentKey);
       if (this.windows.get(providerId) === win) {
         this.windows.delete(providerId);
         this._status.delete(providerId);

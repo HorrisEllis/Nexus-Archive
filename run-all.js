@@ -62,6 +62,7 @@ const SUITES = [
   'test-repo-agent-node.js',
   'test-repo-agent-learn.js',
   'test-repo-inject.js',
+  'test-guardian-job-correlation.js',
   'test-file-tree-plan.js',
   'test-repo-run.js',
   'test-repo-agent-provider.js',

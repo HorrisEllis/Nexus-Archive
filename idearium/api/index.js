@@ -218,7 +218,6 @@ import fs from 'fs';
 import { loadTable, appendRow, deleteRow, syncTable } from '../lib/db.js';
 import { runImportPipeline } from '../repo/import-pipeline.js';
 import { makeBusForwarder } from '../repo/pipeline-events.js';
-import { getChunkIndex } from '../lib/chunk-index-cache.js';
 
 // §PROJECTS 2026-07-19 — "a place to store projects, easily." A flat
 // binary shelf for whole project archives (zips built elsewhere — MASTERMIND
@@ -2404,12 +2403,8 @@ async function handle(req, res, route, query, body) {
       const dir = _repoDiskDir(params.uuid);
       if (!dir) return err(res, 500, 'could not resolve repo directory');
       const p = path.join(dir, 'chunks', 'index.json');
-      // §PERF 2026-09-23 — was a raw readFileSync+JSON.parse on every
-      // call; cached now, mtime-invalidated, real reads confirmed
-      // unchanged by a direct test before this was wired in.
-      const idx = getChunkIndex(p);
-      if (!idx) return err(res, 404, 'no chunk index yet — repo has not been through the import pipeline (see POST .../reindex)');
-      let chunks = idx.chunks;
+      if (!fs.existsSync(p)) return err(res, 404, 'no chunk index yet — repo has not been through the import pipeline (see POST .../reindex)');
+      let chunks = JSON.parse(fs.readFileSync(p, 'utf8'));
       if (query.file) chunks = chunks.filter(c => c.file === query.file);
       return ok(res, { chunks, total: chunks.length });
     }
@@ -2423,13 +2418,8 @@ async function handle(req, res, route, query, body) {
       const dir = _repoDiskDir(params.uuid);
       if (!dir) return err(res, 500, 'could not resolve repo directory');
       const idxPath = path.join(dir, 'chunks', 'index.json');
-      // §PERF 2026-09-23 — the index read here was doing exactly the
-      // full-repo-scale read this route's own comment says it exists to
-      // avoid (linear JSON.parse + Array.find over the whole index, on
-      // every single one-chunk fetch). Cached + O(1) id lookup now.
-      const idx = getChunkIndex(idxPath);
-      if (!idx) return err(res, 404, 'no chunk index yet');
-      const entry = idx.byId.get(params.chunkId);
+      if (!fs.existsSync(idxPath)) return err(res, 404, 'no chunk index yet');
+      const entry = JSON.parse(fs.readFileSync(idxPath, 'utf8')).find(c => c.id === params.chunkId);
       if (!entry) return err(res, 404, `chunk not found: ${params.chunkId}`);
       const full = JSON.parse(fs.readFileSync(path.join(dir, 'chunks', entry._file), 'utf8'));
       return ok(res, full);
@@ -2510,8 +2500,7 @@ async function handle(req, res, route, query, body) {
         let chunkCount = null;
         try {
           const idx = path.join(dir, 'chunks', 'index.json');
-          const cached = getChunkIndex(idx);
-          if (cached) chunkCount = cached.chunks.length;
+          if (fs.existsSync(idx)) chunkCount = JSON.parse(fs.readFileSync(idx, 'utf8')).length;
         } catch (_) { /* stays null — honestly unknown, not zero */ }
         os.emit('idearium.repo.chunk.done', {
           repoUuid: params.uuid, name: repo.name, state: pipeline.state, fileCount, chunkCount,
