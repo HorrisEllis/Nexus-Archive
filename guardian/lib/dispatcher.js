@@ -425,6 +425,29 @@ function createDispatcher(deps) {
       tools: job.tools || null,
       hat: job.hat || null,
     }) ? 1 : 0) : 0;
+    if (!sent && job.agentId) {
+      // §FIX 2026-09-23 — James, direct, against his own real boot log:
+      // "i tried to use this cli as agent. it didn't open the tab."
+      // TR2 (0.39.218) built providerHost.ensureAgentTab() but this was
+      // the missing trigger — named plainly in that commit's own note
+      // ("capability without a trigger... no caller was wired on a
+      // guess"). Fire-and-forget, exactly as that note already scoped
+      // it: THIS job still takes the pushActive() fallback below
+      // (unchanged — no behaviour regression for the job in flight), but
+      // the NEXT job for this repo/provider now finds a real, connected
+      // tab instead of missing again. Reuses spawnProviderTab() (already
+      // real, already auto-spawns Clear Glass on demand) rather than a
+      // second HTTP call invented here — checked first: its opts are
+      // spread straight into providerHost.start()'s own body, the exact
+      // same call ensureAgentTab() itself makes internally, so no new
+      // clear-glass-side route was needed.
+      try {
+        const { spawnProviderTab } = require('../clear-glass-bridge.js');
+        spawnProviderTab(job.provider, { show: false, agentId: job.agentId })
+          .then(r => { if (!r.ok) console.warn(`[guardian] could not open a dedicated tab for ${job.agentId} on ${job.provider} (this job still dispatched via the shared tab): ${r.error}`); })
+          .catch(e => console.warn(`[guardian] spawnProviderTab threw for ${job.agentId}/${job.provider} (non-fatal): ${e.message}`));
+      } catch (e) { console.warn(`[guardian] could not load clear-glass-bridge.js to open a dedicated tab (non-fatal): ${e.message}`); }
+    }
     if (!sent) {
       sent = ncp.pushActive(job.provider, {
         type: 'GUARDIAN_JOB', jobId: job.id, command: job.command,

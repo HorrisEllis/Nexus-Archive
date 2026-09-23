@@ -3160,7 +3160,17 @@ function handleExtendedRoutes(req, res, url, method) {
       }
 
       // ── Raw job dispatch ────────────────────────────────────────────────────
-      const parsed = parseCommand(body.raw);
+      // §FIX 2026-09-22 — found while wiring a new structured caller (no
+      // `raw`, real command/provider/prompt fields instead, the same
+      // shape sendFile() in guardian/cli.js already uses for command:
+      // 'spec' — but that one is intercepted by an EARLIER branch, so
+      // this exact path was never actually exercised with body.raw
+      // unset). parseCommand(undefined) returns null (str becomes '',
+      // matches nothing) — every read below (`parsed.provider`, etc.)
+      // then threw TypeError: Cannot read properties of null. Any
+      // structured, non-raw /command call with command:'ask'/'code' and
+      // no raw field would have crashed with a 500.
+      const parsed = parseCommand(body.raw) || {};
       let _rawProvider = body.provider || parsed.provider || null;
 
       // §RAID + §P97: if no explicit provider, let RAID decide (LAW_I: Ollama first)
