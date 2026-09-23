@@ -31,8 +31,13 @@ function main() {
 
   // ── clear-glass phasemap's cited facts ───────────────────────────────
   const REPO_AGENT = fs.readFileSync(path.join(ROOT, 'lib', 'repo-agent.js'), 'utf8');
-  check('lib/repo-agent.js still has no agentId — the exact gap TR1 is scoped to close (if this ever goes false, TR1 needs re-diagnosing, not silently marked done)',
-    !/agentId/.test(REPO_AGENT));
+  // §UPDATE 2026-09-22 — TR1 (originally diagnosed as "zero agentId
+  // references") shipped for real (commit 838d3c8/c270920, closed in the
+  // phasemap's own closed_2026_09_22 section) — this check now verifies
+  // the CLOSURE stays real, inverted from its original "still a gap"
+  // form rather than deleted, so a regression here is still caught.
+  check('lib/repo-agent.js now derives a real, repo-scoped agentId on dispatch — TR1\'s real, closed fix (was: zero agentId references at all)',
+    /agentId\s*=\s*`repo-\$\{repo\.uuid\}`|agentId:\s*`repo-\$\{repo\.uuid\}`|repo-\$\{repo\.uuid\}/.test(REPO_AGENT));
   const CG_MAIN = fs.readFileSync(path.join(ROOT, 'clear-glass', 'src', 'main', 'index.js'), 'utf8');
   check('clear-glass\'s windows Map is still keyed by agentId — the mechanism TR1 relies on already existing',
     /windows\.set\(agentId, win\)/.test(CG_MAIN));

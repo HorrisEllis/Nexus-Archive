@@ -33,6 +33,11 @@
  *   connectGuardianStream() — live subscription, guardian.job.complete/
  *     .error → resolve the matching chunk (by jobId) via completeChunk/
  *     failChunk, the SAME real functions the synchronous poll path uses.
+ *     §FIX 2026-09-22 — that parity claim was true for completeChunk/
+ *     failChunk themselves but NOT for the code-extraction step in front
+ *     of them (warp-build-dispatch.js's generate() runs extractCode()
+ *     before ever calling completeChunk; this module didn't). Fixed —
+ *     see _prepareChunkContent below.
  *     Reconnects with backoff (copilot's own real retry timings, 2s/5s —
  *     that part of the pattern IS real and worth keeping).
  *   reconcileInFlightChunks() — one-time boot sweep. For every chunk
@@ -46,8 +51,43 @@
  */
 
 const http = require('http');
+const path = require('path');
+const { extractCode } = require('../../lib/extract-code.js');
+const CODE_EXTENSIONS = require('../../lib/languages.js').codeExtensions();
 
 const GUARDIAN_PORT = parseInt(process.env.GUARDIAN_PORT || '7820');
+
+// §FIX 2026-09-22 — James: "how does guardian or clearglass get the
+// actual code file to the right end point for build or expanding
+// repos?" Traced end to end, not assumed: idearium/spec-engine/warp-
+// build-dispatch.js's generate() already does this correctly — when
+// record.expectCode is set, it runs the raw agent reply through
+// lib/extract-code.js's extractCode() (built 2026-09-19 for exactly
+// this — "whatever an agent's reply was... became the chunk's real
+// content verbatim") and fails LOUDLY rather than silently keeping raw
+// prose+fences. But that only runs inside the WARP cascade's OWN
+// internal poll. THIS module — the live SSE push (_handleGuardianEvent)
+// and the boot-time reconciliation sweep (reconcileInFlightChunks) —
+// is the real, separate recovery path for a chunk that completes after
+// idearium restarted or reconnected mid-dispatch, and it called
+// completeChunk() directly with guardian's raw job text: no extraction,
+// ever. A code chunk (one with a real chunk.realPath and a code
+// extension) recovered through EITHER of this module's two paths would
+// get whatever prose+fences the agent actually sent written straight
+// into the real repo file via materialize() — silently, since nothing
+// here checked. expectCode is computed the exact same way idearium/
+// api/index.js already computes it for the live dispatch path (a real
+// chunk.realPath with a real code extension) — not a second definition
+// of what counts as code.
+function _prepareChunkContent(chunk, text) {
+  const expectCode = !!(chunk.realPath && CODE_EXTENSIONS.has(path.extname(chunk.realPath).toLowerCase()));
+  if (!expectCode) return { ok: true, content: text };
+  const extracted = extractCode(text, { allowMultiple: false });
+  if (!extracted.ok) {
+    return { ok: false, error: `guardian returned a reply but it wasn't usable code for ${chunk.realPath}: ${extracted.error}` };
+  }
+  return { ok: true, content: extracted.code };
+}
 
 function _httpGet(port, path, timeoutMs = 8000) {
   return new Promise((resolve) => {
@@ -101,7 +141,13 @@ async function reconcileInFlightChunks(se) {
     if (job && (job.status === 'complete' || job.status === 'done')) {
       const text = job.responseText || job.result || job.text;
       if (text) {
-        try { se.completeChunk(specUuid, chunk.uuid, text); resolved++; console.log(`[idearium/guardian-stream] reconcile: '${chunk.sectionId}' completed while idearium was down — resolved`); continue; }
+        const prepared = _prepareChunkContent(chunk, text);
+        if (!prepared.ok) {
+          try { se.failChunk(specUuid, chunk.uuid, prepared.error); failed++; console.warn(`[idearium/guardian-stream] reconcile: '${chunk.sectionId}' — ${prepared.error}`); }
+          catch (_) {}
+          continue;
+        }
+        try { se.completeChunk(specUuid, chunk.uuid, prepared.content); resolved++; console.log(`[idearium/guardian-stream] reconcile: '${chunk.sectionId}' completed while idearium was down — resolved`); continue; }
         catch (e) { console.warn(`[idearium/guardian-stream] reconcile: completeChunk failed for '${chunk.sectionId}': ${e.message}`); }
       }
     }
@@ -178,7 +224,13 @@ async function _handleGuardianEvent(se, ev) {
   const job = jobsRes.ok && jobsRes.data?.jobs ? jobsRes.data.jobs.find(j => j.id === jobId || j.uuid === jobId) : null;
   const text = job ? (job.responseText || job.result || job.text) : null;
   if (!text) { console.warn(`[idearium/guardian-stream] '${chunk.sectionId}' — guardian.job.complete fired but no response text found for job ${jobId}`); return; }
-  se.completeChunk(specUuid, chunk.uuid, text);
+  const prepared = _prepareChunkContent(chunk, text);
+  if (!prepared.ok) {
+    se.failChunk(specUuid, chunk.uuid, prepared.error);
+    console.warn(`[idearium/guardian-stream] '${chunk.sectionId}' — ${prepared.error}`);
+    return;
+  }
+  se.completeChunk(specUuid, chunk.uuid, prepared.content);
   console.log(`[idearium/guardian-stream] '${chunk.sectionId}' completed (live push, job ${jobId})`);
 }
 

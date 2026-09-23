@@ -157,34 +157,6 @@ spec:
         through different code; this phase must not create a second result
         shape — see TX1.
 
-    TR1_repo_derived_agentId_in_dispatch:
-      does: >-
-        lib/repo-agent.js's dispatch() gains a real, derived agentId
-        (`repo-${repo.uuid}`, matching sessionIdFor's own naming
-        convention) and passes it through routeFor()'s guardian path,
-        instead of leaving it unset. Guardian's NCP dispatch resolves that
-        agentId to a real clear-glass background tab (clear-glass's own
-        bgTabs mechanism — "same chrome as an agent window, never shown" —
-        already exists for exactly this: a tab that isn't a visible window
-        but is a real, isolated browsing context) rather than the shared
-        provider tab.
-      reuse: "clear-glass's windows/bgTabs Maps (already agentId-keyed), lib/repo-agent's existing sessionIdFor naming."
-      gate: "two repos dispatching to the same provider concurrently do not interleave in one tab — verified by a real concurrent-dispatch test, not just code inspection."
-      drift: "one tab per repo, kept open indefinitely, is real memory/process cost per open compartment — a cap or idle-close policy is the live tuning surface, not solved by this phase."
-
-    TR2_tab_lifecycle_and_visibility:
-      does: >-
-        Decide and build the actual lifecycle: does a repo's dedicated tab
-        open on first dispatch and stay open, or open-dispatch-close per
-        call? Does the person ever SEE it (a real visible window, toggle-
-        able like "bring this repo's tab forward"), or does it stay a
-        background tab always? This is a real product decision TR1 doesn't
-        make on its own — this phase is where James's own answer determines
-        the design, not an assumption made here.
-      reuse: "clear-glass's existing window show()/hide() and bgTab promotion (already used for 'move to background tab')."
-      gate: "a person can find and look at a specific repo's live tab on demand, if TR2's decision says they should be able to."
-      drift: "purely a design decision, not a technical unknown — the phasemap defers it rather than guessing."
-
     TX1_converge_the_three_transports:
       does: >-
         There are now THREE ways to talk to a provider tab: the NCP guardian
@@ -204,27 +176,93 @@ spec:
         AN1 and CLI1 expose what the real shared surface is.
 
   ordering_rationale: >
-    AN1 first: it is the correctness fix underneath the bug James hit twice
-    ("injected, didn't recieve back" and the first job's answer reused for
-    the second). 0.39.215's guard stops the wrong answer being returned;
-    AN1 removes the possibility. Everything else — exact streaming, two jobs
-    in one tab — rests on having a real anchor. CLI1 second: "all cli based
+    §UPDATE 2026-09-22 (post TR1/TR2 closure) — TR1 and TR2 shipped out of
+    the order drafted below (before AN1/CLI1), by James's own real work.
+    Original rationale kept for the record: AN1 first, it is the
+    correctness fix underneath the bug James hit twice ("injected, didn't
+    recieve back" and the first job's answer reused for the second).
+    0.39.215's guard stops the wrong answer being returned; AN1 removes
+    the possibility. Everything else — exact streaming, two jobs in one
+    tab — rests on having a real anchor. CLI1 second: "all cli based
     first" is the stated default, and the substrate (dom-transport jobs,
     mesh-client, guardian/cli.js) already exists, so this is wiring, not
-    invention. TR1 third: per-repo agentId routing is already diagnosed in
-    this file and is what lets two repo agents run at once without
-    interleaving in one shared provider tab. TR2 after TR1, unchanged — the
-    lifecycle question still needs TR1's real behaviour in front of James
-    before it can be answered rather than guessed. TX1 last: convergence is
-    only safe once AN1 and CLI1 have shown what the genuinely shared surface
-    is, and it touches the same live dispatch path three recent fixes did.
+    invention. TX1 last: convergence is only safe once AN1 and CLI1 have
+    shown what the genuinely shared surface is, and it touches the same
+    live dispatch path three recent fixes did. AN1 and CLI1 remain open,
+    in that order, as the active queue.
 
   honest_risks:
     - "AN1 replaces a guard that is currently WORKING (0.39.215, 34/34 tests, mutation-checked). The anchor must be proven per provider before the guard is removed, or a real fix is traded for a cleaner one that regresses."
     - "CLI1 and TX1 both assume dom-transport is the right convergence target. That is a judgement from reading it, not from running it headless end to end — CLI1 is also the phase that tests the assumption."
-    - "TR1/TR2 touch guardian's live dispatch path — the same class of code the 0.39.212/213 fixes just touched. Needs real regression coverage against those fixes specifically, not just new tests for the new behavior."
     - "UI1's file-count is a judgment call, not a formula — over-splitting (one file per tiny widget) recreates the coordination cost monoliths avoid; this phasemap does not pre-decide the granularity."
-    - "TR2 is explicitly unresolved — building TR1 without a real answer to TR2 risks either leaking hidden windows or building a toggle nobody asked for."
+    - "TR2's real remaining gap (nothing calls ensureAgentTab yet) means the whole tab-per-repo thread is still capability without a trigger until something wires it — see closed_2026_09_22 above, not re-litigated here as if unknown."
+
+  closed_2026_09_22:
+    note: >-
+      §UPDATE 2026-09-22 (later same day, after this phasemap's own
+      2628bb7 edit) — TR1 and TR2, drafted above as future work, were
+      built and closed by James's own real commits on his machine before
+      this file was updated to say so. Moved here rather than left
+      describing undone work that is actually done — the phasemap itself
+      would otherwise be the stale artifact this whole exercise exists to
+      prevent.
+    TR1_repo_derived_agentId_in_dispatch:
+      status: "CLOSED — commit 838d3c8 (v0.39.217 c270920 closed it end to end)."
+      what_shipped: >-
+        Traced the WHOLE chain, not just the one link originally diagnosed
+        here: lib/repo-agent.js sets payload.agentId = repo-<uuid> on
+        guardian dispatches; copilot/server.js forwards it for backend
+        'guardian'; copilot/lifeline.js's _tryGuardian posts it to guardian
+        /api/copilot/prompt; guardian/ask.js passes it into createJob;
+        guardian/lib/dispatcher.js aims the job with
+        ncp.pushTab(job.provider, job.agentId), falling back to
+        pushActive when no such tab exists. The REAL break, found only by
+        tracing every link: the userscripts invented MY_TAB as a random
+        sessionStorage id, so no tab ever registered under tabId=agentId
+        and pushTab always missed. Fixed at both ends: clear-glass
+        ProviderHost gained agentId-aware _stampAgent() (sets
+        window.__NEXUS_AGENT_ID + sessionStorage gd_agent_id before
+        injection); all five userscripts prefer that stamp as MY_TAB,
+        falling back to their own random id when unstamped — an ordinary
+        shared provider tab is unaffected. A tempting second routing
+        mechanism (ncp.js push(provider, data, {agentId})) was written
+        and then reverted: pushTab already did this correctly.
+      real_gap_named_at_close: >-
+        Nothing yet CALLED _inject with an agentId when 838d3c8 landed —
+        the chain was complete but unexercised. TR2 (below) is what
+        started calling it.
+      tests: "test-guardian-job-correlation.js grew 34 -> 50, asserting the chain link by link; mutation-checked."
+
+    TR2_tab_lifecycle_and_visibility:
+      status: "CAPABILITY CLOSED, TRIGGER OPEN — commit 48d5edf (v0.39.218)."
+      the_lifecycle_decision_this_phase_deferred: >-
+        Answered by James, not guessed: a repo's tab OPENS ON FIRST
+        DISPATCH AND STAYS OPEN, hidden by default, viewable on demand,
+        bounded by an LRU cap (CG_AGENT_TAB_MAX, default 6) and an idle
+        close (CG_AGENT_TAB_IDLE_MS, default 15min) — reasoning given, not
+        just preference: a provider page load is slow and the chat IS the
+        conversation lane repo-agent's sessionId already assumes, so
+        open/dispatch/close would throw that session away every call; and
+        "kept open indefinitely" was this phasemap's own named drift risk
+        for TR1, so bounded rather than unbounded closes it honestly.
+      what_shipped: >-
+        clear-glass ProviderHost gained its own agentTabs registry, keyed
+        separately from this.windows (checked first: every existing
+        consumer of that map assumes the key IS a provider id; a composite
+        key there would have quietly broken them all). New
+        ensureAgentTab/showAgentTab/closeAgentTab/listAgentTabs;
+        _enforceAgentTabCap and _sweepIdleAgentTabs hooked into the
+        EXISTING idle sweep, not a second timer.
+      real_gap_named_at_close: >-
+        Nothing calls ensureAgentTab yet. Guardian's dispatcher is the
+        natural trigger, but clear-glass's POST /cmd emits bus events
+        rather than invoking the ipcMain handlers directly, so the
+        reachable path from guardian was not confirmed and no caller was
+        wired on a guess. Until something calls it, TR2 is capability
+        without a trigger — behaviour is byte-for-byte what it was before
+        this phase. This is the one real remaining piece of the whole
+        tab-per-repo thread.
+      tests: "test-guardian-job-correlation.js grew 50 -> 60; mutation-checked (cap disabled -> 3 fail; idle close disabled -> 1 fail)."
 
   archive_superseded_2026_09_22:
     note: >-
