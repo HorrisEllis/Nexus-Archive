@@ -2349,7 +2349,13 @@ const server = http.createServer(async (req, res) => {
         // any agentId a caller sent (idearium's lib/repo-agent.js now
         // sends one — see that file's own §TR1 note). ollama has no tab
         // to pick between, so agentId is only meaningful for 'guardian'.
-        const result = await dispatchFn(prompt, { provider: body.agent || undefined, agentId: body.backend === 'guardian' ? (body.agentId || undefined) : undefined, requestId, sessionId });
+        // §FIX 2026-09-23 — see copilot/lifeline.js's own note on this
+        // same date: a caller's real patience (idearium's repo-agent
+        // dispatch bumps to 300000ms for exactly this reason) was being
+        // silently cut short by this hop's own hardcoded 45s default.
+        // Only meaningful for 'guardian' (ollama's own dispatch has no
+        // equivalent per-call override here).
+        const result = await dispatchFn(prompt, { provider: body.agent || undefined, agentId: body.backend === 'guardian' ? (body.agentId || undefined) : undefined, timeoutMs: body.backend === 'guardian' ? (body.timeoutMs || undefined) : undefined, requestId, sessionId });
         if (result?.ok || result?.text) {
           json(res, 200, { ok: true, text: result.text, provider_used: body.backend === 'guardian' ? (result.provider || body.agent) : 'ollama', requestId });
         } else {

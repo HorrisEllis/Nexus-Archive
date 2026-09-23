@@ -1,0 +1,40 @@
+envelope: 1
+uuid: nexus-export-chunk-prov-1790152221060.nexus-id-repo-22c384bd.882d379c-348c-40c8-b949-f144d4f9c854
+type: chunk
+id: prov-1790152221060.nexus-id-repo-22c384bd.882d379c-348c-40c8-b949-f144d4f9c854
+context: idearium spec-engine chunk of spec 66de9bb7-0448-4883-8a91-9f77bc633952
+intent: null
+summary: src-helper (complete)
+system: idearium
+tags:
+  - spec:66de9bb7-0448-4883-8a91-9f77bc633952
+  - status:complete
+  - section:src-helper
+  - specName:prov-1790152221060
+  - agent:user
+  - repo:nexus-id-repo-22c384bd
+exported_at: 1790152221278
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1790152221278
+lastSeenAt: 1790152221278
+fingerprint: null
+payload:
+  uuid: 882d379c-348c-40c8-b949-f144d4f9c854
+  specUuid: 66de9bb7-0448-4883-8a91-9f77bc633952
+  sectionId: src-helper
+  sectionTitle: src/helper.js
+  chunkIdx: 2
+  status: complete
+  realPath: src/helper.js
+  fileName: 02-src-helper.md
+  filePath: /home/claude/work/nexus3/Nexus_v0_39_219/base/idearium/data/specs/66de9bb7-0448-4883-8a91-9f77bc633952/02-src-helper-882d379c.js
+  agent: user
+  agentModel: null
+  attempts: 0
+  failureMode: null
+  byteSize: 412
+  contentHash: e66632c768b0374654732fa307ae14d2b73f9d8bcc7a72316413c160c49469e0
+  createdAt: 1790152221222
+  updatedAt: 1790152221277
+  completedAt: 1790152221277

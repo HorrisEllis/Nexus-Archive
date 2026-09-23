@@ -273,6 +273,23 @@ async function _tryGuardian(prompt, opts = {}) {
     const ESCALATION_TOOLS = ['read_file', 'diagnose', 'system_priority', 'intent_hat'];
 
     // Use the NEXUS co-pilot proxy on Guardian
+    // §FIX 2026-09-23 — James, live: a repo-agent's dispatch still showed
+    // nothing after a real, watched wait. Traced: lib/repo-agent.js's
+    // dispatch() deliberately bumps ITS OWN timeout to 300000ms for a
+    // guardian backend — its own comment already says why ("a browser
+    // provider answers through a real tab... 90s is too short for a long
+    // answer"), and that reasoning is even stronger for a tab that just
+    // cold-spawned and has to load+authenticate first (the exact case in
+    // the boot log this was traced against — chatgpt.com had JUST been
+    // injected when this job was already in flight). But this call to
+    // guardian used the hardcoded GUARDIAN_TIMEOUT_MS (45000) regardless
+    // of what the caller was willing to wait — copilot silently cut the
+    // hop short at 45s no matter how patient the caller upstream was,
+    // defeating repo-agent's own 300000ms allowance entirely without
+    // either side ever knowing. opts.timeoutMs is now honoured when a
+    // caller sends one (idearium's own dispatch() now does, see that
+    // file's own note); GUARDIAN_TIMEOUT_MS stays the real default for
+    // every other existing caller that doesn't set it.
     const result = await _post(`${GD_URL}/api/copilot/prompt`, {
       prompt,
       provider:   ragProvider,
@@ -287,7 +304,7 @@ async function _tryGuardian(prompt, opts = {}) {
       channel:    'lifeline',
       channelName: 'Lifeline',
       tools:      opts.tools || ESCALATION_TOOLS,
-    }, GUARDIAN_TIMEOUT_MS);
+    }, opts.timeoutMs || GUARDIAN_TIMEOUT_MS);
 
     if (!result?.text) {
       try {
