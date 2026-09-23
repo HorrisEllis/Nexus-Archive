@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        clear-glass
-    version:     3.9.0
+    version:     3.10.0
     foundation:  nexus-system-foundation@1.1.0
     port:        7702
     uuid:        nexus-clear-glass-v1-0000-2026-0901-jamesbrooks-001
@@ -56,7 +56,7 @@ spec:
       returns: "Full clear-glass component registry — 79 real components as of 2026-09-22 (was 67 at 2026-09-01)"
 
   handshake:
-    components_count: 79   # §2026-09-22 — was 67 (stale since 2026-09-01); autofill's 7 real
+    components_count: 94   # §2026-09-22 — was 67 (stale since 2026-09-01); autofill's 7 real
                             # IPC methods (shipped 2026-09-19, never registered) and screen-qa's
                             # 5 (this session) both landed in registry-components.js with zero
                             # entries here — checked directly against the live registry export,
@@ -143,6 +143,31 @@ spec:
         against a real ipcMain handler) surfaced 4 registered-but-
         unimplemented components — see gaps: entry EXT1 below.
 
+    - date: 2026-09-23
+      summary: >
+        Accounts authority + login portals + settings rebuild (James:
+        "login portals ... hook into the cookie vault, and create a
+        accountid per account" / "yes clearglass"). Clear Glass is now
+        the ONE account authority: options store gained accountDefaults
+        (per-provider default), resolveAccountForDispatch (never auto-
+        creates) and per-account session records; GET /accounts/resolve on
+        :7702 is what guardian's dispatch ladder asks (guardian/lib/
+        cg-account-authority.js) instead of its own list. New
+        src/accounts/login-portal.js opens a provider's sign-in page in
+        the exact partition agent-mesh spawn() uses (persist:mesh-
+        <provider>-<accountId>) and captures the session into the
+        CookieVault under the key spawn() restores from. Both vaults' keys
+        moved off a hardcoded string onto Electron safeStorage
+        (src/security/vault-key.js) with a legacy-key read fallback so no
+        existing record becomes unreadable. Two real bugs fixed on the
+        way: CookieVault's file-store branch (the real one — better-
+        sqlite3 is not a dependency) never read named-account cookies
+        back, so every restore() returned []; preload declared `macros`
+        twice. Registry 79 -> 94. renderer/settings.html rebuilt as a
+        shell over renderer/settings/*.js, one file per area (UI1's
+        principle), inline script gone so script-src drops
+        'unsafe-inline'.
+
   gaps:
     as_of: 2026-09-01
     entries:
@@ -174,6 +199,15 @@ spec:
         opened: 2026-09-22
 
   version_history:
+    - version: 3.10.0
+      date: 2026-09-23
+      summary: >-
+        MINOR — new capability, backward compatible: 15 new IPC components (per-provider default
+        account + dispatch resolution, 8 login-portal channels, vault key status, macro create/delete/
+        schema). All five sync points moved together (package.json, this file, lib/version.js,
+        main/index.js CG_VERSION, registry-components.js V); interaction-contract.json regenerated
+        79 -> 94 routes, existing route objects kept verbatim.
+      versioniumCommitId: null
     - version: 3.1.0
       date: 2026-09-01
       summary: "First real .spec authored, matching live code@3.1.0 exactly (no version bump required)."

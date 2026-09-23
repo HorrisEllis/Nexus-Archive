@@ -62,8 +62,16 @@ function createLadder({ registry, mesh, picker, mode = () => process.env.GUARDIA
     if (breakerOpen()) return { kind: 'ncp', reason: 'mesh_circuit_open', trail };
 
     let accountId;
-    try { accountId = registry.resolveAccount(job.provider, job.accountId); }
-    catch (e) { return { kind: 'failed', reason: e.code || 'account_error', error: e.message, trail }; }
+    try {
+      accountId = typeof registry.resolveAccountAsync === 'function'
+        ? await registry.resolveAccountAsync(job.provider, job.accountId)
+        : registry.resolveAccount(job.provider, job.accountId);
+    } catch (e) {
+      // Clear Glass (the account authority, 2026-09-23) is also where the mesh runs: if it is down the mesh is
+      // down, so this is the documented NCP fallback with its reason recorded — not a silent 'default' account.
+      if (e.code === 'authority_unreachable') return { kind: 'ncp', reason: 'account_authority_unreachable', error: e.message, trail };
+      return { kind: 'failed', reason: e.code || 'account_error', error: e.message, trail };
+    }
     const agentId = job.agentId || `mesh-${job.provider}-${accountId || 'default'}`;
 
     // The mesh has no userscript, so the NEXUS agent hint (wake-hint.js) is added here, once, to the SENT prompt only.

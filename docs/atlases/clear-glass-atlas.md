@@ -1,6 +1,6 @@
 # clear-glass — Sovereign NEXUS Browser
 
-> **v3.9.0 (active — `clear-glass.spec` and `registry-components.js` now agree, fixed 2026-09-22)** · 79 real components · Electron + Chromium + Firefox fingerprint + TLS JA4 + ErosmancerOS wire (SISO-native)
+> **v3.10.0 (active, 2026-09-23)** · 94 real components · account authority for NEXUS · Electron + Chromium + Firefox fingerprint + TLS JA4 + ErosmancerOS wire (SISO-native)
 
 **Author:** James Brooks (Erosmancer) · rheon.world
 
@@ -169,6 +169,20 @@ by periodic manual audit.
 `nexus.status` — real, from this file's own `module.exports.events.emits`.
 
 ---
+
+## Accounts, login portals, vaults, Settings (3.10.0, 2026-09-23)
+
+**Clear Glass is the account authority** (James: "yes clearglass" — D3 of the mesh-first phasemap). One account = one options-store uuid; that uuid is the `accountId` everywhere downstream.
+
+| Path | What |
+|---|---|
+| `src/options/store.js` | accounts, `accountDefaults`, `resolveAccountForDispatch`, `recordSession` |
+| `src/main/index.js` | `GET :7702/accounts/resolve` — what guardian's ladder asks (`guardian/lib/cg-account-authority.js`) |
+| `src/accounts/login-portal.js` | sign-in window in `persist:mesh-<provider>-<accountId>`; capture → CookieVault `{agentId: provider, accountId}` |
+| `src/security/vault-key.js` | safeStorage-sealed data key for both vaults, legacy-key read fallback |
+| `renderer/settings.html` + `renderer/settings/` | Settings shell + `core.js` + one file per area under `sections/` |
+
+End to end: **+** → account uuid → **Sign in** (portal, same partition the mesh uses) → **Save session** (vault) → guardian dispatch resolves the account from Clear Glass → mesh `spawn()` opens that partition and restores that vault entry.
 
 ## Modules Not Yet Built
 

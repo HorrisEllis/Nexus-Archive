@@ -2,7 +2,7 @@
 /**
  * clear-glass/registry-components.js — Clear Glass System Contract
  * UUID: cg-registry-v1-0000-0000-000000000001
- * Version: 3.9.0
+ * Version: 3.10.0
  *
  * Served at GET /contract from the IPC server (:7702).
  * Verified by orchestrator contract-handshake on boot.
@@ -17,7 +17,7 @@ const NS = 'cg';
 // drift lib/version.js's services['clear-glass'], main/index.js's
 // CG_VERSION, and clear-glass.spec's meta.version all had — found while
 // updating those three, checked here too rather than assumed synced.
-const V  = '3.9.0';
+const V  = '3.10.0';
 
 function _c(id, method, path, desc, opts = {}) {
   return {
@@ -185,6 +185,26 @@ const components = [
   _c('screenQa.inject',         'IPC', 'screen-qa:inject',         'Write a chosen answer into one real field',                                                                { tags: ['screen-qa'] }),
   _c('screenQa.elementAt',      'IPC', 'screen-qa:element-at',     'The real field at a window-relative point — the right-click path\'s own target',                          { tags: ['screen-qa'] }),
   _c('screenQa.deriveQuestion', 'IPC', 'screen-qa:derive-question','Derive a question from one real field\'s metadata (label/aria-label/placeholder/name)',                    { tags: ['screen-qa'] }),
+
+  // §BUILT 2026-09-23 — James: "login portals like apppassword login to each
+  // provider, with a plus to add multiple, which hook into the cookie vault"
+  // / "yes clearglass" (Clear Glass is the account authority). Each entry
+  // copied verbatim from src/ipc/bridge.js's ipcMain.handle() calls.
+  _c('accounts.setDefault',        'IPC', 'accounts:setDefault',        'Set/clear the per-provider default account (Clear Glass is the account authority guardian resolves against)', { tags: ['accounts'] }),
+  _c('accounts.defaults',          'IPC', 'accounts:defaults',          'Per-provider default account map',                                    { tags: ['accounts'] }),
+  _c('accounts.resolve',           'IPC', 'accounts:resolve',           'Resolve the account a dispatch to this provider would use (never auto-creates)', { tags: ['accounts'] }),
+  _c('accounts.portal.providers',  'IPC', 'accounts:portal:providers',  'Providers a login portal can open, with their sign-in urls',           { tags: ['accounts', 'portal'] }),
+  _c('accounts.portal.open',       'IPC', 'accounts:portal:open',       'Open a provider sign-in window in the account\'s own mesh partition',  { tags: ['accounts', 'portal'] }),
+  _c('accounts.portal.capture',    'IPC', 'accounts:portal:capture',    'Capture the signed-in session into the cookie vault + link the provider identity', { tags: ['accounts', 'portal', 'vault'] }),
+  _c('accounts.portal.status',     'IPC', 'accounts:portal:status',     'Live cookies, vault copy, identity and portal state for one account/provider', { tags: ['accounts', 'portal', 'vault'] }),
+  _c('accounts.portal.close',      'IPC', 'accounts:portal:close',      'Close an open sign-in window',                                         { tags: ['accounts', 'portal'] }),
+  _c('accounts.portal.signOut',    'IPC', 'accounts:portal:signOut',    'Clear the account\'s partition and delete its vault copy',            { tags: ['accounts', 'portal', 'vault'] }),
+  _c('accounts.portal.credentials','IPC', 'accounts:portal:credentials','Seal optional sign-in credentials in the password vault for pre-fill', { tags: ['accounts', 'portal', 'passwords', 'security'] }),
+  _c('accounts.portal.list',       'IPC', 'accounts:portal:list',       'List open sign-in windows',                                            { tags: ['accounts', 'portal'] }),
+  _c('vault.status',               'IPC', 'vault:status',               'Which key protects each vault — OS-sealed (safeStorage) or legacy',    { tags: ['vault', 'security'] }),
+  _c('macros.create',              'IPC', 'macros:create',              'Create a macro through macro.js\'s own validation (step builder)',     { tags: ['macros'] }),
+  _c('macros.delete',              'IPC', 'macros:delete',              'Delete a macro (soft-delete, audit trail kept)',                       { tags: ['macros'] }),
+  _c('macros.schema',              'IPC', 'macros:schema',              'Real browser_action enum + erosmancer actions + behavior profiles for the step builder', { tags: ['macros', 'eros'] }),
 ];
 
 module.exports = {

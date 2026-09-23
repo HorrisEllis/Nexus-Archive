@@ -272,6 +272,11 @@ spec:
       after the 0.39.215 job-correlation work. They move here so the active
       phase list is the work actually queued; re-promote them into `phases`
       when the dispatch thread is done. Nothing about them is retracted.
+      UI1_progress_2026_09_23: >-
+        Applied to Settings (v0.39.223): renderer/settings.html is a shell over
+        renderer/settings/core.js + sections/*.js, one file per area, no
+        inline script. browser.js's monolith is untouched — UI1 for the main
+        chrome is still open.
       UI1_one_file_per_ui_area:
         does: >-
           Extract each real, distinct clear-glass UI capability currently

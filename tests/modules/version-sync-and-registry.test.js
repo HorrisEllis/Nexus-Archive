@@ -37,15 +37,15 @@ function main() {
   const CG_REGISTRY_SRC = fs.readFileSync(path.join(ROOT, 'clear-glass', 'registry-components.js'), 'utf8');
   const VERSION_JS = fs.readFileSync(path.join(ROOT, 'lib', 'version.js'), 'utf8');
 
-  check('clear-glass/package.json reads 3.9.0', CG_PKG.version === '3.9.0');
-  check('clear-glass.spec\'s meta.version matches package.json', /version:\s*3\.9\.0/.test(CG_SPEC));
+  check('clear-glass/package.json reads 3.10.0', CG_PKG.version === '3.10.0');
+  check('clear-glass.spec\'s meta.version matches package.json', /meta:[\s\S]{0,80}version:\s*3\.10\.0/.test(CG_SPEC));
   check('clear-glass.spec has a real version_history entry explaining the bump (not just a number change)',
     /- version: 3\.9\.0[\s\S]{0,200}date: 2026-09-22/.test(CG_SPEC) && /DRIFT CORRECTED, not invented/.test(CG_SPEC));
-  check('main/index.js\'s CG_VERSION matches', /const CG_VERSION\s*=\s*'3\.9\.0'/.test(CG_MAIN));
+  check('main/index.js\'s CG_VERSION matches', /const CG_VERSION\s*=\s*'3\.10\.0'/.test(CG_MAIN));
   check('registry-components.js\'s own local V constant matches (a FOURTH sync point, found while fixing the other three)',
-    /const V\s*=\s*'3\.9\.0'/.test(CG_REGISTRY_SRC));
-  check('registry-components.js\'s header comment matches too', /\* Version: 3\.9\.0/.test(CG_REGISTRY_SRC));
-  check('lib/version.js\'s services[\'clear-glass\'] matches', /'clear-glass':'3\.9\.0'/.test(VERSION_JS));
+    /const V\s*=\s*'3\.10\.0'/.test(CG_REGISTRY_SRC));
+  check('registry-components.js\'s header comment matches too', /\* Version: 3\.10\.0/.test(CG_REGISTRY_SRC));
+  check('lib/version.js\'s services[\'clear-glass\'] matches', /'clear-glass':'3\.10\.0'/.test(VERSION_JS));
 
   // ── idearium: four real sync points ───────────────────────────────────
   const ID_PKG = JSON.parse(fs.readFileSync(path.join(ROOT, 'idearium', 'package.json'), 'utf8'));
@@ -66,6 +66,11 @@ function main() {
       .every(m => ids.includes(`cg.autofill.${m}`)));
   check('screen-qa\'s 5 real IPC methods are all registered',
     ['detect', 'answer', 'inject', 'elementAt', 'deriveQuestion'].every(m => ids.includes(`cg.screenQa.${m}`)));
+  // §2026-09-23 — the 3.10.0 additions: accounts authority, login portals, vault status, macro builder.
+  check('the 15 accounts-authority / login-portal / vault / macro-builder components are all registered',
+    ['accounts.setDefault','accounts.defaults','accounts.resolve','accounts.portal.providers','accounts.portal.open','accounts.portal.capture',
+     'accounts.portal.status','accounts.portal.close','accounts.portal.signOut','accounts.portal.credentials','accounts.portal.list',
+     'vault.status','macros.create','macros.delete','macros.schema'].every(m => ids.includes(`cg.${m}`)));
   check('every new entry stamps the CURRENT version, not a stale literal', () => true); // covered by the V-constant check above; component.version reads from V
   check('every new autofill/screen-qa component carries the real route it actually maps to (not a placeholder)',
     CG_REGISTRY.components.find(c => c.id === 'cg.autofill.detect').route.path === 'autofill:detect' &&
@@ -119,7 +124,7 @@ function main() {
   const yaml = require('js-yaml');
   try {
     const cg = yaml.load(CG_SPEC);
-    check('clear-glass.spec parses as real YAML', cg.spec.meta.version === '3.9.0');
+    check('clear-glass.spec parses as real YAML', cg.spec.meta.version === '3.10.0');
     check('clear-glass.spec\'s handshake.components_count matches the live registry export exactly',
       cg.spec.handshake.components_count === CG_REGISTRY.components.length);
     check('the new autofill/screen-qa module entries are real, present in the parsed doc',
@@ -144,7 +149,7 @@ function main() {
   const driftResult = specDrift.check({});
   check('the real, live spec-drift checker (orchestrator/lib/spec-drift.js) reports idearium synced at the correct version',
     (driftResult.synced || []).some(s => s.system === 'idearium' && s.version === '4.2.0'));
-  check('...and clear-glass synced at the correct version too', (driftResult.synced || []).some(s => s.system === 'clear-glass' && s.version === '3.9.0'));
+  check('...and clear-glass synced at the correct version too', (driftResult.synced || []).some(s => s.system === 'clear-glass' && s.version === '3.10.0'));
 
   console.log(`\n  ${passed} passed, ${failed} failed\n`);
   process.exitCode = failed === 0 ? 0 : 1;

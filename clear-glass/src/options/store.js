@@ -148,6 +148,16 @@ const DEFAULTS = {
   // or a wholesale agentKeys replace without genuinely corrupting sibling
   // accounts), only through these dedicated methods.
   accounts: {},
+
+  // §BUILT 2026-09-23 — James: "yes clearglass" — Clear Glass is the ONE
+  // owner of which accounts exist and which is the default per provider
+  // (docs/2026-09-19-guardian-mesh-first-dispatch-phasemap.spec's D3,
+  // decided). agentKey -> account uuid. Guardian's dispatch ladder asks
+  // Clear Glass (GET /accounts/resolve) instead of keeping its own list.
+  // Absent key = no explicit default: resolveDefaultAccountForAgent keeps
+  // its existing earliest-linked rule, so nothing changes until someone
+  // picks a default.
+  accountDefaults: {},
 };
 
 class NexusOptions {
@@ -272,7 +282,10 @@ class NexusOptions {
   deleteAccount(id) {
     if (!this.data.accounts?.[id]) return { error: `no account "${id}"` };
     const { [id]: _removed, ...rest } = this.data.accounts;
-    this.data = { ...this.data, accounts: rest };
+    // A default pointing at a deleted account would resolve to nothing real —
+    // drop it with the account (§1.1), the earliest-linked rule takes over.
+    const defaults = Object.fromEntries(Object.entries(this.data.accountDefaults || {}).filter(([, v]) => v !== id));
+    this.data = { ...this.data, accounts: rest, accountDefaults: defaults };
     this._persist();
     return { ok: true, id };
   }
@@ -302,10 +315,70 @@ class NexusOptions {
    * same real uuid back, not a fresh one each time.
    */
   resolveDefaultAccountForAgent(agentKey) {
+    const explicit = this.getDefaultAccount(agentKey);
+    if (explicit) return explicit;
     const linked = this.listAccounts().filter(a => a.agentKeys.includes(agentKey));
     if (linked.length) return linked[0].id;
     const created = this.createAccount({ label: `Default — ${agentKey}`, agentKeys: [agentKey] });
     return created.id;
+  }
+
+  // ── Per-provider default + resolution authority — §BUILT 2026-09-23 ──────
+
+  /** getDefaultAccount(agentKey) — the explicit default's id, only if that account still exists and is linked. */
+  getDefaultAccount(agentKey) {
+    const id = this.data.accountDefaults?.[agentKey];
+    const acc = id && this.data.accounts?.[id];
+    return acc && acc.agentKeys.includes(agentKey) ? id : null;
+  }
+
+  /** setDefaultAccount(agentKey, id) — id null clears it. Links the agent if not yet linked (a default must be usable). */
+  setDefaultAccount(agentKey, id) {
+    if (!agentKey) return { error: 'agentKey required' };
+    if (id === null || id === undefined || id === '') {
+      const { [agentKey]: _gone, ...rest } = this.data.accountDefaults || {};
+      this.data = { ...this.data, accountDefaults: rest };
+      this._persist();
+      return { ok: true, agentKey, id: null };
+    }
+    const acc = this.data.accounts?.[id];
+    if (!acc) return { error: `no account "${id}"` };
+    if (!acc.agentKeys.includes(agentKey)) this.linkAgent(id, agentKey);
+    this.data = { ...this.data, accountDefaults: { ...(this.data.accountDefaults || {}), [agentKey]: id } };
+    this._persist();
+    return { ok: true, agentKey, id };
+  }
+
+  /**
+   * resolveAccountForDispatch(agentKey, explicit) — the authority guardian
+   * asks. Explicit id must exist AND be linked to this agent (never a silent
+   * substitute — same invariant guardian's own resolveAccount enforced);
+   * none given -> explicit default, else earliest linked, else null (the
+   * agent's default profile). Unlike resolveDefaultAccountForAgent this
+   * NEVER auto-creates: a remote read must not mint accounts as a side effect.
+   */
+  resolveAccountForDispatch(agentKey, explicit) {
+    if (explicit) {
+      const acc = this.data.accounts?.[explicit];
+      if (!acc || !acc.agentKeys.includes(agentKey)) return { error: `unknown_account: ${explicit} for ${agentKey}`, code: 'unknown_account' };
+      return { accountId: explicit, source: 'explicit' };
+    }
+    const d = this.getDefaultAccount(agentKey);
+    if (d) return { accountId: d, source: 'default' };
+    const linked = this.listAccounts().filter(a => a.agentKeys.includes(agentKey));
+    return linked.length ? { accountId: linked[0].id, source: 'earliest-linked' } : { accountId: null, source: 'none' };
+  }
+
+  /** recordSession(id, provider, meta) — login-portal capture/sign-out state, per account per provider. meta null clears. */
+  recordSession(id, provider, meta) {
+    const existing = this.data.accounts?.[id];
+    if (!existing) return { error: `no account "${id}"` };
+    const sessions = { ...(existing.sessions || {}) };
+    if (meta === null) delete sessions[provider]; else sessions[provider] = { ...(sessions[provider] || {}), ...meta };
+    const updated = { ...existing, sessions, updatedAt: Date.now() };
+    this.data = { ...this.data, accounts: { ...this.data.accounts, [id]: updated } };
+    this._persist();
+    return { ...updated };
   }
 
   // ── Provider account identity — §BUILT 2026-09-19 ────────────────────────

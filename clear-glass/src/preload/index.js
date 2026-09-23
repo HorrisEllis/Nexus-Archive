@@ -77,19 +77,6 @@ contextBridge.exposeInMainWorld('ClearGlass', {
     commands: () => ipcRenderer.invoke('toolbar:commands'),
   },
 
-  // §NEW 2026-09-06 — James: BrainOS's real AUTOMATION tab needs this.
-  // Found the exact gap: clear-glass/src/ipc/bridge.js already has real
-  // macros:list/macros:get/macros:run handlers (built earlier this
-  // session's lineage, "real menu-triggered panel showing stored
-  // macros... a working Run button") — but nothing had ever bridged
-  // them through contextBridge, so no renderer could actually reach
-  // them. Same real IPC channel names, no new backend mechanism.
-  macros: {
-    list: () => ipcRenderer.invoke('macros:list'),
-    get:  (name) => ipcRenderer.invoke('macros:get', { name }),
-    run:  (name, opts = {}) => ipcRenderer.invoke('macros:run', { name, agentId: opts.agentId, params: opts.params, skipSnapshot: opts.skipSnapshot }),
-  },
-
   // ── Plugins — §NEW 2026-08-24, src/plugins/host.js ─────────────────────
   // invoke() is fire-and-forget by design (see bridge.js's own handler
   // comment) — a plugin's real response comes back as a separate event
@@ -126,10 +113,22 @@ contextBridge.exposeInMainWorld('ClearGlass', {
   },
 
   // ── Macros — §NEW 2026-08-29 — first real UI reach into lib/agent-tools/ ──
+  // §FIXED 2026-09-23 — this object literal declared `macros` TWICE (a
+  // 2026-09-06 block with run(name, {agentId, params, skipSnapshot}) and
+  // this one with positional run(name, agentId, params, skipSnapshot)). In
+  // a literal the LAST key wins, so ui/brainos/brainos-app.js's
+  // macros.run(name, {}) sent `{}` as the agentId. One definition now,
+  // accepting both call shapes so neither real caller breaks.
   macros: {
-    list: ()                       => ipcRenderer.invoke('macros:list'),
-    get:  (name)                   => ipcRenderer.invoke('macros:get', { name }),
-    run:  (name, agentId, params, skipSnapshot) => ipcRenderer.invoke('macros:run', { name, agentId, params, skipSnapshot }),
+    list:   ()     => ipcRenderer.invoke('macros:list'),
+    get:    (name) => ipcRenderer.invoke('macros:get', { name }),
+    run:    (name, agentOrOpts, params, skipSnapshot) => {
+      const o = (agentOrOpts && typeof agentOrOpts === 'object') ? agentOrOpts : { agentId: agentOrOpts, params, skipSnapshot };
+      return ipcRenderer.invoke('macros:run', { name, agentId: o.agentId, params: o.params, skipSnapshot: o.skipSnapshot });
+    },
+    create: (payload) => ipcRenderer.invoke('macros:create', payload),
+    delete: (name)    => ipcRenderer.invoke('macros:delete', { name }),
+    schema: ()        => ipcRenderer.invoke('macros:schema'),
   },
 
   // ── Passwords — §NEW 2026-08-24 ─────────────────────────────────────────
@@ -167,6 +166,26 @@ contextBridge.exposeInMainWorld('ClearGlass', {
     verifyProvider: (id, provider)                                        => ipcRenderer.invoke('accounts:verifyProvider', { id, provider }),
     getProvider:    (id, provider)                                        => ipcRenderer.invoke('accounts:getProvider',    { id, provider }),
     findByProvider: (provider, accountId)                                 => ipcRenderer.invoke('accounts:findByProvider', { provider, accountId }),
+    // §BUILT 2026-09-23 — Clear Glass is the account authority (per-provider
+    // default) + login portals wired to the cookie vault.
+    setDefault: (agentKey, id) => ipcRenderer.invoke('accounts:setDefault', { agentKey, id }),
+    defaults:   ()             => ipcRenderer.invoke('accounts:defaults'),
+    resolve:    (agentKey, id) => ipcRenderer.invoke('accounts:resolve', { agentKey, id }),
+    portal: {
+      providers:   ()                                   => ipcRenderer.invoke('accounts:portal:providers'),
+      open:        (id, provider)                       => ipcRenderer.invoke('accounts:portal:open',    { id, provider }),
+      capture:     (id, provider, identity, close)      => ipcRenderer.invoke('accounts:portal:capture', { id, provider, identity, close }),
+      status:      (id, provider)                       => ipcRenderer.invoke('accounts:portal:status',  { id, provider }),
+      close:       (id, provider)                       => ipcRenderer.invoke('accounts:portal:close',   { id, provider }),
+      signOut:     (id, provider, opts = {})            => ipcRenderer.invoke('accounts:portal:signOut', { id, provider, ...opts }),
+      credentials: (id, provider, username, password)   => ipcRenderer.invoke('accounts:portal:credentials', { id, provider, username, password }),
+      list:        ()                                   => ipcRenderer.invoke('accounts:portal:list'),
+    },
+  },
+
+  // §BUILT 2026-09-23 — which key protects each vault (OS-sealed or legacy).
+  vault: {
+    status: () => ipcRenderer.invoke('vault:status'),
   },
 
   // §TX16 2026-08-28 — was wired in ipc/bridge.js (listeners:list/get/

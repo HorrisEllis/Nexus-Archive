@@ -149,6 +149,7 @@ const SUITES = [
   'clear-glass-screen-qa.test.js',
   'clear-glass-screen-qa-ui.test.js',
   'version-sync-and-registry.test.js',
+  'test-cg-accounts-portal-settings.test.js', // §0.39.223 — Clear Glass account authority, login portals, sealed vault keys, settings rebuild
   'test-provider-host-respawn.js',
   'test-userscript-mixed-content-fix.js',
   'test-contract-handshake-paths.js',

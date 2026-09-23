@@ -38,21 +38,29 @@ const crypto = require('crypto');
 const { normalizeOrigin } = require('../site-settings/store');
 
 const VAULT_DIR = path.join(process.env.APPDATA || process.env.HOME || '.', '.clear-glass', 'passwords');
-const VAULT_PATH = path.join(VAULT_DIR, 'passwords.json');
-const VAULT_KEY  = 'clear-glass-password-vault-key-v1'; // TODO: derive from machine ID — same real gap CookieVault's own key has
-const ALGORITHM  = 'aes-256-gcm';
+// §CLOSED 2026-09-23 — legacy key only now (see src/security/vault-key.js).
+const VAULT_KEY  = 'clear-glass-password-vault-key-v1';
+const { loadVaultKey, encryptWith, decryptWithFallback } = require('../security/vault-key');
 
 class PasswordVault {
-  constructor() {
+  constructor({ dir = VAULT_DIR, safeStorage } = {}) {
     this.entries = []; // [{id, origin, username, encrypted:{iv,tag,data}, createdAt, updatedAt}]
-    this.key = this._deriveKey(VAULT_KEY);
+    this.dir = dir;
+    this.path = path.join(dir, 'passwords.json');
+    this._safeStorage = safeStorage;
+    this._k = { key: this._deriveKey(VAULT_KEY), legacyKey: this._deriveKey(VAULT_KEY), source: 'legacy', reason: 'load() not yet run' };
+    this.key = this._k.key;
   }
+
+  keyStatus() { return { source: this._k.source, reason: this._k.reason || null }; }
 
   load() {
     try {
-      fs.mkdirSync(VAULT_DIR, { recursive: true });
-      if (fs.existsSync(VAULT_PATH)) {
-        this.entries = JSON.parse(fs.readFileSync(VAULT_PATH, 'utf8'));
+      fs.mkdirSync(this.dir, { recursive: true });
+      this._k = loadVaultKey({ name: 'password-vault', legacyPassphrase: VAULT_KEY, dir: this.dir, safeStorage: this._safeStorage });
+      this.key = this._k.key;
+      if (fs.existsSync(this.path)) {
+        this.entries = JSON.parse(fs.readFileSync(this.path, 'utf8'));
       } else {
         this._persist();
       }
@@ -64,8 +72,8 @@ class PasswordVault {
 
   _persist() {
     try {
-      fs.mkdirSync(VAULT_DIR, { recursive: true });
-      fs.writeFileSync(VAULT_PATH, JSON.stringify(this.entries, null, 2));
+      fs.mkdirSync(this.dir, { recursive: true });
+      fs.writeFileSync(this.path, JSON.stringify(this.entries, null, 2));
     } catch (err) {
       console.warn('[PasswordVault] persist error:', err.message);
     }
@@ -136,22 +144,9 @@ class PasswordVault {
     return crypto.createHash('sha256').update(passphrase).digest();
   }
 
-  _encrypt(plaintext) {
-    const iv = crypto.randomBytes(16);
-    const cipher = crypto.createCipheriv(ALGORITHM, this.key, iv);
-    let enc = cipher.update(plaintext, 'utf8', 'hex');
-    enc += cipher.final('hex');
-    const tag = cipher.getAuthTag();
-    return { iv: iv.toString('hex'), tag: tag.toString('hex'), data: enc };
-  }
+  _encrypt(plaintext) { return encryptWith(this._k.key, plaintext); }
 
-  _decrypt({ iv, tag, data }) {
-    const decipher = crypto.createDecipheriv(ALGORITHM, this.key, Buffer.from(iv, 'hex'));
-    decipher.setAuthTag(Buffer.from(tag, 'hex'));
-    let dec = decipher.update(data, 'hex', 'utf8');
-    dec += decipher.final('utf8');
-    return dec;
-  }
+  _decrypt(blob) { return decryptWithFallback(this._k, blob); }
 }
 
 module.exports = { PasswordVault };

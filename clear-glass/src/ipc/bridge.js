@@ -22,7 +22,7 @@ const {
 } = require('../screen-qa/detector.js');
 
 class IpcBridge {
-  constructor({ port, sse, ctxMgr, vault, apiSettings, urlListener, mesh, diag, fp, options, minimizeFn, hideFn, openFn, maximizeFn, openSettingsFn, closeSettingsFn, bookmarks, rewind, providerHost, userscripts, siteSettings, downloads, passwordVault, speech, macroTool, errorCapture, copilot, postEvent, pluginHost, history, autofillStore, dom }) {
+  constructor({ port, sse, ctxMgr, vault, apiSettings, urlListener, mesh, diag, fp, options, minimizeFn, hideFn, openFn, maximizeFn, openSettingsFn, closeSettingsFn, bookmarks, rewind, providerHost, userscripts, siteSettings, downloads, passwordVault, speech, macroTool, errorCapture, copilot, postEvent, pluginHost, history, autofillStore, dom, loginPortal }) {
     this.port        = port;
     this.sse         = sse;
     this.errorCapture = errorCapture;
@@ -59,6 +59,7 @@ class IpcBridge {
     // never needed IPC), but any future renderer-side management panel
     // would have silently failed. Fixed now.
     this.passwordVault = passwordVault;
+    this.loginPortal   = loginPortal || null;
     this.speech        = speech;
     this.macroTool     = macroTool;
     this.pluginHost    = pluginHost;
@@ -875,6 +876,24 @@ class IpcBridge {
       if (!this.macroTool) return { error: 'macro tool not available' };
       return this.macroTool.execute({ action: 'run', name: d.name, agentId: d.agentId, params: d.params, skipSnapshot: d.skipSnapshot });
     });
+    // §BUILT 2026-09-23 — the step builder the 2026-08-29 note above named as
+    // "a separate, larger piece" rather than a bare JSON textarea. create/
+    // delete go through macro.js's OWN validation (real browser_action enum,
+    // erosmancer targetUuid rule, profile set) — the UI never re-implements it.
+    ipcMain.handle('macros:create', async (e, d = {}) => {
+      if (!this.macroTool) return { error: 'macro tool not available' };
+      return this.macroTool.execute({ action: 'create', name: d.name, urlPattern: d.urlPattern, steps: d.steps, params: d.params, profile: d.profile || undefined, description: d.description });
+    });
+    ipcMain.handle('macros:delete', async (e, d = {}) => {
+      if (!this.macroTool) return { error: 'macro tool not available' };
+      return this.macroTool.execute({ action: 'delete', name: d.name });
+    });
+    ipcMain.handle('macros:schema', async () => {
+      try {
+        const ba = require('../../../lib/agent-tools/tools/browser/browser-action.js');
+        return { ok: true, actions: ba.parameters.properties.action.enum, erosActions: ['click', 'type', 'hover', 'scroll', 'evaluate', 'navigate', 'screenshot'], profiles: ['precise', 'cautious', 'exploratory', 'turbo'] };
+      } catch (err) { return { ok: false, error: err.message }; }
+    });
     // Background tabs
     ipcMain.handle('bgtab:open',  async (e, d) => require('../main/index').openBackgroundTab(d));
     ipcMain.handle('bgtab:close', async (e, d) => require('../main/index').closeBackgroundTab(d.agentId));
@@ -989,6 +1008,32 @@ class IpcBridge {
     ipcMain.handle('accounts:verifyProvider', async (e, d) => this.options?.verifyProviderAccount(d.id, d.provider));
     ipcMain.handle('accounts:getProvider',    async (e, d) => this.options?.getProviderAccount(d.id, d.provider));
     ipcMain.handle('accounts:findByProvider', async (e, d) => this.options?.findAccountByProviderAccountId(d.provider, d.accountId));
+
+    // §BUILT 2026-09-23 — James: "yes clearglass" + "login portals ... hook
+    // into the cookie vault, and create a accountid per account." Clear
+    // Glass is the one account authority: per-provider default here, the
+    // sign-in portal in src/accounts/login-portal.js. Every portal handler
+    // returns {ok:false,error} rather than throwing across IPC (§1.2 — the
+    // Settings page shows the real reason).
+    const portal = (fn) => async (e, d = {}) => {
+      if (!this.loginPortal) return { ok: false, error: 'login portal not initialized' };
+      try { return await fn(d); } catch (err) { return { ok: false, error: err.message, code: err.code || null }; }
+    };
+    ipcMain.handle('accounts:setDefault',  async (e, d) => this.options?.setDefaultAccount(d.agentKey, d.id ?? null));
+    ipcMain.handle('accounts:defaults',    async ()     => ({ ...(this.options?.get().accountDefaults || {}) }));
+    ipcMain.handle('accounts:resolve',     async (e, d) => this.options?.resolveAccountForDispatch(d.agentKey, d.id || null));
+    ipcMain.handle('accounts:portal:providers',   portal(async ()  => this.loginPortal.providers()));
+    ipcMain.handle('accounts:portal:open',        portal(async (d) => this.loginPortal.open(d)));
+    ipcMain.handle('accounts:portal:capture',     portal(async (d) => this.loginPortal.capture(d)));
+    ipcMain.handle('accounts:portal:status',      portal(async (d) => this.loginPortal.status(d)));
+    ipcMain.handle('accounts:portal:close',       portal(async (d) => this.loginPortal.close(d)));
+    ipcMain.handle('accounts:portal:signOut',     portal(async (d) => this.loginPortal.signOut(d)));
+    ipcMain.handle('accounts:portal:credentials', portal(async (d) => this.loginPortal.saveCredentials(d)));
+    ipcMain.handle('accounts:portal:list',        portal(async ()  => this.loginPortal.list()));
+    ipcMain.handle('vault:status', async () => ({
+      cookies:   this.vault?.keyStatus ? this.vault.keyStatus() : { source: 'unknown' },
+      passwords: this.passwordVault?.keyStatus ? this.passwordVault.keyStatus() : { source: 'unknown' },
+    }));
 
     // Autofill — §BUILT 2026-09-19, real IPC surface for the UI. Same
     // real logic as gates/index.js's autofillDetectGate/autofillFillGate

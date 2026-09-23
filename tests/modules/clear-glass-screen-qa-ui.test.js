@@ -79,14 +79,20 @@ function main() {
   check('settings.js defines real, persistent screen-qa defaults in the SAME file-backed store every other setting uses',
     /screenQaEnabled:\s*true/.test(SETTINGS_JS) && /screenQaMinConfidence:\s*'medium'/.test(SETTINGS_JS) &&
     /screenQaProfileId:\s*''/.test(SETTINGS_JS) && /screenQaContext:\s*''/.test(SETTINGS_JS));
-  check('settings.html has a real Screen Q&A section: enable toggle, confidence select, profile picker, context box',
-    /id="toggle-screenqa"/.test(SETTINGS_HTML) && /id="screenQaMinConfidence"/.test(SETTINGS_HTML) &&
-    /id="screenQaProfileId"/.test(SETTINGS_HTML) && /id="screenQaContext"/.test(SETTINGS_HTML));
-  check('the profile picker is populated LIVE from cg.autofill.listProfiles(), not a hardcoded list', /await cg\.autofill\.listProfiles\(\)/.test(SETTINGS_HTML));
-  check('save() actually sends all four new fields through cg.api.set — settings.html\'s save round-trip is real, not partial',
-    /screenQaEnabled:\s*document\.getElementById\('toggle-screenqa'\)\.classList\.contains\('on'\)/.test(SETTINGS_HTML) &&
-    /screenQaMinConfidence:\s*document\.getElementById\('screenQaMinConfidence'\)\.value/.test(SETTINGS_HTML) &&
-    /screenQaContext:\s*document\.getElementById\('screenQaContext'\)\.value/.test(SETTINGS_HTML));
+  // §UPDATED 2026-09-23 — settings.html was rebuilt as a shell over
+  // renderer/settings/sections/*.js (one file per area, no inline script).
+  // Same three intents, checked against where the Screen Q&A UI lives now;
+  // saves are per-field on change instead of one Save button.
+  const SETTINGS_SECTION = fs.readFileSync(path.join(ROOT, 'clear-glass', 'renderer', 'settings', 'sections', 'browser.js'), 'utf8');
+  check('settings has a real Screen Q&A section: enable toggle, confidence select, profile picker, context box',
+    /settings\/sections\/browser\.js/.test(SETTINGS_HTML) && /Answering questions on screen/.test(SETTINGS_SECTION) &&
+    /toggle\(s\.screenQaEnabled !== false/.test(SETTINGS_SECTION) && /const minConf = select\(/.test(SETTINGS_SECTION) &&
+    /const prof = select\(/.test(SETTINGS_SECTION) && /const ctx = h\('textarea'/.test(SETTINGS_SECTION));
+  check('the profile picker is populated LIVE from cg.autofill.listProfiles(), not a hardcoded list', /cg\.autofill\.listProfiles\(\)/.test(SETTINGS_SECTION) && /profiles\.map\(p => \(\{ value: p\.id, label: p\.label \}\)\)/.test(SETTINGS_SECTION));
+  check('all four Screen Q&A fields are really persisted through cg.api.set',
+    /save\(\{ screenQaEnabled: on \}\)/.test(SETTINGS_SECTION) && /save\(\{ screenQaMinConfidence: minConf\.value \}\)/.test(SETTINGS_SECTION) &&
+    /save\(\{ screenQaProfileId: prof\.value \}\)/.test(SETTINGS_SECTION) && /save\(\{ screenQaContext: ctx\.value \}\)/.test(SETTINGS_SECTION) &&
+    /const save = \(patch\) => call\(\(\) => cg\.api\.set\(patch\)/.test(SETTINGS_SECTION));
 
   // ── the preview surface (Co-pilot panel), James's own explicit choice ──
   check('results render through the real, existing addMsg() function — not a new, competing preview widget', /function _screenQaRenderAnswer[\s\S]{0,400}addMsg\('assistant'/.test(BROWSER_JS));

@@ -174,6 +174,10 @@ Not read this session — `guardian.spec`'s `routes:`/`modules:`/`handshake:` se
 
 ---
 
+## Accounts come from Clear Glass (2026-09-23)
+
+`lib/agent-registry.js` stays the source of truth for **agents** (selectors, repairs, health). **Accounts** are resolved by Clear Glass: the registry is built with `accountAuthority` (`lib/cg-account-authority.js` → `GET :7702/accounts/resolve`) and the dispatch ladder awaits `resolveAccountAsync`. Unknown explicit account → job fails (`unknown_account`); Clear Glass unreachable → NCP fallback with reason `account_authority_unreachable`.
+
 ## Modules Not Yet Built
 
 Not determined — `guardian.spec`'s own `modules:`/`gaps:` sections not read this session.

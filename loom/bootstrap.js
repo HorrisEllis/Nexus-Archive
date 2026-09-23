@@ -14,6 +14,7 @@ const { mapCopilotCapability } = require('./maps/copilot-capability-map');
 const { mapSession20260814 } = require('./maps/session-2026-08-14-map');
 const { mapUi } = require('./maps/ui-map');
 const { mapRaidEventsAndTools } = require('./maps/raid-events-and-tools-map');
+const { mapAccountsAuthority } = require('./maps/accounts-authority-map');
 
 const driver = new LoomDriver(); // default dataDir = loom/data/
 
@@ -135,6 +136,7 @@ const handMapped = [
   ...require('./maps/session-2026-08-14-map').FILES.map(f => f[0]),
   ...require('./maps/ui-map').FILES.map(f => f[0]),
   ...require('./maps/raid-events-and-tools-map').FILES.map(f => f[0]),
+  ...require('./maps/accounts-authority-map').FILES.map(f => f[0]),
   'loom/agent-suite/index.js',
 ];
 console.log('\nscanning whole tree from source (real require/import edges only)...\n');
@@ -229,6 +231,7 @@ console.log(`  wires:      ${mappedCC.wires.length} ok`);
 // ── UI files (2026-08-13) — plain UI, real HTTP-shaped edges only ──────────
 console.log('\nmapping ui files...\n');
 const mappedUi = mapUi(driver);
+const mappedAccounts = mapAccountsAuthority(driver); // §0.39.223 — account authority / login portals / sealed vaults
 console.log(`  components: ${mappedUi.components.length} ok`);
 console.log(`  hooks:      ${mappedUi.hooks.length} ok`);
 console.log(`  wires:      ${mappedUi.wires.length} ok`);

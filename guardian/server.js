@@ -615,7 +615,8 @@ const { requestSync } = createChatSync({ bus, ncp });
 const pendingQueue = new Map(); // provider → job[] (legacy fallback for non-pool paths)
 // §BUILT 2026-09-19 — guardian owns the agent registry and the mesh-first escalation ladder.
 // Mesh -> archaeology/DOM-mapping repair -> userscript (NCP) -> user (picker). Default GUARDIAN_TRANSPORT=ncp-only.
-const _agentRegistry = require('./lib/agent-registry').createAgentRegistry();
+// §2026-09-23 — Clear Glass owns accounts (James: "yes clearglass"); the registry asks it instead of its own list.
+const _agentRegistry = require('./lib/agent-registry').createAgentRegistry({ accountAuthority: require('./lib/cg-account-authority').createClearGlassAccountAuthority() });
 const _meshClient    = require('./lib/mesh-client').createMeshClient();
 const _ladder = require('./lib/dispatch-ladder').createLadder({
   registry: _agentRegistry, mesh: _meshClient, wakeHint: require('./lib/wake-hint').createHintInjector(),

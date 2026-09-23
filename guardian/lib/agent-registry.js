@@ -19,7 +19,7 @@ const path = require('path');
 const MODULE_ID = 'guardian.agent-registry';
 const SEED = require('./agent-registry.seed.json');
 
-function createAgentRegistry({ dir = process.env.GUARDIAN_AGENTS_DIR || path.join(__dirname, '../../data/guardian/agents'), now = Date.now } = {}) {
+function createAgentRegistry({ dir = process.env.GUARDIAN_AGENTS_DIR || path.join(__dirname, '../../data/guardian/agents'), now = Date.now, accountAuthority = null } = {}) {
   const file = path.join(dir, 'agents.json');
   let overrides = {};
   try { overrides = JSON.parse(fs.readFileSync(file, 'utf8')); } catch (_) { overrides = {}; }
@@ -82,6 +82,17 @@ function createAgentRegistry({ dir = process.env.GUARDIAN_AGENTS_DIR || path.joi
     return d ? d.id : null;
   }
 
+  // §2026-09-23 — when an accountAuthority is given (guardian/server.js passes
+  // Clear Glass's, see cg-account-authority.js) it is the ONLY account truth;
+  // the local list above is then unused and stays only for authority-less
+  // callers (tests, a guardian run without Clear Glass). Unknown agent still
+  // fails here first — guardian stays the source of truth for AGENTS.
+  async function resolveAccountAsync(id, explicit) {
+    if (!accountAuthority) return resolveAccount(id, explicit);
+    if (!SEED[id]) throw new Error(`unknown agent: ${id}`);
+    return accountAuthority.resolve(id, explicit || null);
+  }
+
   function recordOutcome(id, { ok, stage = null }) {
     if (!SEED[id]) return;
     const h = ov(id).health = ov(id).health || { ok: 0, fail: 0, lastOkAt: null, lastFailAt: null, lastStage: null };
@@ -89,7 +100,7 @@ function createAgentRegistry({ dir = process.env.GUARDIAN_AGENTS_DIR || path.joi
     persist();
   }
 
-  return { list, get, recordRepair, addAccount, resolveAccount, recordOutcome, MODULE_ID };
+  return { list, get, recordRepair, addAccount, resolveAccount, resolveAccountAsync, hasAccountAuthority: !!accountAuthority, recordOutcome, MODULE_ID };
 }
 
 module.exports = { createAgentRegistry, MODULE_ID };

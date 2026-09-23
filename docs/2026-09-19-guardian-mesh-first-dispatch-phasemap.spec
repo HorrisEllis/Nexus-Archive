@@ -49,6 +49,7 @@ spec:
     D1_default: "Default policy. Recommend shipping as ncp-first until the live smoke passes, then flip to mesh-first; env switch, no redeploy."
     D2_tabs: "Mesh tab and userscript tab for the same provider+account: separate (recommended, avoids T4) or shared."
     D3_account_choice: "How a job names an account: explicit accountId on the job (recommended) plus a per-provider default in the account manager."
+    D3_decided_2026_09_23: "DECIDED by James (\"yes clearglass\"): Clear Glass owns accounts. Explicit job.accountId, else Clear Glass's per-provider default (options.accountDefaults), else earliest linked, else null. guardian/lib/cg-account-authority.js -> GET :7702/accounts/resolve; ladder falls back to NCP with account_authority_unreachable if Clear Glass is down. Login portals (clear-glass/src/accounts/login-portal.js) sign accounts into the exact persist:mesh-<provider>-<accountId> partition P4 names. v0.39.223."
   escalation_ladder_decided:
     james: "guardian is the source of truth for agents. job dispatch -> agent mesh, job queue, spawn a tab and inject into the agent's chat
       input -> archaeology + automatic DOM mapping diagnose and fix -> userscript -> user intervention via the guardian picker."

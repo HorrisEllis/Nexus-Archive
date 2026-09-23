@@ -62,7 +62,7 @@ const MODULE_UUID = randomUUID();
 // glass.spec's meta.version independently exhibited. All three synced
 // to 3.9.0 (3.8.0 baseline + this session's real additions) together;
 // see clear-glass.spec's version_history for what's actually new.
-const CG_VERSION  = '3.9.0';
+const CG_VERSION  = '3.10.0';
 
 // ── Headless / tray-only mode ─────────────────────────────────────────────
 // CG_HEADLESS=1  OR  --headless in argv → no BrowserWindow, tray only.
@@ -167,6 +167,7 @@ const EROS_PORT = parseInt(process.env.EROS_PORT || '7432');
 const WIRE_PORT = parseInt(process.env.WIRE_PORT || '7704');
 
 // ── State ──────────────────────────────────────────────────────────────────
+let loginPortal;
 let tray, sse, ipcBridge, nexusOptions, bookmarks, rewind, providerHost, userscripts, siteSettings, downloads, passwordVault, pluginHost, errorCapture, processMetrics, history, mesh, autofillStore;
 let fp          = null;   // FingerprintEngine  — set in bootstrap()
 let ctxMgr      = null;   // ContextMgr         — set in bootstrap()
@@ -1397,6 +1398,14 @@ async function bootstrap() {
   mesh = new AgentMesh({ ctxMgr, driver, vault, accounts: nexusOptions, sse: { emit: (t, d) => emit(t, d) } });
   await mesh.init();
 
+  // §BUILT 2026-09-23 — login portals: per-account provider sign-in in the
+  // SAME partition + vault key agent-mesh spawn() reads (src/accounts/login-portal.js).
+  const { LoginPortal } = require('../accounts/login-portal');
+  loginPortal = new LoginPortal({
+    options: nexusOptions, vault, passwordVault, registry: () => mesh.getRegistry(),
+    BrowserWindow, session, emit: (t, d) => emit(t, d),
+  });
+
   // §BUILT — James: "deepseek as a ncp provider and open in the background
   // in clearglass." Every other real provider only ever opens on-demand,
   // inside spawn()'s own on-demand path (mesh.route()'s "spawn fresh if
@@ -1576,6 +1585,7 @@ async function bootstrap() {
     macroTool,
     pluginHost,
     copilot,
+    loginPortal,
   });
   await ipcBridge.start();
   // §5.2 Contract IS the bridge — serve /contract so orchestrator can verify us
@@ -1594,6 +1604,18 @@ async function bootstrap() {
     // not a new pattern. Calls the same real, shared module-level state
     // archaeology.js's own ipcMain.handle('compartment:set-active', ...)
     // already uses — one real state, two real entry points.
+    // §BUILT 2026-09-23 — James: "yes clearglass". Clear Glass is the one
+    // account authority; guardian's dispatch ladder asks here instead of
+    // keeping a second account list (guardian/lib/cg-account-authority.js).
+    // Read-only, never auto-creates (resolveAccountForDispatch's contract).
+    ipcBridge.app.get('/accounts/resolve', (req, res) => {
+      const provider = String(req.query.provider || '');
+      if (!provider) return res.status(400).json({ ok: false, error: 'provider required' });
+      const r = nexusOptions.resolveAccountForDispatch(provider, req.query.account ? String(req.query.account) : null);
+      if (r.error) return res.status(404).json({ ok: false, error: r.error, code: r.code });
+      res.json({ ok: true, provider, ...r });
+    });
+    ipcBridge.app.get('/accounts', (req, res) => res.json({ ok: true, accounts: nexusOptions.listAccounts().map(a => ({ id: a.id, label: a.label, agentKeys: a.agentKeys, providers: Object.keys(a.providerAccounts || {}) })), defaults: nexusOptions.get().accountDefaults || {} }));
     ipcBridge.app.post('/compartment/set-active', (req, res) => {
       try {
         const { setActiveCompartment } = require('../dom/archaeology');
@@ -2245,14 +2267,15 @@ let settingsWin = null;
 function openSettingsWindow() {
   if (settingsWin && !settingsWin.isDestroyed()) { settingsWin.show(); settingsWin.focus(); return; }
   settingsWin = new BrowserWindow({
-    width: 800, height: 620, backgroundColor: '#08080d',
+    // §2026-09-23 — rebuilt Settings (rail + sections) needs room; still usable narrow (responsive CSS).
+    width: 1180, height: 820, minWidth: 640, minHeight: 480, backgroundColor: '#08080d',
     frame: false,
     webPreferences: {
       preload:          path.join(__dirname, '../preload/index.js'),
       contextIsolation: true,
       nodeIntegration:  false,
     },
-    title: 'Clear Glass — API Settings',
+    title: 'Clear Glass — Settings',
   });
   settingsWin.loadFile(path.join(__dirname, '../../renderer/settings.html'));
   settingsWin.on('closed', () => { settingsWin = null; });
