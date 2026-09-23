@@ -1,0 +1,39 @@
+envelope: 1
+uuid: nexus-export-chunk-phase-sync-standalone-1790026180256.43d0477d-fd82-4512-8ef7-67d1b3485cff.8344ecff-8797-4338-8292-bba06c03bb28
+type: chunk
+id: phase-sync-standalone-1790026180256.43d0477d-fd82-4512-8ef7-67d1b3485cff.8344ecff-8797-4338-8292-bba06c03bb28
+context: idearium spec-engine chunk of spec 43d0477d-fd82-4512-8ef7-67d1b3485cff
+intent: null
+summary: meta (complete)
+system: idearium
+tags:
+  - spec:43d0477d-fd82-4512-8ef7-67d1b3485cff
+  - status:complete
+  - section:meta
+  - specName:phase-sync-standalone-1790026180256
+  - agent:ollama
+exported_at: 1790026181919
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1790026181919
+lastSeenAt: 1790026181919
+fingerprint: null
+payload:
+  uuid: 8344ecff-8797-4338-8292-bba06c03bb28
+  specUuid: 43d0477d-fd82-4512-8ef7-67d1b3485cff
+  sectionId: meta
+  sectionTitle: Meta & Identity
+  chunkIdx: 0
+  status: complete
+  realPath: null
+  fileName: 00-meta.md
+  filePath: /home/claude/work/package/Nexus_v0_39_205/base/idearium/data/specs/43d0477d-fd82-4512-8ef7-67d1b3485cff/00-meta-8344ecff.md
+  agent: ollama
+  agentModel: null
+  attempts: 0
+  failureMode: null
+  byteSize: 406
+  contentHash: af2c17d675e9c002ad0a475bc947a670bcd4514083133f5ca894211e3709f922
+  createdAt: 1790026180257
+  updatedAt: 1790026181911
+  completedAt: 1790026181911

@@ -1,0 +1,21 @@
+{
+  "id": "chunk-a08c4a30c5dfd1df",
+  "repository": "nexus-id-repo-929cafff",
+  "file": "src/gemini.js",
+  "range": {
+    "start_line": 1,
+    "end_line": 2
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "047031ce087876df9e3a91491a72893ab178534f90ae84ab6c7e5efffde53be0"
+  },
+  "status": "complete",
+  "content": "export const who = 'gemini';\n"
+}

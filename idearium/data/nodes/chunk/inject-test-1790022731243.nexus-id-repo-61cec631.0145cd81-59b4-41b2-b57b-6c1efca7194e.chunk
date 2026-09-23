@@ -1,0 +1,40 @@
+envelope: 1
+uuid: nexus-export-chunk-inject-test-1790022731243.nexus-id-repo-61cec631.0145cd81-59b4-41b2-b57b-6c1efca7194e
+type: chunk
+id: inject-test-1790022731243.nexus-id-repo-61cec631.0145cd81-59b4-41b2-b57b-6c1efca7194e
+context: idearium spec-engine chunk of spec 2e604550-0009-42ca-99c3-8a48ee33abc2
+intent: null
+summary: src-a (complete)
+system: idearium
+tags:
+  - spec:2e604550-0009-42ca-99c3-8a48ee33abc2
+  - status:complete
+  - section:src-a
+  - specName:inject-test-1790022731243
+  - agent:ingest
+  - repo:nexus-id-repo-61cec631
+exported_at: 1790022731304
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1790022731304
+lastSeenAt: 1790022731304
+fingerprint: null
+payload:
+  uuid: 0145cd81-59b4-41b2-b57b-6c1efca7194e
+  specUuid: 2e604550-0009-42ca-99c3-8a48ee33abc2
+  sectionId: src-a
+  sectionTitle: src/a.js
+  chunkIdx: 0
+  status: complete
+  realPath: src/a.js
+  fileName: 00-src-a.md
+  filePath: /home/claude/work/package/Nexus_v0_39_204/base/idearium/data/specs/2e604550-0009-42ca-99c3-8a48ee33abc2/00-src-a-0145cd81.js
+  agent: ingest
+  agentModel: ingest:drop
+  attempts: 1
+  failureMode: null
+  byteSize: 373
+  contentHash: cefd0dd07bfa670f7e0b825b372e76a33017fb39beaae3a4db0a742196bb99df
+  createdAt: 1790022731246
+  updatedAt: 1790022731303
+  completedAt: 1790022731303

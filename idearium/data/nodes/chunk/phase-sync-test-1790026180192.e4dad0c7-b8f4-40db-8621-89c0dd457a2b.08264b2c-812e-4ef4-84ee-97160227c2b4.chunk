@@ -1,0 +1,39 @@
+envelope: 1
+uuid: nexus-export-chunk-phase-sync-test-1790026180192.e4dad0c7-b8f4-40db-8621-89c0dd457a2b.08264b2c-812e-4ef4-84ee-97160227c2b4
+type: chunk
+id: phase-sync-test-1790026180192.e4dad0c7-b8f4-40db-8621-89c0dd457a2b.08264b2c-812e-4ef4-84ee-97160227c2b4
+context: idearium spec-engine chunk of spec e4dad0c7-b8f4-40db-8621-89c0dd457a2b
+intent: null
+summary: events (complete)
+system: idearium
+tags:
+  - spec:e4dad0c7-b8f4-40db-8621-89c0dd457a2b
+  - status:complete
+  - section:events
+  - specName:phase-sync-test-1790026180192
+  - agent:ollama
+exported_at: 1790026180237
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1790026180237
+lastSeenAt: 1790026180237
+fingerprint: null
+payload:
+  uuid: 08264b2c-812e-4ef4-84ee-97160227c2b4
+  specUuid: e4dad0c7-b8f4-40db-8621-89c0dd457a2b
+  sectionId: events
+  sectionTitle: Events & Bus
+  chunkIdx: 5
+  status: complete
+  realPath: null
+  fileName: 05-events.md
+  filePath: /home/claude/work/package/Nexus_v0_39_205/base/idearium/data/specs/e4dad0c7-b8f4-40db-8621-89c0dd457a2b/05-events-08264b2c.md
+  agent: ollama
+  agentModel: null
+  attempts: 0
+  failureMode: null
+  byteSize: 406
+  contentHash: 8e8da4d50f4088ba4b70156ea9c937094312596fb0045aa63200e63bbf4001fe
+  createdAt: 1790026180197
+  updatedAt: 1790026180236
+  completedAt: 1790026180236

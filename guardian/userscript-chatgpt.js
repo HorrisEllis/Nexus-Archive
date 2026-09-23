@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Guardian — ChatGPT v10.0
 // @namespace    nexus.guardian.chatgpt
-// @version      10.3.0
+// @version      10.2.0
 // @description  Guardian v10 — ChatGPT: full feature parity with Claude v10. IndexedDB
 //               kernel, SHA-256 dedup, intelligence injection, SEAM, NEXUS module,
 //               memory/RAID/self-heal hooks, structured output detection, tool intercept.
@@ -27,7 +27,7 @@ const CORTEX_URL  = 'http://127.0.0.1:3748';
 const INTELLIGENCE_URL = 'http://127.0.0.1:3753'; // intelligence is its own sovereign system (moved out of cortex 2026-09-19)
 const ORCH_URL    = 'http://127.0.0.1:9000';
 const PROVIDER    = 'chatgpt';
-const VERSION    = '10.3.0';
+const VERSION    = '10.0.0';
 // §P113: exponential backoff 3s→30s — eliminates SSE flood on disconnect
 const RECONNECT_MIN_MS = 3000;
 const RECONNECT_MAX_MS = 30000;
@@ -495,13 +495,6 @@ function findResponseEl() {
     '.text-streaming'
   );
 }
-// §AN1 2026-09-22 — full, ordered list of real assistant-message containers.
-// startWatch() captures this list's LENGTH at inject time; the response is
-// whichever node the DOM appends at that index afterward. See the claude
-// adapter's identical helper for the full rationale.
-function _anchorMessageEls() {
-  return document.querySelectorAll('[data-message-author-role="assistant"]');
-}
 function _isGenerating() {
   return !!document.querySelector('[data-is-streaming="true"], .text-streaming, [class*="loading"]');
 }
@@ -597,17 +590,9 @@ function stopWatch() {
   setJobBar(false);
 }
 
-// How long a job may show only the PREVIOUS answer before it is called a
-// no-reply. Generous: a slow provider can take a while to start rendering.
-const NO_REPLY_MS = parseInt((typeof GM_getValue === 'function' && GM_getValue('nexus_no_reply_ms')) || '180000', 10);
-
 function startWatch(jobId, prompt, retryCount = 0) {
   stopWatch();
   currentJobId = jobId; jobActive = true; _watchStart = Date.now();
-  // §AN1 2026-09-22 — anchor the response, don't guard against the previous
-  // one. See the claude adapter's identical block for the full rationale.
-  const _anchorIndex = _anchorMessageEls().length;
-  let _anchorNode = null;
   setJobBar(true, prompt, jobId);
 
   let lastText = '', stableCount = 0;
@@ -615,36 +600,9 @@ function startWatch(jobId, prompt, retryCount = 0) {
 
   function checkStable() {
     if (!currentJobId || currentJobId !== jobId) return;
-
-    if (!_anchorNode) {
-      const els = _anchorMessageEls();
-      if (els.length > _anchorIndex) {
-        _anchorNode = els[_anchorIndex];
-      } else {
-        // Nothing appended yet — §1.2, loud no-reply rather than stale.
-        if (Date.now() - _watchStart > NO_REPLY_MS) {
-          const ms = Date.now() - _watchStart;
-          stopWatch();
-          _log('gap', 'No reply', `#${jobId.slice(0,8)} · ${Math.round(ms/1000)}s`);
-          send({ type:'GUARDIAN_ERROR', jobId, gate:'watch',
-                 error:`no new response — the tab still shows the previous answer after ${Math.round(ms/1000)}s (nothing was injected, or the send never went through)`,
-                 chatUrl:location.href, account:getAccount() });
-          return;
-        }
-        _watchTimer = setTimeout(checkStable, 600); return;
-      }
-    }
-
-    if (!_anchorNode.isConnected) {
-      stopWatch();
-      _log('err', 'Anchor node detached', `#${jobId.slice(0,8)}`);
-      send({ type:'GUARDIAN_ERROR', jobId, gate:'watch',
-             error:'anchor node was removed from the DOM before the response settled',
-             chatUrl:location.href, account:getAccount() });
-      return;
-    }
-
-    const text = (_anchorNode.innerText || _anchorNode.textContent || '').trim();
+    const el   = findResponseEl();
+    if (!el) { _watchTimer = setTimeout(checkStable, 600); return; }
+    const text = (el.innerText || el.textContent || '').trim();
     if (text === lastText && !_isGenerating()) {
       stableCount++;
       if (stableCount >= 3) {

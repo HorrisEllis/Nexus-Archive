@@ -1,0 +1,33 @@
+{
+  "repository": "nexus-id-repo-5ae5c9e6",
+  "status": "passed",
+  "scopedTo": [
+    "src/agent2.js"
+  ],
+  "tiers": [
+    {
+      "level": "L6",
+      "name": "targeted runtime/test",
+      "passed": true,
+      "testsFound": 0,
+      "testsRun": 0,
+      "testsSkipped": 0,
+      "results": []
+    },
+    {
+      "level": "L7",
+      "name": "integration",
+      "passed": true,
+      "scope": 1,
+      "failures": []
+    },
+    {
+      "level": "L8",
+      "name": "system contract",
+      "passed": true,
+      "status": "not_applicable",
+      "reason": "no interaction-contract.json at repo root"
+    }
+  ],
+  "finishedAt": 1790025930589
+}

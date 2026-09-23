@@ -1,0 +1,21 @@
+{
+  "id": "chunk-a96f66b8444f20c8",
+  "repository": "nexus-id-repo-5ae5c9e6",
+  "file": "README.md",
+  "range": {
+    "start_line": 1,
+    "end_line": 1
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "1f885426f5e09fe3c782a5a075fa09cbbbb0681b43370a82f4fe6ac33eb8d9f2"
+  },
+  "status": "complete",
+  "content": "# edited after the inject"
+}

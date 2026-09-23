@@ -279,20 +279,30 @@ class ProviderHost {
       skipTaskbar: true,
       webPreferences: {
         partition,
-        // §FIXED 2026-09-22 — James: "it injected when i have the ui open, can
-        // you make sure it's still able to work without needing clearglass
-        // render open." THIS is why it needed the window visible: Electron
-        // throttles renderer timers in hidden/occluded windows, and the
-        // guardian userscript's response watch is a 300-600ms setTimeout loop
-        // (startWatch/checkStable). Throttled to ~1/minute, a job's reply is
-        // never observed to settle, so nothing comes back. The note above is
-        // still right that throttling does not save the memory that mattered
-        // there — it only ever cost correctness here.
-        backgroundThrottling:        false,
         nodeIntegration:             false,
         contextIsolation:            true,
         webSecurity:                 true,
         allowRunningInsecureContent: false,
+        // §FIXED 2026-09-22 — traced from guardian's own real NCP connect/
+        // disconnect cycle (provider=chatgpt, same tabId each time — not a
+        // new tab, the same hidden one reconnecting). Client's real
+        // heartbeat is HB_MS=8000 (userscript-chatgpt.js), server's real
+        // stale threshold is STALE_MS=30_000 (guardian/lib/ncp.js) — a
+        // healthy 4x margin on paper. This window is hidden by default
+        // (`show` above) and backgroundThrottling was never set here,
+        // so Electron's default (throttling ON for hidden renderers)
+        // applies — silently stretching the 8s setInterval past the 30s
+        // stale window with no error on either side, then the client's
+        // own correct reconnect logic fires, restarting the cycle.
+        // A prior investigation (§ADDED 2026-08-18, above this block)
+        // already checked backgroundThrottling and ruled it out — for a
+        // DIFFERENT problem (renderer memory pressure, which throttling
+        // doesn't affect since it's DOM/JS-heap, not CPU). That finding
+        // doesn't apply here: this is a timer-starvation problem, exactly
+        // what backgroundThrottling controls. Not yet confirmed fixed —
+        // the next real boot log's NCP connect/disconnect cadence is the
+        // actual test, not this comment.
+        backgroundThrottling: false,
         // preload is NOT used here — we inject via executeJavaScript after load
       },
       title: `NEXUS NCP — ${def.name}`,

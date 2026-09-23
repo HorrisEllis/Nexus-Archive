@@ -1,0 +1,39 @@
+envelope: 1
+uuid: nexus-export-chunk-drumpad.e965325e-42e5-44b8-a2f5-a5e14bd300b4.3b2d99bb-e9e4-4939-847b-bc4464ac1054
+type: chunk
+id: drumpad.e965325e-42e5-44b8-a2f5-a5e14bd300b4.3b2d99bb-e9e4-4939-847b-bc4464ac1054
+context: idearium spec-engine chunk of spec e965325e-42e5-44b8-a2f5-a5e14bd300b4
+intent: null
+summary: src-kernel-pattern-js (complete)
+system: idearium
+tags:
+  - spec:e965325e-42e5-44b8-a2f5-a5e14bd300b4
+  - status:complete
+  - section:src-kernel-pattern-js
+  - specName:drumpad
+  - agent:chatgpt
+exported_at: 1790060582456
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1790060582456
+lastSeenAt: 1790060582456
+fingerprint: null
+payload:
+  uuid: 3b2d99bb-e9e4-4939-847b-bc4464ac1054
+  specUuid: e965325e-42e5-44b8-a2f5-a5e14bd300b4
+  sectionId: src-kernel-pattern-js
+  sectionTitle: src/kernel/pattern.js
+  chunkIdx: 0
+  status: complete
+  realPath: src/kernel/pattern.js
+  fileName: 00-src-kernel-pattern-js.md
+  filePath: /tmp/ftp-idearium-M6Rodg/specs/e965325e-42e5-44b8-a2f5-a5e14bd300b4/00-src-kernel-pattern-js-3b2d99bb.js
+  agent: chatgpt
+  agentModel: null
+  attempts: 0
+  failureMode: null
+  byteSize: 444
+  contentHash: 3eda77d761a89bb27c46092fdb2c072542689fa794294c983f5b51be32ac4a28
+  createdAt: 1790060582248
+  updatedAt: 1790060582454
+  completedAt: 1790060582454

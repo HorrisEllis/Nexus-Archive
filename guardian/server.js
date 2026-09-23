@@ -1487,13 +1487,7 @@ bus.register(new SISOGate('guardian.job.complete', (data) => {
   const jobId = data.jobId || randomUUID();
   const existing = jaa.get('jobs', { id: jobId });
   if (existing) {
-    // §FIXED 2026-09-22 — James: "maybe also log the chaturls to make them
-    // consistent." Only the INSERT branch below recorded chat_url; a normal
-    // dispatched job takes this UPDATE branch, so the URL the userscript
-    // already sends was dropped every time — jobs.chat_url was populated only
-    // for jobs guardian never dispatched. Same fields, same source, both paths.
-    jaa.update('jobs', { id: jobId }, { status:'complete', response:(data.text||'').slice(0,5000), chars:(data.text||'').length, completed_ts:ts,
-      ...(data.chatUrl ? { chat_url: data.chatUrl } : {}), ...(data.chatId ? { chat_id: data.chatId } : {}), ...(data.account ? { account: data.account } : {}) });
+    jaa.update('jobs', { id: jobId }, { status:'complete', response:(data.text||'').slice(0,5000), chars:(data.text||'').length, completed_ts:ts });
   } else {
     jaa.insert('jobs', {
       id: jobId, provider: data.provider||'claude', command: data.command||'',
@@ -1504,9 +1498,6 @@ bus.register(new SISOGate('guardian.job.complete', (data) => {
     });
   }
   const startedTs = existing?.started_ts || data.startedTs || ts;
-  // One consistent completion line, with the chat the answer actually came
-  // from — so a job can be traced back to the real conversation.
-  console.log(`[guardian] job complete: ${String(jobId).slice(0,8)} · ${data.provider || existing?.provider || '?'} · ${(data.text||'').length}ch · ${Math.round((ts - startedTs)/1000)}s · chat=${data.chatUrl || existing?.chat_url || '(none reported)'}`);
   _feedRaid(data.provider || existing?.provider || 'claude', true, ts - startedTs, { job: (typeof jobs !== 'undefined' && jobs.get) ? jobs.get(jobId) : null });
 }));
 

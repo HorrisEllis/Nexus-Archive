@@ -2405,56 +2405,6 @@ ${res.note ? '\n' + escapeHtml(res.note) : ''}</div>${undo}`;
 // ── SETTINGS — compartment (real, MCO6), agent/source provenance, and
 // the repo-level actions (add file, fork, export, archive) moved here
 // from the file-tree toolbar — these are repo settings, not tree controls.
-// §MOVED 2026-09-22 — James: "this should all be in a agents section in the
-// settings tab for the compartments. per repo." The Agent tab is the CLI; how
-// the agent is CONFIGURED (which model wears the hat, its persona, what it has
-// learned, where its code lands) belongs with the rest of this repo's settings.
-async function renderRepoAgentSettings(repo) {
-  const el = document.getElementById('repo-agents-section');
-  if (!el) return;
-  let st = null, cfg = null, obs = [], inj = null;
-  try {
-    st = await api(`/api/repos/${repo.uuid}/agent`);
-    cfg = await api(`/api/repos/${repo.uuid}/agent/settings`);
-    AGENT_SETTINGS.set(repo.uuid, cfg);
-    if (st.memory && st.memory.total) obs = (await api(`/api/repos/${repo.uuid}/agent/memory`)).observations || [];
-    inj = await api(`/api/repos/${repo.uuid}/injects`);
-  } catch (e) { el.innerHTML = `<div class="ds"><div class="ds-label">agents</div><div style="opacity:.6;font-size:10px">unavailable: ${escapeHtml(e.message)}</div></div>`; return; }
-
-  const idx = st.index || {}, mem = st.memory || { total: 0 };
-  el.innerHTML = `
-    <div class="ds"><div class="ds-label">agents — this compartment's agent</div>
-      <div class="ds-mono">${st.exists ? escapeHtml(st.hat.name) : '(no hat forged yet)'}
-session    ${escapeHtml(st.sessionId || '—')}
-indexed    ${idx.indexed ? `${idx.fileCount ?? '?'} files · ${idx.chunkCount ?? '?'} chunks` : 'NOT indexed — run the pipeline from Diagnose'}
-learned    ${mem.total} observation${mem.total === 1 ? '' : 's'}
-exchanges  ${st.exchanges || 0}
-toolScope  ${st.toolScopeEnforced ? 'enforced' : 'NOT enforced on this path'}</div>
-      <div style="margin:8px 0;font-size:10px">wearing the hat:
-        <label style="cursor:pointer"><input type="checkbox" id="agent-use-guardian" ${cfg.useGuardian !== false ? 'checked' : ''} onchange="agentSetUseGuardian(this.checked)"> guardian</label>
-        <select id="agent-guardian-agent" onchange="agentSetGuardianAgent(this.value)" ${cfg.useGuardian === false ? 'disabled' : ''} style="font-size:10px;background:var(--bg2);color:var(--text);border:1px solid var(--b1);border-radius:3px;padding:1px 4px;margin-left:4px">
-          ${(cfg.guardianProviders || []).map(p => `<option value="${escapeHtml(p)}"${p === cfg.guardianAgent ? ' selected' : ''}>${escapeHtml(p)}</option>`).join('')}
-        </select>
-        <span style="opacity:.55">— on: they answer through their guardian tab, every output lands the same way. off: ollama.</span>
-      </div>
-      <div class="action-row">
-        ${st.exists
-          ? `<button class="action-btn" onclick="toggleAgentPersona()">show/hide persona</button>
-             <button class="action-btn" onclick="agentTeach()">teach</button>
-             <button class="action-btn" onclick="agentExport()">export agent</button>
-             <button class="action-btn" onclick="agentImport()">import agent</button>`
-          : `<button class="action-btn" onclick="agentForgeHat()">forge this repo's agent</button>`}
-      </div>
-      <div id="agent-persona" style="display:none;white-space:pre-wrap;font-size:10px;opacity:.8;border:1px solid var(--b1);border-radius:3px;padding:8px;margin-top:8px;max-height:280px;overflow-y:auto">${st.exists ? escapeHtml(st.hat.personaPrompt || '(empty persona)') : ''}</div>
-    </div>
-    ${obs.length ? `<div class="ds"><div class="ds-label">learned</div><div style="font-size:10px;line-height:1.8">` +
-      obs.map(o => `<div>(${escapeHtml(o.kind)}) ${escapeHtml(o.text)}${(o.occurrences || 1) > 1 ? ` <span style="opacity:.6">[${o.occurrences}×]</span>` : ''}${o.evidence ? ` <span style="opacity:.6">[${escapeHtml(o.evidence)}]</span>` : ''} <span style="cursor:pointer;opacity:.5" title="forget" onclick="agentForget('${o.uuid}')">×</span></div>`).join('') + `</div></div>` : ''}
-    ${inj ? `<div class="ds"><div class="ds-label">injects · mode <span style="cursor:pointer;border-bottom:1px dotted" onclick="agentSetMode('${inj.mode === 'auto' ? 'review' : 'auto'}')">${escapeHtml(inj.mode)}</span> · <span style="cursor:pointer;border-bottom:1px dotted" onclick="agentNewInject()">+ new</span></div>` +
-      ((inj.injects || []).length ? `<div style="font-size:10px;line-height:1.9">` + inj.injects.slice(0, 30).map(n => `<div><span style="opacity:.55">${escapeHtml(n.uuid.slice(0, 8))}</span> <span class="inj-st inj-${escapeHtml(n.status)}">${escapeHtml(n.status)}</span> <span style="cursor:pointer;text-decoration:underline" onclick="openInjectEditor('${n.uuid}')">${escapeHtml(n.path)}</span> <span style="opacity:.55">by ${escapeHtml(n.hatName || 'you')}</span>` +
-        (n.status === 'proposed' ? ` <span class="inj-act" onclick="agentInjectAction('${n.uuid}','apply')">apply</span> <span class="inj-act" onclick="agentInjectAction('${n.uuid}','reject')">reject</span>` : n.status === 'applied' ? ` <span class="inj-act" onclick="agentInjectAction('${n.uuid}','revert')">revert</span>` : '') + `</div>`).join('') + `</div>`
-        : `<div style="opacity:.5;font-size:10px">no injects yet — code the agent writes for this project lands here</div>`) + `</div>` : ''}`;
-}
-
 function renderRepoSettings(repo) {
   const el = document.getElementById('repo-subtab-settings');
   if (!el) return;
@@ -2471,9 +2421,7 @@ function renderRepoSettings(repo) {
         <button class="action-btn" onclick="exportApiRepo()">⇩ export .zip</button>
         <button class="action-btn danger" onclick="openDeleteRepoModal()">✕ delete</button>
       </div>
-    </div>
-    <div id="repo-agents-section"></div>`;
-  renderRepoAgentSettings(repo);
+    </div>`;
 }
 
 // Renders the selected repo as a real, nested, expanded-by-default file
@@ -2789,17 +2737,71 @@ indexed    ${idx.indexed ? `${idx.fileCount ?? '?'} files · ${idx.chunkCount ??
 learned    ${mem.total} observation${mem.total === 1 ? '' : 's'}${kindCounts ? ` (${kindCounts})` : ''}
 exchanges  ${st.exchanges || 0}</div>
     </div>
-    <div style="margin:6px 0;font-size:10px;opacity:.6">hat, provider, teaching, export/import and inject mode live in <span style="cursor:pointer;text-decoration:underline" onclick="setRepoSubtab('settings')">Settings → Agents</span>${st.exists ? '' : ' — no hat forged yet'}</div>
-`;
+    <div style="margin:6px 0;font-size:10px">wearing the hat:
+      <label style="cursor:pointer"><input type="checkbox" id="agent-use-guardian" ${AGENT_SETTINGS.get(repo.uuid)?.useGuardian !== false ? 'checked' : ''} onchange="agentSetUseGuardian(this.checked)"> guardian</label>
+      <select id="agent-guardian-agent" onchange="agentSetGuardianAgent(this.value)" ${AGENT_SETTINGS.get(repo.uuid)?.useGuardian === false ? 'disabled' : ''} style="font-size:10px;background:var(--bg2);color:var(--text);border:1px solid var(--b1);border-radius:3px;padding:1px 4px;margin-left:4px">
+        ${(AGENT_SETTINGS.get(repo.uuid)?.guardianProviders || []).map(p => `<option value="${escapeHtml(p)}"${p === AGENT_SETTINGS.get(repo.uuid)?.guardianAgent ? ' selected' : ''}>${escapeHtml(p)}</option>`).join('')}
+      </select>
+      <span style="opacity:.55">— on: chatgpt/claude/gemini/deepseek/perplexity answer through their guardian tab, every output lands the same way. off: ollama.</span>
+    </div>
+    <div style="margin:8px 0">
+      ${st.exists
+        ? `<button class="tb-btn" onclick="toggleAgentPersona()">show/hide persona</button>
+           <button class="tb-btn" style="margin-left:6px" onclick="agentTeach()">teach</button>
+           <button class="tb-btn" style="margin-left:6px" onclick="agentExport()">export agent</button>
+           <button class="tb-btn" style="margin-left:6px" onclick="agentImport()">import agent</button>
+           <button class="tb-btn" style="margin-left:6px" onclick="agentClearTranscript()">clear transcript</button>`
+        : `<button class="tb-btn" onclick="agentForgeHat()">forge this repo's agent</button>`}
+    </div>
+    <div id="agent-persona" style="display:none;white-space:pre-wrap;font-size:10px;opacity:.8;border:1px solid var(--b1);border-radius:3px;padding:8px;margin-bottom:8px;max-height:280px;overflow-y:auto">${st.exists ? escapeHtml(st.hat.personaPrompt || '(empty persona)') : ''}</div>`;
 
-  const memHtml = '';
+  // Learned observations, each removable. The person's delete always wins,
+  // and the server re-grounds the hat so it leaves the persona too.
+  let memHtml = '';
+  if (mem.total) {
+    let obs = [];
+    try { obs = (await api(`/api/repos/${repo.uuid}/agent/memory`)).observations || []; } catch (_) { /* header already shows the count */ }
+    if (obs.length) {
+      memHtml = `<div class="ds"><div class="ds-label">learned</div><div style="font-size:10px;line-height:1.8">` +
+        obs.map(o => `<div>(${escapeHtml(o.kind)}) ${escapeHtml(o.text)}` +
+          `${(o.occurrences || 1) > 1 ? ` <span style="opacity:.6">[${o.occurrences}×]</span>` : ''}` +
+          `${o.evidence ? ` <span style="opacity:.6">[${escapeHtml(o.evidence)}]</span>` : ''}` +
+          ` <span style="cursor:pointer;opacity:.5" title="forget" onclick="agentForget('${o.uuid}')">×</span></div>`).join('') +
+        `</div></div>`;
+    }
+  }
 
   const lines = _agentTranscript(repo.uuid);
   const transcript = lines.length
     ? lines.map(l => `<div style="margin-bottom:10px"><div style="opacity:.55;font-size:9px">${escapeHtml(l.role)}${l.meta ? ` · ${escapeHtml(l.meta)}` : ''}</div><div style="white-space:pre-wrap">${escapeHtml(l.text)}</div>${l.detail || ''}</div>`).join('')
     : `<div style="opacity:.5">no exchanges in this session yet</div>`;
 
-  const injHtml = '';
+  // §INJECT 2026-09-21 — this compartment's .inject nodes: agent (or person)
+  // proposed writes, each openable in the editor, applicable, rejectable and
+  // revertable. The mode switch decides whether an agent's addressed code
+  // blocks land as proposals (review) or are written at once (auto).
+  let injHtml = '';
+  try {
+    const IR = await api(`/api/repos/${repo.uuid}/injects`);
+    AGENT_INJECT_MODE.set(repo.uuid, IR.mode);
+    const inj = IR.injects || [];
+    const counts = inj.reduce((a, n) => (a[n.status] = (a[n.status] || 0) + 1, a), {});
+    injHtml = `<div class="ds"><div class="ds-label">injects · mode ` +
+      `<span style="cursor:pointer;border-bottom:1px dotted" title="toggle review/auto" onclick="agentSetMode('${IR.mode === 'auto' ? 'review' : 'auto'}')">${escapeHtml(IR.mode)}</span>` +
+      `${IR.mode === 'auto' ? ' <span style="opacity:.6">(agent code is written on arrival; every write is revertable)</span>' : ' <span style="opacity:.6">(agent code waits here for you)</span>'}` +
+      ` · <span style="cursor:pointer;border-bottom:1px dotted" onclick="agentNewInject()">+ new</span></div>` +
+      (inj.length ? `<div style="font-size:10px;line-height:1.9">` + inj.slice(0, 30).map(n => {
+        const acts = n.status === 'proposed'
+          ? `<span class="inj-act" onclick="agentInjectAction('${n.uuid}','apply')">apply</span> <span class="inj-act" onclick="agentInjectAction('${n.uuid}','reject')">reject</span>`
+          : n.status === 'applied' ? `<span class="inj-act" onclick="agentInjectAction('${n.uuid}','revert')">revert</span>` : '';
+        return `<div><span style="opacity:.55">${escapeHtml(n.uuid.slice(0, 8))}</span> ` +
+          `<span class="inj-st inj-${escapeHtml(n.status)}">${escapeHtml(n.status)}</span> ` +
+          `<span style="cursor:pointer;text-decoration:underline" onclick="openInjectEditor('${n.uuid}')">${escapeHtml(n.path)}</span>` +
+          `${n.creates ? ' <span style="opacity:.6">(new file)</span>' : ''} <span style="opacity:.55">by ${escapeHtml(n.hatName || 'you')}</span> ${acts}</div>`;
+      }).join('') + `</div><div style="opacity:.5;font-size:9px">${Object.entries(counts).map(([k, v]) => `${k} ${v}`).join(' · ')}</div>`
+        : `<div style="opacity:.5;font-size:10px">no injects yet — code the agent writes for this project lands here</div>`) +
+      `</div>`;
+  } catch (e) { injHtml = `<div class="ds"><div class="ds-label">injects</div><div style="opacity:.6;font-size:10px">unavailable: ${escapeHtml(e.message)}</div></div>`; }
 
   el.innerHTML = head + memHtml + injHtml + `
     <div class="ds"><div class="ds-label">cli</div>

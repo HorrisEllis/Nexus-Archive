@@ -1,0 +1,39 @@
+envelope: 1
+uuid: nexus-export-chunk-stab-orphan.cee857c2-61a9-43bc-9fb2-190557960d6b.15433277-9059-41fc-bc54-d9847fc3519f
+type: chunk
+id: stab-orphan.cee857c2-61a9-43bc-9fb2-190557960d6b.15433277-9059-41fc-bc54-d9847fc3519f
+context: idearium spec-engine chunk of spec cee857c2-61a9-43bc-9fb2-190557960d6b
+intent: null
+summary: dir1-file-1 (complete)
+system: idearium
+tags:
+  - spec:cee857c2-61a9-43bc-9fb2-190557960d6b
+  - status:complete
+  - section:dir1-file-1
+  - specName:stab-orphan
+  - agent:ingest
+exported_at: 1790026001172
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1790026001172
+lastSeenAt: 1790026001172
+fingerprint: null
+payload:
+  uuid: 15433277-9059-41fc-bc54-d9847fc3519f
+  specUuid: cee857c2-61a9-43bc-9fb2-190557960d6b
+  sectionId: dir1-file-1
+  sectionTitle: dir1/file-1.js
+  chunkIdx: 1
+  status: complete
+  realPath: dir1/file-1.js
+  fileName: 01-dir1-file-1.md
+  filePath: /tmp/idearium-ingest-stab-GSO92H/specs/cee857c2-61a9-43bc-9fb2-190557960d6b/01-dir1-file-1-15433277.md
+  agent: ingest
+  agentModel: ingest:drop
+  attempts: 1
+  failureMode: null
+  byteSize: 10886
+  contentHash: a202530ed142d841612322b1b2b8d9afec73805ba2aa542838f404308ef84320
+  createdAt: 1790026001169
+  updatedAt: 1790026001170
+  completedAt: 1790026001170

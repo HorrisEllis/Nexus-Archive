@@ -1,0 +1,37 @@
+envelope: 1
+uuid: nexus-export-repository-anchor
+type: repository
+id: anchor
+context: idearium repo undefined
+intent: null
+summary: 1 files, 135 chunks, READY
+system: idearium
+tags:
+  - spec:undefined
+  - state:READY
+  - verification:passed
+exported_at: 1790026258819
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1790026258819
+lastSeenAt: 1790026258819
+fingerprint: null
+payload:
+  uuid: anchor
+  rootHash: null
+  parent: null
+  state: READY
+  fileCount: 1
+  byLanguage:
+    javascript: 1
+  failedCount: 0
+  chunkCount: 135
+  symbolCount: 134
+  verificationStatus: passed
+  verificationLevel: L5
+  paths:
+    atlas: /tmp/pipeline-syntax-aL47RX/anchor-hFE4LA/atlas.json
+    chunks: /tmp/pipeline-syntax-aL47RX/anchor-hFE4LA/chunks
+    indexes: /tmp/pipeline-syntax-aL47RX/anchor-hFE4LA/indexes
+    verification: /tmp/pipeline-syntax-aL47RX/anchor-hFE4LA/verification.json
+  generatedAt: 1790026258819

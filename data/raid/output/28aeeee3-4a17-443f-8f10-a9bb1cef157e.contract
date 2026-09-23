@@ -1,0 +1,108 @@
+envelope: 1
+uuid: nexus-export-contract-28aeeee3-4a17-443f-8f10-a9bb1cef157e
+type: contract
+id: 28aeeee3-4a17-443f-8f10-a9bb1cef157e
+context: null
+intent: null
+summary: null
+system: null
+tags: []
+exported_at: 1790025979232
+source: self-heal
+occurrences: 1
+firstSeenAt: 1790025979232
+lastSeenAt: 1790025979232
+fingerprint: null
+payload:
+  queueId: 28aeeee3-4a17-443f-8f10-a9bb1cef157e
+  status: fail
+  verdict: FAIL
+  trace_log:
+    - event: SPAWN
+      data:
+        intent_uuid: ad1bdcc0-33d8-4f12-ac51-503152af2ce2
+        snapId: 1d876a4c-dfbe-41ec-89b8-3c3bf213cc59
+      ts: 1790025979203
+    - event: EXECUTE_START
+      data: {}
+      ts: 1790025979230
+    - event: EXECUTE_COMPLETE
+      data:
+        hasResult: true
+      ts: 1790025979230
+    - event: ADVERSARY_SUITE
+      data:
+        ran: true
+        intensity:
+          stressIterations: 1
+          strictBoundary: false
+        riskCeiling: null
+        violations: []
+        attackResults:
+          - class: syntax
+            violated: false
+          - class: logic
+            violated: false
+          - class: edge-case
+            violated: false
+          - class: state
+            violated: false
+          - class: cross-domain
+            violated: false
+          - class: stress
+            violated: false
+      ts: 1790025979230
+    - event: QA_QC
+      data:
+        ran: true
+        checks:
+          syntax: true
+          schema: true
+          type: true
+          invariant: true
+          deterministic_replay: true
+          contract_end_state_pass: false
+        verdict: FAIL
+      ts: 1790025979230
+    - event: FAIL
+      data:
+        reason: QA/QC check failed
+        violations: null
+        checks:
+          syntax: true
+          schema: true
+          type: true
+          invariant: true
+          deterministic_replay: true
+          contract_end_state_pass: false
+      ts: 1790025979230
+    - event: REWOUND
+      data:
+        snapId: 1d876a4c-dfbe-41ec-89b8-3c3bf213cc59
+      ts: 1790025979231
+    - event: CRYSTAL_LATTICE_UPDATE
+      data:
+        ran: true
+        lattice:
+          updated: true
+          edge:
+            uuid: 7e1552c2-d02a-4397-8f5e-ea61179281c2
+            edgeKey: 'CompartmentType:RT-2: self-heal sourced.implement->State:Resolution'
+            from: 'CompartmentType:RT-2: self-heal sourced.implement'
+            to: State:Resolution
+            weight: 0.4
+            success_rate: 0
+            failure_rate: 1
+            successCount: 0
+            failureCount: 1
+            totalCount: 1
+            decay_rate: 0.02
+            lastTransitionAt: 1790025979231
+            lastTransitionOutcome: FAIL
+            createdAt: 1790025979231
+            updatedAt: 1790025979231
+        crystal:
+          crystallized: false
+          frequency: 1
+          threshold: 3
+      ts: 1790025979231

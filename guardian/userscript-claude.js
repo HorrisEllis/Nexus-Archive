@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Guardian — Claude v10.0
 // @namespace    nexus.guardian.claude
-// @version      10.4.0
+// @version      10.3.0
 // @description  Guardian v10: IndexedDB kernel, SHA-256 dedup, pre-prompt intelligence
 //               injection, full system widget, connection info, log/ledger, options,
 //               SEAM, queue, tags — fully system aware, no localStorage for state.
@@ -32,7 +32,7 @@ const CORTEX_URL  = 'http://127.0.0.1:3748';
 const INTELLIGENCE_URL = 'http://127.0.0.1:3753'; // intelligence is its own sovereign system (moved out of cortex 2026-09-19)
 const ORCH_URL    = 'http://127.0.0.1:9000';
 const PROVIDER    = 'claude';
-const VERSION    = '10.4.0';
+const VERSION    = '10.1.0';
 // §P113: exponential backoff 3s→30s — eliminates SSE flood on disconnect
 const RECONNECT_MIN_MS = 3000;
 const RECONNECT_MAX_MS = 30000;
@@ -543,15 +543,6 @@ function findResponseEl() {
     '.text-streaming'
   );
 }
-// §AN1 2026-09-22 — the full, ordered list of real assistant-message
-// containers (not just the last one). startWatch() captures this list's
-// LENGTH at inject time; the response is whichever node the DOM appends
-// at that index afterward — a real anchor, not a re-query. Same
-// container class findResponseEl() and sendDOMMap()'s role-detection
-// already treat as "the" assistant message; nothing new invented here.
-function _anchorMessageEls() {
-  return document.querySelectorAll('.font-claude-message');
-}
 function _isGenerating() {
   return !!document.querySelector('[data-is-streaming="true"], .text-streaming, [class*="loading"]');
 }
@@ -636,25 +627,9 @@ function stopWatch() {
   setJobBar(false);
 }
 
-// How long a job may show only the PREVIOUS answer before it is called a
-// no-reply. Generous: a slow provider can take a while to start rendering.
-const NO_REPLY_MS = parseInt((typeof GM_getValue === 'function' && GM_getValue('nexus_no_reply_ms')) || '180000', 10);
-
 function startWatch(jobId, prompt, retryCount = 0) {
   stopWatch();
   currentJobId = jobId; jobActive = true; _watchStart = Date.now();
-  // §AN1 2026-09-22 — anchor the response, don't guard against the previous
-  // one. 0.39.215's baseline-compare (§STALE-REPLY FIX, kept below in spirit)
-  // refused a match against the previous answer, but every poll still asked
-  // findResponseEl() "what's the last message right now" — a live guess that
-  // could still resolve wrong under DOM churn. AN1 captures how many real
-  // assistant messages exist at inject time and latches whichever node the
-  // DOM appends at that index as THE response, permanently. Once latched,
-  // every read (chunk, stable-check, completion) comes from that one node
-  // reference, never a re-query — makes the stale class impossible by
-  // construction and makes the delta stream exact.
-  const _anchorIndex = _anchorMessageEls().length;
-  let _anchorNode = null;
   setJobBar(true, prompt, jobId);
 
   let lastText = '', stableCount = 0;
@@ -662,42 +637,9 @@ function startWatch(jobId, prompt, retryCount = 0) {
 
   function checkStable() {
     if (!currentJobId || currentJobId !== jobId) return;
-
-    if (!_anchorNode) {
-      const els = _anchorMessageEls();
-      if (els.length > _anchorIndex) {
-        _anchorNode = els[_anchorIndex];
-      } else {
-        // Nothing appended yet — this job hasn't produced a message
-        // container at all, let alone text. §1.2 — after NO_REPLY_MS say so
-        // loudly rather than return a stale reply.
-        if (Date.now() - _watchStart > NO_REPLY_MS) {
-          const ms = Date.now() - _watchStart;
-          stopWatch();
-          _log('gap', 'No reply', `#${jobId.slice(0,8)} · ${Math.round(ms/1000)}s`);
-          send({ type:'GUARDIAN_ERROR', jobId, gate:'watch',
-                 error:`no new response — the tab still shows the previous answer after ${Math.round(ms/1000)}s (nothing was injected, or the send never went through)`,
-                 chatUrl:location.href, account:getAccount() });
-          return;
-        }
-        _watchTimer = setTimeout(checkStable, 600); return;
-      }
-    }
-
-    if (!_anchorNode.isConnected) {
-      // The anchored node was removed from the DOM (virtualization / re-
-      // render) instead of mutated in place. Fail loudly rather than
-      // silently fall back to a re-query that could resolve to the wrong
-      // message — §AN1's "nothing silently fails" requirement.
-      stopWatch();
-      _log('err', 'Anchor node detached', `#${jobId.slice(0,8)}`);
-      send({ type:'GUARDIAN_ERROR', jobId, gate:'watch',
-             error:'anchor node was removed from the DOM before the response settled',
-             chatUrl:location.href, account:getAccount() });
-      return;
-    }
-
-    const text = (_anchorNode.innerText || _anchorNode.textContent || '').trim();
+    const el   = findResponseEl();
+    if (!el) { _watchTimer = setTimeout(checkStable, 600); return; }
+    const text = (el.innerText || el.textContent || '').trim();
     if (text === lastText && !_isGenerating()) {
       stableCount++;
       if (stableCount >= 3) {

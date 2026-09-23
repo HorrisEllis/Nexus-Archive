@@ -1,0 +1,40 @@
+envelope: 1
+uuid: nexus-export-chunk-prov-1790025937478.nexus-id-repo-929cafff.338ae970-7168-4de7-8e57-b4ecc0f3d685
+type: chunk
+id: prov-1790025937478.nexus-id-repo-929cafff.338ae970-7168-4de7-8e57-b4ecc0f3d685
+context: idearium spec-engine chunk of spec 7195ed83-1550-4b40-9231-9c0333423be9
+intent: null
+summary: src-chatgpt (complete)
+system: idearium
+tags:
+  - spec:7195ed83-1550-4b40-9231-9c0333423be9
+  - status:complete
+  - section:src-chatgpt
+  - specName:prov-1790025937478
+  - agent:user
+  - repo:nexus-id-repo-929cafff
+exported_at: 1790025937604
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1790025937604
+lastSeenAt: 1790025937604
+fingerprint: null
+payload:
+  uuid: 338ae970-7168-4de7-8e57-b4ecc0f3d685
+  specUuid: 7195ed83-1550-4b40-9231-9c0333423be9
+  sectionId: src-chatgpt
+  sectionTitle: src/chatgpt.js
+  chunkIdx: 1
+  status: complete
+  realPath: src/chatgpt.js
+  fileName: 01-src-chatgpt.md
+  filePath: /home/claude/work/package/Nexus_v0_39_205/base/idearium/data/specs/7195ed83-1550-4b40-9231-9c0333423be9/01-src-chatgpt-338ae970.js
+  agent: user
+  agentModel: null
+  attempts: 0
+  failureMode: null
+  byteSize: 409
+  contentHash: c27b8c7bda99565dcd1dd8e1f970b859eba67d3c8dbd2743d653264c9001accc
+  createdAt: 1790025937602
+  updatedAt: 1790025937603
+  completedAt: 1790025937603
