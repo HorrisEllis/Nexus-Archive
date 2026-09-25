@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        guardian
-    version:     3.9.0
+    version:     3.9.2
     foundation:  nexus-system-foundation@1.0.0
     port:        7820
     uuid:        nexus-guardian-v3-0000-2026-0615-jamesbrooks-001
@@ -315,3 +315,36 @@ spec:
       tests/dispatcher-agent-tab-trigger.test.js 10/10 (was 5: AT-002/AT-005 pinned the shared-tab delivery
       and were reversed; mutation-checked, each reverted fix fails its own test);
       tests/modules/test-guardian-replay-retired.test.js 3/3 (the pre-0.39.237 handler fails RR-01).
+  built_2026_09_25_watch_never_silent:
+    shipped: "0.39.238"
+    asked_by: James, with the 2026-09-25 log (job 44d68e3d — waiting for its own tab, delivered, acked, "submitted (button)", then nothing) and the reply visible in ChatGPT — "this should be working."
+    found: >-
+      The 0.39.224 stage evidence answered it: no reply-started after submit means the watch never saw
+      reply text. In every userscript's checkStable(), a findResponseEl() that returns nothing rescheduled
+      itself every 600 ms FOREVER — the NO_REPLY_MS deadline sat below that branch and never ran. No
+      progress, no error, no completion. ChatGPT's findResponseEl() made that likely: one querySelector
+      over '[data-is-streaming="true"], [data-message-author-role="assistant"]:last-child, .text-streaming'
+      returns the FIRST match in document order, and :last-child only matches a message that is the last
+      child of its own wrapper.
+    fix: >-
+      All six watchers (chatgpt, claude, gemini, deepseek, perplexity, nexus-hey-claude): with no reply
+      element, one GUARDIAN_PROGRESS stage 'no-reply-element' after 15 s, and GUARDIAN_ERROR at the
+      no-reply deadline naming selector drift. ChatGPT's findResponseEl(): the streaming element while it
+      exists, otherwise the LAST [data-message-author-role="assistant"] — the way that file's own chat
+      reader already finds messages. Userscript versions bumped, header and VERSION constant aligned
+      (they disagreed before: e.g. chatgpt @version 10.2.0 vs VERSION 10.1.0).
+    what_the_next_log_says: >-
+      reply-started + job complete: fixed. no-reply-element: ChatGPT's page no longer has any element the
+      selector recognises — the DOM must be mapped from the live page (archaeology), not guessed here.
+    tests: >-
+      tests/modules/test-guardian-job-correlation.js 102 -> 120 (15 no-element cases across five providers on a
+      20x clock, 3 on ChatGPT's real findResponseEl); against the 0.39.237 userscripts all 16 new checks fail
+      and the run hangs until killed.
+  built_2026_09_25_downloads_index_one_root:
+    shipped: "0.39.239"
+    change: >-
+      lib/code-artifact.js recordAgentResponse (writes every completed reply to Clear Glass's downloads index) and
+      lib/response-sink.js (recovers a job's reply from that index when the live signal was lost) now take the index
+      root from clear-glass/src/downloads/artifact-chat-index.js defaultRoot() instead of each resolving the COS
+      compartment themselves; Clear Glass's readers use the same call. The reply record is unchanged: raw.agentId and
+      raw.jobId, now also lifted into first-class agent_id/job_id by the index. No route or event change.

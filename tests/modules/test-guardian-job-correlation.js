@@ -44,10 +44,13 @@ function extractFn(src, name) {
  * reply: null = the tab never answers (the previous answer just sits there);
  *        string = the new answer appears after `afterMs`.
  */
-function runWatch(src, { previous, reply = null, afterMs = 1700, noReplyMs = 6000, giveUpMs = 14000 }) {
+function runWatch(src, { previous, reply = null, afterMs = 1700, noReplyMs = 6000, giveUpMs = 14000, noElement = false, clockScale = 1 }) {
   return new Promise((resolve) => {
     const sent = [];
-    let el = { innerText: previous };            // the PREVIOUS answer, already rendered
+    // noElement: the page has NO element findResponseEl() recognises (0.39.238).
+    let el = noElement ? null : { innerText: previous };   // the PREVIOUS answer, already rendered
+    const t0 = Date.now();
+    const clock = clockScale === 1 ? Date : { now: () => t0 + (Date.now() - t0) * clockScale };
     const started = Date.now();
     if (reply !== null) setTimeout(() => { el = { innerText: reply }; }, afterMs);
     const sandbox = {
@@ -69,7 +72,7 @@ function runWatch(src, { previous, reply = null, afterMs = 1700, noReplyMs = 600
       MutationObserver: class { observe() {} disconnect() {} },
       document: { querySelector: () => null, body: {} },
       location: { href: 'https://provider.example/c/abc123' },
-      setTimeout, clearTimeout, Date,
+      setTimeout, clearTimeout, Date: clock,
       currentJobId: null, jobActive: false, _watchStart: 0, _watchObs: null, _watchTimer: null,
     };
     const body = `${extractFn(src, 'startWatch')}; startWatch('job-2', 'the second question', 0);`;
@@ -105,8 +108,35 @@ async function main() {
     check(`${p}: a job that never gets a reply reports no reply-started at all`,
       !stale.sent.some(m => m.type === 'GUARDIAN_PROGRESS' && m.stage === 'reply-started'));
 
+    // 0.39.238 — James's 2026-09-25 log: submitted, then silence. With no
+    // element findResponseEl() recognises, the watch rescheduled itself forever.
+    const noEl = await runWatch(src, { noElement: true, noReplyMs: 30000, clockScale: 20, giveUpMs: 6000 });
+    check(`${p}: no reply element → reports no-reply-element early (seconds, not the deadline)`,
+      noEl.sent.some(m => m.type === 'GUARDIAN_PROGRESS' && m.stage === 'no-reply-element' && m.chatUrl));
+    check(`${p}: no reply element → fails loudly at the deadline, naming the selector, never silent`,
+      noEl.sent.some(m => m.type === 'GUARDIAN_ERROR' && /no reply element found/.test(m.error) && /selector drift/.test(m.error)), noEl.timedOut ? 'timed out silently' : '');
+    check(`${p}: no reply element → reports it once, not every poll`,
+      noEl.sent.filter(m => m.stage === 'no-reply-element').length === 1);
+
     check(`${p}: the userscript version was bumped so the fix is visible in guardian's report`,
       /const VERSION\s*=\s*'10\.[1-9]/.test(src));
+  }
+
+  // 0.39.238 — ChatGPT's REAL findResponseEl against a page with several turns.
+  {
+    const src = fs.readFileSync(path.join(ROOT, 'guardian', 'userscript-chatgpt.js'), 'utf8');
+    const first = { id: 'first-answer' }, second = { id: 'second-answer' }, streamingEl = { id: 'streaming' };
+    const doc = (streaming) => ({
+      // Real DOM semantics for the two selector shapes: querySelector → first match or null.
+      querySelector: (sel) => (streaming && /data-is-streaming|text-streaming/.test(sel)) ? streamingEl
+        : (/:last-child/.test(sel) ? first : null),       // one wrapper per turn: EVERY message is :last-child, the first wins
+      querySelectorAll: (sel) => /data-message-author-role="assistant"/.test(sel) ? [first, second] : [],
+    });
+    const run = (streaming) => new Function('document', `${extractFn(src, 'findResponseEl')}; return findResponseEl();`)(doc(streaming));
+    check('chatgpt: findResponseEl returns the LAST assistant message, not the first', run(false) === second, run(false) && run(false).id);
+    check('chatgpt: …and the streaming element while a reply is still being written', run(true) === streamingEl);
+    const none = new Function('document', `${extractFn(src, 'findResponseEl')}; return findResponseEl();`)({ querySelector: () => null, querySelectorAll: () => [] });
+    check('chatgpt: …and null (not a throw) on a page with no messages', none === null);
   }
 
   // Headless: the watch loop is timer-driven, so hidden windows must not throttle.

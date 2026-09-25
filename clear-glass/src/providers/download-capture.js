@@ -32,7 +32,7 @@ const http = require('http');
 
 const GUARDIAN_HOST = process.env.GUARDIAN_HOST || '127.0.0.1';
 const GUARDIAN_PORT = parseInt(process.env.GUARDIAN_HTTP_PORT || '7820', 10);
-const VERSION = '1.0.0';
+const VERSION = '1.1.0';   // 0.39.239: agentId on every capture; one listener per session; recorded in the downloads index
 
 // §ARTIFACTS-LISTENER 2026-09-16 — James: "clearglass downloads manager
 // used as a artifacts listener for agents." This file already IS a real
@@ -95,9 +95,45 @@ function _announce(payload, log) {
  * @param {function} [log]
  * @returns {{detach:function}}
  */
-function attach({ session, providerId, log = console.log } = {}) {
+// §ONE-LISTENER 0.39.239 — every window of a provider (the shared one and each
+// repo agent tab) uses the SAME session partition (persist:ncp-<provider>), and
+// ProviderHost.start() calls attach() once per window. Each call added another
+// will-download listener to that one session, so every download was announced
+// once per open window. attach() is now idempotent per session.
+const _attached = new WeakMap(); // session -> { detach }
+
+// Index size cap: a download up to this size is copied into the downloads index
+// (a self-contained backup); larger files are recorded by path only.
+const INDEX_COPY_MAX_BYTES = 10 * 1024 * 1024;
+
+function _recordInIndex({ providerId, agentId, chatUrl, filename, savePath, bytes, mimeType, url }, log) {
+  try {
+    const index = require('../downloads/artifact-chat-index.js');
+    const fs = require('fs');
+    let buf = null;
+    if (bytes && bytes <= INDEX_COPY_MAX_BYTES) { try { buf = fs.readFileSync(savePath); } catch (_) { buf = null; } }
+    const r = index.recordResponse(index.defaultRoot(), {
+      kind: 'artifact', provider: providerId, agentId: agentId || null,
+      chatId: chatUrl || null, artifactBuffer: buf, artifactFileName: buf ? path.basename(filename) : undefined,
+      raw: { agentId: agentId || null, provider: providerId, chatUrl, filename, savePath, bytes, mimeType, url,
+             copied: !!buf, capturedBy: `clear-glass.download-capture@${VERSION}` },
+    });
+    log(`[download-capture] indexed ${filename} → ${agentId || providerId} (${r.responsePath}${buf ? '' : ', by path'})`);
+  } catch (e) {
+    // §1.2 — stated, not swallowed; the announce and ledger write already happened.
+    log(`[download-capture] ${filename}: could not record in the downloads index — ${e.message}`);
+  }
+}
+
+/**
+ * @param {function} [agentIdFor]  (webContents) => the agent id of the tab the
+ *   download came from, or null for the shared provider window. Supplied by
+ *   ProviderHost, which owns the agentId -> window map.
+ */
+function attach({ session, providerId, log = console.log, agentIdFor = null } = {}) {
   if (!session || typeof session.on !== 'function') throw new Error('download-capture.attach needs a real Electron session');
   if (!providerId) throw new Error('download-capture.attach needs a providerId — a drop with no author is not provenance');
+  if (_attached.has(session)) return _attached.get(session);
 
   const handler = (event, item, webContents) => {
     const filename = item.getFilename();
@@ -107,6 +143,9 @@ function attach({ session, providerId, log = console.log } = {}) {
     // navigate away while a large file is still downloading.
     let chatUrl = null;
     try { chatUrl = webContents && typeof webContents.getURL === 'function' ? webContents.getURL() : null; } catch (_) {}
+    // Which agent's tab asked for it — resolved now, while the tab still exists.
+    let agentId = null;
+    try { agentId = typeof agentIdFor === 'function' ? (agentIdFor(webContents) || null) : null; } catch (_) {}
     const startedAt = Date.now();
 
     item.once('done', (_e, state) => {
@@ -118,6 +157,7 @@ function attach({ session, providerId, log = console.log } = {}) {
       const payload = {
         source:   savePath,
         provider: providerId,
+        agentId,
         chatUrl,
         filename,
         url:          item.getURL(),
@@ -133,15 +173,17 @@ function attach({ session, providerId, log = console.log } = {}) {
       // announce are two different real jobs (permanent record vs.
       // "something to act on now"), so this doesn't wait on or depend
       // on _announce's own result.
-      _ledgerWrite('clear-glass', 'artifact.downloaded', {
-        agentId: providerId, chatUrl, ...payload,
-      });
+      // 0.39.239 — agentId was set to the PROVIDER name here; it is now the tab's agent (null for the shared window).
+      _ledgerWrite('clear-glass', 'artifact.downloaded', { chatUrl, ...payload });
+      _recordInIndex({ providerId, agentId, chatUrl, filename, savePath, bytes: payload.bytes, mimeType: payload.mimeType, url: payload.url }, log);
     });
   };
 
   session.on('will-download', handler);
   log(`[download-capture] armed for ${providerId} → guardian :${GUARDIAN_PORT}/api/intake`);
-  return { detach() { try { session.removeListener('will-download', handler); } catch (_) {} } };
+  const handle = { detach() { try { session.removeListener('will-download', handler); } catch (_) {} _attached.delete(session); } };
+  _attached.set(session, handle);
+  return handle;
 }
 
 module.exports = { attach, VERSION, MODULE_ID: 'clear-glass.providers.download-capture' };

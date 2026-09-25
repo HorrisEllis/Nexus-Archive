@@ -2,7 +2,7 @@
 /**
  * clear-glass/registry-components.js — Clear Glass System Contract
  * UUID: cg-registry-v1-0000-0000-000000000001
- * Version: 3.11.3
+ * Version: 3.12.0
  *
  * Served at GET /contract from the IPC server (:7702).
  * Verified by orchestrator contract-handshake on boot.
@@ -17,7 +17,7 @@ const NS = 'cg';
 // drift lib/version.js's services['clear-glass'], main/index.js's
 // CG_VERSION, and clear-glass.spec's meta.version all had — found while
 // updating those three, checked here too rather than assumed synced.
-const V  = '3.11.3';
+const V  = '3.12.0';
 
 function _c(id, method, path, desc, opts = {}) {
   return {
@@ -211,6 +211,9 @@ const components = [
   _c('mesh.jobSend', 'POST', '/agent-mesh/send', 'Guardian hands Clear Glass a job it CLAIMED on its .job; the intake verifies the claim via guardian /jobs?id= before queueing (idempotent by jobId)', { tags: ['mesh', 'jobs', 'intake'] }),
   _c('mesh.jobStatus', 'GET', '/agent-mesh/job?jobId={jobId}', 'Status of a mesh job; survives a Clear Glass restart as clear_glass_restarted (sent:null, never resend)', { tags: ['mesh', 'jobs', 'intake'] }),
   _c('mesh.jobIntake', 'GET', '/agent-mesh/intake', 'Jobs Clear Glass has taken in from guardian (only jobs guardian claimed for it on their .job), with each <jobId>.intake record', { tags: ['mesh', 'jobs', 'intake'] }),
+  // v0.39.239 — the downloads index's read side (the Library's Responses tab)
+  _c('downloads.responses',    'GET', '/cli/downloads/responses',     'Agent replies and provider-tab downloads in the downloads index, each filed under its agent; filters agentId, jobId, provider, kind', { tags: ['downloads', 'responses', 'agent'] }),
+  _c('downloads.responseItem', 'GET', '/cli/downloads/responses/:id', 'One downloads-index item in full: the reply text and code blocks, or the downloaded file record', { tags: ['downloads', 'responses', 'agent'] }),
 ];
 
 module.exports = {

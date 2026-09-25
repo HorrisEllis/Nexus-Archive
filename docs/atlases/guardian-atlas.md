@@ -234,3 +234,7 @@ The shared tab still serves a repo job when there's evidence the repo tab isn't 
 `GUARDIAN_REPLAY` no longer completes a job. It used to mark the named job complete with no response; the userscripts no longer send it.
 
 **Open:** the ping gate still pings the provider's active client, not the repo tab the job is aimed at.
+
+## A reply watcher is never silent (3.9.1, v0.39.238)
+
+When a userscript's `findResponseEl()` finds no reply element, the watch now reports a `no-reply-element` progress stage after 15 s and fails the job loudly at the no-reply deadline, naming selector drift. It used to poll forever with nothing in the log — the "submitted, then silence" of the 2026-09-25 run. ChatGPT's `findResponseEl()` returns the streaming element, else the last assistant message; it used to return the first `:last-child` match or nothing.

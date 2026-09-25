@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        clear-glass
-    version:     3.11.3
+    version:     3.12.0
     foundation:  nexus-system-foundation@1.1.0
     port:        7702
     uuid:        nexus-clear-glass-v1-0000-2026-0901-jamesbrooks-001
@@ -56,7 +56,7 @@ spec:
       returns: "Full clear-glass component registry — 79 real components as of 2026-09-22 (was 67 at 2026-09-01)"
 
   handshake:
-    components_count: 97   # §2026-09-22 — was 67 (stale since 2026-09-01); autofill's 7 real
+    components_count: 99   # §2026-09-22 — was 67 (stale since 2026-09-01); autofill's 7 real
                             # IPC methods (shipped 2026-09-19, never registered) and screen-qa's
                             # 5 (this session) both landed in registry-components.js with zero
                             # entries here — checked directly against the live registry export,
@@ -281,6 +281,26 @@ spec:
         opened: 2026-09-25
 
   version_history:
+    - version: 3.12.0
+      date: 2026-09-25
+      summary: >-
+        MINOR (v0.39.239) — the downloads manager routes each response to its agent and can be read. James: "the download
+        manager should be routing the response to the agent or compartment id" / "needs a ui so i can actually see this".
+        src/downloads/artifact-chat-index.js: agent_id and job_id are first-class fields (older .response files read from
+        raw.agentId/raw.jobId), queryItems filters them, readItem(root,id) returns one record (ids that could leave
+        responses/ are refused), defaultRoot() is the ONE root resolver — guardian's writer (code-artifact.js), guardian's
+        recovery (response-sink.js), the new routes and download-capture all use it (four callers resolved it themselves
+        before). src/ipc/bridge.js: GET /cli/downloads/responses and /cli/downloads/responses/:id (read-only; registry
+        97 -> 99, contract routes regenerated from the registry); its command index honours NEXUS_DATA_ROOT so a test
+        starting the bridge no longer rewrites the real data/clear-glass/command-index.json. src/providers/download-capture.js
+        1.1.0: attach() is idempotent per session (every provider window shares one session; each window added a listener,
+        so every download was announced once per open window), each download carries the agentId of the tab it came from
+        (ProviderHost resolves it), the ledger no longer records the provider name as the agent, and each download is
+        recorded in the index under its agent (copied up to 10 MB, else by path). ui/library: a Responses tab
+        (areas/responses.js + .css) lists replies by agent with the reply text and code blocks. Tests:
+        tests/modules/test-downloads-responses.test.js 15/15 on the real writer and the real bridge over HTTP, each fix
+        mutation-checked; the tab driven in headless Chromium. All sync points moved together.
+      versioniumCommitId: null
     - version: 3.11.3
       date: 2026-09-25
       summary: >-

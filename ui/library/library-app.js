@@ -114,6 +114,10 @@
   }
   function empty(msg) { return `<div class="empty-state">${esc(msg)}</div>`; }
 
+  // 0.39.239 — the shared helpers, exposed once so a tab can live in its own
+  // file (ui/library/areas/<tab>.js + .css) instead of growing this one.
+  window.LIB = { api, esc, fmtAgo, fmtBytes, openModal, closeModal, TABS, row, empty, matches, query: () => currentQuery };
+
   // ── Bookmarks ────────────────────────────────────────────────────────
   TABS.bookmarks = {
     async load(q) {
@@ -172,7 +176,7 @@
       if (r.error) return (list.innerHTML = empty(r.error));
       const items = (r.downloads || []).filter((d) => matches(q, d.filename, d.savePath));
       list.innerHTML = items.length ? items.map((d) => row(
-        `${STATE_LABEL[d.state] || d.state} ${esc(d.filename)}`, `${fmtBytes(d.bytes)} • ${esc(d.savePath || '')}`,
+        `${STATE_LABEL[d.state] || d.state} ${esc(d.filename)}`, `${d.agentId ? `${esc(d.agentId)} • ` : ''}${fmtBytes(d.bytes)} • ${esc(d.savePath || '')}`,
         `<span class="hbtn danger" data-del="${esc(d.id)}">REMOVE</span>`,
       )).join('') : empty('No downloads yet.');
       list.querySelectorAll('[data-del]').forEach((el) => el.addEventListener('click', async () => {

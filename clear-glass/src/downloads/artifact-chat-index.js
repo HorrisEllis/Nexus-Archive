@@ -79,6 +79,23 @@ function ensureCompartment(host) {
   return compartment;
 }
 
+/**
+ * defaultRoot() — 0.39.239. THE one place the index's root is resolved: the
+ * COS compartment 'clearglass-downloads-index', created on first use. Guardian's
+ * writer (guardian/lib/code-artifact.js), Clear Glass's download capture and the
+ * Library's read routes all call this, so they cannot drift onto different
+ * folders. Cached per process; a failure throws with the reason.
+ */
+let _defaultRoot = null;
+function defaultRoot() {
+  if (_defaultRoot) return _defaultRoot;
+  const { createHost } = require('../../../cos/host/index.js');
+  const c = ensureCompartment(createHost());
+  const root = c.fs?.root || c.root;
+  if (!root) throw new Error(`compartment '${COMPARTMENT_NAME}' has no root`);
+  return (_defaultRoot = root);
+}
+
 function _paths(root) {
   return {
     root,
@@ -99,6 +116,8 @@ CREATE TABLE IF NOT EXISTS items (
   kind         TEXT NOT NULL,        -- 'chat' | 'artifact'
   provider     TEXT,
   chat_id      TEXT,
+  agent_id     TEXT,                 -- 0.39.239: whose response this is (e.g. repo-<uuid>), first-class, not buried in raw
+  job_id       TEXT,                 -- 0.39.239: the guardian job it answered
   captured_at  INTEGER NOT NULL,
   content_hash TEXT NOT NULL,
   response_path TEXT NOT NULL,
@@ -109,16 +128,28 @@ CREATE INDEX IF NOT EXISTS idx_items_kind     ON items(kind);
 CREATE INDEX IF NOT EXISTS idx_items_chat_id  ON items(chat_id);
 CREATE INDEX IF NOT EXISTS idx_items_provider ON items(provider);
 `;
+const SCHEMA_INDEXES_0_39_239 = `
+CREATE INDEX IF NOT EXISTS idx_items_agent_id ON items(agent_id);
+CREATE INDEX IF NOT EXISTS idx_items_job_id   ON items(job_id);
+`;
 
 function _openDb(p) {
   const Database = _sqlite();
   const db = new Database(p.dbPath);
   db.pragma('journal_mode = WAL'); // real crash-safety for the index layer itself — matches this module's own "the index must never be the single point of failure" reasoning
   db.exec(SCHEMA);
+  // 0.39.239 — an index.db written before agent_id/job_id existed gains them here.
+  const cols = new Set(db.prepare('PRAGMA table_info(items)').all().map(c => c.name));
+  if (!cols.has('agent_id')) db.exec('ALTER TABLE items ADD COLUMN agent_id TEXT');
+  if (!cols.has('job_id'))   db.exec('ALTER TABLE items ADD COLUMN job_id TEXT');
+  db.exec(SCHEMA_INDEXES_0_39_239);
   return db;
 }
 
 function sha256(s) { return crypto.createHash('sha256').update(s).digest('hex'); }
+// 0.39.239 — a .response written before agent_id/job_id were fields still carries them in raw.
+const _agentOf = (r) => (r && (r.agent_id || (r.raw && r.raw.agentId))) || null;
+const _jobOf   = (r) => (r && (r.job_id   || (r.raw && r.raw.jobId)))   || null;
 
 /**
  * recordResponse(root, { kind, provider, chatId, raw, artifactBuffer, artifactFileName })
@@ -128,13 +159,16 @@ function sha256(s) { return crypto.createHash('sha256').update(s).digest('hex');
  * (rebuildIndexFromResponses() picks it up), never an index row
  * pointing at a .response that doesn't exist.
  */
-function recordResponse(root, { kind, provider, chatId, raw, artifactBuffer, artifactFileName }) {
+function recordResponse(root, { kind, provider, chatId, agentId, jobId, raw, artifactBuffer, artifactFileName }) {
   if (kind !== 'chat' && kind !== 'artifact') throw new Error(`recordResponse: kind must be 'chat' or 'artifact', got ${kind}`);
   const p = _paths(root);
   _ensureDirs(p);
 
   const id = crypto.randomUUID();
   const capturedAt = Date.now();
+  // 0.39.239 — who the response belongs to is a field, not something to dig out of raw.
+  const agent = agentId || (raw && raw.agentId) || null;
+  const job   = jobId   || (raw && raw.jobId)   || null;
   const rawJson = JSON.stringify(raw ?? {});
   const contentHash = `sha256:${sha256(rawJson)}`;
 
@@ -149,6 +183,7 @@ function recordResponse(root, { kind, provider, chatId, raw, artifactBuffer, art
 
   const responseFile = {
     id, kind, provider: provider || null, chat_id: chatId || null,
+    agent_id: agent, job_id: job,
     captured_at: capturedAt, content_hash: contentHash,
     artifact_path: artifactPath, raw,
   };
@@ -184,9 +219,9 @@ function recordResponse(root, { kind, provider, chatId, raw, artifactBuffer, art
   try {
     const db = _openDb(p);
     try {
-      db.prepare(`INSERT INTO items (id, kind, provider, chat_id, captured_at, content_hash, response_path, artifact_path, status)
-                  VALUES (@id, @kind, @provider, @chat_id, @captured_at, @content_hash, @response_path, @artifact_path, 'ok')`)
-        .run({ id, kind, provider: provider || null, chat_id: chatId || null, captured_at: capturedAt, content_hash: contentHash, response_path: responseRelPath, artifact_path: artifactPath });
+      db.prepare(`INSERT INTO items (id, kind, provider, chat_id, agent_id, job_id, captured_at, content_hash, response_path, artifact_path, status)
+                  VALUES (@id, @kind, @provider, @chat_id, @agent_id, @job_id, @captured_at, @content_hash, @response_path, @artifact_path, 'ok')`)
+        .run({ id, kind, provider: provider || null, chat_id: chatId || null, agent_id: agent, job_id: job, captured_at: capturedAt, content_hash: contentHash, response_path: responseRelPath, artifact_path: artifactPath });
       indexed = true;
     } finally {
       db.close();
@@ -196,7 +231,7 @@ function recordResponse(root, { kind, provider, chatId, raw, artifactBuffer, art
     console.warn(`[${MODULE_ID}] recordResponse: the .response file is written and durable at ${responseRelPath}, but indexing it failed (${e.message}) — rebuildIndexFromResponses() recovers this`);
   }
 
-  return { id, kind, capturedAt, contentHash, responsePath: responseRelPath, artifactPath, indexed, indexError };
+  return { id, kind, agentId: agent, jobId: job, capturedAt, contentHash, responsePath: responseRelPath, artifactPath, indexed, indexError };
 }
 
 /**
@@ -221,8 +256,8 @@ function rebuildIndexFromResponses(root) {
   const db = _openDb(p);
   let recovered = 0, unreadable = 0;
   try {
-    const insert = db.prepare(`INSERT OR REPLACE INTO items (id, kind, provider, chat_id, captured_at, content_hash, response_path, artifact_path, status)
-                                VALUES (@id, @kind, @provider, @chat_id, @captured_at, @content_hash, @response_path, @artifact_path, @status)`);
+    const insert = db.prepare(`INSERT OR REPLACE INTO items (id, kind, provider, chat_id, agent_id, job_id, captured_at, content_hash, response_path, artifact_path, status)
+                                VALUES (@id, @kind, @provider, @chat_id, @agent_id, @job_id, @captured_at, @content_hash, @response_path, @artifact_path, @status)`);
     const files = fs.existsSync(p.responsesDir) ? fs.readdirSync(p.responsesDir).filter(f => f.endsWith('.response')) : [];
     const rebuildTx = db.transaction((entries) => { for (const e of entries) insert.run(e); });
     const entries = [];
@@ -236,6 +271,7 @@ function rebuildIndexFromResponses(root) {
         entries.push({
           id: parsed.id || id, kind: parsed.kind || 'chat', provider: parsed.provider || null,
           chat_id: parsed.chat_id || null, captured_at: parsed.captured_at || 0,
+          agent_id: _agentOf(parsed), job_id: _jobOf(parsed),
           content_hash: parsed.content_hash || rawHash, response_path: relPath,
           artifact_path: parsed.artifact_path || null, status: 'ok',
         });
@@ -246,7 +282,7 @@ function rebuildIndexFromResponses(root) {
         // gets a real content_hash (of its raw bytes) so a rebuild can
         // tell whether the same broken file persists or was replaced.
         entries.push({
-          id, kind: 'chat', provider: null, chat_id: null, captured_at: 0,
+          id, kind: 'chat', provider: null, chat_id: null, agent_id: null, job_id: null, captured_at: 0,
           content_hash: rawHash, response_path: relPath, artifact_path: null, status: 'unreadable',
         });
         unreadable++;
@@ -268,7 +304,7 @@ function rebuildIndexFromResponses(root) {
  * layer beyond the .response files themselves, and at that point the
  * caller should look at disk directly, not trust another silent retry.
  */
-function queryItems(root, { kind, provider, chatId, limit = 100 } = {}) {
+function queryItems(root, { kind, provider, chatId, agentId, jobId, limit = 100 } = {}) {
   const p = _paths(root);
   const run = () => {
     const db = _openDb(p);
@@ -277,6 +313,8 @@ function queryItems(root, { kind, provider, chatId, limit = 100 } = {}) {
       if (kind)     { clauses.push('kind = @kind');         params.kind = kind; }
       if (provider) { clauses.push('provider = @provider'); params.provider = provider; }
       if (chatId)   { clauses.push('chat_id = @chatId');    params.chatId = chatId; }
+      if (agentId)  { clauses.push('agent_id = @agentId');  params.agentId = agentId; }
+      if (jobId)    { clauses.push('job_id = @jobId');      params.jobId = jobId; }
       const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
       return db.prepare(`SELECT * FROM items ${where} ORDER BY captured_at DESC LIMIT @limit`).all({ ...params, limit });
     } finally {
@@ -302,7 +340,7 @@ function queryItems(root, { kind, provider, chatId, limit = 100 } = {}) {
       // correct. This is what "redundant backups, and fallback chains"
       // has to mean to be real rather than decorative.
       console.warn(`[${MODULE_ID}] queryItems: index unavailable (${e2.message}) — reading responses/ directly`);
-      return _scanResponses(p, { kind, provider, chatId, limit });
+      return _scanResponses(p, { kind, provider, chatId, agentId, jobId, limit });
     }
   }
 }
@@ -311,7 +349,7 @@ function queryItems(root, { kind, provider, chatId, limit = 100 } = {}) {
  *  .response files themselves, newest first. A file that will not parse
  *  is reported with status:'unreadable' rather than skipped silently,
  *  the same rule rebuildIndexFromResponses() already applies. */
-function _scanResponses(p, { kind, provider, chatId, limit = 100 } = {}) {
+function _scanResponses(p, { kind, provider, chatId, agentId, jobId, limit = 100 } = {}) {
   let names;
   try { names = fs.readdirSync(p.responsesDir).filter(n => n.endsWith('.response')); }
   catch (_) { return []; }
@@ -321,7 +359,7 @@ function _scanResponses(p, { kind, provider, chatId, limit = 100 } = {}) {
     let r;
     try { r = JSON.parse(fs.readFileSync(abs, 'utf8')); }
     catch (e) {
-      out.push({ id: name.replace(/\.response$/, ''), kind: null, provider: null, chat_id: null,
+      out.push({ id: name.replace(/\.response$/, ''), kind: null, provider: null, chat_id: null, agent_id: null, job_id: null,
         captured_at: 0, content_hash: null, response_path: path.join('responses', name),
         artifact_path: null, status: 'unreadable', error: e.message });
       continue;
@@ -329,7 +367,9 @@ function _scanResponses(p, { kind, provider, chatId, limit = 100 } = {}) {
     if (kind && r.kind !== kind) continue;
     if (provider && r.provider !== provider) continue;
     if (chatId && r.chat_id !== chatId) continue;
-    out.push({ id: r.id, kind: r.kind, provider: r.provider, chat_id: r.chat_id,
+    if (agentId && _agentOf(r) !== agentId) continue;
+    if (jobId && _jobOf(r) !== jobId) continue;
+    out.push({ id: r.id, kind: r.kind, provider: r.provider, chat_id: r.chat_id, agent_id: _agentOf(r), job_id: _jobOf(r),
       captured_at: r.captured_at, content_hash: r.content_hash,
       response_path: path.join('responses', name), artifact_path: r.artifact_path, status: 'ok' });
   }
@@ -368,6 +408,23 @@ function findResponseByJobId(root, jobId) {
 }
 
 /**
+ * readItem(root, id) — 0.39.239. The full record for one item, read from its
+ * .response file (the source of truth, never the index). The Library's
+ * Responses view opens this to show the reply text and code blocks. The id
+ * must be a plain item id: anything that could leave responses/ is refused.
+ */
+function readItem(root, id) {
+  if (typeof id !== 'string' || !/^[A-Za-z0-9-]{1,80}$/.test(id)) return { error: 'invalid id' };
+  const abs = path.join(_paths(root).responsesDir, `${id}.response`);
+  let text;
+  try { text = fs.readFileSync(abs, 'utf8'); } catch (_) { return null; }
+  try {
+    const r = JSON.parse(text);
+    return { ...r, agent_id: _agentOf(r), job_id: _jobOf(r) };
+  } catch (e) { return { id, status: 'unreadable', error: e.message }; }
+}
+
+/**
  * backupSnapshot(host) — redundant backups via the REAL, existing COS
  * snapshot mechanism (cos/cli/commands/snapshot.js), not a second
  * bespoke backup path. A snapshot captures responses/ and index.db
@@ -381,5 +438,5 @@ function backupSnapshot(host) {
 module.exports = {
   MODULE_ID, COMPARTMENT_NAME,
   ensureCompartment, recordResponse, queryItems, rebuildIndexFromResponses, backupSnapshot,
-  findResponseByJobId,
+  findResponseByJobId, readItem, defaultRoot,
 };

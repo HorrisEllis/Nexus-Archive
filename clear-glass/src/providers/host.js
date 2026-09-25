@@ -354,7 +354,11 @@ class ProviderHost {
     // see lib/intake.js for why arrival must not equal acceptance.
     try {
       const downloadCapture = require('./download-capture.js');
-      downloadCapture.attach({ session: ses, providerId, log: _log });
+      // 0.39.239 — the capture learns which agent tab a download came from; attach() is idempotent per session.
+      downloadCapture.attach({ session: ses, providerId, log: _log, agentIdFor: (wc) => {
+        for (const e of this.agentTabs.values()) { if (e.win && !e.win.isDestroyed() && e.win.webContents === wc) return e.agentId; }
+        return null;
+      } });
     } catch (e) { _logWarn(`[ProviderHost] download-capture not attached for ${providerId}: ${e.message}`); }
 
     ses.webRequest.onHeadersReceived((details, callback) => {

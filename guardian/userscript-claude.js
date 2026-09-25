@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Guardian — Claude v10.0
 // @namespace    nexus.guardian.claude
-// @version      10.3.0
+// @version      10.4.0
 // @description  Guardian v10: IndexedDB kernel, SHA-256 dedup, pre-prompt intelligence
 //               injection, full system widget, connection info, log/ledger, options,
 //               SEAM, queue, tags — fully system aware, no localStorage for state.
@@ -32,7 +32,7 @@ const CORTEX_URL  = 'http://127.0.0.1:3748';
 const INTELLIGENCE_URL = 'http://127.0.0.1:3753'; // intelligence is its own sovereign system (moved out of cortex 2026-09-19)
 const ORCH_URL    = 'http://127.0.0.1:9000';
 const PROVIDER    = 'claude';
-const VERSION    = '10.2.0';
+const VERSION    = '10.4.0';
 // §P113: exponential backoff 3s→30s — eliminates SSE flood on disconnect
 const RECONNECT_MIN_MS = 3000;
 const RECONNECT_MAX_MS = 30000;
@@ -643,6 +643,7 @@ const NO_REPLY_MS = parseInt((typeof GM_getValue === 'function' && GM_getValue('
 function startWatch(jobId, prompt, retryCount = 0) {
   stopWatch();
   currentJobId = jobId; jobActive = true; _watchStart = Date.now();
+  let _noElReported = false; // 0.39.238 — one no-reply-element report per watch
   // §STALE-REPLY FIX 2026-09-22 — James: "it used the first response from the
   // first job for the second attempt." findResponseEl() returns the LAST
   // assistant message, which at job start is the PREVIOUS job's answer — already
@@ -661,7 +662,28 @@ function startWatch(jobId, prompt, retryCount = 0) {
   function checkStable() {
     if (!currentJobId || currentJobId !== jobId) return;
     const el   = findResponseEl();
-    if (!el) { _watchTimer = setTimeout(checkStable, 600); return; }
+    if (!el) {
+      // §NO-ELEMENT 0.39.238 — this branch used to reschedule itself forever:
+      // no progress, no error, no completion (James's 2026-09-25 log: submitted,
+      // then silence). The NO_REPLY_MS deadline below never ran for it. Now the
+      // log says within 15 s that findResponseEl() matches nothing on this page,
+      // and the job fails loudly at the deadline, naming selector drift.
+      const _waited = Date.now() - _watchStart;
+      const _limit = (typeof NO_REPLY_MS !== 'undefined') ? NO_REPLY_MS : 180000;
+      if (!_noElReported && _waited > 15000) {
+        _noElReported = true;
+        send({ type:'GUARDIAN_PROGRESS', jobId, stage:'no-reply-element', how:`${Math.round(_waited/1000)}s`, chatUrl:location.href, ts:Date.now() });
+      }
+      if (_waited > _limit) {
+        stopWatch();
+        _log('gap', 'No reply element', `#${jobId.slice(0,8)} · ${Math.round(_waited/1000)}s`);
+        send({ type:'GUARDIAN_ERROR', jobId, gate:'watch',
+               error:`no reply element found after ${Math.round(_waited/1000)}s — findResponseEl() matched nothing on this page, so the reply could not be read (selector drift, not a missing answer)`,
+               chatUrl:location.href, account:getAccount() });
+        return;
+      }
+      _watchTimer = setTimeout(checkStable, 600); return;
+    }
     const text = (el.innerText || el.textContent || '').trim();
     // Still showing the previous answer: this job has produced nothing yet.
     // §1.2 — after NO_REPLY_MS say so loudly rather than return a stale reply.

@@ -157,6 +157,7 @@ const SUITES = [
   '../dispatcher-agent-tab-trigger.test.js', // §0.39.237 — a repo job goes to its own tab or waits for it; never also the shared tab
   'test-provider-host-one-tab.test.js',   // §0.39.237 — real ProviderHost: agent tabs restart as themselves; intentional closes open nothing
   'test-guardian-replay-retired.test.js', // §0.39.237 — a replay never completes a job; no userscript sends one
+  'test-downloads-responses.test.js',     // §0.39.239 — replies and downloads filed under their agent; Library Responses routes
   'test-cg-accounts-portal-settings.test.js', // §0.39.223 — Clear Glass account authority, login portals, sealed vault keys, settings rebuild
   'test-provider-host-respawn.js',
   'test-userscript-mixed-content-fix.js',

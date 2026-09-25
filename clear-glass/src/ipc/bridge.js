@@ -258,6 +258,36 @@ class IpcBridge {
     // own list({agentId, state}) had no route at all.
     this.app.get('/cli/downloads', (req, res) => res.json({ downloads: this.downloads?.list(req.query) || [] }));
     this.app.delete('/cli/downloads/:id', (req, res) => res.json(this.downloads?.clearItem(req.params.id) || { error: 'downloads unavailable' }));
+    // §RESPONSES 0.39.239 — James: "the download manager should be routing the
+    // response to the agent or compartment id" and "needs a ui so i can actually
+    // see this". Every agent reply guardian completes is already written to
+    // clear-glass/src/downloads/artifact-chat-index.js (guardian/lib/code-artifact.js
+    // recordAgentResponse, since 2026-09-20) — in the COS compartment
+    // 'clearglass-downloads-index' — and nothing could read it back. These two
+    // routes are that read side, for the Library window's Responses tab. The root
+    // comes from the index's own defaultRoot(), the same call guardian's writer
+    // makes, so both sides address the same compartment. Read-only.
+    const _responsesRoot = () => require('../downloads/artifact-chat-index.js').defaultRoot();
+    this.app.get('/cli/downloads/responses', (req, res) => {
+      try {
+        const index = require('../downloads/artifact-chat-index.js');
+        const q = req.query || {};
+        const limit = Math.min(Math.max(parseInt(q.limit, 10) || 200, 1), 1000);
+        const items = index.queryItems(_responsesRoot(), { kind: q.kind || undefined, provider: q.provider || undefined, agentId: q.agentId || undefined, jobId: q.jobId || undefined, limit });
+        // Every agent that has at least one item, so a view can filter without a second call.
+        const agents = {};
+        for (const it of index.queryItems(_responsesRoot(), { limit: 1000 })) { const a = it.agent_id || '(no agent)'; agents[a] = (agents[a] || 0) + 1; }
+        res.json({ ok: true, items, agents });
+      } catch (e) { res.status(503).json({ ok: false, error: `downloads index unavailable: ${e.message}` }); }
+    });
+    this.app.get('/cli/downloads/responses/:id', (req, res) => {
+      try {
+        const r = require('../downloads/artifact-chat-index.js').readItem(_responsesRoot(), req.params.id);
+        if (!r) return res.status(404).json({ ok: false, error: `no response ${req.params.id}` });
+        if (r.error && !r.status) return res.status(400).json({ ok: false, error: r.error });
+        res.json({ ok: true, item: r });
+      } catch (e) { res.status(503).json({ ok: false, error: `downloads index unavailable: ${e.message}` }); }
+    });
     // §BUILT 2026-09-21 — found while wiring library-app.js's downloads
     // tab: downloads:clearCompleted has been a real IPC handler since
     // 2026-09-19 (this.downloads.clearCompleted(), same store as the two
@@ -600,7 +630,12 @@ class IpcBridge {
     const index = this._buildCommandIndex();
     try {
       const fs = require('fs'), path = require('path');
-      const dir = path.join(__dirname, '..', '..', '..', 'data', 'clear-glass');
+      // 0.39.239 — was hard-wired to the real data/ folder, so a test that starts
+      // this bridge rewrote the live command index. Same fix as 0.39.236's stores:
+      // the sandbox is asked first, and NEXUS_DATA_ROOT (set by it in a test
+      // process) wins. In production nothing changes: the default is the same path.
+      try { require('../../../lib/test-sandbox.js').ensure(); } catch (_) {}
+      const dir = path.join(process.env.NEXUS_DATA_ROOT || path.join(__dirname, '..', '..', '..', 'data'), 'clear-glass');
       fs.mkdirSync(dir, { recursive: true });
       fs.writeFileSync(path.join(dir, 'command-index.json'), JSON.stringify(index, null, 2));
       console.log(`[IPC] real command index written — ${index.commandCount} real commands`);

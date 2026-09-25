@@ -245,3 +245,11 @@ An agent tab (`${providerId}::${agentId}`) that crashes or closes unexpectedly r
 `closeAgentTab()` — used by the idle sweep (15 min) and the LRU cap (6 tabs) — marks the window `_nexusIntentionalStop` before destroying it, the same flag `stop()` sets for shared windows. Without it, every intentional agent-tab close looked unexpected and started the shared window 5 s later.
 
 Proven against the real `ProviderHost` class (only `electron` faked): `tests/modules/test-provider-host-one-tab.test.js`, 7/7, each fix mutation-checked.
+
+## The downloads manager files every response under its agent (3.12.0, v0.39.239)
+
+Guardian writes each completed agent reply into the downloads index (`src/downloads/artifact-chat-index.js`, COS compartment `clearglass-downloads-index`), and every file a provider tab downloads is recorded there too. Each item now carries `agent_id` and `job_id` as fields. `defaultRoot()` is the one place the index's folder is resolved; guardian's writer and recovery, the read routes and the download capture all call it.
+
+`GET /cli/downloads/responses` (filters `agentId`, `jobId`, `provider`, `kind`) and `GET /cli/downloads/responses/:id` read it. The Library window's **Responses** tab (`ui/library/areas/responses.js` + `.css`) shows them by agent.
+
+`download-capture` attaches once per provider session — every window of a provider shares one session, and it used to add a listener per window — and resolves which agent tab a download came from.

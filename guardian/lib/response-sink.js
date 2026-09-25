@@ -437,11 +437,9 @@ function synthesize(jobId, deps = {}) {
   // ".response" files, named the same because they hold the same shape
   // of thing, not because they're the same store). §BUILT 2026-09-22.
   try {
-    const { ensureCompartment, findResponseByJobId } = require('../../clear-glass/src/downloads/artifact-chat-index.js');
-    const { createHost } = require('../../cos/host/index.js');
-    const compartment = ensureCompartment(createHost());
-    const root = compartment.fs?.root || compartment.root;
-    const found = findResponseByJobId(root, jobId);
+    // 0.39.239 — root from the index's own defaultRoot(), shared with its writer and readers.
+    const { defaultRoot, findResponseByJobId } = require('../../clear-glass/src/downloads/artifact-chat-index.js');
+    const found = findResponseByJobId(defaultRoot(), jobId);
     if (found && found.raw?.response) {
       return { ok: true, found: true, source: 'downloads', jobId,
         response: found.raw.response, provider: found.provider || 'unknown',

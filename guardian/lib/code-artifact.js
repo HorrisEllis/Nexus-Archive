@@ -331,10 +331,9 @@ function capture({ job, text, dir, stage = true } = {}) {
 function recordAgentResponse({ job, text, blocks } = {}) {
   if (!job || typeof text !== 'string' || !text.trim()) return null;
   try {
-    const { ensureCompartment, recordResponse } = require('../../clear-glass/src/downloads/artifact-chat-index.js');
-    const { createHost } = require('../../cos/host/index.js');
-    const compartment = ensureCompartment(createHost());
-    const root = compartment.fs?.root || compartment.root;
+    // 0.39.239 — root from the index's own defaultRoot(), shared with Clear Glass's readers.
+    const { defaultRoot, recordResponse } = require('../../clear-glass/src/downloads/artifact-chat-index.js');
+    const root = defaultRoot();
 
     const codeBlocks = (blocks || []).map(b => ({
       index: b.index,

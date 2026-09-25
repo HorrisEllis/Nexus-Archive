@@ -36,6 +36,7 @@
   "management list + act against a chosen live agent."
 -->
 <link rel="stylesheet" href="/ui/library/library-app.css">
+<link rel="stylesheet" href="/ui/library/areas/responses.css">
 </head>
 <body>
 
@@ -45,6 +46,7 @@
     <div class="tnav act" data-tab="bookmarks">BOOKMARKS</div>
     <div class="tnav" data-tab="history">HISTORY</div>
     <div class="tnav" data-tab="downloads">DOWNLOADS</div>
+    <div class="tnav" data-tab="responses">RESPONSES</div>
     <div class="tnav" data-tab="accounts">ACCOUNTS</div>
     <div class="tnav" data-tab="macros">MACROS</div>
     <div class="tnav" data-tab="autofill">AUTOFILL</div>
@@ -80,6 +82,15 @@
       <button class="hbtn" id="downloads-refresh">↻ REFRESH</button>
     </div>
     <div class="list" id="downloads-list"><div class="empty-state">loading…</div></div>
+  </div>
+
+  <div class="panel" id="panel-responses">
+    <div class="panel-head">
+      <span>Agent responses</span>
+      <select id="responses-agent" title="Show one agent's responses"><option value="">all agents</option></select>
+      <button class="hbtn" id="responses-refresh">↻ REFRESH</button>
+    </div>
+    <div class="list" id="responses-list"><div class="empty-state">loading…</div></div>
   </div>
 
   <div class="panel" id="panel-accounts">
@@ -133,5 +144,6 @@
 </div>
 
 <script src="/ui/library/library-app.js"></script>
+<script src="/ui/library/areas/responses.js"></script>
 </body>
 </html>
