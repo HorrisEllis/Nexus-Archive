@@ -1,4 +1,6 @@
 'use strict';
+// §SANDBOX 2026-09-25 — this test starts real NEXUS processes; they inherit a throwaway data root from here (lib/test-sandbox.js).
+require('../../lib/test-sandbox.js').ensure();
 /**
  * tests/modules/test-ncp-handler-sr3.js — guardian/lib/ncp-handler.js's
  * real GUARDIAN_COMPLETE path, with focused coverage of the new SR3

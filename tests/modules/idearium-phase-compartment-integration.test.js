@@ -1,3 +1,5 @@
+// §SANDBOX 2026-09-25 — this test starts real NEXUS processes; they inherit a throwaway data root from here (lib/test-sandbox.js).
+require('../../lib/test-sandbox.js').ensure();
 // tests/modules/idearium-phase-compartment-integration.test.js — James's
 // own real boot log caught a real bug the unit-style test in
 // idearium-phase-compartment.test.mjs never could: "compartment spawn

@@ -78,9 +78,8 @@ const SEAM_PREFIX = 'idearium.spec-engine:v1:chunk';
 // the same path — the one that actually caught a leak during testing:
 // fixing the other two alone still let one test-generated spec land in
 // the real directory, traced directly to this line.
-const SPECS_ROOT = process.env.IDEARIUM_DATA_DIR
-  ? path.join(process.env.IDEARIUM_DATA_DIR, 'specs')
-  : path.join(__dirname, '..', 'data', 'specs');
+// §SANDBOX 2026-09-25 — idearium/lib/data-dir.cjs decides (test processes get a temp root).
+const SPECS_ROOT = path.join(_require('../lib/data-dir.cjs').ideariumDataDir(), 'specs');
 
 // ── Cortex mirror tables ──────────────────────────────────────────────────────
 // §DB-MIGRATION 2026-07-15 — spec-engine was the one manifest store still on

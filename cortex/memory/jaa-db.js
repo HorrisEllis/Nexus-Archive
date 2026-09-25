@@ -47,6 +47,10 @@ const { JaaStore } = require('../../guardian/jaa-store');
 // It is also the exact blocker for running NEXUS in a sandbox: the code can be
 // shared read-only, but the STATE must be isolated or a learning agent is
 // experimenting on production memory. One line, and the sandbox becomes possible.
+// §SANDBOX 2026-09-25 — a test process gets a temp JAA_DATA_DIR from
+// lib/test-sandbox.js before this is read (unless the test chose its own).
+// Production: no-op, same path as before.
+require('../../lib/test-sandbox.js').ensure();
 const DATA_DIR = process.env.JAA_DATA_DIR || path.join(__dirname, '../../data/cortex/memory');
 
 // Singleton — one store for the whole process

@@ -3,7 +3,7 @@
 /**
  * cli/clear-idearium.js — clear idearium's idea / spec-library / repo state.
  * UUID: nexus-clear-idearium-v1-0000-2026-0920-jamesbrooks-001
- * Version: 0.1.0
+ * Version: 0.2.0
  *
  * §BUILT 2026-09-20 — James: "none of the repos in idearium right now are
  * real. clear them... empty ideas, spec library, and repos."
@@ -44,6 +44,30 @@
  * would be ceremony, not architecture, and would hide the one thing that
  * actually matters here: the delete order above.
  *
+ * §EXTENDED 0.2.0, 2026-09-25 — James: "the tests need to stop in
+ * idearium. they keep generating." The boot log of that day showed what
+ * the three surfaces above miss: the reconcile had put each leaked spec in
+ * a COMPARTMENT OS compartment (idearium-repo-<8hex>), and guardian had a
+ * repo-agent job for "inject-test-1790345265876" requeued to go back to
+ * ChatGPT. Clearing the tables and files while those survive leaves the
+ * compartments orphaned and the job still dispatching. Added:
+ *   4. repo-scoped JAA tables — repo_agent_log, repo_agent_settings,
+ *      repo_hat_memory (keyed by repoUuid; nothing else lives in them).
+ *   5. idearium/data/nodes/inject/ — repo-inject's node files.
+ *   6. COS compartments named idearium-repo-* / idearium-idea-* — the only
+ *      names idearium's _ensureCompartment() mints.
+ *   7. guardian .job files that carry a repo's project-agent prompt
+ *      ('You are the project agent for "<name>"', lib/repo-hat.js) for a
+ *      repo being cleared. Other guardian jobs are never touched.
+ * And --apply now REFUSES while idearium (:4800) or guardian (:7820)
+ * answers /health: a running idearium holds these rows in memory and its
+ * next flush writes them back — the exact 0.39.121 resurrection above,
+ * across processes — and a running guardian would re-dispatch a job
+ * whose file just vanished. Stop NEXUS, then apply.
+ *
+ * The cause of the leaks is fixed separately (lib/test-sandbox.js); this
+ * clears what already leaked.
+ *
  * Usage:
  *   node cli/clear-idearium.js            # dry-run report (default)
  *   node cli/clear-idearium.js --apply    # actually clear
@@ -67,18 +91,31 @@ const TABLES = [
   'idearium_spec_manifests',
   'idearium_spec_chunks',
   'idearium_spec_chunk_events',
+  // §0.2.0 — repo-scoped (every row keyed by a repoUuid)
+  'repo_agent_log',
+  'repo_agent_settings',
+  'repo_hat_memory',
 ];
 
-const TABLE_DIR = path.join(ROOT, 'data', 'cortex', 'memory');
+// §0.2.0 — the same resolvers the stores use, so this clears exactly where
+// they write (JAA_DATA_DIR / IDEARIUM_DATA_DIR honoured; defaults unchanged).
+const TABLE_DIR = process.env.JAA_DATA_DIR || path.join(ROOT, 'data', 'cortex', 'memory');
+const IDEARIUM_DATA = require(path.join(ROOT, 'idearium', 'lib', 'data-dir.cjs')).ideariumDataDir();
 
 const NODE_DIRS = [
-  path.join(ROOT, 'idearium', 'data', 'nodes', 'repository'),
-  path.join(ROOT, 'idearium', 'data', 'nodes', 'chunk'),
+  path.join(IDEARIUM_DATA, 'nodes', 'repository'),
+  path.join(IDEARIUM_DATA, 'nodes', 'chunk'),
+  path.join(IDEARIUM_DATA, 'nodes', 'inject'),   // §0.2.0
 ];
 
+// §0.2.0 — idearium's _ensureCompartment() names: idearium-repo-<8hex>, idearium-idea-<8hex>.
+const COMPARTMENT_NAME = /^idearium-(repo|idea)-/;
+const JOBS_DIR = process.env.GUARDIAN_JOBS_DIR || path.join(ROOT, 'data', 'guardian', 'jobs');
+const LIVE_PORTS = { idearium: 4800, guardian: 7820 };
+
 const TREE_DIRS = [
-  path.join(ROOT, 'idearium', 'data', 'projects'),
-  path.join(ROOT, 'idearium', 'data', 'specs'),
+  path.join(IDEARIUM_DATA, 'projects'),
+  path.join(IDEARIUM_DATA, 'specs'),
 ];
 
 const APPLY = process.argv.includes('--apply');
@@ -113,12 +150,83 @@ function listTree(dir) {
   return { path: dir, exists: true, entries: fs.readdirSync(dir) };
 }
 
-function inventory() {
+function repoNames() {
+  // Names of every repo/spec being cleared — what a project-agent prompt names.
+  const names = new Set();
+  for (const t of ['idearium_repos', 'idearium_spec_manifests']) {
+    const p = path.join(TABLE_DIR, `${t}.json`);
+    try {
+      const parsed = JSON.parse(fs.readFileSync(p, 'utf8'));
+      const rows = Array.isArray(parsed) ? parsed : (parsed?.rows || []);
+      for (const r of rows) if (r && typeof r.name === 'string' && r.name) names.add(r.name);
+    } catch (_) {}
+  }
+  const specs = path.join(IDEARIUM_DATA, 'specs');
+  if (fs.existsSync(specs)) for (const d of fs.readdirSync(specs)) {
+    try { const m = JSON.parse(fs.readFileSync(path.join(specs, d, 'manifest.json'), 'utf8')); if (m.name) names.add(m.name); } catch (_) {}
+  }
+  return names;
+}
+
+function listCompartments() {
+  let bridge;
+  try { bridge = require(path.join(ROOT, 'lib', 'cos-bridge.js')); }
+  catch (e) { return { available: false, reason: e.message, items: [] }; }
+  if (!bridge.available()) return { available: false, reason: String(bridge.lastError() || 'COS host unavailable'), items: [] };
+  const items = (bridge.listCompartments() || []).filter(c => c && COMPARTMENT_NAME.test(c.name || ''))
+    .map(c => ({ id: c.id || c.compartmentId, name: c.name, purpose: c.purpose || '' }));
+  return { available: true, items };
+}
+
+function listRepoJobs(names) {
+  if (!fs.existsSync(JOBS_DIR)) return { path: JOBS_DIR, exists: false, files: [] };
+  const files = [];
+  for (const f of fs.readdirSync(JOBS_DIR)) {
+    if (!f.endsWith('.job')) continue;
+    let src = '';
+    try { src = fs.readFileSync(path.join(JOBS_DIR, f), 'utf8'); } catch (_) { continue; }
+    const m = src.match(/You are the project agent for \\?"([^"\\]+)\\?"/);
+    if (m && names.has(m[1])) files.push({ file: f, repo: m[1] });
+  }
+  return { path: JOBS_DIR, exists: true, files };
+}
+
+function inventory(names = repoNames()) {
   return {
     tables:   TABLES.map(readTable).map((t, i) => ({ name: TABLES[i], ...t })),
     nodeDirs: NODE_DIRS.map(listDir),
     treeDirs: TREE_DIRS.map(listTree),
+    compartments: listCompartments(),
+    jobs: listRepoJobs(names),
+    repoNames: [...names].sort(),
   };
+}
+
+function probeLive(port) {
+  // Synchronous on purpose: a one-shot CLI deciding whether it may write.
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, ['-e',
+    `require('http').get({host:'127.0.0.1',port:${port},path:'/health',timeout:1500},res=>{process.exit(0)}).on('error',()=>process.exit(1)).on('timeout',function(){this.destroy();process.exit(1)})`],
+    { timeout: 4000 });
+  return r.status === 0;
+}
+
+function clearCompartments(report, inv) {
+  report.compartments = { removed: 0, failed: [] };
+  if (!inv.compartments.available) { report.compartments.skipped = inv.compartments.reason; return; }
+  const bridge = require(path.join(ROOT, 'lib', 'cos-bridge.js'));
+  for (const c of inv.compartments.items) {
+    const r = bridge.destroyCompartment(c.name, { wipe: true, force: true });
+    if (r.ok) report.compartments.removed++; else report.compartments.failed.push(`${c.name}: ${r.error}`);
+  }
+}
+
+function clearJobs(report, inv) {
+  report.jobs = { removed: 0, failed: [] };
+  for (const j of inv.jobs.files) {
+    try { fs.unlinkSync(path.join(JOBS_DIR, j.file)); report.jobs.removed++; }
+    catch (e) { report.jobs.failed.push(`${j.file}: ${e.message}`); }
+  }
 }
 
 // ── Pass 1 — the live jaaDB singleton ─────────────────────────────────────────
@@ -213,6 +321,13 @@ function printInventory(inv) {
     const rel = path.relative(ROOT, d.path);
     console.log(`    ${rel.padEnd(40)} ${d.exists ? `${d.entries.length} entr(y|ies)` : 'absent'}`);
   }
+  console.log('\n  Repos/specs being cleared (by name)');
+  console.log(inv.repoNames.length ? inv.repoNames.map(n => `    ${n}`).join('\n') : '    (none)');
+  console.log('\n  COMPARTMENT OS compartments (idearium-repo-* / idearium-idea-*)');
+  if (!inv.compartments.available) console.log(`    COS unavailable — ${inv.compartments.reason}`);
+  else console.log(inv.compartments.items.length ? inv.compartments.items.map(c => `    ${c.name}  ${c.purpose ? '— ' + c.purpose : ''}`).join('\n') : '    (none)');
+  console.log(`\n  guardian .job files for those repos (${path.relative(ROOT, inv.jobs.path) || inv.jobs.path})`);
+  console.log(inv.jobs.files.length ? inv.jobs.files.map(j => `    ${j.file}  → project agent for "${j.repo}"`).join('\n') : '    (none)');
 }
 
 function main() {
@@ -226,8 +341,16 @@ function main() {
     const totalNodes = before.nodeDirs.reduce((n, d) => n + d.files.length, 0);
     const totalTrees = before.treeDirs.reduce((n, d) => n + d.entries.length, 0);
     console.log(`\n  DRY RUN — nothing removed.`);
-    console.log(`  Would clear ${totalRows} table row(s), ${totalNodes} node file(s), ${totalTrees} tree entr(y|ies).`);
+    console.log(`  Would clear ${totalRows} table row(s), ${totalNodes} node file(s), ${totalTrees} tree entr(y|ies), ${before.compartments.items.length} compartment(s), ${before.jobs.files.length} guardian job(s).`);
     console.log(`  Re-run with --apply to actually clear.\n`);
+    return;
+  }
+
+  const live = Object.entries(LIVE_PORTS).filter(([, port]) => probeLive(port)).map(([n, port]) => `${n} :${port}`);
+  if (live.length) {
+    console.error(`\n  REFUSING --apply: ${live.join(', ')} is running. A running idearium writes its in-memory rows`);
+    console.error('  back on its next flush, and a running guardian re-dispatches queued jobs. Stop NEXUS, then re-run.\n');
+    process.exitCode = 2;
     return;
   }
 
@@ -239,9 +362,11 @@ function main() {
   truncateTables(report);
   clearNodeDirs(report);
   clearTreeDirs(report);
+  clearCompartments(report, before);
+  clearJobs(report, before);
 
   // Verify against the real store rather than trusting the writes.
-  report.after = inventory();
+  report.after = inventory(new Set(before.repoNames));   // same names: the tables naming them are gone now
 
   if (JSON_OUT) { console.log(JSON.stringify(report, null, 2)); return; }
 
@@ -250,10 +375,12 @@ function main() {
     : `unavailable (${report.jaa.reason}) — file pass still applied`);
   console.log('  tables:', Object.entries(report.tables).map(([k, v]) => `${k}=${v}`).join(', '));
   for (const [k, v] of Object.entries(report.nodes)) {
+    if (typeof v === 'string') { console.log(`  ${k}: ${v}`); continue; }
     console.log(`  ${k}: removed ${v.removed}${v.failed?.length ? `, FAILED ${v.failed.length}` : ''}`);
     (v.failed || []).forEach(f => console.log(`      ! ${f}`));
   }
   for (const [k, v] of Object.entries(report.trees)) {
+    if (typeof v === 'string') { console.log(`  ${k}: ${v}`); continue; }
     console.log(`  ${k}: removed ${v.removed}${v.failed?.length ? `, FAILED ${v.failed.length}` : ''}`);
     (v.failed || []).forEach(f => console.log(`      ! ${f}`));
   }
@@ -261,9 +388,16 @@ function main() {
   const rowsLeft  = report.after.tables.reduce((n, t) => n + t.rows, 0);
   const nodesLeft = report.after.nodeDirs.reduce((n, d) => n + d.files.length, 0);
   const treesLeft = report.after.treeDirs.reduce((n, d) => n + d.entries.length, 0);
-  const clean = rowsLeft === 0 && nodesLeft === 0 && treesLeft === 0;
+  for (const k of ['compartments', 'jobs']) {
+    const v = report[k];
+    console.log(`  ${k}: ${v.skipped ? `skipped (${v.skipped})` : `removed ${v.removed}`}${v.failed.length ? `, FAILED ${v.failed.length}` : ''}`);
+    v.failed.forEach(f => console.log(`      ! ${f}`));
+  }
+  const compsLeft = report.after.compartments.items.length;
+  const jobsLeft  = report.after.jobs.files.length;
+  const clean = rowsLeft === 0 && nodesLeft === 0 && treesLeft === 0 && compsLeft === 0 && jobsLeft === 0;
 
-  console.log(`\n  VERIFIED AFTER: ${rowsLeft} row(s), ${nodesLeft} node file(s), ${treesLeft} tree entr(y|ies) remaining.`);
+  console.log(`\n  VERIFIED AFTER: ${rowsLeft} row(s), ${nodesLeft} node file(s), ${treesLeft} tree entr(y|ies), ${compsLeft} compartment(s), ${jobsLeft} guardian job(s) remaining.`);
   console.log(clean ? '  Clear.\n' : '  NOT CLEAN — see failures above.\n');
   if (!clean) process.exitCode = 1;
 }

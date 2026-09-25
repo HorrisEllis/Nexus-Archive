@@ -93,7 +93,7 @@ function _latticeLink(a, b, w = 0.7, t = 'associated') {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-export const VERSION   = '4.2.0';   // §5.4 fix 2026-08-08 — was 3.0.0, drifted from canonical lib/version.js's services.idearium (3.2.0)
+export const VERSION   = '4.2.1';   // §5.4 fix 2026-08-08 — was 3.0.0, drifted from canonical lib/version.js's services.idearium (3.2.0)
                                      // §2026-09-22 — real bump: eravos mods in the New Spec picker + Brainstorm AI assistance. See idearium.spec's meta.version comment.
                                      // §5.4 fix 2026-09-13 — same drift recurred: idearium/package.json had moved
                                      // on to 4.1.0 through the 2026-09-03 "idearium 3.3.0" session and beyond,
@@ -149,7 +149,8 @@ const SNR_WINDOW = 50;
 // left on disk afterward, untouched, as an archive (§7.4).
 // §FIXED 2026-09-06 — same real fix as idearium/api/index.js's
 // IDEARIUM_DATA_DIR (see that file's own comment for the full finding).
-const DATA_DIR = process.env.IDEARIUM_DATA_DIR || join(__dir, '../data');
+// §SANDBOX 2026-09-25 — idearium/lib/data-dir.cjs decides (test processes get a temp root).
+const DATA_DIR = _require('./lib/data-dir.cjs').ideariumDataDir();
 const DB_FILE  = join(DATA_DIR, 'idearium.json');
 
 function ensureDataDir() {
@@ -246,8 +247,9 @@ export class IdeaOS {
       // same drop-in surface as cortex/guardian/bridge/orchestrator.
       const { createCFRLedger } = _require('../intelligence/cfr/ledger');
       this._evLedger = createCFRLedger({
-        ledgerDir: _require('path').join(_require('path').dirname(
-          _require('url').fileURLToPath(import.meta.url)), '../data/idearium'),
+        // §SANDBOX 2026-09-25 — same data/idearium as before in production;
+        // a test's own sandbox otherwise (it wrote the real one on every run).
+        ledgerDir: _require('./lib/data-dir.cjs').ideariumLedgerDir(),
         systemId: 'idearium',
       });
       this._evLedger.open();

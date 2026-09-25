@@ -27,6 +27,11 @@ const DEFAULT_SSE_PORT = 3749;
 // for development compatibility.
 
 function getCosDataRoot() {
+  // §SANDBOX 2026-09-25 — COMPARTMENT OS had no override at all, so every
+  // test that created a compartment made a real folder under %APPDATA%.
+  // COS_DATA_ROOT is the override; lib/test-sandbox.js sets it for tests.
+  require('../../lib/test-sandbox.js').ensure();
+  if (process.env.COS_DATA_ROOT) return path.resolve(process.env.COS_DATA_ROOT);
   if (process.platform === 'win32') {
     const appData = process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming');
     return path.join(appData, 'CompartmentOS');

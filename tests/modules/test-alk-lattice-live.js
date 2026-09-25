@@ -26,6 +26,10 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const http = require('http');
+// §SANDBOX 2026-09-25 — this test reads what the live store really holds.
+// It now reads a copy of it (lib/test-sandbox.js seedFromReal), so nothing
+// it or autopilot's handlers write can land in the real data/cortex/memory.
+require('../../lib/test-sandbox.js').seedFromReal('JAA_DATA_DIR');
 let passed = 0, failed = 0;
 async function test(id, desc, fn) {
   try { await fn(); console.log(`  ✓ ${id} ${desc}`); passed++; }

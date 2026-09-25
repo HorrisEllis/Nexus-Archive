@@ -1,6 +1,9 @@
 // spec-promote — the idea→repo link. UUID: idearium-spec-promote-test-v1-2026-0710
 // "Idearium isn't importing ideas into the repository library." This is the fix:
 // a built spec becomes a repo artifact, two modes (emerge auto / manual builder).
+// §SANDBOX 2026-09-25 — this test starts real NEXUS processes; they inherit a throwaway data root from here (lib/test-sandbox.js).
+import { createRequire as __sandboxRequire } from 'module';
+__sandboxRequire(import.meta.url)('../../lib/test-sandbox.js').ensure();
 import assert from 'assert';
 import { spawn } from 'child_process';
 import http from 'http';

@@ -40,6 +40,7 @@
  * §A-flex declarative: a repo is data, the layer is thin — thinner now than v1.
  */
 
+import { createRequire } from 'module';
 import fs from 'fs';
 import path from 'path';
 import { randomUUID } from 'crypto';
@@ -61,7 +62,7 @@ export class RepoLayer {
     // a RepoLayer constructed before that load finishes still sees it once
     // ready, instead of permanently caching a null snapshot).
     this._seGetter = typeof specEngine === 'function' ? specEngine : () => specEngine;
-    this.dataDir = dataDir || process.env.IDEARIUM_DATA_DIR || path.join(__dirname, '..', 'data');
+    this.dataDir = dataDir || createRequire(import.meta.url)('../lib/data-dir.cjs').ideariumDataDir();   // §SANDBOX 2026-09-25 — idearium/lib/data-dir.cjs decides (test processes get a temp root).
     this.reposFile = path.join(this.dataDir, REPOS_FILE_NAME);
     this.repos = this._load();
   }

@@ -366,7 +366,12 @@ for (const f of files) {
   if (/^\s*\/\/ ==UserScript==/m.test(src)) continue;
   const REQUIRES_ELECTRON = /require\(\s*['"]electron['"]\s*\)/.test(src);
 
-  const req = spawnSync(process.execPath, ['-e', `require(${JSON.stringify(full)})`], { cwd: ROOT, encoding: 'utf8', timeout: 8000 });
+  // §SANDBOX 2026-09-25 — this require() really starts servers (cortex/boot.js
+  // stays alive until the timeout) from the LIVE tree. It is a probe, so its
+  // data goes to a throwaway root like any test's (lib/test-sandbox.js).
+  const _sb = require(path.join(ROOT, 'lib', 'test-sandbox.js')).childEnv();
+  const req = spawnSync(process.execPath, ['-e', `require(${JSON.stringify(full)})`], { cwd: ROOT, encoding: 'utf8', timeout: 8000, env: _sb.env });
+  _sb.cleanup();
   // §CORRECTED, found by testing before shipping: a real, long-running
   // server (cortex/boot.js, confirmed) correctly stays alive and gets
   // killed by the timeout below — that's status:null, signal:'SIGTERM',

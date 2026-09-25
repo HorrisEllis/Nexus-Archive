@@ -1,5 +1,7 @@
 'use strict';
 
+// §SANDBOX 2026-09-25 — this test starts real NEXUS processes; they inherit a throwaway data root from here (lib/test-sandbox.js).
+require('../../lib/test-sandbox.js').ensure();
 /**
  * tests/modules/mco15-component-exec-test.test.js
  *

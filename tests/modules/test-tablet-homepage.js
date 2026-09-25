@@ -1,4 +1,6 @@
 'use strict';
+// §SANDBOX 2026-09-25 — this test starts real NEXUS processes; they inherit a throwaway data root from here (lib/test-sandbox.js).
+require('../../lib/test-sandbox.js').ensure();
 // OB5 (v2, rebuilt) — an actual tablet: device frame, per-system CLI, capitalized
 // names, tv-shell-consistent icons, sovereign floating menu button. Plus OB6
 // continuous diagnostic injection into the ollama stream digest.

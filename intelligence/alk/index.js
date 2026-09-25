@@ -30,6 +30,8 @@ const path           = require('path');
 const { CausalGraph } = require('../../intelligence/cfr/graph.js');
 
 const ROOT      = path.join(__dirname, '../..');
+// §SANDBOX 2026-09-25 — tests get a temp NEXUS_DATA_ROOT (lib/test-sandbox.js).
+require('../../lib/test-sandbox.js').ensure();
 const DATA_DIR  = process.env.NEXUS_DATA_ROOT
   ? path.join(process.env.NEXUS_DATA_ROOT, 'alk')
   : path.join(ROOT, 'data', 'alk');

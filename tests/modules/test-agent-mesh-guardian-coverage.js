@@ -1,4 +1,6 @@
 'use strict';
+// §SANDBOX 2026-09-25 — this test starts real NEXUS processes; they inherit a throwaway data root from here (lib/test-sandbox.js).
+require('../../lib/test-sandbox.js').ensure();
 /**
  * tests/modules/test-agent-mesh-guardian-coverage.js — real, functional
  * tests for the DA1 fix: clear-glass/src/mesh/agent-mesh.js's route()

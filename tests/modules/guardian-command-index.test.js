@@ -1,3 +1,5 @@
+// §SANDBOX 2026-09-25 — this test starts real NEXUS processes; they inherit a throwaway data root from here (lib/test-sandbox.js).
+require('../../lib/test-sandbox.js').ensure();
 // tests/modules/guardian-command-index.test.js — docs/command-index-
 // per-system.spec's build_order.phase-3 exit criteria, verbatim: "GET
 // /commands count matches a fresh grep count of guardian/server.js's

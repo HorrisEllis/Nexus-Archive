@@ -1365,6 +1365,7 @@ let _testRunActive = false;
 // already-fast set of 8 real NCP/agent fixes (not the full test suite,
 // which would meaningfully delay every single boot for tests unrelated
 // to whether the system can actually dispatch to an agent).
+const VITALS_TIMEOUT_MS = 180000;
 function _runVitalsCheck() {
   const { spawn } = require('child_process');
   const vitalsFile = path.join(ROOT, 'tests', 'verify-ncp-agents.js');
@@ -1373,11 +1374,20 @@ function _runVitalsCheck() {
     return;
   }
   _log('running post-boot vitals check (tests/verify-ncp-agents.js — 8 real NCP/agent fixes)...');
-  const proc = spawn(process.execPath, [vitalsFile], { cwd: ROOT });
+  // §SANDBOX 2026-09-25 — this runs on every boot, from the LIVE tree, while
+  // the live system is up. Its suites get a throwaway data root so a check
+  // can never leave anything in idearium, cortex memory or COMPARTMENT OS.
+  const sb = require('../lib/test-sandbox.js').childEnv();
+  const proc = spawn(process.execPath, [vitalsFile], { cwd: ROOT, env: sb.env });
+  proc.on('close', sb.cleanup);
   let out = '';
   const cap = (c) => { out += c.toString(); };
   proc.stdout.on('data', cap); proc.stderr.on('data', cap);
-  const timer = setTimeout(() => { try { proc.kill('SIGKILL'); } catch (_) {} }, 30000);
+  // §FIX 2026-09-25 — was 30000ms for the WHOLE check, while the check runs
+  // 9 suites with up to 30s each. On James's machine (boot log 2026-09-25)
+  // it was killed mid-run every boot: "✗ VITALS CHECK FAILED — (no summary
+  // line captured)" — a failure report about the timer, not about any fix.
+  const timer = setTimeout(() => { try { proc.kill('SIGKILL'); } catch (_) {} }, VITALS_TIMEOUT_MS);
   proc.on('exit', (code) => {
     clearTimeout(timer);
     const summaryLine = out.split('\n').find(l => l.includes('REAL FIXES VERIFIED') || l.includes('have REGRESSED')) || '(no summary line captured)';
@@ -1415,10 +1425,14 @@ function _handleRunTests(req, res) {
   if (_testRunActive) return _ledgerJson(res, 409, { ok: false, error: 'a test run is already active — one at a time' });
   _testRunActive = true;
   const { spawn } = require('child_process');
+  // §SANDBOX 2026-09-25 — run-all gives each suite its own root; this marks
+  // the runner itself as a test process too.
+  const sb = require('../lib/test-sandbox.js').childEnv({ ...process.env, NEXUS_TEST_RUN_DEPTH: '1' });
   const proc = spawn(process.execPath, [path.join(ROOT, 'tests', 'modules', 'run-all.js'), `--filter=${name}`], {
     cwd: ROOT,
-    env: { ...process.env, NEXUS_TEST_RUN_DEPTH: '1' },
+    env: sb.env,
   });
+  proc.on('close', sb.cleanup);
   let out = '';
   const cap = (c) => { out += c.toString(); if (out.length > 60000) out = out.slice(-60000); };
   proc.stdout.on('data', cap); proc.stderr.on('data', cap);

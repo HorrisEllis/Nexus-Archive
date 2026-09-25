@@ -97,7 +97,8 @@ function _cfg() {
 
 function _nodesDir(cfg) {
   const rel = (cfg && cfg.chunking && cfg.chunking.chunk_nodes_dir) || 'data/nodes/chunk';
-  return path.isAbsolute(rel) ? rel : path.join(__dirname, '..', rel);
+  // §SANDBOX 2026-09-25 — 'data/…' now follows idearium's data dir (was always idearium/data, even in tests).
+  return require('./data-dir.cjs').resolveIdeariumPath(rel);
 }
 
 /**

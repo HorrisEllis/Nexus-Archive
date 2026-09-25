@@ -41,6 +41,7 @@
  *     copy of it) before ever returning to the cascade.
  */
 
+import { createRequire } from 'module';
 import { createWarpDispatch } from '../../lib/seam/adapters/warp-cascade.js';
 import { FlatFileCrystallizer } from '../../warp/plugins/crystallizer-flatfile.js';
 import { PopulationStore } from '../../warp/dispatch/population.js';
@@ -60,7 +61,7 @@ function _getCache() {
   // Same real classes ollama/server.js already runs in production —
   // not a reimplementation, one cache file scoped to idearium's own builds.
   if (!_crystallizer) {
-    const dataDir = process.env.IDEARIUM_DATA_DIR || path.join(__dirname, '..', 'data');
+    const dataDir = createRequire(import.meta.url)('../lib/data-dir.cjs').ideariumDataDir();   // §SANDBOX 2026-09-25 — idearium/lib/data-dir.cjs decides (test processes get a temp root).
     // §BUG CAUGHT BEFORE IT SHIPPED — FlatFileCrystallizer.set() calls
     // fs.writeFileSync(this._path, ...) directly, no parent-directory
     // creation. idearium/data/ didn't exist. The first successful chunk

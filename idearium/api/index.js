@@ -184,7 +184,8 @@ import { fileURLToPath as _fileURLToPath, pathToFileURL as _pathToFileURL } from
 // found and removed from idearium/data/specs/ this same pass, alongside
 // the 3 genuinely real ones (brainos-real-import x3). IDEARIUM_DATA_DIR
 // env var lets a test point this somewhere real-but-disposable instead.
-const IDEARIUM_DATA_DIR = process.env.IDEARIUM_DATA_DIR || path.join(path.dirname(_fileURLToPath(import.meta.url)), '..', 'data');
+// §SANDBOX 2026-09-25 — idearium/lib/data-dir.cjs decides (test processes get a temp root).
+const IDEARIUM_DATA_DIR = _require('../lib/data-dir.cjs').ideariumDataDir();
 import { dispatchChunkWithVerification } from '../spec-engine/chunk-dispatch.js';
 import { LANG_TO_EXT } from '../../lib/extract-code.js';
 // §BUILT 2026-09-19 — real source-code extensions this dispatch path

@@ -142,6 +142,16 @@ Not enumerated this session.
 
 ---
 
+## Where idearium writes (and where a test writes)
+
+Every idearium data path comes from `idearium/lib/data-dir.cjs`: `ideariumDataDir()` for idearium/data (specs, nodes, projects, drop, the WARP cache) and `ideariumLedgerDir()` for its event ledger in the shared data root (data/idearium/). Nothing else in idearium computes a data path; `tests/modules/test-test-sandbox.test.js` fails if one reappears.
+
+In production both return exactly what they always did. In a test process they return a throwaway root made by `lib/test-sandbox.js`, as do cortex memory and COMPARTMENT OS. This is why a test can no longer leave specs behind for the boot reconcile to adopt, build and send to an agent (2026-09-25).
+
+What leaked before 0.39.236 is cleared with `node cli/clear-idearium.js` (dry run first; `--apply` only with NEXUS stopped — it refuses otherwise). It covers the idearium tables, repo-scoped tables, node files, projects, specs, the `idearium-repo-*`/`idearium-idea-*` compartments, and guardian jobs carrying a cleared repo's project-agent prompt.
+
+---
+
 ## Modules Not Yet Built
 
 Not determined comprehensively — no single `idearium.spec` gaps/history section was read this session (if one exists at all; not confirmed).

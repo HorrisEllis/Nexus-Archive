@@ -390,6 +390,10 @@ const SUITES = [
   'guardian-picker-answer-roundtrip.test.js',
   'nexus-cli-switch.test.js',
   'node-index-watcher.test.js',
+
+  // §2026-09-25 (0.39.236) — tests never write real data
+  'test-test-sandbox.test.js',
+  'test-clear-idearium.test.js',
 ];
 
 let totalPassed = 0;
@@ -399,10 +403,18 @@ const results = [];
 async function runSuite(file) {
   return new Promise((resolve) => {
     const { spawn } = require('child_process');
+    // §SANDBOX 2026-09-25 — every suite gets its own throwaway data root
+    // (idearium, cortex memory, COMPARTMENT OS, inject nodes). The suite
+    // would also get one by itself (lib/test-sandbox.js), but giving it here
+    // means anything it spawns before touching a store is covered too, and
+    // no two suites share leftovers.
+    const sb = require('../../lib/test-sandbox.js').childEnv();
     const proc = spawn('node', [path.join(MODULES_DIR, file)], {
       cwd: path.join(__dirname, '../..'),
       stdio: ['ignore', 'pipe', 'pipe'],
+      env: sb.env,
     });
+    proc.on('close', sb.cleanup);
 
     let out = '';
     let settled = false;

@@ -1,4 +1,6 @@
 'use strict';
+// §SANDBOX 2026-09-25 — this test starts real NEXUS processes; they inherit a throwaway data root from here (lib/test-sandbox.js).
+require('../../lib/test-sandbox.js').ensure();
 /**
  * tests/modules/test-cortex-heartbeat.js — real regression test for the
  * 2026-07-24 fix: cortex was the only one of orchestrator's 3

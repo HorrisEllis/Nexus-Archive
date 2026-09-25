@@ -36,6 +36,10 @@ async function test(id, desc, fn) {
 }
 
 const ROOT = path.join(__dirname, '../..');
+// §SANDBOX 2026-09-25 — this test reads what the live store really holds.
+// It now reads a copy of it (lib/test-sandbox.js seedFromReal), so nothing
+// it or autopilot's handlers write can land in the real data/cortex/memory.
+require('../../lib/test-sandbox.js').seedFromReal('JAA_DATA_DIR');
 const { _handleGraphRead } = require('../../nexus/autopilot.js');
 
 let server, PORT;

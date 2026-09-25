@@ -25,6 +25,7 @@
  * now would be scope this pass doesn't call for.
  */
 
+import { createRequire } from 'module';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -36,7 +37,8 @@ export const MODULE_ID = 'idearium-repo-node';
 let _lastError = null;
 
 function _nodesDir() {
-  return path.join(__dirname, '..', 'data', 'nodes', 'repository');
+  // §SANDBOX 2026-09-25 — was hardcoded, ignoring IDEARIUM_DATA_DIR: even an isolated test wrote here.
+  return path.join(createRequire(import.meta.url)('../lib/data-dir.cjs').ideariumDataDir(), 'nodes', 'repository');
 }
 
 /**

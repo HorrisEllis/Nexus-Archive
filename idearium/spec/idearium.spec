@@ -1,7 +1,13 @@
 spec:
   meta:
     name:        idearium
-    version:     4.2.0   # §5.4 drift fix 2026-09-13 — was 3.2.0, out of sync with
+    version:     4.2.1   # §2026-09-25 (PATCH, no API change) — every idearium
+                         # data path goes through idearium/lib/data-dir.cjs, and a
+                         # test process gets a throwaway root (lib/test-sandbox.js);
+                         # repo-node.js and chunk-nodes.js stopped ignoring
+                         # IDEARIUM_DATA_DIR; the event ledger follows
+                         # NEXUS_DATA_ROOT. See lib/version.js 0.39.236.
+                         # 4.2.0: §5.4 drift fix 2026-09-13 — was 3.2.0, out of sync with
                          # idearium/package.json's 4.1.0 since at least the
                          # 2026-09-03 "idearium 3.3.0" session. package.json is
                          # the one actually bumped per-release; this field had

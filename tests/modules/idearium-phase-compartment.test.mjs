@@ -9,6 +9,9 @@
 // compartment for that idea's own real text; the idea's real `compartment`
 // field (already an IdeaUpdateGate-allowed field, previously never
 // populated by anything) really gets set to that real compartment's id.
+// §SANDBOX 2026-09-25 — this test starts real NEXUS processes; they inherit a throwaway data root from here (lib/test-sandbox.js).
+import { createRequire as __sandboxRequire } from 'module';
+__sandboxRequire(import.meta.url)('../../lib/test-sandbox.js').ensure();
 import assert from 'assert';
 const { IdeaOS } = await import('../../idearium/index.js');
 const { classify, freeze } = await import('../../lib/intent-classifier.js');
