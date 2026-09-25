@@ -1,0 +1,39 @@
+envelope: 1
+uuid: nexus-export-chunk-drumpad.25a1dced-3ef5-455b-840f-f417e99e4573.7f87538f-b012-4db7-a639-be97e70b7e83
+type: chunk
+id: drumpad.25a1dced-3ef5-455b-840f-f417e99e4573.7f87538f-b012-4db7-a639-be97e70b7e83
+context: idearium spec-engine chunk of spec 25a1dced-3ef5-455b-840f-f417e99e4573
+intent: null
+summary: env-example (complete)
+system: idearium
+tags:
+  - spec:25a1dced-3ef5-455b-840f-f417e99e4573
+  - status:complete
+  - section:env-example
+  - specName:drumpad
+  - agent:chatgpt
+exported_at: 1790345058583
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1790345058583
+lastSeenAt: 1790345058583
+fingerprint: null
+payload:
+  uuid: 7f87538f-b012-4db7-a639-be97e70b7e83
+  specUuid: 25a1dced-3ef5-455b-840f-f417e99e4573
+  sectionId: env-example
+  sectionTitle: .env.example
+  chunkIdx: 2
+  status: complete
+  realPath: .env.example
+  fileName: 02-env-example.md
+  filePath: /tmp/ftp-idearium-SWXAaJ/specs/25a1dced-3ef5-455b-840f-f417e99e4573/02-env-example-7f87538f.example
+  agent: chatgpt
+  agentModel: null
+  attempts: 0
+  failureMode: null
+  byteSize: 415
+  contentHash: 0b708d7fbe68e29e6e81a675af1ff69b4aa426d5afea3fa382c92c7ace59f6c8
+  createdAt: 1790345058573
+  updatedAt: 1790345058582
+  completedAt: 1790345058582

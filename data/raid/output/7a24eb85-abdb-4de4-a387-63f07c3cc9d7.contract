@@ -1,0 +1,126 @@
+envelope: 1
+uuid: nexus-export-contract-7a24eb85-abdb-4de4-a387-63f07c3cc9d7
+type: contract
+id: 7a24eb85-abdb-4de4-a387-63f07c3cc9d7
+context: null
+intent: null
+summary: null
+system: null
+tags: []
+exported_at: 1790345350382
+source: test
+occurrences: 1
+firstSeenAt: 1790345350382
+lastSeenAt: 1790345350382
+fingerprint: null
+payload:
+  queueId: 7a24eb85-abdb-4de4-a387-63f07c3cc9d7
+  status: fail
+  verdict: FAIL
+  trace_log:
+    - event: SPAWN
+      data:
+        intent_uuid: 9a74a7df-62e9-4076-b44c-ad202f2d2f8c
+        snapId: 57dd9238-73b3-4a4c-b41f-8e85a9b65496
+      ts: 1790345350376
+    - event: EXECUTE_START
+      data: {}
+      ts: 1790345350381
+    - event: EXECUTE_COMPLETE
+      data:
+        hasResult: true
+      ts: 1790345350381
+    - event: ADVERSARY_SUITE
+      data:
+        ran: true
+        intensity:
+          stressIterations: 1
+          strictBoundary: false
+        riskCeiling: null
+        violations: []
+        attackResults:
+          - class: syntax
+            violated: false
+          - class: logic
+            violated: false
+          - class: edge-case
+            violated: false
+          - class: state
+            violated: false
+          - class: cross-domain
+            violated: false
+          - class: stress
+            violated: false
+      ts: 1790345350381
+    - event: QA_QC
+      data:
+        ran: true
+        checks:
+          syntax: true
+          schema: true
+          type: true
+          invariant: true
+          deterministic_replay: true
+          contract_end_state_pass: false
+        verdict: FAIL
+      ts: 1790345350381
+    - event: FAIL
+      data:
+        reason: QA/QC check failed
+        violations: null
+        checks:
+          syntax: true
+          schema: true
+          type: true
+          invariant: true
+          deterministic_replay: true
+          contract_end_state_pass: false
+      ts: 1790345350381
+    - event: REWOUND
+      data:
+        snapId: 57dd9238-73b3-4a4c-b41f-8e85a9b65496
+      ts: 1790345350381
+    - event: CRYSTAL_LATTICE_UPDATE
+      data:
+        ran: true
+        lattice:
+          updated: true
+          edge:
+            uuid: e9e051ae-d5a2-458b-a6fc-15be6de8490f
+            edgeKey: 'CompartmentType:RT-1: no onFail declared.implement->State:Resolution'
+            from: 'CompartmentType:RT-1: no onFail declared.implement'
+            to: State:Resolution
+            weight: 0.09999999999999998
+            success_rate: 0
+            failure_rate: 1
+            successCount: 0
+            failureCount: 3
+            totalCount: 3
+            decay_rate: 0.02
+            lastTransitionAt: 1790345350381
+            lastTransitionOutcome: FAIL
+            createdAt: 1790345350368
+            updatedAt: 1790345350381
+            id: 2c056442-d97f-4e13-ae88-16f6b5947f48
+        crystal:
+          crystallized: true
+          crystal:
+            uuid: ec5f9137-899d-43d6-aaa0-0fbaeff0b980
+            kind: CREATE_NEGATIVE_CRYSTAL
+            pattern_signature: 'RT-1: no onFail declared:implement:FAIL'
+            entry_conditions:
+              domain: 'RT-1: no onFail declared'
+              verb: implement
+              risk_ceiling: null
+            exit_conditions:
+              outcome: FAIL
+            success_probability: 0
+            failure_boundaries:
+              - FAIL
+            support_paths:
+              - f1de9b86-59ba-4687-b611-1b4c2c8f3a6c
+            usage_count: 1
+            pattern_frequency_at_creation: 3
+            source: crystal-lattice
+            ts: 1790345350382
+      ts: 1790345350382

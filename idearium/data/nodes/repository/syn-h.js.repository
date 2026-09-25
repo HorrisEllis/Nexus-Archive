@@ -1,0 +1,37 @@
+envelope: 1
+uuid: nexus-export-repository-syn-h.js
+type: repository
+id: syn-h.js
+context: idearium repo undefined
+intent: null
+summary: 1 files, 1 chunks, READY
+system: idearium
+tags:
+  - spec:undefined
+  - state:READY
+  - verification:passed
+exported_at: 1790345604628
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1790345604628
+lastSeenAt: 1790345604628
+fingerprint: null
+payload:
+  uuid: syn-h.js
+  rootHash: null
+  parent: null
+  state: READY
+  fileCount: 1
+  byLanguage:
+    javascript: 1
+  failedCount: 0
+  chunkCount: 1
+  symbolCount: 1
+  verificationStatus: passed
+  verificationLevel: L5
+  paths:
+    atlas: /tmp/pipeline-syntax-UlKOhL/r-Rc5rCs/atlas.json
+    chunks: /tmp/pipeline-syntax-UlKOhL/r-Rc5rCs/chunks
+    indexes: /tmp/pipeline-syntax-UlKOhL/r-Rc5rCs/indexes
+    verification: /tmp/pipeline-syntax-UlKOhL/r-Rc5rCs/verification.json
+  generatedAt: 1790345604628

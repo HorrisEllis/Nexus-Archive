@@ -58,6 +58,8 @@ const SUITES = [
   'test-repo-agent-learn.js',
   'test-repo-inject.js',
   'test-guardian-job-correlation.js',
+  'test-guardian-job-persistence.js',
+  'test-system-record-discipline.js',
   'test-guardian-stream-extraction.test.js',
   'test-chat-sync-agent-routing.test.js',
   'test-command-parse-null-guard.test.js',
@@ -149,6 +151,9 @@ const SUITES = [
   'clear-glass-screen-qa.test.js',
   'clear-glass-screen-qa-ui.test.js',
   'version-sync-and-registry.test.js',
+  'test-cg-job-intake.test.js',           // §0.39.227 — guardian claim + Clear Glass job intake
+  'test-cg-settings-ui-files.test.js',    // §0.39.227 — one JS + one CSS file per Settings area
+  'test-home-ui-files.test.js',           // §0.39.228 — one JS + one CSS file per home UI area (ui/home/index.html)
   'test-cg-accounts-portal-settings.test.js', // §0.39.223 — Clear Glass account authority, login portals, sealed vault keys, settings rebuild
   'test-provider-host-respawn.js',
   'test-userscript-mixed-content-fix.js',

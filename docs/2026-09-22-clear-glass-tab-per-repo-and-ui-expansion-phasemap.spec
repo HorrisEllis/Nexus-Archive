@@ -277,6 +277,9 @@ spec:
         renderer/settings/core.js + sections/*.js, one file per area, no
         inline script. browser.js's monolith is untouched — UI1 for the main
         chrome is still open.
+        v0.39.227: Settings now fully meets it — 14 area JS files + 14 area CSS
+        files (James: "including css file per ui file"), area CSS scoped to
+        body[data-area], enforced by tests/modules/test-cg-settings-ui-files.test.js.
       UI1_one_file_per_ui_area:
         does: >-
           Extract each real, distinct clear-glass UI capability currently

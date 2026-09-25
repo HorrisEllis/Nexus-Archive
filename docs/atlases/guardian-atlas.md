@@ -178,6 +178,24 @@ Not read this session — `guardian.spec`'s `routes:`/`modules:`/`handshake:` se
 
 `lib/agent-registry.js` stays the source of truth for **agents** (selectors, repairs, health). **Accounts** are resolved by Clear Glass: the registry is built with `accountAuthority` (`lib/cg-account-authority.js` → `GET :7702/accounts/resolve`) and the dispatch ladder awaits `resolveAccountAsync`. Unknown explicit account → job fails (`unknown_account`); Clear Glass unreachable → NCP fallback with reason `account_authority_unreachable`.
 
+## Jobs are files (2026-09-23)
+
+A job's `.job` envelope in `data/guardian/jobs/` (override: `GUARDIAN_JOBS_DIR`) is written **before** the job is accepted — if it cannot be written the job is refused, because a job that cannot survive a restart is not a job guardian can promise. Later status writes stay non-fatal: the job already exists and may be mid-flight, and killing live work over a status write loses more than it protects.
+
+Recovery and redelivery already existed and were **not** rebuilt: `lib/jobs.js loadPersistedJobs()` hydrates the in-memory Map at `createJobStore`, and `server.js _redispatchRecoveredJobs` (2026-09-11) requeues `dispatched` → `pending` — the tab that held it is provably gone in a fresh process — then dispatches each pending job once, leaving `complete`/`error` as history. Gate proven by `tests/modules/test-guardian-job-persistence.js` (15/15) with a real second store over the same directory.
+
+**Not built:** Clear Glass watching this directory and adding each `.job` to its intake. The mesh queue is already idempotent by jobId and NCP already delivers these jobs; a second delivery route without deciding which one *owns* delivery would create the duplicate dispatch it is meant to prevent.
+
+---
+
+## A quiet job says where it stopped (2026-09-23)
+
+`submit()` in each of the five userscripts returns `{ ok, how: 'button'|'enter-key' }` or `{ ok:false, error }`. A prompt typed but never sent fails immediately with that reason and the response watch never starts. The watch emits `GUARDIAN_PROGRESS` `reply-started` (with a character count) the first time it sees text that is not the stale baseline — placed before the baseline guard, so *"the guard skipped it"* and *"the page produced nothing"* are different observations. `lib/ncp-handler.js` routes it to `guardian.job.progress`; `server.js` logs one line per stage with the chat url.
+
+Separates four silences that used to look identical: never sent · sent but nothing rendered · rendered but never settled · returned.
+
+---
+
 ## Modules Not Yet Built
 
 Not determined — `guardian.spec`'s own `modules:`/`gaps:` sections not read this session.
@@ -199,3 +217,8 @@ Not confirmed.
 ## Copyright
 
 Copyright © 2026 James Brooks (Erosmancer). Part of the rheon.world / NEXUS ecosystem.
+
+## Jobs are claimed before Clear Glass takes them (3.8.0, v0.39.227)
+
+The dispatch ladder takes a `claim` dependency and calls it before any mesh send. `server.js` wires it to a **required** `.job` write: `transport: mesh`, `claimedBy: clear-glass`, `status: dispatched`. A failed claim sends nothing and falls back to NCP (`mesh_claim_failed`). When the ladder falls back to NCP, the dispatcher clears `claimedBy` — a `.job` never names two owners. Clear Glass's intake refuses any job it can't find claimed through `GET /jobs?id=`. `updateJob(id, patch, { required })` — the opt-in is used only for the claim; status updates stay non-fatal.
+

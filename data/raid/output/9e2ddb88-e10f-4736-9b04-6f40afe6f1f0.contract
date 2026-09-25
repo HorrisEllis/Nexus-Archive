@@ -1,0 +1,193 @@
+envelope: 1
+uuid: nexus-export-contract-9e2ddb88-e10f-4736-9b04-6f40afe6f1f0
+type: contract
+id: 9e2ddb88-e10f-4736-9b04-6f40afe6f1f0
+context: null
+intent: null
+summary: null
+system: null
+tags: []
+exported_at: 1790345225709
+source: test
+occurrences: 1
+firstSeenAt: 1790345225709
+lastSeenAt: 1790345225709
+fingerprint: null
+payload:
+  queueId: 9e2ddb88-e10f-4736-9b04-6f40afe6f1f0
+  status: pass
+  verdict: PASS
+  trace_log:
+    - event: SPAWN
+      data:
+        intent_uuid: ac5a3378-0244-4fe2-8dbd-0d26b299faf0
+        snapId: 07febfdc-ec47-483f-ab72-bed87d1f453d
+      ts: 1790345225705
+    - event: EXECUTE_START
+      data: {}
+      ts: 1790345225708
+    - event: EXECUTE_COMPLETE
+      data:
+        hasResult: true
+      ts: 1790345225708
+    - event: ADVERSARY_SUITE
+      data:
+        ran: true
+        intensity:
+          stressIterations: 1
+          strictBoundary: false
+        riskCeiling: null
+        violations: []
+        attackResults:
+          - class: syntax
+            violated: false
+          - class: logic
+            violated: false
+          - class: edge-case
+            violated: false
+          - class: state
+            violated: false
+          - class: cross-domain
+            violated: false
+          - class: stress
+            violated: false
+      ts: 1790345225708
+    - event: QA_QC
+      data:
+        ran: true
+        checks:
+          syntax: true
+          schema: true
+          type: true
+          invariant: true
+          deterministic_replay: true
+          contract_end_state_pass: true
+        verdict: PASS
+      ts: 1790345225708
+    - event: PASS
+      data: {}
+      ts: 1790345225709
+    - event: CRYSTAL_LATTICE_UPDATE
+      data:
+        ran: true
+        lattice:
+          updated: true
+          edge:
+            uuid: 51b0a445-ed6d-4519-bac2-632b9b99bf6c
+            edgeKey: CompartmentType:contract.implement->State:Resolution
+            from: CompartmentType:contract.implement
+            to: State:Resolution
+            weight: 0.6
+            success_rate: 1
+            failure_rate: 0
+            successCount: 1
+            failureCount: 0
+            totalCount: 1
+            decay_rate: 0.02
+            lastTransitionAt: 1790345225709
+            lastTransitionOutcome: PASS
+            createdAt: 1790345225709
+            updatedAt: 1790345225709
+        crystal:
+          crystallized: false
+          frequency: 1
+          threshold: 3
+      ts: 1790345225709
+    - event: CASE_LIBRARY_INDEX
+      data:
+        indexed: true
+        signature: contract:implement
+        entry:
+          uuid: c1de49f9-0429-4595-960e-5318fe4c3bf8
+          signature: contract:implement
+          domain: contract
+          verb: implement
+          compartment_uuid: 25abc724-5db1-4ca9-987b-586087150199
+          intent_uuid: ac5a3378-0244-4fe2-8dbd-0d26b299faf0
+          working_memory: null
+          result:
+            text: |-
+              ack.
+
+              SEAM VERDICT: PASS
+          trace_log:
+            - event: SPAWN
+              data:
+                intent_uuid: ac5a3378-0244-4fe2-8dbd-0d26b299faf0
+                snapId: 07febfdc-ec47-483f-ab72-bed87d1f453d
+              ts: 1790345225705
+            - event: EXECUTE_START
+              data: {}
+              ts: 1790345225708
+            - event: EXECUTE_COMPLETE
+              data:
+                hasResult: true
+              ts: 1790345225708
+            - event: ADVERSARY_SUITE
+              data:
+                ran: true
+                intensity:
+                  stressIterations: 1
+                  strictBoundary: false
+                riskCeiling: null
+                violations: []
+                attackResults:
+                  - class: syntax
+                    violated: false
+                  - class: logic
+                    violated: false
+                  - class: edge-case
+                    violated: false
+                  - class: state
+                    violated: false
+                  - class: cross-domain
+                    violated: false
+                  - class: stress
+                    violated: false
+              ts: 1790345225708
+            - event: QA_QC
+              data:
+                ran: true
+                checks:
+                  syntax: true
+                  schema: true
+                  type: true
+                  invariant: true
+                  deterministic_replay: true
+                  contract_end_state_pass: true
+                verdict: PASS
+              ts: 1790345225708
+            - event: PASS
+              data: {}
+              ts: 1790345225709
+            - event: CRYSTAL_LATTICE_UPDATE
+              data:
+                ran: true
+                lattice:
+                  updated: true
+                  edge:
+                    uuid: 51b0a445-ed6d-4519-bac2-632b9b99bf6c
+                    edgeKey: CompartmentType:contract.implement->State:Resolution
+                    from: CompartmentType:contract.implement
+                    to: State:Resolution
+                    weight: 0.6
+                    success_rate: 1
+                    failure_rate: 0
+                    successCount: 1
+                    failureCount: 0
+                    totalCount: 1
+                    decay_rate: 0.02
+                    lastTransitionAt: 1790345225709
+                    lastTransitionOutcome: PASS
+                    createdAt: 1790345225709
+                    updatedAt: 1790345225709
+                crystal:
+                  crystallized: false
+                  frequency: 1
+                  threshold: 3
+              ts: 1790345225709
+          constraint_frame_uuid: 56b250e0-5bbf-4f54-82c4-efba2957bc5f
+          _evicted: false
+          indexedAt: 1790345225709
+        evicted: 0
+      ts: 1790345225709

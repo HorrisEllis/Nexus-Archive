@@ -1,0 +1,40 @@
+envelope: 1
+uuid: nexus-export-chunk-prov-1790345308703.nexus-id-repo-ed6f9990.9f079995-b030-44d6-a924-d456af6936d1
+type: chunk
+id: prov-1790345308703.nexus-id-repo-ed6f9990.9f079995-b030-44d6-a924-d456af6936d1
+context: idearium spec-engine chunk of spec 4ee7ae13-8118-46a4-a95c-3f312af83737
+intent: null
+summary: src-gemini (complete)
+system: idearium
+tags:
+  - spec:4ee7ae13-8118-46a4-a95c-3f312af83737
+  - status:complete
+  - section:src-gemini
+  - specName:prov-1790345308703
+  - agent:user
+  - repo:nexus-id-repo-ed6f9990
+exported_at: 1790345308859
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1790345308859
+lastSeenAt: 1790345308859
+fingerprint: null
+payload:
+  uuid: 9f079995-b030-44d6-a924-d456af6936d1
+  specUuid: 4ee7ae13-8118-46a4-a95c-3f312af83737
+  sectionId: src-gemini
+  sectionTitle: src/gemini.js
+  chunkIdx: 3
+  status: complete
+  realPath: src/gemini.js
+  fileName: 03-src-gemini.md
+  filePath: /home/claude/work/nexus228/idearium/data/specs/4ee7ae13-8118-46a4-a95c-3f312af83737/03-src-gemini-9f079995.js
+  agent: user
+  agentModel: null
+  attempts: 0
+  failureMode: null
+  byteSize: 404
+  contentHash: 047031ce087876df9e3a91491a72893ab178534f90ae84ab6c7e5efffde53be0
+  createdAt: 1790345308858
+  updatedAt: 1790345308859
+  completedAt: 1790345308859

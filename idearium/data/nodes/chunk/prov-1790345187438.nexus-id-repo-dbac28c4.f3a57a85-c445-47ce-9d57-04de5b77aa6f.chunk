@@ -1,0 +1,40 @@
+envelope: 1
+uuid: nexus-export-chunk-prov-1790345187438.nexus-id-repo-dbac28c4.f3a57a85-c445-47ce-9d57-04de5b77aa6f
+type: chunk
+id: prov-1790345187438.nexus-id-repo-dbac28c4.f3a57a85-c445-47ce-9d57-04de5b77aa6f
+context: idearium spec-engine chunk of spec 5b1a26a5-3a61-4fc9-8a9c-dbfb5e07ac00
+intent: null
+summary: src-deepseek (complete)
+system: idearium
+tags:
+  - spec:5b1a26a5-3a61-4fc9-8a9c-dbfb5e07ac00
+  - status:complete
+  - section:src-deepseek
+  - specName:prov-1790345187438
+  - agent:user
+  - repo:nexus-id-repo-dbac28c4
+exported_at: 1790345187605
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1790345187605
+lastSeenAt: 1790345187605
+fingerprint: null
+payload:
+  uuid: f3a57a85-c445-47ce-9d57-04de5b77aa6f
+  specUuid: 5b1a26a5-3a61-4fc9-8a9c-dbfb5e07ac00
+  sectionId: src-deepseek
+  sectionTitle: src/deepseek.js
+  chunkIdx: 4
+  status: complete
+  realPath: src/deepseek.js
+  fileName: 04-src-deepseek.md
+  filePath: /home/claude/work/nexus228/idearium/data/specs/5b1a26a5-3a61-4fc9-8a9c-dbfb5e07ac00/04-src-deepseek-f3a57a85.js
+  agent: user
+  agentModel: null
+  attempts: 0
+  failureMode: null
+  byteSize: 414
+  contentHash: a20a7a538db00d4fe1f97e47eec2f1b7408b5559cce6050b09404dad33d43fb9
+  createdAt: 1790345187604
+  updatedAt: 1790345187605
+  completedAt: 1790345187605

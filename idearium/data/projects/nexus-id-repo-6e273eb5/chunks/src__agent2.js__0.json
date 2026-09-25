@@ -1,0 +1,21 @@
+{
+  "id": "chunk-0a264642a8f43232",
+  "repository": "nexus-id-repo-6e273eb5",
+  "file": "src/agent2.js",
+  "range": {
+    "start_line": 1,
+    "end_line": 2
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "63a25998a5e6941f50b00c3570f2e54d30457c4b4f9692710b416da010ef961d"
+  },
+  "status": "complete",
+  "content": "export default 43;\n"
+}

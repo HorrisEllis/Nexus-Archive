@@ -571,6 +571,12 @@ function createNCPMessageHandler(deps) {
         break;
       }
 
+      // §SUBMIT-EVIDENCE 2026-09-23 — stage reports from the page, so a run's
+      // log shows WHERE a job stopped rather than going quiet after dispatch.
+      case 'GUARDIAN_PROGRESS':
+        bus.emit('guardian.job.progress', { jobId: msg.jobId, stage: msg.stage, how: msg.how, chatUrl: msg.chatUrl });
+        break;
+
       case 'GUARDIAN_ERROR':
       case 'NCP_ERROR': {
         if (jobId) {

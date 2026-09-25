@@ -1,0 +1,40 @@
+envelope: 1
+uuid: nexus-export-chunk-prov-1790345187438.nexus-id-repo-dbac28c4.04f878be-fdc8-45ba-a826-3e828ffe18ba
+type: chunk
+id: prov-1790345187438.nexus-id-repo-dbac28c4.04f878be-fdc8-45ba-a826-3e828ffe18ba
+context: idearium spec-engine chunk of spec 5b1a26a5-3a61-4fc9-8a9c-dbfb5e07ac00
+intent: null
+summary: src-a (complete)
+system: idearium
+tags:
+  - spec:5b1a26a5-3a61-4fc9-8a9c-dbfb5e07ac00
+  - status:complete
+  - section:src-a
+  - specName:prov-1790345187438
+  - agent:ingest
+  - repo:nexus-id-repo-dbac28c4
+exported_at: 1790345187445
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1790345187445
+lastSeenAt: 1790345187445
+fingerprint: null
+payload:
+  uuid: 04f878be-fdc8-45ba-a826-3e828ffe18ba
+  specUuid: 5b1a26a5-3a61-4fc9-8a9c-dbfb5e07ac00
+  sectionId: src-a
+  sectionTitle: src/a.js
+  chunkIdx: 0
+  status: complete
+  realPath: src/a.js
+  fileName: 00-src-a.md
+  filePath: /home/claude/work/nexus228/idearium/data/specs/5b1a26a5-3a61-4fc9-8a9c-dbfb5e07ac00/00-src-a-04f878be.md
+  agent: ingest
+  agentModel: ingest:drop
+  attempts: 1
+  failureMode: null
+  byteSize: 373
+  contentHash: cefd0dd07bfa670f7e0b825b372e76a33017fb39beaae3a4db0a742196bb99df
+  createdAt: 1790345187441
+  updatedAt: 1790345187444
+  completedAt: 1790345187444

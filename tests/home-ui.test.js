@@ -5,7 +5,9 @@
  */
 const fs = require('fs');
 const path = require('path');
-const HTML = fs.readFileSync(path.join(__dirname, '../ui/home/index.html'), 'utf8');
+// v0.39.228: the page is index.html + the per-area JS/CSS files it links (see helpers/home-page-source.js).
+const { homePageSource } = require('./helpers/home-page-source');
+const HTML = homePageSource();
 
 let pass = 0, fail = 0;
 function test(label, fn) {

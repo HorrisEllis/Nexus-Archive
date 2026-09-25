@@ -1,0 +1,40 @@
+envelope: 1
+uuid: nexus-export-repository-nexus-id-repo-df862a30
+type: repository
+id: nexus-id-repo-df862a30
+context: idearium repo inject-test-1790345144595
+intent: null
+summary: 3 files, 3 chunks, READY
+system: idearium
+tags:
+  - spec:2980f97a-6f91-4709-b447-172541b291be
+  - state:READY
+  - verification:passed
+exported_at: 1790345144789
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1790345144789
+lastSeenAt: 1790345144789
+fingerprint: null
+payload:
+  uuid: nexus-id-repo-df862a30
+  name: inject-test-1790345144595
+  specUuid: 2980f97a-6f91-4709-b447-172541b291be
+  rootHash: 342b96742b6b6255fc8b9f784d0fb10a648374db4b36d6388be71a662a61e621
+  parent: null
+  state: READY
+  fileCount: 3
+  byLanguage:
+    javascript: 2
+    markdown: 1
+  failedCount: 0
+  chunkCount: 3
+  symbolCount: 0
+  verificationStatus: passed
+  verificationLevel: L5
+  paths:
+    atlas: /home/claude/work/nexus228/idearium/data/projects/nexus-id-repo-df862a30/atlas.json
+    chunks: /home/claude/work/nexus228/idearium/data/projects/nexus-id-repo-df862a30/chunks
+    indexes: /home/claude/work/nexus228/idearium/data/projects/nexus-id-repo-df862a30/indexes
+    verification: /home/claude/work/nexus228/idearium/data/projects/nexus-id-repo-df862a30/verification.json
+  generatedAt: 1790345144789

@@ -1,0 +1,39 @@
+envelope: 1
+uuid: nexus-export-chunk-stab-big.2594b2e6-d095-4793-bec0-dc4301bc7cdc.38581c1f-952c-4e59-ac99-e63245eab91b
+type: chunk
+id: stab-big.2594b2e6-d095-4793-bec0-dc4301bc7cdc.38581c1f-952c-4e59-ac99-e63245eab91b
+context: idearium spec-engine chunk of spec 2594b2e6-d095-4793-bec0-dc4301bc7cdc
+intent: null
+summary: dir5-file-61 (complete)
+system: idearium
+tags:
+  - spec:2594b2e6-d095-4793-bec0-dc4301bc7cdc
+  - status:complete
+  - section:dir5-file-61
+  - specName:stab-big
+  - agent:ingest
+exported_at: 1790345371712
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1790345371712
+lastSeenAt: 1790345371712
+fingerprint: null
+payload:
+  uuid: 38581c1f-952c-4e59-ac99-e63245eab91b
+  specUuid: 2594b2e6-d095-4793-bec0-dc4301bc7cdc
+  sectionId: dir5-file-61
+  sectionTitle: dir5/file-61.js
+  chunkIdx: 61
+  status: complete
+  realPath: dir5/file-61.js
+  fileName: 61-dir5-file-61.md
+  filePath: /tmp/idearium-ingest-stab-hvAwU0/specs/2594b2e6-d095-4793-bec0-dc4301bc7cdc/61-dir5-file-61-38581c1f.md
+  agent: ingest
+  agentModel: ingest:drop
+  attempts: 1
+  failureMode: null
+  byteSize: 10891
+  contentHash: 8c99d0ebccd7fdf4b26babe7373f9534f8059e2530d20ff133ebd19447d45e24
+  createdAt: 1790345371510
+  updatedAt: 1790345371550
+  completedAt: 1790345371550

@@ -1,6 +1,6 @@
 # clear-glass — Sovereign NEXUS Browser
 
-> **v3.10.0 (active, 2026-09-23)** · 94 real components · account authority for NEXUS · Electron + Chromium + Firefox fingerprint + TLS JA4 + ErosmancerOS wire (SISO-native)
+> **v3.11.0 (active, 2026-09-23)** · 97 real components · account authority for NEXUS · Electron + Chromium + Firefox fingerprint + TLS JA4 + ErosmancerOS wire (SISO-native)
 
 **Author:** James Brooks (Erosmancer) · rheon.world
 
@@ -183,6 +183,20 @@ by periodic manual audit.
 | `renderer/settings.html` + `renderer/settings/` | Settings shell + `core.js` + one file per area under `sections/` |
 
 End to end: **+** → account uuid → **Sign in** (portal, same partition the mesh uses) → **Save session** (vault) → guardian dispatch resolves the account from Clear Glass → mesh `spawn()` opens that partition and restores that vault entry.
+
+## Job intake (3.11.0, v0.39.227)
+
+Clear Glass takes guardian jobs in through `src/jobs/intake.js`, never by reading guardian's folder.
+
+1. guardian writes `<jobId>.job` (required at creation).
+2. guardian's ladder **claims** it on the `.job` — `transport: mesh`, `claimedBy: clear-glass` — before sending (required write).
+3. `POST /agent-mesh/send` → intake reads the job back through guardian `GET /jobs?id=`; no claim → refused (`intake_refused`, nothing sent).
+4. intake writes its own `<jobId>.intake` (`%APPDATA%|$HOME/.clear-glass/job-intake/`), then queues on the mesh DOM transport (idempotent by jobId).
+5. `GET /agent-mesh/job` answers from the live queue, or — after a Clear Glass restart — `clear_glass_restarted`, `sent: null` (never resend). `GET /agent-mesh/intake` lists records.
+
+## Settings UI files (v0.39.227)
+
+`renderer/settings/sections/<area>.js` + `<area>.css` — one pair per area (14). `settings.css` = tokens, frame, shared components only. `core.js` sets `body[data-area]` and loads the area's CSS the first time it's shown; every area rule is scoped to it. Enforced by `tests/modules/test-cg-settings-ui-files.test.js`.
 
 ## Modules Not Yet Built
 

@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        guardian
-    version:     3.6.2
+    version:     3.8.0
     foundation:  nexus-system-foundation@1.0.0
     port:        7820
     uuid:        nexus-guardian-v3-0000-2026-0615-jamesbrooks-001
@@ -41,6 +41,7 @@ spec:
       - "guardian.seam.chunk_failed"
       - "guardian.artifact.captured"
       - "guardian.artifact.refused"
+      - "guardian.job.progress"
       - "guardian.response.captured"
       - "guardian.blocks.captured"
     handles:
@@ -196,3 +197,85 @@ spec:
       path to the same capability — is a real, still-open decision, not made here (§16.5: one truth, a
       second path needs a real reason beyond parity). See docs/2026-09-19-agents-clearglass-guardian-
       idearium-copilot-phasemap.spec's phase_5.
+
+  built_2026_09_23_account_authority_and_job_evidence:
+    why_this_block_exists: >-
+      §3 of the 2026-09-23 handoff — "every change updates .git, .spec, atlas,
+      component registry" — names guardian's .spec as the one 0.39.223 skipped.
+      This records three real changes to guardian that had landed in code with
+      no spec entry. MINOR, 3.6.2 -> 3.7.0: new capability, nothing removed,
+      every existing route and event unchanged.
+    accounts_moved_to_clear_glass:
+      shipped: "0.39.223 (code only — unrecorded here until now)"
+      what: >-
+        lib/agent-registry.js remains the source of truth for AGENTS (selectors,
+        repairs, health). ACCOUNTS are no longer guardian's to decide: the
+        registry is constructed with an accountAuthority
+        (lib/cg-account-authority.js -> GET :7702/accounts/resolve) and
+        lib/dispatch-ladder.js awaits resolveAccountAsync before choosing a tab.
+      failure_modes_are_distinct_on_purpose: >-
+        An explicit account guardian cannot resolve fails the job
+        (unknown_account) — dispatching to the wrong signed-in session is worse
+        than not dispatching. Clear Glass being unreachable is NOT that: it
+        falls back to NCP with reason account_authority_unreachable, because an
+        authority that is merely down must not take the whole engine with it.
+    job_stage_evidence:
+      shipped: "0.39.224"
+      what: >-
+        A job that goes quiet now says where it stopped. The five userscripts'
+        submit() returns { ok, how: button|enter-key } or { ok:false, error };
+        a prompt typed but never sent fails immediately with that reason and the
+        response watch is never started for it. The watch emits GUARDIAN_PROGRESS
+        stage reply-started with a character count the first time it sees text
+        that is not the stale baseline, BEFORE the baseline guard, so "the guard
+        is skipping it" and "the page produced nothing" are distinguishable.
+        lib/ncp-handler.js routes GUARDIAN_PROGRESS -> guardian.job.progress
+        (added to events.emits above); server.js logs one line per stage with
+        the chat url.
+      evidence: >-
+        James's 0.39.218 run: created -> dispatched -> ACKED -> silence, while
+        the provider tab visibly held a real answer. The prompt had been sent
+        and the RESULT never returned, and nothing in the pipeline could say
+        which step failed. Four previously identical silences are now separable:
+        never sent, sent but nothing rendered, rendered but never settled,
+        returned.
+    job_file_is_the_source_of_truth:
+      shipped: "0.39.225"
+      what: >-
+        lib/jobs.js _persistJob(job, { required }) — the .job envelope write is
+        REQUIRED at creation (a job whose file cannot be written is refused
+        loudly, naming the directory and the reason, §1.2) and stays non-fatal
+        on later status updates (the job already exists and may be mid-flight;
+        killing live work over a status write loses more than it protects).
+        JOBS_DIR is nameable via GUARDIAN_JOBS_DIR and exported; default path
+        unchanged.
+      already_existed_do_not_rebuild: >-
+        loadPersistedJobs() already hydrates the in-memory Map from disk at
+        createJobStore, and server.js _redispatchRecoveredJobs (2026-09-11)
+        already requeues 'dispatched' -> 'pending' (the tab that held it is
+        provably gone in a fresh process) and dispatches each pending job once,
+        leaving complete/error as history. The handoff's stated gate — kill
+        mid-job, restart, requeued once, never duplicated — was already built;
+        0.39.225 proves it (tests/modules/test-guardian-job-persistence.js,
+        15/15, with a real second store over the same directory) rather than
+        rebuilding it.
+    clear_glass_job_intake:
+      shipped: "0.39.227"
+      decided_by: James — "Do it. 1 then 2."
+      decision: >-
+        PUSH-WITH-CLAIM, not a watch. The ladder (lib/dispatch-ladder.js) calls claim(job) before any mesh
+        send; server.js wires it to updateJob(id, {transport:'mesh', claimedBy:'clear-glass', claimedAt,
+        status:'dispatched'}, {required:true}) — the claim is a REQUIRED .job write (updateJob's opt-in
+        {required}; its default stays non-fatal, 0.39.225's rule). A failed claim sends nothing: NCP fallback,
+        reason mesh_claim_failed. lib/dispatcher.js's NCP fallback clears claimedBy, so the .job never names
+        two owners. Clear Glass (clear-glass/src/jobs/intake.js) takes a job in ONLY after reading it back
+        through GET /jobs?id= and finding that claim; everything else is refused (stage intake_refused, sent:false).
+      why_not_a_watch: >-
+        Only guardian creates and reads its .job files (node-ownership rule, handoff item 4); and every job
+        lands in that folder, including NCP-owned ones, so a watcher would deliver those twice.
+      restart: >-
+        guardian restart: unchanged — _redispatchRecoveredJobs requeues, the ladder re-claims, Clear Glass's
+        intake answers from its existing <jobId>.intake (idempotent, no second send). Clear Glass restart:
+        intake records not finished are marked interrupted and reported as clear_glass_restarted with
+        sent:null, which the ladder already treats as never-resend (sent_no_response -> ask the user).
+      tests: tests/modules/test-cg-job-intake.test.js (12/12, real store + ladder + mesh-client + HTTP both sides)

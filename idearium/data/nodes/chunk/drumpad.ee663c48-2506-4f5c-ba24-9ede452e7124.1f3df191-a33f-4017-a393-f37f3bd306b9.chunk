@@ -1,0 +1,39 @@
+envelope: 1
+uuid: nexus-export-chunk-drumpad.ee663c48-2506-4f5c-ba24-9ede452e7124.1f3df191-a33f-4017-a393-f37f3bd306b9
+type: chunk
+id: drumpad.ee663c48-2506-4f5c-ba24-9ede452e7124.1f3df191-a33f-4017-a393-f37f3bd306b9
+context: idearium spec-engine chunk of spec ee663c48-2506-4f5c-ba24-9ede452e7124
+intent: null
+summary: agent-js (complete)
+system: idearium
+tags:
+  - spec:ee663c48-2506-4f5c-ba24-9ede452e7124
+  - status:complete
+  - section:agent-js
+  - specName:drumpad
+  - agent:chatgpt
+exported_at: 1790345181165
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1790345181165
+lastSeenAt: 1790345181165
+fingerprint: null
+payload:
+  uuid: 1f3df191-a33f-4017-a393-f37f3bd306b9
+  specUuid: ee663c48-2506-4f5c-ba24-9ede452e7124
+  sectionId: agent-js
+  sectionTitle: agent.js
+  chunkIdx: 3
+  status: complete
+  realPath: agent.js
+  fileName: 03-agent-js.md
+  filePath: /tmp/ftp-idearium-3dJtUV/specs/ee663c48-2506-4f5c-ba24-9ede452e7124/03-agent-js-1f3df191.js
+  agent: chatgpt
+  agentModel: null
+  attempts: 0
+  failureMode: null
+  byteSize: 391
+  contentHash: 67cab3b5aa1aff1411a0f4d9af5db248b234d85533d7c65f612a70bdfb769278
+  createdAt: 1790345181147
+  updatedAt: 1790345181163
+  completedAt: 1790345181163

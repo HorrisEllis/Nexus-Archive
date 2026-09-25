@@ -1,0 +1,32 @@
+[
+  {
+    "id": "chunk-33876465518a63f8",
+    "file": "src/agent2.js",
+    "range": {
+      "start_line": 1,
+      "end_line": 2
+    },
+    "symbols": [],
+    "hash": "63a25998a5e6941f50b00c3570f2e54d30457c4b4f9692710b416da010ef961d"
+  },
+  {
+    "id": "chunk-aed29139df5fdd84",
+    "file": "src/a.js",
+    "range": {
+      "start_line": 1,
+      "end_line": 1
+    },
+    "symbols": [],
+    "hash": "cefd0dd07bfa670f7e0b825b372e76a33017fb39beaae3a4db0a742196bb99df"
+  },
+  {
+    "id": "chunk-556708d7ff484f90",
+    "file": "README.md",
+    "range": {
+      "start_line": 1,
+      "end_line": 1
+    },
+    "symbols": [],
+    "hash": "1f885426f5e09fe3c782a5a075fa09cbbbb0681b43370a82f4fe6ac33eb8d9f2"
+  }
+]

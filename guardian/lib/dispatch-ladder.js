@@ -37,6 +37,9 @@ const CONTENT_STAGES  = new Set(['attach_failed', 'inject_failed']);
 
 function createLadder({ registry, mesh, picker, mode = () => process.env.GUARDIAN_TRANSPORT || 'ncp-only',
                         breakerThreshold = 3, breakerMs = 60000, now = Date.now, log = () => {}, onProgress = null, wakeHint = null,
+                        // v0.39.227 — claim(job, {agentId, accountId}) records on the .job that Clear Glass owns delivery,
+                        // BEFORE anything is sent. Clear Glass's intake refuses any job without this claim. Throwing = no send.
+                        claim = null,
                         // Whole code bases generate for many minutes: 90s was a guaranteed failure. Env-configurable, default 1h.
                         timeoutMs = parseInt(process.env.GUARDIAN_MESH_TIMEOUT_MS || '3600000', 10) } = {}) {
   let infraFails = 0, openUntil = 0;
@@ -77,6 +80,12 @@ function createLadder({ registry, mesh, picker, mode = () => process.env.GUARDIA
     // The mesh has no userscript, so the NEXUS agent hint (wake-hint.js) is added here, once, to the SENT prompt only.
     const hint = wakeHint ? wakeHint.apply({ provider: job.provider, agentId, command: job.command, prompt: job.prompt }) : null;
     const sentPrompt = hint ? hint.prompt : job.prompt;
+    // One owner per job, written on the .job before delivery (guardian is the only writer of it). If the claim
+    // cannot be recorded, nothing was sent — the userscript path takes the job with that reason on its trail.
+    if (claim) {
+      try { claim(job, { agentId, accountId }); }
+      catch (e) { return { kind: 'ncp', reason: 'mesh_claim_failed', error: e.message, trail }; }
+    }
     const send = (selectors) => callMesh({ provider: job.provider, prompt: sentPrompt, content: job.content, agentId, accountId, jobId: job.id, selectors, timeoutMs, onProgress: onProgress ? (p) => onProgress(job, p) : null });
     let r = await send(agent.selectors);
     step('mesh', r, hint ? { wakeHint: { injected: hint.injected, mode: hint.mode } } : {});

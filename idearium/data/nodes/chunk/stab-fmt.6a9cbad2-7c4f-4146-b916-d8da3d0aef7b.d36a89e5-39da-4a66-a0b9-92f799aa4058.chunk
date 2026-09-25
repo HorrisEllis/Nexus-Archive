@@ -1,0 +1,39 @@
+envelope: 1
+uuid: nexus-export-chunk-stab-fmt.6a9cbad2-7c4f-4146-b916-d8da3d0aef7b.d36a89e5-39da-4a66-a0b9-92f799aa4058
+type: chunk
+id: stab-fmt.6a9cbad2-7c4f-4146-b916-d8da3d0aef7b.d36a89e5-39da-4a66-a0b9-92f799aa4058
+context: idearium spec-engine chunk of spec 6a9cbad2-7c4f-4146-b916-d8da3d0aef7b
+intent: null
+summary: etc-passwd (complete)
+system: idearium
+tags:
+  - spec:6a9cbad2-7c4f-4146-b916-d8da3d0aef7b
+  - status:complete
+  - section:etc-passwd
+  - specName:stab-fmt
+  - agent:ingest
+exported_at: 1790345371902
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1790345371902
+lastSeenAt: 1790345371902
+fingerprint: null
+payload:
+  uuid: d36a89e5-39da-4a66-a0b9-92f799aa4058
+  specUuid: 6a9cbad2-7c4f-4146-b916-d8da3d0aef7b
+  sectionId: etc-passwd
+  sectionTitle: ../../etc/passwd
+  chunkIdx: 0
+  status: complete
+  realPath: etc/passwd
+  fileName: 00-etc-passwd.md
+  filePath: /tmp/idearium-ingest-stab-hvAwU0/specs/6a9cbad2-7c4f-4146-b916-d8da3d0aef7b/00-etc-passwd-d36a89e5.md
+  agent: ingest
+  agentModel: ingest:drop
+  attempts: 1
+  failureMode: null
+  byteSize: 394
+  contentHash: 89ef98f859f634507b321f5540785bedb26696c45ab130a70d9c61655ddfc5cc
+  createdAt: 1790345371900
+  updatedAt: 1790345371902
+  completedAt: 1790345371902

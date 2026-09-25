@@ -26,7 +26,35 @@ const FILES = [
     // static HTML/JS file, no require() at all) — wired anyway because the
     // dependency is real, same reasoning warp-map.js and observability-map.js
     // already use for their own HTTP-shaped edges.
+  ...homeFiles(),
 ];
+
+/**
+ * v0.39.228 — the NEXUS home UI (ui/home/index.html). It had no loom entry at
+ * all. Its real edges are <script src>/<link href> LOADS, which the source
+ * scanner cannot see (no require()). Derived from index.html's own tags at
+ * require time, so this map cannot drift from the page: every /ui/home/** file
+ * the page links is one component, and the page gets one wire per file it
+ * loads. JS ids follow source-map.js idFor() (so the scanner, which excludes
+ * hand-mapped paths, never declares them twice); a stylesheet keeps its .css
+ * suffix in its id so guardian.js and guardian.css stay distinct.
+ * A linked file that is missing on disk throws — a map of a page that cannot
+ * load is not a map.
+ */
+function homeFiles() {
+  const fs = require('fs'), path = require('path');
+  const root = path.resolve(__dirname, '..', '..');
+  const html = fs.readFileSync(path.join(root, 'ui/home/index.html'), 'utf8');
+  const rels = [...html.matchAll(/<(?:script[^>]*\ssrc|link[^>]*\shref)="\/(ui\/home\/[^"]+)"/g)].map(m => m[1]);
+  const idOf = rel => 'nexus.' + rel.replace(/\.js$/, '').split('/').join('.');
+  const out = [];
+  for (const rel of rels) {
+    if (!fs.existsSync(path.join(root, rel))) throw new Error(`ui-map: ui/home/index.html links /${rel}, which does not exist`);
+    out.push([rel, idOf(rel), []]);
+  }
+  out.push(['ui/home/index.html', 'nexus.ui.home', out.map(f => f[1])]);   // loads each, in link order
+  return out;
+}
 
 function mapUi(driver) {
   const results = { components: [], hooks: [], wires: [], failures: [] };

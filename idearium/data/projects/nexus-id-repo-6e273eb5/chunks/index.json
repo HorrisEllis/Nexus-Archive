@@ -1,0 +1,65 @@
+[
+  {
+    "id": "chunk-0a264642a8f43232",
+    "repository": "nexus-id-repo-6e273eb5",
+    "file": "src/agent2.js",
+    "range": {
+      "start_line": 1,
+      "end_line": 2
+    },
+    "symbols": [],
+    "parent": null,
+    "tags": [],
+    "relations": [],
+    "dependencies": [],
+    "contracts": [],
+    "tests": [],
+    "hash": {
+      "content": "63a25998a5e6941f50b00c3570f2e54d30457c4b4f9692710b416da010ef961d"
+    },
+    "status": "complete",
+    "_file": "src__agent2.js__0.json"
+  },
+  {
+    "id": "chunk-d15c4c730032a03f",
+    "repository": "nexus-id-repo-6e273eb5",
+    "file": "src/a.js",
+    "range": {
+      "start_line": 1,
+      "end_line": 1
+    },
+    "symbols": [],
+    "parent": null,
+    "tags": [],
+    "relations": [],
+    "dependencies": [],
+    "contracts": [],
+    "tests": [],
+    "hash": {
+      "content": "cefd0dd07bfa670f7e0b825b372e76a33017fb39beaae3a4db0a742196bb99df"
+    },
+    "status": "complete",
+    "_file": "src__a.js__0.json"
+  },
+  {
+    "id": "chunk-13ff015622864744",
+    "repository": "nexus-id-repo-6e273eb5",
+    "file": "README.md",
+    "range": {
+      "start_line": 1,
+      "end_line": 1
+    },
+    "symbols": [],
+    "parent": null,
+    "tags": [],
+    "relations": [],
+    "dependencies": [],
+    "contracts": [],
+    "tests": [],
+    "hash": {
+      "content": "1f885426f5e09fe3c782a5a075fa09cbbbb0681b43370a82f4fe6ac33eb8d9f2"
+    },
+    "status": "complete",
+    "_file": "README.md__0.json"
+  }
+]

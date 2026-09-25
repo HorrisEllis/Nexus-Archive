@@ -3,6 +3,23 @@
 # Status: Pre-build spec — map before touching anything
 # Date: 2026-06-27
 
+## §ADDENDUM 2026-09-25 (v0.39.228) — read this before the 07-11 addendum
+
+The 07-11 addendum below lists 11 channel documents under ui/channels/. Only
+4 exist on disk now: causal, conversations, idearium, log. overview, guardian,
+cortex, bridge, diagnose, blueprint and build are gone, and git history
+(which starts 2026-09-17) never contained them. So nexus-home.html + shell.js
+cannot serve 7 of the 11 channels they register, and the 4 that remain are
+July-era inline forks that have drifted from index.html since.
+
+index.html is therefore still the only working home. v0.39.228 split it IN
+PLACE instead of cutting over: markup-only index.html, one JS + one CSS file
+per area in ui/home/areas/, non-UI modules in ui/home/core/, shared home.css.
+The areas map onto this plan's per-channel files (overview.js/.css,
+guardian.js/.css, ...), so a later cut-over moves files rather than
+re-extracting them. Phase 3 (thin shell via iframes) is not started, and should
+not start until the missing channel documents are rebuilt from the areas.
+
 ## §ADDENDUM 2026-07-11 — Phase 1 & 2 executed
 
 Phase 1 (extract modules) and Phase 2 (channels as sovereign HTML) below

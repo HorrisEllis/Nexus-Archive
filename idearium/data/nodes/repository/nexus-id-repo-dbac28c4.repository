@@ -1,0 +1,39 @@
+envelope: 1
+uuid: nexus-export-repository-nexus-id-repo-dbac28c4
+type: repository
+id: nexus-id-repo-dbac28c4
+context: idearium repo prov-1790345187438
+intent: null
+summary: 5 files, 5 chunks, READY
+system: idearium
+tags:
+  - spec:5b1a26a5-3a61-4fc9-8a9c-dbfb5e07ac00
+  - state:READY
+  - verification:passed
+exported_at: 1790345187618
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1790345187618
+lastSeenAt: 1790345187618
+fingerprint: null
+payload:
+  uuid: nexus-id-repo-dbac28c4
+  name: prov-1790345187438
+  specUuid: 5b1a26a5-3a61-4fc9-8a9c-dbfb5e07ac00
+  rootHash: e544fca9c3f2e1ac2c25dc404473165e3f3e127b1afff86630968e8cc2b342ad
+  parent: null
+  state: READY
+  fileCount: 5
+  byLanguage:
+    javascript: 5
+  failedCount: 0
+  chunkCount: 5
+  symbolCount: 1
+  verificationStatus: passed
+  verificationLevel: L5
+  paths:
+    atlas: /home/claude/work/nexus228/idearium/data/projects/nexus-id-repo-dbac28c4/atlas.json
+    chunks: /home/claude/work/nexus228/idearium/data/projects/nexus-id-repo-dbac28c4/chunks
+    indexes: /home/claude/work/nexus228/idearium/data/projects/nexus-id-repo-dbac28c4/indexes
+    verification: /home/claude/work/nexus228/idearium/data/projects/nexus-id-repo-dbac28c4/verification.json
+  generatedAt: 1790345187618

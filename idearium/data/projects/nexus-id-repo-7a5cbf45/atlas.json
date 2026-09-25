@@ -1,0 +1,86 @@
+{
+  "repository": "nexus-id-repo-7a5cbf45",
+  "generatedAt": 1790345065113,
+  "fileCount": 5,
+  "byLanguage": {
+    "javascript": 5
+  },
+  "byKind": {
+    "component": 5
+  },
+  "failedCount": 0,
+  "tree": {
+    "src": {
+      "__dir": true,
+      "children": {
+        "a.js": {
+          "language": "javascript",
+          "status": "complete",
+          "symbolCount": 0,
+          "lineCount": 1,
+          "kind": "component"
+        },
+        "chatgpt.js": {
+          "language": "javascript",
+          "status": "complete",
+          "symbolCount": 0,
+          "lineCount": 2,
+          "kind": "component"
+        },
+        "helper.js": {
+          "language": "javascript",
+          "status": "complete",
+          "symbolCount": 1,
+          "lineCount": 2,
+          "kind": "component"
+        },
+        "gemini.js": {
+          "language": "javascript",
+          "status": "complete",
+          "symbolCount": 0,
+          "lineCount": 2,
+          "kind": "component"
+        },
+        "deepseek.js": {
+          "language": "javascript",
+          "status": "complete",
+          "symbolCount": 0,
+          "lineCount": 2,
+          "kind": "component"
+        }
+      }
+    }
+  },
+  "components": [
+    {
+      "path": "src/a.js",
+      "kind": "component",
+      "language": "javascript",
+      "symbolCount": 0
+    },
+    {
+      "path": "src/chatgpt.js",
+      "kind": "component",
+      "language": "javascript",
+      "symbolCount": 0
+    },
+    {
+      "path": "src/helper.js",
+      "kind": "component",
+      "language": "javascript",
+      "symbolCount": 1
+    },
+    {
+      "path": "src/gemini.js",
+      "kind": "component",
+      "language": "javascript",
+      "symbolCount": 0
+    },
+    {
+      "path": "src/deepseek.js",
+      "kind": "component",
+      "language": "javascript",
+      "symbolCount": 0
+    }
+  ]
+}

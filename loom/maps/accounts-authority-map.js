@@ -5,6 +5,10 @@
  * comp_id: nexus.loom.maps.accounts-authority
  * UUID: nexus-loom-map-accounts-authority-v1-0000-2026-0923-001
  *
+ * Registries these edges belong to: clear-glass/registry-components.js (mesh.jobSend,
+ * mesh.jobStatus, mesh.jobIntake, accounts.*) and guardian/registry-components.js (guardian 3.8.0:
+ * the claim is an internal .job write rule, no new HTTP component).
+ *
  * Hand-mapped (not left to the source scanner) because the edges that matter
  * here are NOT require() edges the scanner can see:
  *   - guardian's registry is handed the authority by INJECTION (server.js);
@@ -24,7 +28,11 @@ const FILES = [
     'nexus.clear-glass.src.options.store', 'nexus.clear-glass.src.cookies.vault', 'nexus.clear-glass.src.passwords.vault']],
   ['guardian/lib/cg-account-authority.js',       'nexus.guardian.lib.cg-account-authority',       ['nexus.clear-glass.src.options.store']],             // HTTP GET :7702/accounts/resolve
   ['guardian/lib/agent-registry.js',             'nexus.guardian.lib.agent-registry',             ['nexus.guardian.lib.cg-account-authority']],         // injected (accountAuthority)
-  ['guardian/lib/dispatch-ladder.js',            'nexus.guardian.lib.dispatch-ladder',            ['nexus.guardian.lib.agent-registry']],               // injected (registry)
+  ['guardian/lib/dispatch-ladder.js',            'nexus.guardian.lib.dispatch-ladder',            ['nexus.guardian.lib.agent-registry', 'nexus.guardian.lib.mesh-client']],   // injected (registry, mesh)
+  // v0.39.227 — guardian job -> Clear Glass intake (both edges are HTTP, invisible to the source scanner)
+  ['guardian/lib/jobs.js',                       'nexus.guardian.lib.jobs',                       []],
+  ['clear-glass/src/jobs/intake.js',             'nexus.clear-glass.src.jobs.intake',             ['nexus.guardian.lib.jobs']],                         // HTTP GET :7820/jobs?id= (guardian reads its own .job)
+  ['guardian/lib/mesh-client.js',                'nexus.guardian.lib.mesh-client',                ['nexus.clear-glass.src.jobs.intake']],               // HTTP POST /agent-mesh/send, GET /agent-mesh/job
   ['clear-glass/renderer/settings/core.js',      'nexus.clear-glass.renderer.settings.core',      []],
   ['clear-glass/renderer/settings/sections/accounts.js', 'nexus.clear-glass.renderer.settings.sections.accounts', [                     // IPC accounts:* / accounts:portal:* / vault:status
     'nexus.clear-glass.renderer.settings.core', 'nexus.clear-glass.src.accounts.login-portal', 'nexus.clear-glass.src.options.store']],

@@ -627,6 +627,14 @@ const _ladder = require('./lib/dispatch-ladder').createLadder({
   log: (m) => console.log(`[guardian/ladder] ${m}`),
   // long generations: surface progress on the job and the bus (drives dashboards; proves the job is alive)
   onProgress: (job, p) => { try { updateJob(job.id, { progress: p }); bus.emit('guardian.job.progress', { jobId: job.id, provider: job.provider, ...p }); } catch (_) {} },
+  // v0.39.227 — James: "guardian's jobs generate physically to the jobs directory, then Clear Glass adds it to the
+  // intake of the job queue." The .job records that Clear Glass owns it BEFORE the send; Clear Glass's intake
+  // (clear-glass/src/jobs/intake.js) reads this back through GET /jobs?id= and refuses anything unclaimed.
+  // If the mesh fails, the dispatcher's existing fallback write sets transport:'ncp' — the claim moves with it.
+  claim: (job, { agentId, accountId }) => {
+    const j = updateJob(job.id, { transport: 'mesh', claimedBy: 'clear-glass', claimedAt: Date.now(), status: 'dispatched', dispatchedAt: Date.now(), agentId, accountId }, { required: true });
+    if (!j) throw new Error(`job ${job.id} not found — cannot claim it for Clear Glass`);
+  },
 });
 // A mesh answer completes the job through the SAME handler an NCP GUARDIAN_COMPLETE goes through
 // (chat_log, response sink, bus events): no second completion implementation. Lazy: _handleNCPMessage is
@@ -1509,6 +1517,13 @@ bus.register(new SISOGate('guardian.job.complete', (data) => {
   // from — so a job can be traced back to the real conversation.
   console.log(`[guardian] job complete: ${String(jobId).slice(0,8)} · ${data.provider || existing?.provider || '?'} · ${(data.text||'').length}ch · ${Math.round((ts - startedTs)/1000)}s · chat=${data.chatUrl || existing?.chat_url || '(none reported)'}`);
   _feedRaid(data.provider || existing?.provider || 'claude', true, ts - startedTs, { job: (typeof jobs !== 'undefined' && jobs.get) ? jobs.get(jobId) : null });
+}));
+
+// §SUBMIT-EVIDENCE 2026-09-23 — one line per job stage, so a run's log shows
+// WHERE a job stopped (typed but never sent / sent and waiting / replying)
+// instead of only "dispatched" then silence.
+bus.register(new SISOGate('guardian.job.progress', (data) => {
+  console.log(`[guardian] job ${String(data.jobId || '').slice(0,8)} — ${data.stage}${data.how ? ` (${data.how})` : ''}${data.chatUrl ? ` · chat=${data.chatUrl}` : ''}`);
 }));
 
 bus.register(new SISOGate('guardian.job.error', (data) => {

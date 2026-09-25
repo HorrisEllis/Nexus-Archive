@@ -62,7 +62,7 @@ const MODULE_UUID = randomUUID();
 // glass.spec's meta.version independently exhibited. All three synced
 // to 3.9.0 (3.8.0 baseline + this session's real additions) together;
 // see clear-glass.spec's version_history for what's actually new.
-const CG_VERSION  = '3.10.0';
+const CG_VERSION  = '3.11.0';
 
 // ── Headless / tray-only mode ─────────────────────────────────────────────
 // CG_HEADLESS=1  OR  --headless in argv → no BrowserWindow, tray only.
@@ -167,7 +167,7 @@ const EROS_PORT = parseInt(process.env.EROS_PORT || '7432');
 const WIRE_PORT = parseInt(process.env.WIRE_PORT || '7704');
 
 // ── State ──────────────────────────────────────────────────────────────────
-let loginPortal;
+let loginPortal, jobIntake;
 let tray, sse, ipcBridge, nexusOptions, bookmarks, rewind, providerHost, userscripts, siteSettings, downloads, passwordVault, pluginHost, errorCapture, processMetrics, history, mesh, autofillStore;
 let fp          = null;   // FingerprintEngine  — set in bootstrap()
 let ctxMgr      = null;   // ContextMgr         — set in bootstrap()
@@ -804,12 +804,19 @@ async function _startWire() {
       // needs exactly that without requiring a prompt to go with it.
       // ── guardian mesh-first dispatch (2026-09-19). send is async + idempotent by jobId; poll /agent-mesh/job. ──
       if (u === '/agent-mesh/send' && req.method === 'POST') {
-        try { const r = await mesh.sendViaDom(parsed); res.writeHead(r.accepted === false ? 200 : 202); return res.end(JSON.stringify({ ok: r.accepted !== false, ...r })); }
+        // v0.39.227: through the intake — guardian's claim on the .job is checked before anything is queued.
+        if (!jobIntake) { res.writeHead(503); return res.end(JSON.stringify({ ok: false, accepted: false, sent: false, stage: 'mesh_unreachable', error: 'Clear Glass is still starting — job intake not ready' })); }
+        try { const r = await jobIntake.intake(parsed); res.writeHead(r.accepted === false ? 200 : 202); return res.end(JSON.stringify({ ok: r.accepted !== false, ...r })); }
         catch (e) { res.writeHead(500); return res.end(JSON.stringify({ ok: false, accepted: false, sent: false, stage: 'inject_failed', error: e.message })); }
       }
       if (u === '/agent-mesh/job' && req.method === 'GET') {
         const id = new URL(req.url, 'http://127.0.0.1').searchParams.get('jobId');
-        res.writeHead(200); return res.end(JSON.stringify({ ok: true, ...mesh.getDomJob(id) }));
+        if (!jobIntake) { res.writeHead(503); return res.end(JSON.stringify({ ok: false, error: 'job intake not ready' })); }
+        res.writeHead(200); return res.end(JSON.stringify({ ok: true, ...jobIntake.status(id) }));
+      }
+      if (u === '/agent-mesh/intake' && req.method === 'GET') {
+        if (!jobIntake) { res.writeHead(503); return res.end(JSON.stringify({ ok: false, error: 'job intake not ready' })); }
+        res.writeHead(200); return res.end(JSON.stringify({ ok: true, dir: jobIntake.dir, jobs: jobIntake.list() }));
       }
       if (u === '/agent-mesh/diagnose' && req.method === 'POST') {
         try { res.writeHead(200); return res.end(JSON.stringify(await mesh.diagnoseDom(parsed))); }
@@ -1400,6 +1407,24 @@ async function bootstrap() {
 
   // §BUILT 2026-09-23 — login portals: per-account provider sign-in in the
   // SAME partition + vault key agent-mesh spawn() reads (src/accounts/login-portal.js).
+  // §BUILT 2026-09-23 (v0.39.227) — Clear Glass's intake for guardian jobs: only
+  // jobs guardian CLAIMED for Clear Glass on their .job are taken in (read back
+  // through guardian's own /jobs?id=), each with a durable <jobId>.intake record
+  // in Clear Glass's own data dir. See src/jobs/intake.js for why push-with-claim,
+  // not a watch on guardian's folder.
+  {
+    const { createJobIntake, guardianJobFetcher } = require('../jobs/intake');
+    const guardianPort = (apiSettings && apiSettings.get && apiSettings.get().guardianPort) || NEXUS_PORTS.guardian;
+    jobIntake = createJobIntake({
+      dir: path.join(process.env.APPDATA || process.env.HOME || '.', '.clear-glass', 'job-intake'),   // same root as the vaults
+      fetchGuardianJob: guardianJobFetcher({ port: guardianPort }),
+      sendViaDom: (a) => mesh.sendViaDom(a),
+      getDomJob: (id) => mesh.getDomJob(id),
+      log: (m) => console.log(m),
+    });
+    jobIntake.recover();
+  }
+
   const { LoginPortal } = require('../accounts/login-portal');
   loginPortal = new LoginPortal({
     options: nexusOptions, vault, passwordVault, registry: () => mesh.getRegistry(),

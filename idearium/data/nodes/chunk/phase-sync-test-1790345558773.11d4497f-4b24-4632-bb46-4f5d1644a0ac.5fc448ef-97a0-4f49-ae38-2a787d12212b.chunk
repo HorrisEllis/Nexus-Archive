@@ -1,0 +1,39 @@
+envelope: 1
+uuid: nexus-export-chunk-phase-sync-test-1790345558773.11d4497f-4b24-4632-bb46-4f5d1644a0ac.5fc448ef-97a0-4f49-ae38-2a787d12212b
+type: chunk
+id: phase-sync-test-1790345558773.11d4497f-4b24-4632-bb46-4f5d1644a0ac.5fc448ef-97a0-4f49-ae38-2a787d12212b
+context: idearium spec-engine chunk of spec 11d4497f-4b24-4632-bb46-4f5d1644a0ac
+intent: null
+summary: api (complete)
+system: idearium
+tags:
+  - spec:11d4497f-4b24-4632-bb46-4f5d1644a0ac
+  - status:complete
+  - section:api
+  - specName:phase-sync-test-1790345558773
+  - agent:claude
+exported_at: 1790345558802
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1790345558802
+lastSeenAt: 1790345558802
+fingerprint: null
+payload:
+  uuid: 5fc448ef-97a0-4f49-ae38-2a787d12212b
+  specUuid: 11d4497f-4b24-4632-bb46-4f5d1644a0ac
+  sectionId: api
+  sectionTitle: API & Routes
+  chunkIdx: 4
+  status: complete
+  realPath: null
+  fileName: 04-api.md
+  filePath: /home/claude/work/nexus228/idearium/data/specs/11d4497f-4b24-4632-bb46-4f5d1644a0ac/04-api-5fc448ef.md
+  agent: claude
+  agentModel: null
+  attempts: 0
+  failureMode: null
+  byteSize: 397
+  contentHash: a10ab81e8d32607e81cb118874d76a07e9e965666e9b72deb937211aec332c3a
+  createdAt: 1790345558775
+  updatedAt: 1790345558801
+  completedAt: 1790345558801

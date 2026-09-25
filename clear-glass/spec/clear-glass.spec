@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        clear-glass
-    version:     3.10.0
+    version:     3.11.0
     foundation:  nexus-system-foundation@1.1.0
     port:        7702
     uuid:        nexus-clear-glass-v1-0000-2026-0901-jamesbrooks-001
@@ -56,7 +56,7 @@ spec:
       returns: "Full clear-glass component registry — 79 real components as of 2026-09-22 (was 67 at 2026-09-01)"
 
   handshake:
-    components_count: 94   # §2026-09-22 — was 67 (stale since 2026-09-01); autofill's 7 real
+    components_count: 97   # §2026-09-22 — was 67 (stale since 2026-09-01); autofill's 7 real
                             # IPC methods (shipped 2026-09-19, never registered) and screen-qa's
                             # 5 (this session) both landed in registry-components.js with zero
                             # entries here — checked directly against the live registry export,
@@ -199,6 +199,16 @@ spec:
         opened: 2026-09-22
 
   version_history:
+    - version: 3.11.0
+      date: 2026-09-23
+      summary: >-
+        MINOR — Clear Glass job intake (src/jobs/intake.js): /agent-mesh/send and /agent-mesh/job now go
+        through it; it takes in only jobs guardian CLAIMED for it on their .job (read back via guardian
+        GET /jobs?id=), keeps its own <jobId>.intake records, survives a restart as clear_glass_restarted
+        (sent:null). Registered mesh.jobSend + mesh.jobStatus (real since 2026-09-19, never registered) and new
+        mesh.jobIntake GET /agent-mesh/intake: 94 -> 97. Settings UI: one JS + one CSS file per area (14 + 14),
+        area CSS scoped to body[data-area], shared settings.css holds tokens/frame/shared components only.
+      versioniumCommitId: null
     - version: 3.10.0
       date: 2026-09-23
       summary: >-

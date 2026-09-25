@@ -305,7 +305,8 @@ function createDispatcher(deps) {
         bus.emit('guardian.job.error', { jobId: job.id, error: lr.reason, provider: job.provider, needsUser: lr.kind === 'user' });
         return true;
       }
-      if (lr.reason && lr.reason !== 'policy_ncp_only') updateJob(job.id, { transport: 'ncp', transportFallbackReason: lr.reason, transportTrail: lr.trail });
+      // v0.39.227: the mesh claim is released on fallback — the .job must never say two transports own it.
+      if (lr.reason && lr.reason !== 'policy_ncp_only') updateJob(job.id, { transport: 'ncp', claimedBy: null, transportFallbackReason: lr.reason, transportTrail: lr.trail });
     }
 
     if (!ncp.isConnected(job.provider)) {

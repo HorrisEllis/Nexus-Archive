@@ -1,0 +1,41 @@
+{
+  "id": "intake-95c753b7-a73d-4c7e-ab66-6122c8431343",
+  "dropId": "95c753b7-a73d-4c7e-ab66-6122c8431343",
+  "version": "1.0.0",
+  "module": "nexus.lib.intake",
+  "state": "STAGED",
+  "stagedAt": 1790345586028,
+  "provenance": {
+    "provider": "claude",
+    "chatUrl": null,
+    "filename": "block-0.js",
+    "downloadedAt": 1790345586027,
+    "jobId": "job-unregistered",
+    "blockIndex": 0,
+    "syntax": "javascript",
+    "derivedName": true,
+    "raidQueueId": null,
+    "sourcePath": "/home/claude/work/nexus228/data/guardian/code-artifacts/job-unregistered/block-0.js"
+  },
+  "claims": [
+    {
+      "source": "block-0.js",
+      "target": "block-0.js",
+      "mapped": false,
+      "bytes": 12,
+      "sha256": "281b3c2e7e782869002f654a11b438c97959c12ac7cadaebc0b8fd7589b2e77f",
+      "effect": "UNPLACED"
+    }
+  ],
+  "summary": {
+    "files": 1,
+    "create": 0,
+    "overwrite": 0,
+    "identical": 0,
+    "unplaced": 1,
+    "archives": 0,
+    "unexpandedArchives": []
+  },
+  "verdict": null,
+  "promoted": null
+}

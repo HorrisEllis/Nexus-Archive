@@ -168,6 +168,12 @@
   function section(def) { sections.push(def); }
 
   let current = null, pollers = [];
+  const loadedCss = new Set();
+  function loadAreaCss(id) {
+    if (loadedCss.has(id)) return;
+    loadedCss.add(id);
+    document.head.append(h('link', { rel: 'stylesheet', href: `settings/sections/${id}.css`, dataset: { area: id } }));
+  }
   function onLeave(fn) { pollers.push(fn); }
 
   async function show(id) {
@@ -179,6 +185,12 @@
     if (location.hash !== '#' + def.id) { try { history.replaceState(null, '', '#' + def.id); } catch (_) { /* opaque origin */ } }
     const main = document.getElementById('main');
     main.replaceChildren();
+    // v0.39.227 — one stylesheet per area (sections/<id>.css), loaded the first
+    // time the area is shown; its rules are scoped to body[data-area="<id>"]
+    // so one area's styles can never leak into another.
+    main.dataset.area = def.id;
+    document.body.dataset.area = def.id;   // modals live on body, outside #main — scope area CSS from body
+    loadAreaCss(def.id);
     const tools = h('div', { class: 'tools' });
     main.append(h('header', { class: 'page-head' }, h('h1', { text: def.label }), def.blurb ? h('p', { text: def.blurb }) : null, tools));
     const page = h('div', { class: 'page' }, h('div', { class: 'loading', text: 'Loading…' }));

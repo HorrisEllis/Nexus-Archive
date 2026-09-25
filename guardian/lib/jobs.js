@@ -49,8 +49,37 @@ const nodeExport = require('../../lib/node-export.js');
 // here for the first time. loadPersistedJobs() hydrates the in-memory
 // Map from these files at boot, so a restart recovers real, in-flight
 // jobs instead of only ever seeing them after they complete.
-const JOBS_DIR = path.join(__dirname, '..', '..', 'data', 'guardian', 'jobs');
-function _persistJob(job) {
+// §2026-09-23 — the jobs directory is addressable. It was hardcoded, which
+// made it impossible to point a second guardian (or a test) at a different
+// one, and the handoff's item 5 makes this directory the source of truth —
+// something that is the source of truth should be nameable. Default is
+// unchanged; GUARDIAN_JOBS_DIR overrides it.
+const JOBS_DIR = process.env.GUARDIAN_JOBS_DIR || path.join(__dirname, '..', '..', 'data', 'guardian', 'jobs');
+/**
+ * _persistJob(job, { required }) — write the .job envelope.
+ *
+ * §SOURCE-OF-TRUTH 2026-09-23 — James: "guardian jobs physically in the jobs
+ * directory ... the .job file is written FIRST and is the source of truth (a
+ * failed write fails the job loudly)."
+ *
+ * The split is deliberate, and narrower than "always fatal":
+ *   required:true  — at CREATION. Recoverability is the promise createJob
+ *                    makes; a job whose file never landed is not recoverable,
+ *                    so accepting it would be accepting a job that quietly
+ *                    cannot survive a restart. Throws (§1.2).
+ *   required:false — on every later status update. The job already exists,
+ *                    is already dispatched or answering, and killing real
+ *                    in-flight work because a status write failed would lose
+ *                    MORE than it protects. Degrades restart fidelity for
+ *                    that one job, loudly, and says so.
+ */
+function _persistJob(job, { required = false } = {}) {
+  if (required) {
+    fs.mkdirSync(JOBS_DIR, { recursive: true });
+    const envelope = nodeExport.wrap('job', job.id, job, { context: 'guardian real-time job dispatch', system: 'guardian' });
+    fs.writeFileSync(path.join(JOBS_DIR, `${job.id}.job`), nodeExport.toYaml(envelope), 'utf8');
+    return true;
+  }
   try {
     fs.mkdirSync(JOBS_DIR, { recursive: true });
     const envelope = nodeExport.wrap('job', job.id, job, { context: 'guardian real-time job dispatch', system: 'guardian' });
@@ -152,8 +181,14 @@ function createJobStore() {
       hat,
       status: 'pending', response: '', ts: Date.now(), updatedAt: Date.now(),
     };
+    // The file first: if it cannot be written, this job is not recoverable
+    // and is refused here rather than accepted and silently lost on restart.
+    try {
+      _persistJob(job, { required: true });
+    } catch (e) {
+      throw new Error(`guardian: refusing job ${id} — its .job file could not be written to ${JOBS_DIR} (${e.message}). The job would not survive a restart.`);
+    }
     jobs.set(id, job);
-    _persistJob(job);
     // §FIX 2026-09-15 — James: "i also love how [the wake relay] shows
     // the content of the wake word. i want the jobs to do that also."
     // Real gap: wake-relay.js's handleWake() logs a preview of the
@@ -167,11 +202,13 @@ function createJobStore() {
     return job;
   }
 
-  function updateJob(id, patch) {
+  // { required } — v0.39.227: the mesh CLAIM is a write whose absence changes who delivers the job, so it
+  // follows creation's rule (must land on disk, or throw) rather than the non-fatal status-update rule.
+  function updateJob(id, patch, { required = false } = {}) {
     const job = jobs.get(id);
     if (!job) return null;
     Object.assign(job, patch, { updatedAt: Date.now() });
-    _persistJob(job);
+    _persistJob(job, { required });
     return job;
   }
 
@@ -200,4 +237,4 @@ function createJobStore() {
   return { jobs, createJob, updateJob, _suggestJobHat, _findActiveJobForProvider };
 }
 
-module.exports = { createJobStore };
+module.exports = { createJobStore, JOBS_DIR };

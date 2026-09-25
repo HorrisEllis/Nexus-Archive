@@ -1,0 +1,39 @@
+envelope: 1
+uuid: nexus-export-repository-mco2-test-repo
+type: repository
+id: mco2-test-repo
+context: idearium repo undefined
+intent: null
+summary: 9 files, 9 chunks, READY
+system: idearium
+tags:
+  - spec:undefined
+  - state:READY
+  - verification:partial
+exported_at: 1790345592422
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1790345592422
+lastSeenAt: 1790345592422
+fingerprint: null
+payload:
+  uuid: mco2-test-repo
+  rootHash: null
+  parent: null
+  state: READY
+  fileCount: 9
+  byLanguage:
+    javascript: 7
+    python: 1
+    json: 1
+  failedCount: 1
+  chunkCount: 9
+  symbolCount: 6
+  verificationStatus: partial
+  verificationLevel: L2
+  paths:
+    atlas: /tmp/mco2-QMSN13/repo/atlas.json
+    chunks: /tmp/mco2-QMSN13/repo/chunks
+    indexes: /tmp/mco2-QMSN13/repo/indexes
+    verification: /tmp/mco2-QMSN13/repo/verification.json
+  generatedAt: 1790345592422

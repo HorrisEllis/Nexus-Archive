@@ -1,0 +1,54 @@
+[
+  {
+    "id": "chunk-bdb75ae91b3c1707",
+    "file": "src/helper.js",
+    "range": {
+      "start_line": 1,
+      "end_line": 2
+    },
+    "symbols": [
+      "helper_deepseek"
+    ],
+    "hash": "e66632c768b0374654732fa307ae14d2b73f9d8bcc7a72316413c160c49469e0"
+  },
+  {
+    "id": "chunk-54b3b5c989a30c58",
+    "file": "src/a.js",
+    "range": {
+      "start_line": 1,
+      "end_line": 1
+    },
+    "symbols": [],
+    "hash": "cefd0dd07bfa670f7e0b825b372e76a33017fb39beaae3a4db0a742196bb99df"
+  },
+  {
+    "id": "chunk-61f726711ea7fce0",
+    "file": "src/chatgpt.js",
+    "range": {
+      "start_line": 1,
+      "end_line": 2
+    },
+    "symbols": [],
+    "hash": "c27b8c7bda99565dcd1dd8e1f970b859eba67d3c8dbd2743d653264c9001accc"
+  },
+  {
+    "id": "chunk-8383f00da8717329",
+    "file": "src/gemini.js",
+    "range": {
+      "start_line": 1,
+      "end_line": 2
+    },
+    "symbols": [],
+    "hash": "047031ce087876df9e3a91491a72893ab178534f90ae84ab6c7e5efffde53be0"
+  },
+  {
+    "id": "chunk-e632995a92120033",
+    "file": "src/deepseek.js",
+    "range": {
+      "start_line": 1,
+      "end_line": 2
+    },
+    "symbols": [],
+    "hash": "a20a7a538db00d4fe1f97e47eec2f1b7408b5559cce6050b09404dad33d43fb9"
+  }
+]

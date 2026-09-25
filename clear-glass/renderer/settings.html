@@ -6,6 +6,10 @@
      with every feature in mind." Shell only; the page is renderer/settings/
      core.js plus one file per area under renderer/settings/sections/
      (clear-glass UI1: "one file per UI area, no monoliths").
+     v0.39.227 — James: "each UI area its own file, including its own CSS file
+     per UI file." settings.css now holds shared tokens + frame + shared
+     components only; each area's styles are sections/<id>.css, loaded by
+     core.js when that area is shown and scoped to body[data-area="<id>"].
      CSP: script-src is now 'self' only — the ~190-line inline <script> the
      previous version's own CSP comment named as "a real follow-up, not done
      here" is gone, so 'unsafe-inline' is dropped for scripts. style-src
@@ -37,11 +41,18 @@
 <script src="settings/core.js"></script>
 <script src="settings/sections/accounts.js"></script>
 <script src="settings/sections/providers.js"></script>
+<script src="settings/sections/fingerprint.js"></script>
 <script src="settings/sections/mesh.js"></script>
+<script src="settings/sections/automation.js"></script>
 <script src="settings/sections/macros.js"></script>
+<script src="settings/sections/eros.js"></script>
 <script src="settings/sections/suite.js"></script>
-<script src="settings/sections/browser.js"></script>
-<script src="settings/sections/system.js"></script>
+<script src="settings/sections/general.js"></script>
+<script src="settings/sections/autofill.js"></script>
+<script src="settings/sections/privacy.js"></script>
+<script src="settings/sections/connections.js"></script>
+<script src="settings/sections/copilot.js"></script>
+<script src="settings/sections/diagnostics.js"></script>
 <script src="settings/boot.js"></script>
 </body>
 </html>

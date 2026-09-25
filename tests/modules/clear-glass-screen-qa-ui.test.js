@@ -83,9 +83,9 @@ function main() {
   // renderer/settings/sections/*.js (one file per area, no inline script).
   // Same three intents, checked against where the Screen Q&A UI lives now;
   // saves are per-field on change instead of one Save button.
-  const SETTINGS_SECTION = fs.readFileSync(path.join(ROOT, 'clear-glass', 'renderer', 'settings', 'sections', 'browser.js'), 'utf8');
+  const SETTINGS_SECTION = fs.readFileSync(path.join(ROOT, 'clear-glass', 'renderer', 'settings', 'sections', 'autofill.js'), 'utf8');
   check('settings has a real Screen Q&A section: enable toggle, confidence select, profile picker, context box',
-    /settings\/sections\/browser\.js/.test(SETTINGS_HTML) && /Answering questions on screen/.test(SETTINGS_SECTION) &&
+    /settings\/sections\/autofill\.js/.test(SETTINGS_HTML) && /Answering questions on screen/.test(SETTINGS_SECTION) &&
     /toggle\(s\.screenQaEnabled !== false/.test(SETTINGS_SECTION) && /const minConf = select\(/.test(SETTINGS_SECTION) &&
     /const prof = select\(/.test(SETTINGS_SECTION) && /const ctx = h\('textarea'/.test(SETTINGS_SECTION));
   check('the profile picker is populated LIVE from cg.autofill.listProfiles(), not a hardcoded list', /cg\.autofill\.listProfiles\(\)/.test(SETTINGS_SECTION) && /profiles\.map\(p => \(\{ value: p\.id, label: p\.label \}\)\)/.test(SETTINGS_SECTION));

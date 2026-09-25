@@ -97,6 +97,13 @@ async function main() {
     check(`${p}: a genuine new answer completes the job with ITS text`,
       good.done && good.done.text === 'SECOND JOB ANSWER', good.done && good.done.text);
     check(`${p}: the completed job is the one that was watched`, good.done && good.done.jobId === 'job-2');
+    // Behavioural, not textual: the watch must actually EMIT the report when
+    // it first sees new text — a source-only assertion passes even if the
+    // branch is disabled.
+    check(`${p}: it reports reply-started, with how much text it first saw`,
+      good.sent.some(m => m.type === 'GUARDIAN_PROGRESS' && m.stage === 'reply-started' && /\d+ch/.test(String(m.how))));
+    check(`${p}: a job that never gets a reply reports no reply-started at all`,
+      !stale.sent.some(m => m.type === 'GUARDIAN_PROGRESS' && m.stage === 'reply-started'));
 
     check(`${p}: the userscript version was bumped so the fix is visible in guardian's report`,
       /const VERSION\s*=\s*'10\.[1-9]/.test(src));
@@ -178,6 +185,31 @@ async function main() {
     /_sweepIdle\(\) \{[\s\S]{0,120}_sweepIdleAgentTabs\(now\)/.test(HOSTSRC));
   check('TR2: opening a tab for an agent stamps that agent before injecting',
     /this\._inject\(providerId, win, agentId\)/.test(HOSTSRC));
+
+  // ── Submit + watch evidence: a job that goes quiet must say WHERE ──
+  // James's run: created -> dispatched -> acked -> silence, while the tab
+  // showed a real answer. Neither the send nor the watch reported anything.
+  for (const p of PROVIDERS) {
+    const src = fs.readFileSync(path.join(ROOT, 'guardian', `userscript-${p}.js`), 'utf8');
+    const sub = extractFn(src, 'submit');
+    check(`${p}: submit() reports which path sent the prompt`,
+      /return \{ ok: true, how: 'button' \}/.test(sub) && /how: 'enter-key'/.test(sub));
+    check(`${p}: submit() reports a real reason when nothing could send`,
+      /return \{ ok: false, how: 'none', error:/.test(sub));
+    check(`${p}: a prompt typed but never sent fails immediately with that reason`,
+      /stage: s && s\.ok \? 'submitted' : 'submit-failed'/.test(src) && /never sent —/.test(src));
+    check(`${p}: the watch only starts once the prompt really went out`,
+      src.indexOf('if (!s || !s.ok)') > 0 && src.indexOf('if (!s || !s.ok)') < src.indexOf('startWatch(jobId, text, 0);'));
+    check(`${p}: the watch reports the first new text it sees, so silence is diagnosable`,
+      /stage:'reply-started'/.test(src) && /let _sawNew = false;/.test(src));
+    check(`${p}: reply-started fires before the stale-baseline guard can skip the pass`,
+      src.indexOf("stage:'reply-started'") < src.indexOf('if (el === _baseEl && text === _baseText) {'));
+  }
+  const NH = fs.readFileSync(path.join(ROOT, 'guardian', 'lib', 'ncp-handler.js'), 'utf8');
+  check('guardian routes stage reports from the page',
+    /case 'GUARDIAN_PROGRESS'[\s\S]{0,240}guardian\.job\.progress/.test(NH));
+  check('guardian logs one line per job stage, naming the chat',
+    /guardian\.job\.progress[\s\S]{0,300}chat=/.test(fs.readFileSync(path.join(ROOT, 'guardian', 'server.js'), 'utf8')));
 
   console.log(`\n  ${pass} passed, ${fail} failed\n`);
   process.exitCode = fail === 0 ? 0 : 1;

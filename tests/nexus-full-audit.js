@@ -38,6 +38,8 @@ function t(label, fn) {
 }
 
 function read(rel) { return fs.readFileSync(path.join(ROOT, rel), 'utf8'); }
+// v0.39.228: ui/home/index.html links its JS/CSS per area — read the assembled page.
+const { homePageSource } = require('./helpers/home-page-source');
 function exists(rel) { return fs.existsSync(path.join(ROOT, rel)); }
 function syntaxOk(rel) {
   const { execSync } = require('child_process');
@@ -157,21 +159,21 @@ t('organism-factory has register() (Phase 40 dynamic)', () => read('ui/eravos/ru
 // ── SECTION 5: Home UI ────────────────────────────────────────────────────────
 console.log('\n══ §5 HOME UI ══\n');
 
-t('home has ch-causal channel', () => read('ui/home/index.html').includes('ch-causal'));
-t('home has ch-conversations channel', () => read('ui/home/index.html').includes('ch-conversations'));
-t('home has ch-canvas channel', () => read('ui/home/index.html').includes('ch-canvas'));
-t('home has ch-emerge channel', () => read('ui/home/index.html').includes('ch-emerge'));
-t('home accent animation exists', () => read('ui/home/index.html').includes('accent-cycle'));
+t('home has ch-causal channel', () => homePageSource().includes('ch-causal'));
+t('home has ch-conversations channel', () => homePageSource().includes('ch-conversations'));
+t('home has ch-canvas channel', () => homePageSource().includes('ch-canvas'));
+t('home has ch-emerge channel', () => homePageSource().includes('ch-emerge'));
+t('home accent animation exists', () => homePageSource().includes('accent-cycle'));
 t('home --ok not circular (green dot fix)', () => {
-  const h = read('ui/home/index.html');
+  const h = homePageSource();
   return h.includes('--ok:#00ff88') && !h.includes('--ok:var(--ok)');
 });
 t('home --err not circular', () => {
-  const h = read('ui/home/index.html');
+  const h = homePageSource();
   return h.includes('--err:#ff3355') && !h.includes('--err:var(--err)');
 });
-t('home NEXUS_UI_STATE exposed', () => read('ui/home/index.html').includes('NEXUS_UI_STATE'));
-t('home co-pilot sends uiState', () => read('ui/home/index.html').includes('uiState:'));
+t('home NEXUS_UI_STATE exposed', () => homePageSource().includes('NEXUS_UI_STATE'));
+t('home co-pilot sends uiState', () => homePageSource().includes('uiState:'));
 t('emerge-ide has hot-load button', () => read('ui/emerge-ide.html').includes('doHotLoad'));
 t('emerge-ide has spec-load button', () => read('ui/emerge-ide.html').includes('specFirst'));
 

@@ -1,5 +1,8 @@
 'use strict';
 /**
+ * renderer/settings/sections/suite.js — Ledger (Cortex event)  (styles: suite.css)
+ */
+/**
  * renderer/settings/sections/suite.js — Agent suite
  * §BUILT 2026-09-23. The Guardian-plugin surface in one place, all over
  * already-real IPC: custom input/output agents (AM8, options.registerAgent),

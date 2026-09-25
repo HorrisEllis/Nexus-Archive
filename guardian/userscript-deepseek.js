@@ -473,10 +473,16 @@ function injectText(text) {
   return true;
 }
 function submit() {
+  // §SUBMIT-EVIDENCE 2026-09-23 — James's run: job created -> dispatched ->
+  // ACKED -> silence, while the tab itself showed a real answer on screen.
+  // submit() returned NOTHING, so "never sent" and "sent fine" were
+  // indistinguishable and a job could only fail later as a generic no-reply.
+  // Report which path actually fired, or why neither could.
   const btn = _getSendBtn();
-  if (btn && !btn.disabled) { btn.click(); return; }
+  if (btn && !btn.disabled) { btn.click(); return { ok: true, how: 'button' }; }
   const inp = _getInput();
-  if (inp) inp.dispatchEvent(new KeyboardEvent('keydown', { key:'Enter', keyCode:13, bubbles:true, cancelable:true }));
+  if (inp) { inp.dispatchEvent(new KeyboardEvent('keydown', { key:'Enter', keyCode:13, bubbles:true, cancelable:true })); return { ok: true, how: 'enter-key' }; }
+  return { ok: false, how: 'none', error: btn ? 'the send button is present but disabled' : 'no send button and no input to press Enter in' };
 }
 
 // ── Gap / error detection — same contract, citations-aware addition ─────────
@@ -533,6 +539,7 @@ function startWatch(jobId, prompt, retryCount = 0) {
   // its 3 stable passes against the old text and completed the new job with the
   // old reply. Baseline what was on screen BEFORE this job and never accept it:
   // a completion must be a different element, or different text.
+  let _sawNew = false;
   const _baseEl   = findResponseEl();
   const _baseText = _baseEl ? (_baseEl.innerText || _baseEl.textContent || '').trim() : '';
   const mode = detectSearchMode();
@@ -547,6 +554,13 @@ function startWatch(jobId, prompt, retryCount = 0) {
     const text = (el.innerText || el.textContent || '').trim();
     // Still showing the previous answer: this job has produced nothing yet.
     // §1.2 — after NO_REPLY_MS say so loudly rather than return a stale reply.
+    // §WATCH-EVIDENCE 2026-09-23 — the reply WAS on screen and guardian still
+    // got nothing, so the log must say whether the watch ever saw new text at
+    // all. One report, the first time it does.
+    if (!_sawNew && !(el === _baseEl && text === _baseText) && text) {
+      _sawNew = true;
+      send({ type:'GUARDIAN_PROGRESS', jobId, stage:'reply-started', how:`${text.length}ch`, chatUrl:location.href, ts:Date.now() });
+    }
     if (el === _baseEl && text === _baseText) {
       if (Date.now() - _watchStart > NO_REPLY_MS) {
         const ms = Date.now() - _watchStart;
@@ -736,7 +750,21 @@ async function handleJob(msg) {
     if (!injectText(finalText)) throw new Error('Input not found — Perplexity composer not detected');
     send({ type:'GUARDIAN_DELIVERED', jobId, chatUrl:location.href, account:getAccount(), requestId:jobId });
     await dbPut('requests', { uuid:jobId, status:'dispatched', sessionId, dispatchedAt:Date.now() });
-    setTimeout(() => { submit(); startWatch(jobId, text, 0); }, 600);
+    setTimeout(() => {
+      // A send that never happened must fail NOW with the real reason, not
+      // 600ms + NO_REPLY_MS later as a generic silence (§1.2).
+      const s = submit();
+      send({ type:'GUARDIAN_PROGRESS', jobId, stage: s && s.ok ? 'submitted' : 'submit-failed',
+             how: s && s.how, chatUrl: location.href, ts: Date.now() });
+      if (!s || !s.ok) {
+        _log('gap', 'Submit failed', `#${String(jobId).slice(0,8)} · ${s && s.error}`);
+        send({ type:'GUARDIAN_ERROR', jobId, gate:'submit',
+               error:`the prompt was typed into the page but never sent — ${s && s.error}`,
+               chatUrl: location.href, account: getAccount() });
+        return;
+      }
+      startWatch(jobId, text, 0);
+    }, 600);
     return true;
   }, { jobId });
 }

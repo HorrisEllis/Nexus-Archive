@@ -1,0 +1,40 @@
+envelope: 1
+uuid: nexus-export-chunk-inject-test-1790345265876.nexus-id-repo-6e273eb5.2d54a265-0505-44b2-9c38-c107a7e11946
+type: chunk
+id: inject-test-1790345265876.nexus-id-repo-6e273eb5.2d54a265-0505-44b2-9c38-c107a7e11946
+context: idearium spec-engine chunk of spec bb728fed-dcb5-4fd6-b58b-3185751af65c
+intent: null
+summary: readme (complete)
+system: idearium
+tags:
+  - spec:bb728fed-dcb5-4fd6-b58b-3185751af65c
+  - status:complete
+  - section:readme
+  - specName:inject-test-1790345265876
+  - agent:ingest
+  - repo:nexus-id-repo-6e273eb5
+exported_at: 1790345265948
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1790345265948
+lastSeenAt: 1790345265948
+fingerprint: null
+payload:
+  uuid: 2d54a265-0505-44b2-9c38-c107a7e11946
+  specUuid: bb728fed-dcb5-4fd6-b58b-3185751af65c
+  sectionId: readme
+  sectionTitle: README.md
+  chunkIdx: 1
+  status: complete
+  realPath: README.md
+  fileName: 01-readme.md
+  filePath: /home/claude/work/nexus228/idearium/data/specs/bb728fed-dcb5-4fd6-b58b-3185751af65c/01-readme-2d54a265.md
+  agent: ingest
+  agentModel: ingest:drop
+  attempts: 1
+  failureMode: null
+  byteSize: 390
+  contentHash: 1f885426f5e09fe3c782a5a075fa09cbbbb0681b43370a82f4fe6ac33eb8d9f2
+  createdAt: 1790345265878
+  updatedAt: 1790345265947
+  completedAt: 1790345265947

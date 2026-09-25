@@ -1,0 +1,40 @@
+envelope: 1
+uuid: nexus-export-chunk-inject-test-1790345265876.nexus-id-repo-6e273eb5.da729de9-85cd-48a0-b2ef-2d51ed0520b7
+type: chunk
+id: inject-test-1790345265876.nexus-id-repo-6e273eb5.da729de9-85cd-48a0-b2ef-2d51ed0520b7
+context: idearium spec-engine chunk of spec bb728fed-dcb5-4fd6-b58b-3185751af65c
+intent: null
+summary: src-agent2 (complete)
+system: idearium
+tags:
+  - spec:bb728fed-dcb5-4fd6-b58b-3185751af65c
+  - status:complete
+  - section:src-agent2
+  - specName:inject-test-1790345265876
+  - agent:user
+  - repo:nexus-id-repo-6e273eb5
+exported_at: 1790345266090
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1790345266090
+lastSeenAt: 1790345266090
+fingerprint: null
+payload:
+  uuid: da729de9-85cd-48a0-b2ef-2d51ed0520b7
+  specUuid: bb728fed-dcb5-4fd6-b58b-3185751af65c
+  sectionId: src-agent2
+  sectionTitle: src/agent2.js
+  chunkIdx: 4
+  status: complete
+  realPath: src/agent2.js
+  fileName: 04-src-agent2.md
+  filePath: /home/claude/work/nexus228/idearium/data/specs/bb728fed-dcb5-4fd6-b58b-3185751af65c/04-src-agent2-da729de9.js
+  agent: user
+  agentModel: null
+  attempts: 0
+  failureMode: null
+  byteSize: 394
+  contentHash: 63a25998a5e6941f50b00c3570f2e54d30457c4b4f9692710b416da010ef961d
+  createdAt: 1790345266088
+  updatedAt: 1790345266089
+  completedAt: 1790345266089

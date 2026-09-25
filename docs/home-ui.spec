@@ -1,9 +1,9 @@
 spec:
   meta:
     name:        home-ui
-    version:     1.3.0
+    version:     1.4.0
     uuid:        nexus-home-ui-v1-1000-2026-0617-jamesbrooks-001
-    file:        ui/home/index.html
+    file:        ui/home/index.html   # markup only since 1.4.0 -- JS/CSS in ui/home/areas/ (one JS + one CSS per area), ui/home/core/, ui/home/home.css (shared)
     serves:      http://127.0.0.1:9000/
     purpose: >
       The NEXUS home screen. Sovereign OS overview surface.
@@ -22,6 +22,14 @@ spec:
       status:  complete
       desc:    selectMode(mode, goToSuite=false) on init — applies mode to body/badge/tiles
                without navigating away from Overview. goToSuite=true only on user selection.
+      broken_until: '1.4.0 (v0.39.228)'
+      found: >
+        Recorded complete, but whenever a mode WAS stored this restore crashed the page:
+        selectMode -> _logToData touched _uiLog, declared later in the same inline script,
+        in its temporal dead zone. The throw halted the rest of the script -- pollHealth,
+        connectSSE and every interval never started. Found by the 1.4.0 equivalence probe,
+        not by a user report. Fixed by loading core/logging.js first; guarded by
+        test-home-ui-files HF-04 and tests/probe/home-split-equivalence.py.
     3:
       name:    Forge Shell tile
       status:  complete
@@ -47,6 +55,31 @@ spec:
       status:  complete
       desc:    updateForgeTile() runs every 10s alongside pollHealth.
                Updates forge gap count and agent tile state from live data.
+    8:
+      name:    One JS + one CSS file per area
+      status:  complete
+      version: 1.4.0
+      desc: >
+        index.html is markup only. 20 areas (ui/home/areas/<area>.js + .css), 6 non-UI
+        modules in ui/home/core/ (logging, config, keys, sse, ui-state, boot), and a shared
+        home.css (tokens, reset, shared keyframes, components used by several channels).
+        Cut as contiguous ranges of the old inline script, in order; proven equivalent
+        in headless Chromium (tests/probe/home-split-equivalence.py). Enforced by
+        tests/modules/test-home-ui-files.test.js.
+      load_order: >
+        core/logging.js loads FIRST (see phase 2, found). The other files keep the
+        monolith's source order, so a later file may reference an earlier one at load,
+        never the reverse.
+      not_done: >
+        Ownership refinements that are not pure cuts (tuneById lives in agent-suite.js,
+        keyboard shortcuts in core/keys.js reference several areas). The iframe cut-over
+        DECOMP.md describes (Phase 3) is NOT started: nexus-home.html references 11 channel
+        documents and only 4 exist (causal, conversations, idearium, log), so that shell
+        cannot serve 7 of its channels.
+
+  version_history:
+    1.4.0: 'v0.39.228 -- split into one JS + one CSS file per area; stored-mode boot crash fixed (phase 2 found)'
+    1.3.0: 'pre-git (before 2026-09-17) -- what 1.3.0 changed is not recorded anywhere this pass could find'
 
   channels:
     0: Overview     (tile grid — always the landing)

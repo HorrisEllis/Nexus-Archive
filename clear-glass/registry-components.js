@@ -2,7 +2,7 @@
 /**
  * clear-glass/registry-components.js — Clear Glass System Contract
  * UUID: cg-registry-v1-0000-0000-000000000001
- * Version: 3.10.0
+ * Version: 3.11.0
  *
  * Served at GET /contract from the IPC server (:7702).
  * Verified by orchestrator contract-handshake on boot.
@@ -17,7 +17,7 @@ const NS = 'cg';
 // drift lib/version.js's services['clear-glass'], main/index.js's
 // CG_VERSION, and clear-glass.spec's meta.version all had — found while
 // updating those three, checked here too rather than assumed synced.
-const V  = '3.10.0';
+const V  = '3.11.0';
 
 function _c(id, method, path, desc, opts = {}) {
   return {
@@ -205,6 +205,12 @@ const components = [
   _c('macros.create',              'IPC', 'macros:create',              'Create a macro through macro.js\'s own validation (step builder)',     { tags: ['macros'] }),
   _c('macros.delete',              'IPC', 'macros:delete',              'Delete a macro (soft-delete, audit trail kept)',                       { tags: ['macros'] }),
   _c('macros.schema',              'IPC', 'macros:schema',              'Real browser_action enum + erosmancer actions + behavior profiles for the step builder', { tags: ['macros', 'eros'] }),
+  // §BUILT 2026-09-23 (v0.39.227) — Clear Glass's job intake (src/jobs/intake.js).
+  // /agent-mesh/send and /agent-mesh/job existed since 2026-09-19 (guardian's mesh-first ladder calls them) but were never
+  // registered; they are the intake's front door now, so they are recorded here with it.
+  _c('mesh.jobSend', 'POST', '/agent-mesh/send', 'Guardian hands Clear Glass a job it CLAIMED on its .job; the intake verifies the claim via guardian /jobs?id= before queueing (idempotent by jobId)', { tags: ['mesh', 'jobs', 'intake'] }),
+  _c('mesh.jobStatus', 'GET', '/agent-mesh/job?jobId={jobId}', 'Status of a mesh job; survives a Clear Glass restart as clear_glass_restarted (sent:null, never resend)', { tags: ['mesh', 'jobs', 'intake'] }),
+  _c('mesh.jobIntake', 'GET', '/agent-mesh/intake', 'Jobs Clear Glass has taken in from guardian (only jobs guardian claimed for it on their .job), with each <jobId>.intake record', { tags: ['mesh', 'jobs', 'intake'] }),
 ];
 
 module.exports = {

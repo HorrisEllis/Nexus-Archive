@@ -327,10 +327,10 @@ spec:
       status: >
         not yet checked against live code this pass
     - spec:             'home-ui.spec'
-      version:          '1.3.0'
-      last_drift_check: '—'
+      version:          '1.4.0'
+      last_drift_check: '2026-09-25'
       status: >
-        not yet checked against live code this pass
+        file layout checked against code (v0.39.228 split); phase 2 found broken and fixed
     - spec:             'hooks.spec'
       version:          '1.0.0'
       last_drift_check: '—'
@@ -1047,7 +1047,7 @@ spec:
     | `guardian.spec` | 3.6.1 | 2026-06-28 | ✓ mechanical version sync only, no further drift found. |
     | `healer.spec` | 1.0.0 | — | not yet checked against live code this pass |
     | `heartbeat.spec` | 2.0.0 | — | not yet checked against live code this pass |
-    | `home-ui.spec` | 1.3.0 | — | not yet checked against live code this pass |
+    | `home-ui.spec` | 1.4.0 | 2026-09-25 | file layout checked against code (v0.39.228 split); phase 2 found broken and fixed |
     | `hooks.spec` | 1.0.0 | — | not yet checked against live code this pass |
     | `hot-module-loader.spec` | 1.0.0 | — | not yet checked against live code this pass |
     | `idearium.spec` | 3.0.0 | 2026-06-29 | ✓ AX-008 closed session 5/7 (idearium→copilot wire built and verified) — this spec's axioms list updated to match. |

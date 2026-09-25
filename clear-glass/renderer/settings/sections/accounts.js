@@ -1,5 +1,8 @@
 'use strict';
 /**
+ * renderer/settings/sections/accounts.js — Save session  (styles: accounts.css)
+ */
+/**
  * renderer/settings/sections/accounts.js — Accounts & sign-in
  * §BUILT 2026-09-23 — James: "login portals like apppassword login to each
  * provider, with a plus to add multiple, which hook into the cookie vault,
