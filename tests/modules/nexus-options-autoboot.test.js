@@ -103,6 +103,85 @@ async function main() {
     cleanup();
   });
 
+  // ── §BUGFIX 2026-09-25 — defaultStartUrl real default + one-time
+  // migration for an existing install. James: "the ui, its not changed at
+  // all... just fix it." Root cause: src/main/index.js's boot path opens
+  // the one real startup window with nexusOptions.get().defaultStartUrl,
+  // whose default was 'about:blank' since before this store existed —
+  // every UI build shipped was real and reachable, just never what the
+  // app opened by default. Fixed the default AND added a versioned
+  // migration, since load()'s {...DEFAULTS, ...raw} merge means an
+  // on-disk file already holding the old literal 'about:blank' would
+  // silently out-live any new default forever without one. ─────────────
+
+  function writeRawOptions(tmpHome, raw) {
+    const dir = path.join(tmpHome, '.clear-glass');
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'nexus-options.json'), JSON.stringify(raw, null, 2), 'utf8');
+  }
+
+  await atest('a genuinely fresh install gets the real homepage, not about:blank', async () => {
+    const { NexusOptions, cleanup } = freshOptions();
+    const opts = new NexusOptions();
+    await opts.load();
+    assert.strictEqual(opts.get().defaultStartUrl, 'http://127.0.0.1:9000/');
+    assert.strictEqual(opts.get()._schemaVersion, 1);
+    cleanup();
+  });
+
+  await atest('MIGRATION: an existing file with the old about:blank default is upgraded once', async () => {
+    const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'nexus-options-'));
+    process.env.HOME = tmpHome;
+    writeRawOptions(tmpHome, { defaultStartUrl: 'about:blank', hideToTrayOnClose: true });
+    delete require.cache[require.resolve('../../clear-glass/src/options/store.js')];
+    const NexusOptions = require('../../clear-glass/src/options/store.js');
+    const opts = new NexusOptions();
+    await opts.load();
+    assert.strictEqual(opts.get().defaultStartUrl, 'http://127.0.0.1:9000/', 'about:blank must be upgraded');
+    assert.strictEqual(opts.get()._schemaVersion, 1, 'stamped so this never re-runs');
+    fs.rmSync(tmpHome, { recursive: true, force: true });
+  });
+
+  await atest('MIGRATION: a real, already-customized start URL is left alone', async () => {
+    const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'nexus-options-'));
+    process.env.HOME = tmpHome;
+    writeRawOptions(tmpHome, { defaultStartUrl: 'https://claude.ai/new' });
+    delete require.cache[require.resolve('../../clear-glass/src/options/store.js')];
+    const NexusOptions = require('../../clear-glass/src/options/store.js');
+    const opts = new NexusOptions();
+    await opts.load();
+    assert.strictEqual(opts.get().defaultStartUrl, 'https://claude.ai/new', 'a real choice must never be silently overwritten');
+    assert.strictEqual(opts.get()._schemaVersion, 1, 'still stamped, so the file is marked migrated');
+    fs.rmSync(tmpHome, { recursive: true, force: true });
+  });
+
+  await atest('MIGRATION: about:blank chosen AFTER the migration (schema already current) is never re-overwritten', async () => {
+    const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'nexus-options-'));
+    process.env.HOME = tmpHome;
+    writeRawOptions(tmpHome, { defaultStartUrl: 'about:blank', _schemaVersion: 1 });
+    delete require.cache[require.resolve('../../clear-glass/src/options/store.js')];
+    const NexusOptions = require('../../clear-glass/src/options/store.js');
+    const opts = new NexusOptions();
+    await opts.load();
+    assert.strictEqual(opts.get().defaultStartUrl, 'about:blank', 'a deliberate post-migration choice must survive');
+    fs.rmSync(tmpHome, { recursive: true, force: true });
+  });
+
+  await atest('MIGRATION: the upgrade round-trips through disk (persisted, not just in-memory)', async () => {
+    const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'nexus-options-'));
+    process.env.HOME = tmpHome;
+    writeRawOptions(tmpHome, { defaultStartUrl: 'about:blank' });
+    delete require.cache[require.resolve('../../clear-glass/src/options/store.js')];
+    const NexusOptions1 = require('../../clear-glass/src/options/store.js');
+    await new NexusOptions1().load();
+    delete require.cache[require.resolve('../../clear-glass/src/options/store.js')];
+    const NexusOptions2 = require('../../clear-glass/src/options/store.js');
+    const opts2 = new NexusOptions2();
+    await opts2.load();
+    assert.strictEqual(opts2.get().defaultStartUrl, 'http://127.0.0.1:9000/', 'the migrated value must be on disk, not re-derived each load');
+    fs.rmSync(tmpHome, { recursive: true, force: true });
+  });
+
   process.env.HOME = origHome;
 
   // ── autoBootSetting decision logic (extracted, real equivalent of the

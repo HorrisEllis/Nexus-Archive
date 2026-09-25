@@ -36,10 +36,35 @@ const OPTIONS_PATH = path.join(
 // visible in one grep, not silently missed.
 const VALID_PROVIDERS = new Set(['claude', 'chatgpt', 'gemini', 'mistral', 'perplexity', 'deepseek']);
 
+// §BUGFIX 2026-09-25 — James: "the ui, its not changed at all... just fix
+// it." Real root cause, confirmed directly: src/main/index.js's boot path
+// (§18, "Default window") opens the app's one real startup window with
+// `nexusOptions.get().defaultStartUrl`, and that default has been
+// 'about:blank' since before this store existed. Every UI build shipped —
+// tv-shell, ui/home, all of it — has been fully real and fully reachable
+// (confirmed: orchestrator's own root '/' already serves ui/tv-shell/
+// index.html, the real, explicit, previously-decided homepage) but never
+// the thing Clear Glass actually opens by default. Bumped to the real
+// homepage. See OPTIONS_SCHEMA_VERSION below for why this alone isn't
+// enough to fix an existing install.
+const DEFAULT_START_URL = 'http://127.0.0.1:9000/';
+
+// §BUGFIX 2026-09-25 — load()'s own `{...DEFAULTS, ...raw}` merge means an
+// on-disk nexus-options.json with `defaultStartUrl: "about:blank"` (every
+// real install so far — the constructor calls _persist() on first-ever
+// boot, writing that literal value to disk) overrides this new default
+// forever, silently, no matter how many times DEFAULTS changes in code.
+// OPTIONS_SCHEMA_VERSION is a real, persisted one-time migration marker —
+// load() upgrades defaultStartUrl exactly once for a file stamped below
+// this version, then stamps it current so a person who deliberately sets
+// 'about:blank' afterward (a real, valid choice) is never overwritten
+// again.
+const OPTIONS_SCHEMA_VERSION = 1;
+
 const DEFAULTS = {
   // Window behavior
   hideToTrayOnClose:    true,   // close (✕) button / OS close → hide to tray instead of destroying
-  defaultStartUrl:       'about:blank',
+  defaultStartUrl:       DEFAULT_START_URL,
 
   // §NEW 2026-08-24 — real gap named in CLEAR-GLASS-FULL-CHROME-MAP-
   // 2026-08-23.md's §3: "no real 'change download directory' setting
@@ -171,7 +196,26 @@ class NexusOptions {
       if (fs.existsSync(OPTIONS_PATH)) {
         const raw = JSON.parse(fs.readFileSync(OPTIONS_PATH, 'utf8'));
         this.data = { ...DEFAULTS, ...raw };
+
+        // §BUGFIX 2026-09-25 — one-time migration, real and versioned, not
+        // a silent overwrite. A file with no _schemaVersion at all (every
+        // real install before this fix) or one behind current gets its
+        // defaultStartUrl upgraded ONLY if it's still exactly the old
+        // literal default ('about:blank') — a person who already set a
+        // real start URL of their own, including 'about:blank' on
+        // purpose, is left alone. Stamped to current either way so this
+        // never runs again for this file.
+        const onDiskVersion = raw._schemaVersion || 0;
+        if (onDiskVersion < OPTIONS_SCHEMA_VERSION) {
+          if (raw.defaultStartUrl === 'about:blank' || raw.defaultStartUrl === undefined) {
+            this.data.defaultStartUrl = DEFAULT_START_URL;
+            console.log(`[NexusOptions] migrated defaultStartUrl 'about:blank' -> '${DEFAULT_START_URL}' (schema v${onDiskVersion} -> v${OPTIONS_SCHEMA_VERSION})`);
+          }
+          this.data._schemaVersion = OPTIONS_SCHEMA_VERSION;
+          this._persist();
+        }
       } else {
+        this.data._schemaVersion = OPTIONS_SCHEMA_VERSION;
         this._persist();
       }
     } catch (err) {

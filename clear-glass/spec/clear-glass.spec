@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        clear-glass
-    version:     3.11.0
+    version:     3.11.1
     foundation:  nexus-system-foundation@1.1.0
     port:        7702
     uuid:        nexus-clear-glass-v1-0000-2026-0901-jamesbrooks-001
@@ -168,6 +168,24 @@ spec:
         principle), inline script gone so script-src drops
         'unsafe-inline'.
 
+    - date: 2026-09-25
+      summary: >
+        PATCH — real bug fix, no new API surface. James: "the ui, its not
+        changed at all... just fix it." src/options/store.js's
+        DEFAULTS.defaultStartUrl (the URL the app's one real startup
+        window opens, src/main/index.js §18) was the literal 'about:blank'
+        since before this store existed — every UI build shipped this
+        engagement, real and reachable, was simply never what the app
+        opened by default. Fixed to orchestrator's own root '/', which
+        already, by a prior explicit decision (see orchestrator.js's own
+        comments), serves ui/tv-shell/index.html as the homepage. Added a
+        real, versioned one-time migration (_schemaVersion) so an existing
+        install's already-persisted 'about:blank' is upgraded once, not
+        silently re-overridden forever by load()'s {...DEFAULTS, ...raw}
+        merge — and never touched again if a person deliberately chooses
+        'about:blank' after the migration has run. 5 new tests in
+        tests/modules/nexus-options-autoboot.test.js (15/15 total).
+
   gaps:
     as_of: 2026-09-01
     entries:
@@ -199,6 +217,14 @@ spec:
         opened: 2026-09-22
 
   version_history:
+    - version: 3.11.1
+      date: 2026-09-25
+      summary: >-
+        PATCH — defaultStartUrl's real default fixed ('about:blank' -> orchestrator root '/', which
+        already serves ui/tv-shell as the homepage) plus a versioned one-time migration so an existing
+        install's persisted 'about:blank' is upgraded once, not silently overridden forever. No new API
+        surface. All five sync points moved together.
+      versioniumCommitId: null
     - version: 3.11.0
       date: 2026-09-23
       summary: >-
