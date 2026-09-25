@@ -1001,6 +1001,8 @@ function matchRoute(method, url) {
     // See that file's header for the capability-vs-behaviour limit.
     ['GET',    ['api','repos',    ':uuid','agent'],           'repo.agent.status'],
     ['POST',   ['api','repos',    ':uuid','agent','prompt'],  'repo.agent.prompt'],
+    ['GET',    ['api','repos',    ':uuid','agent','late'],    'repo.agent.late.find'],
+    ['POST',   ['api','repos',    ':uuid','agent','late'],    'repo.agent.late.adopt'],
     ['GET',    ['api','repos',    ':uuid','agent','history'], 'repo.agent.history'],
     ['DELETE', ['api','repos',    ':uuid','agent','history'], 'repo.agent.history.clear'],
     ['GET',    ['api','repos',    ':uuid','agent','memory'],  'repo.agent.memory.list'],
@@ -2704,6 +2706,33 @@ async function handle(req, res, route, query, body) {
       // A backend that is down is a real, reportable state, not a server
       // error — 200 with ok:false so the CLI can print it in the transcript
       // instead of api() throwing and losing the text.
+      return ok(res, r);
+    }
+
+    // §LATE 0.39.241 — the Agent tab asks for a reply copilot's wait missed.
+    // find is read-only (safe while a dispatch is in flight); adopt runs the
+    // reply through the same learn/inject/log path dispatch uses, once.
+    case 'repo.agent.late.find': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const RA = _require('../../lib/repo-agent.js');
+      const r = RA.findLate({ repo, since: parseInt(query.since || '0', 10) || 0, message: query.message || null });
+      if (!r.ok) return err(res, 503, r.error);
+      return ok(res, r);
+    }
+
+    case 'repo.agent.late.adopt': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      if (!body.responseId) return err(res, 400, 'responseId is required');
+      if (!body.message || !String(body.message).trim()) return err(res, 400, 'message is required');
+      const RA = _require('../../lib/repo-agent.js');
+      const r = await RA.adoptLate({
+        repo, repoDir: _repoDiskDir(params.uuid), layer: getRepoLayer(),
+        responseId: String(body.responseId), message: body.message,
+        since: Number(body.since) || 0, noContext: body.noContext === true,
+      });
+      // Same convention as repo.agent.prompt: a refusal is a reportable state (200, ok:false).
       return ok(res, r);
     }
 

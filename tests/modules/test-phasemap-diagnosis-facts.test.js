@@ -37,7 +37,9 @@ function main() {
   // the CLOSURE stays real, inverted from its original "still a gap"
   // form rather than deleted, so a regression here is still caught.
   check('lib/repo-agent.js now derives a real, repo-scoped agentId on dispatch — TR1\'s real, closed fix (was: zero agentId references at all)',
-    /agentId\s*=\s*`repo-\$\{repo\.uuid\}`|agentId:\s*`repo-\$\{repo\.uuid\}`|repo-\$\{repo\.uuid\}/.test(REPO_AGENT));
+    /agentId\s*=\s*`repo-\$\{repo\.uuid\}`|agentId:\s*`repo-\$\{repo\.uuid\}`|repo-\$\{repo\.uuid\}/.test(REPO_AGENT) ||
+    // 0.39.241 — moved into agentIdFor(repoUuid), used by dispatch and the late-reply lookup alike
+    (/payload\.agentId = agentIdFor\(repo\.uuid\)/.test(REPO_AGENT) && /return `repo-\$\{repoUuid\}`/.test(REPO_AGENT)));
   const CG_MAIN = fs.readFileSync(path.join(ROOT, 'clear-glass', 'src', 'main', 'index.js'), 'utf8');
   check('clear-glass\'s windows Map is still keyed by agentId — the mechanism TR1 relies on already existing',
     /windows\.set\(agentId, win\)/.test(CG_MAIN));

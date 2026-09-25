@@ -96,6 +96,7 @@ contextBridge.exposeInMainWorld('ClearGlass', {
     clearItem:      (id)      => ipcRenderer.invoke('downloads:clearItem', { id }),
     clearCompleted: ()        => ipcRenderer.invoke('downloads:clearCompleted'),
     openFolder:     (id)      => ipcRenderer.invoke('downloads:openFolder', { id }),
+    openFile:       (id)      => ipcRenderer.invoke('downloads:openFile',   { id }),   // §LIBRARY 0.39.241
     // §2026-08-28 — real download-listener registry.
     listListeners:    ()          => ipcRenderer.invoke('downloads:listListeners'),
     registerListener: (config)    => ipcRenderer.invoke('downloads:registerListener', config),
@@ -234,6 +235,8 @@ contextBridge.exposeInMainWorld('ClearGlass', {
     open:         (payload) => ipcRenderer.invoke('window:open',     payload),
     openSettings: ()        => ipcRenderer.invoke('window:openSettings'),
     closeSettings:()        => ipcRenderer.invoke('window:closeSettings'),
+    openLibrary:  (area)    => ipcRenderer.invoke('window:openLibrary', { area }),   // §LIBRARY 0.39.241 — renderer/library.html
+    closeLibrary: ()        => ipcRenderer.invoke('window:closeLibrary'),
     list:         ()        => ipcRenderer.invoke('window:list'),
     focus:        (agentId) => ipcRenderer.invoke('window:focus', { agentId }),
   },

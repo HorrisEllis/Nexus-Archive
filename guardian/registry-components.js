@@ -6,7 +6,7 @@
  * Declares every Guardian capability to the orchestrator on boot.
  */
 
-const V = '3.9.2';   // §5.4 — tracks canonical lib/version.js services.guardian. 0.39.237: 3.8.0 -> 3.9.0 (repo jobs go to their own tab or wait; guardian.job.agent_tab_fallback). 2026-08-08: was 3.6.1, drifted. 2026-09-23: 3.6.2 -> 3.7.0 with the account-authority + job-evidence + .job-source-of-truth work (guardian/spec/guardian.spec built_2026_09_23 block)
+const V = '3.9.3';   // §5.4 — tracks canonical lib/version.js services.guardian. 0.39.237: 3.8.0 -> 3.9.0 (repo jobs go to their own tab or wait; guardian.job.agent_tab_fallback). 2026-08-08: was 3.6.1, drifted. 2026-09-23: 3.6.2 -> 3.7.0 with the account-authority + job-evidence + .job-source-of-truth work (guardian/spec/guardian.spec built_2026_09_23 block)
 const NS = 'guardian';
 function _c(id, method, path, desc, opts = {}) {
   return {

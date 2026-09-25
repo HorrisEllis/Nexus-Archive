@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        clear-glass
-    version:     3.12.1
+    version:     3.13.0
     foundation:  nexus-system-foundation@1.1.0
     port:        7702
     uuid:        nexus-clear-glass-v1-0000-2026-0901-jamesbrooks-001
@@ -56,7 +56,7 @@ spec:
       returns: "Full clear-glass component registry — 79 real components as of 2026-09-22 (was 67 at 2026-09-01)"
 
   handshake:
-    components_count: 99   # §2026-09-22 — was 67 (stale since 2026-09-01); autofill's 7 real
+    components_count: 102   # §2026-09-22 — was 67 (stale since 2026-09-01); autofill's 7 real
                             # IPC methods (shipped 2026-09-19, never registered) and screen-qa's
                             # 5 (this session) both landed in registry-components.js with zero
                             # entries here — checked directly against the live registry export,
@@ -281,6 +281,29 @@ spec:
         opened: 2026-09-25
 
   version_history:
+    - version: 3.13.0
+      date: 2026-09-25
+      summary: >-
+        MINOR (v0.39.241) — James: "the download manager in clearglass" and "need control j to popout a window
+        like the screenshot. thats what it was supposed to look like, the settings ui but with the library. at
+        least make the library style consistent with the rest of clearglass." The Library is its own Clear Glass
+        window: renderer/library.html loads Settings' own settings.css and settings/core.js (boot() now takes
+        groups/defaultId/cssBase/close/search; Settings' defaults unchanged), with one JS + one CSS per area under
+        renderer/library/sections/ — Downloads (Firefox-style rows: type tile, name, "size — site — time", folder
+        button, click to open; plus the Download Listeners form), Responses, Bookmarks, History (by day),
+        Accounts, Passwords, Autofill, Macros. openLibraryWindow(area) in src/main/index.js: frameless, single
+        instance, preload, library.html#<area>. Ctrl+J opens it at Downloads from ANY web contents (chrome and
+        page) via app 'web-contents-created' before-input-event; Ctrl+Shift+J stays DevTools. The ☰ menu's
+        Downloads and Library rows and the tray entry open it. New IPC: window:openLibrary, window:closeLibrary,
+        downloads:openFile (completed downloads only) — registry 99 -> 102, contract regenerated. Retired:
+        ui/library/ (the :9000 page in an agent window) and browser.js's Downloads dropdown. FIXED: the bridge's
+        CORS preflight named no methods, so every DELETE/PUT/PATCH from the Library (remove download, delete
+        bookmark/history/account/password/profile, edit profile) was refused by the browser — in the old page too.
+        FIXED: downloads/artifact-chat-index.js tried better-sqlite3 on every read and printed two stack traces
+        each time it was missing; now tried once, said once, responses/ read directly. Proven: tests/probe/
+        clearglass-library-window.js (real page, real bridge, 25/25), clearglass-menu-library.py, clear-glass-
+        library-ui 45/45.
+      versioniumCommitId: null
     - version: 3.12.1
       date: 2026-09-25
       summary: >-

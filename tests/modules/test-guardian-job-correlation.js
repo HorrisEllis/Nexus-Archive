@@ -167,8 +167,9 @@ async function main() {
   const DISP = fs.readFileSync(path.join(ROOT, 'guardian', 'lib', 'dispatcher.js'), 'utf8');
   const HOST2 = fs.readFileSync(path.join(ROOT, 'clear-glass', 'src', 'providers', 'host.js'), 'utf8');
   const RA   = fs.readFileSync(path.join(ROOT, 'lib', 'repo-agent.js'), 'utf8');
+  // 0.39.241 — the literal moved into agentIdFor(), shared with findLate/adoptLate (the Responses index files replies under the same id).
   check('repo-agent derives a per-repo agentId for guardian dispatches',
-    /payload\.agentId = `repo-\$\{repo\.uuid\}`/.test(RA));
+    /payload\.agentId = agentIdFor\(repo\.uuid\)/.test(RA) && /function agentIdFor\(repoUuid\) \{ return `repo-\$\{repoUuid\}`; \}/.test(RA));
   check('copilot forwards agentId to guardian only on the guardian backend',
     /agentId: body\.backend === 'guardian' \? \(body\.agentId \|\| undefined\) : undefined/.test(fs.readFileSync(path.join(ROOT, 'copilot', 'server.js'), 'utf8')));
   check('the dispatcher aims a job with an agentId at that tab, not the active one',

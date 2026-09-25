@@ -114,6 +114,9 @@ const COMPONENTS = [
   // host's global current agent (see that file's header).
   _comp('repo.agent.status',        'GET',   '/api/repos/:uuid/agent',              "This compartment's agent: hat, index state, learned count, session", { tags: ['agent'] }),
   _comp('repo.agent.prompt',        'POST',  '/api/repos/:uuid/agent/prompt',       "Dispatch one message as this compartment's agent, wearing its repo hat", { tags: ['agent'] }),
+  // §LATE 0.39.241 — a reply that arrived after copilot stopped waiting, read back from Clear Glass's Responses index.
+  _comp('repo.agent.late.find',     'GET',   '/api/repos/:uuid/agent/late',         "Find this agent's late reply in the Responses index (read-only)", { tags: ['agent'] }),
+  _comp('repo.agent.late.adopt',    'POST',  '/api/repos/:uuid/agent/late',         "Adopt a late reply as the exchange's answer: learn, inject, log — once", { tags: ['agent'] }),
   _comp('repo.agent.history',       'GET',   '/api/repos/:uuid/agent/history',      "This compartment's own exchange log, newest first", { tags: ['agent'] }),
   _comp('repo.agent.history.clear', 'DELETE','/api/repos/:uuid/agent/history',      "Clear this compartment's exchange log", { tags: ['agent'] }),
   _comp('repo.agent.memory.list',   'GET',   '/api/repos/:uuid/agent/memory',       'What this agent has learned working on the project', { tags: ['agent'] }),

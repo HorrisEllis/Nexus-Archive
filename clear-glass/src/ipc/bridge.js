@@ -22,7 +22,7 @@ const {
 } = require('../screen-qa/detector.js');
 
 class IpcBridge {
-  constructor({ port, sse, ctxMgr, vault, apiSettings, urlListener, mesh, diag, fp, options, minimizeFn, hideFn, openFn, maximizeFn, openSettingsFn, closeSettingsFn, bookmarks, rewind, providerHost, userscripts, siteSettings, downloads, passwordVault, speech, macroTool, errorCapture, copilot, postEvent, pluginHost, history, autofillStore, dom, loginPortal }) {
+  constructor({ port, sse, ctxMgr, vault, apiSettings, urlListener, mesh, diag, fp, options, minimizeFn, hideFn, openFn, maximizeFn, openSettingsFn, closeSettingsFn, openLibraryFn, closeLibraryFn, bookmarks, rewind, providerHost, userscripts, siteSettings, downloads, passwordVault, speech, macroTool, errorCapture, copilot, postEvent, pluginHost, history, autofillStore, dom, loginPortal }) {
     this.port        = port;
     this.sse         = sse;
     this.errorCapture = errorCapture;
@@ -41,6 +41,8 @@ class IpcBridge {
     this.maximizeFn  = maximizeFn;
     this.openSettingsFn = openSettingsFn;
     this.closeSettingsFn = closeSettingsFn;
+    this.openLibraryFn = openLibraryFn;     // §LIBRARY 0.39.241
+    this.closeLibraryFn = closeLibraryFn;
     this.bookmarks   = bookmarks;
     this.rewind      = rewind;
     this.providerHost = providerHost;
@@ -106,6 +108,13 @@ class IpcBridge {
     this.app.use((req, res, next) => {
       res.setHeader('Access-Control-Allow-Origin', '*');
       res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+      // §CORS 0.39.241 — found by the Library window probe: the preflight named no
+      // methods, and a browser then allows only GET/HEAD/POST cross-origin. Every
+      // DELETE/PUT/PATCH the Library sends (remove a download, delete a bookmark,
+      // history entry, account, password or autofill profile, edit a profile) was
+      // refused before reaching this server — in the old ui/library page on :9000
+      // exactly as in the new window. The buttons did nothing and said nothing.
+      res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS');
       if (req.method === 'OPTIONS') return res.sendStatus(200);
       next();
     });
@@ -860,6 +869,15 @@ class IpcBridge {
     ipcMain.handle('downloads:list',           async (e, d) => this.downloads?.list(d || {}));
     ipcMain.handle('downloads:clearItem',      async (e, d) => this.downloads?.clearItem(d.id));
     ipcMain.handle('downloads:clearCompleted', async ()      => this.downloads?.clearCompleted());
+    // §LIBRARY 0.39.241 — Library → Downloads opens a file by clicking its name, as
+    // Firefox's Library does. Only a file the store recorded, and only once done.
+    ipcMain.handle('downloads:openFile', async (e, d) => {
+      const record = this.downloads?.list().find(i => i.id === d?.id);
+      if (!record?.savePath) return { ok: false, error: 'no savePath for this item' };
+      if (record.state !== 'completed') return { ok: false, error: `the download is ${record.state}, not completed` };
+      const err = await require('electron').shell.openPath(record.savePath);
+      return err ? { ok: false, error: err } : { ok: true };
+    });
     ipcMain.handle('downloads:openFolder', async (e, d) => {
       const record = this.downloads?.list().find(i => i.id === d.id);
       if (!record?.savePath) return { ok: false, error: 'no savePath for this item' };
@@ -983,6 +1001,9 @@ class IpcBridge {
     ipcMain.handle('window:maximize', async (e, d) => { this.maximizeFn?.(d); return { ok: true }; });
     ipcMain.handle('window:openSettings',  async () => { this.openSettingsFn?.();  return { ok: true }; });
     ipcMain.handle('window:closeSettings', async () => { this.closeSettingsFn?.(); return { ok: true }; });
+    // §LIBRARY 0.39.241 — the Library window (renderer/library.html); area picks its section.
+    ipcMain.handle('window:openLibrary',  async (e, d) => this.openLibraryFn ? this.openLibraryFn(d && d.area) : { ok: false, error: 'library window not wired' });
+    ipcMain.handle('window:closeLibrary', async () => { this.closeLibraryFn?.(); return { ok: true }; });
     ipcMain.handle('window:list',  async ()    => require('../main/index').listOpenAgents());
     ipcMain.handle('window:focus', async (e, d) => require('../main/index').focusAgentWindow(d));
 

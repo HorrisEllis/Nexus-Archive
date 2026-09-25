@@ -131,11 +131,11 @@ test('CGI-008', 'background tabs are explicitly excluded from "open" — only wi
   assert.ok(/windows\.values\(\)/.test(body), 'must check the real visible-windows Map');
 });
 
-test('CGI-009', 'window show handlers exist for both agent windows and the settings window, for immediate (not just periodic) responsiveness', () => {
+test('CGI-009', 'window show handlers exist for agent windows, the settings window and (0.39.241) the library window, for immediate (not just periodic) responsiveness', () => {
   const fs = require('fs');
   const src = fs.readFileSync(CLEAR_GLASS_MAIN, 'utf8');
   const showHooks = src.match(/\.on\('show',\s*\(\)\s*=>\s*_touchAutopilotIfOpen\(\)\)/g) || [];
-  assert.strictEqual(showHooks.length, 2, `expected 2 'show' → touch hooks (agent window + settings window), found ${showHooks.length}`);
+  assert.strictEqual(showHooks.length, 3, `expected 3 'show' → touch hooks (agent window + settings window + library window), found ${showHooks.length}`);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

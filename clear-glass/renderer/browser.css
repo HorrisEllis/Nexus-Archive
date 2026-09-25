@@ -489,6 +489,7 @@
   #menu-zoom-pct { font-size: 11px; color: var(--text); min-width: 34px; text-align: center; }
   .menu-item { padding: 8px; font-size: 11px; color: var(--text); cursor: pointer; }
   .menu-item:hover { background: var(--bg-2); }
+  .menu-item .menu-kbd { float: right; color: var(--text-dim); font-size: 10px; opacity: .8; } /* 0.39.241 — shortcut hint */
   #menu-agent-identity-target { display: flex; flex-direction: column; gap: 4px; padding: 6px 8px; }
   #menu-agent-identity-target button { width: 100%; text-align: left; }
 

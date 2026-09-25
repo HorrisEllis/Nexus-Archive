@@ -172,15 +172,16 @@ const wait = async (fn, ms = 3000) => { const t = Date.now() + ms; while (!fn())
     }
   });
 
-  await test('DR-10', 'the Library has a Responses tab in its own JS + CSS, loaded after library-app.js', async () => {
-    const html = fs.readFileSync(path.join(ROOT, 'ui/library/index.html'), 'utf8');
-    assert.ok(/data-tab="responses"/.test(html) && /id="panel-responses"/.test(html));
-    const a = html.indexOf('/ui/library/library-app.js'), b = html.indexOf('/ui/library/areas/responses.js');
-    assert.ok(a > 0 && b > a, 'responses.js must load after library-app.js');
-    assert.ok(/\/ui\/library\/areas\/responses\.css/.test(html));
-    const js = fs.readFileSync(path.join(ROOT, 'ui/library/areas/responses.js'), 'utf8');
-    assert.ok(/\/cli\/downloads\/responses/.test(js) && /TABS\.responses\s*=/.test(js));
-    assert.ok(/window\.LIB\s*=/.test(fs.readFileSync(path.join(ROOT, 'ui/library/library-app.js'), 'utf8')));
+  // 0.39.241 — the Library moved from ui/library/ to Clear Glass's own window
+  // (renderer/library.html, on the Settings runtime); the Responses area moved with it.
+  await test('DR-10', 'the Library window has a Responses area in its own JS + CSS, reading this index', async () => {
+    const html = fs.readFileSync(path.join(ROOT, 'clear-glass/renderer/library.html'), 'utf8');
+    assert.ok(html.includes('<script src="library/sections/responses.js"></script>'));
+    assert.ok(html.indexOf('library/api.js') < html.indexOf('library/sections/responses.js'), 'api.js must load before the area');
+    const js = fs.readFileSync(path.join(ROOT, 'clear-glass/renderer/library/sections/responses.js'), 'utf8');
+    assert.ok(/\/cli\/downloads\/responses/.test(js) && /section\(\{\s*id: 'responses'/.test(js));
+    assert.ok(fs.existsSync(path.join(ROOT, 'clear-glass/renderer/library/sections/responses.css')));
+    assert.ok(!fs.existsSync(path.join(ROOT, 'ui/library')), 'ui/library/ is retired — one Library, not two');
   });
 
   try { fs.unlinkSync(file); } catch (_) {}

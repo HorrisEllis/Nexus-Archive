@@ -62,7 +62,7 @@ const MODULE_UUID = randomUUID();
 // glass.spec's meta.version independently exhibited. All three synced
 // to 3.9.0 (3.8.0 baseline + this session's real additions) together;
 // see clear-glass.spec's version_history for what's actually new.
-const CG_VERSION  = '3.12.1';
+const CG_VERSION  = '3.13.0';
 
 // ── Headless / tray-only mode ─────────────────────────────────────────────
 // CG_HEADLESS=1  OR  --headless in argv → no BrowserWindow, tray only.
@@ -1596,6 +1596,8 @@ async function bootstrap() {
     maximizeFn:  maximizeAgentWindow,
     openSettingsFn: openSettingsWindow,
     closeSettingsFn: closeSettingsWindow,
+    openLibraryFn: openLibraryWindow,
+    closeLibraryFn: closeLibraryWindow,
     bookmarks,
     rewind,
     providerHost,
@@ -1926,7 +1928,9 @@ function _rebuildTrayMenu(mesh) {
     // mechanism as every entry above, zero orchestrator changes needed
     // (UI_ROOT already serves ui/library/ generically, confirmed
     // directly against orchestrator.js before relying on it).
-    { label: '⬡ Library',            click: () => openAgentWindow({ agentId: 'nexus-library', url: 'http://127.0.0.1:9000/ui/library/' }) },
+    // §LIBRARY 0.39.241 — the Library is its own Clear Glass window now (renderer/library.html,
+    // the Settings runtime), no longer ui/library/ on :9000 inside an agent window.
+    { label: '⬡ Library',            accelerator: 'CmdOrCtrl+J', click: () => openLibraryWindow('downloads') },
     { type: 'separator' },
     { label: 'NEXUS UI Audit',        click: () => emit('diag.nexus', { agentId: 'default' }) },
     { label: 'API Settings',          click: openSettingsWindow },
@@ -2311,6 +2315,61 @@ function closeSettingsWindow() {
   if (settingsWin && !settingsWin.isDestroyed()) settingsWin.close();
 }
 
+// ── Library window — §LIBRARY 0.39.241 ─────────────────────────────────────
+// James: "need control j to popout a window like the screenshot. thats what it
+// was supposed to look like, the settings ui but with the library."
+// Same shape as the Settings window above — frameless, single instance, the
+// preload — because the page is the Settings runtime (renderer/library.html).
+// `area` picks the section (#downloads for Ctrl+J); an open Library is focused
+// and switched to it rather than opened twice.
+let libraryWin = null;
+const LIBRARY_AREA_RE = /^[a-z]{1,24}$/;
+
+function openLibraryWindow(area) {
+  const hash = LIBRARY_AREA_RE.test(area || '') ? area : undefined;
+  if (libraryWin && !libraryWin.isDestroyed()) {
+    if (libraryWin.isMinimized()) libraryWin.restore();
+    libraryWin.show(); libraryWin.focus();
+    if (hash) libraryWin.webContents.executeJavaScript(`location.hash = ${JSON.stringify('#' + hash)}`).catch(() => {});
+    return { ok: true, reused: true, area: hash || null };
+  }
+  libraryWin = new BrowserWindow({
+    width: 1080, height: 760, minWidth: 560, minHeight: 420, backgroundColor: '#08080d',
+    frame: false,
+    webPreferences: {
+      preload:          path.join(__dirname, '../preload/index.js'),
+      contextIsolation: true,
+      nodeIntegration:  false,
+    },
+    title: 'Clear Glass — Library',
+  });
+  libraryWin.loadFile(path.join(__dirname, '../../renderer/library.html'), hash ? { hash } : undefined);
+  libraryWin.on('closed', () => { libraryWin = null; });
+  libraryWin.on('show', () => _touchAutopilotIfOpen());
+  emit('library.opened', { area: hash || null });
+  return { ok: true, reused: false, area: hash || null };
+}
+
+function closeLibraryWindow() {
+  if (libraryWin && !libraryWin.isDestroyed()) libraryWin.close();
+}
+
+// Ctrl+J opens the Library at Downloads from anywhere in Clear Glass — the
+// browser chrome AND the page inside it. A page's keystrokes never reach
+// browser.js (the webview is its own renderer), so the key is taken in the main
+// process for every web contents Clear Glass creates. Ctrl+Shift+J stays DevTools.
+function _isLibraryKey(input) {
+  return input && input.type === 'keyDown' && (input.control || input.meta) && !input.shift && !input.alt &&
+         String(input.key).toLowerCase() === 'j';
+}
+app.on('web-contents-created', (_e, contents) => {
+  contents.on('before-input-event', (event, input) => {
+    if (!_isLibraryKey(input)) return;
+    event.preventDefault();
+    openLibraryWindow('downloads');
+  });
+});
+
 // ── Shutdown ───────────────────────────────────────────────────────────────
 async function shutdown() {
   emit('lifecycle.shutdown', { uuid: MODULE_UUID });
@@ -2345,6 +2404,6 @@ module.exports = {
   openAgentWindow, closeAgentWindow, minimizeAgentWindow, hideAgentWindow, maximizeAgentWindow,
   focusAgentWindow, listOpenAgents,
   openBackgroundTab, closeBackgroundTab, listBackgroundTabs,
-  closeSettingsWindow, windows, bgTabs,
+  closeSettingsWindow, openLibraryWindow, closeLibraryWindow, windows, bgTabs,
   freezeAgentWindow, thawAgentWindow,
 };

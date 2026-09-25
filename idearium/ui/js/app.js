@@ -2855,23 +2855,105 @@ async function agentSend() {
   if (message.startsWith('/')) { ta.value = ''; return agentCommand(message); }
 
   lines.push({ role: 'you', text: message });
-  lines.push({ role: 'agent', text: 'thinking…', meta: null });
+  const line = { role: 'agent', text: 'thinking…', meta: null };
+  lines.push(line);
   ta.value = '';
   renderRepoAgent(CURRENT_API_REPO);
+
+  // §LATE 0.39.241 — the reply can land in Clear Glass's Responses index
+  // before (or after) copilot's wait ends. A read-only poll runs alongside the
+  // dispatch; whichever answer is real first is shown. See _agentLateWatch.
+  const started = Date.now() - 1000;   // 1s of slack: the server stamps its own clock
+  const noContext = AGENT_NO_CONTEXT.has(uuid);
+  const watch = _agentLateWatch(uuid, message, started, line);
 
   let r;
   // 120s: a real dispatch through copilot's cascade routinely outlives
   // api()'s 6s default — the same too-short-timeout bug already fixed once
   // in ui/lib/api.js (0.39.118), not repeated here.
-  try { r = await api(`/api/repos/${uuid}/agent/prompt`, { method: 'POST', body: JSON.stringify({ message, noContext: AGENT_NO_CONTEXT.has(uuid) }) }, 320000); }
-  catch (e) { r = { ok: false, error: e.message }; }
+  try { r = await api(`/api/repos/${uuid}/agent/prompt`, { method: 'POST', body: JSON.stringify({ message, noContext }) }, 320000); }
+  catch (e) { r = { ok: false, error: e.message, clientTimeout: e.name === 'AbortError' || /abort|timed? ?out/i.test(e.message) }; }
 
-  lines.pop(); // drop the placeholder
-  lines.push(r.ok
-    ? { role: 'agent', text: r.text, meta: [r.hatName, r.providerUsed || r.provider, r.modelUsed, r.elapsedMs ? `${Math.round(r.elapsedMs / 100) / 10}s` : null].filter(Boolean).join(' · '), detail: _agentDetail(r) }
-    : { role: 'agent — failed', text: r.error || 'no response', meta: r.hatName || null, detail: _agentDetail(r) });
+  if (r.ok) { watch.stop(); _agentSettle(line, r); return _agentRerender(uuid); }
 
-  renderRepoAgent(CURRENT_API_REPO);
+  // Failed. If a tab may still answer, keep watching the index and adopt what
+  // arrives; otherwise the failure is final.
+  if (!r.awaitLate && !r.clientTimeout) { watch.stop(); _agentSettle(line, r); return _agentRerender(uuid); }
+  watch.afterFailure(r, noContext);
+}
+
+// ── §LATE 0.39.241 — late replies from the Responses index ───────────────
+// James: the Agent tab should pick up a reply that arrives after copilot's
+// wait has ended, from the Responses index by agent, instead of staying on
+// "thinking…". GET …/agent/late is read-only; POST …/agent/late adopts the
+// reply (learn, inject, log — once, server-side idempotent), and is only
+// called after the dispatch itself has failed, so one reply is never run
+// through both paths.
+const AGENT_LATE_POLL_MS = 5000;
+const AGENT_LATE_MAX_MS = 15 * 60 * 1000;   // a tab that has not answered in 15 min is not going to
+
+function _agentSettle(line, r) {
+  const ok = !!r.ok;
+  line.role = ok ? 'agent' : 'agent — failed';
+  line.text = ok ? r.text : (r.error || 'no response');
+  line.meta = ok
+    ? [r.hatName, r.providerUsed || r.provider, r.modelUsed, r.elapsedMs ? `${Math.round(r.elapsedMs / 100) / 10}s` : null, r.late ? 'late — from the Responses index' : null].filter(Boolean).join(' · ')
+    : (r.hatName || null);
+  line.detail = _agentDetail(r);
+}
+function _agentRerender(uuid) { if (CURRENT_API_REPO && CURRENT_API_REPO.uuid === uuid) renderRepoAgent(CURRENT_API_REPO); }
+
+function _agentLateWatch(uuid, message, started, line) {
+  let timer = null, stopped = false, found = null, failure = null, noContext = false, adopting = false;
+  const q = `/api/repos/${uuid}/agent/late?since=${started}&message=${encodeURIComponent(message.slice(0, 200))}`;
+  const stop = () => { stopped = true; if (timer) clearTimeout(timer); timer = null; };
+  const adopt = async () => {
+    if (adopting) return; adopting = true; stop();
+    let a;
+    try { a = await api(`/api/repos/${uuid}/agent/late`, { method: 'POST', body: JSON.stringify({ responseId: found.responseId, message, since: started, noContext }) }, 120000); }
+    catch (e) { a = { ok: false, error: e.message }; }
+    if (a.ok) _agentSettle(line, a);
+    else {   // the reply exists and is shown; only its processing failed — say so, keep the text
+      line.role = 'agent'; line.text = found.text;
+      line.meta = `late — from the Responses index · not processed: ${a.error || 'adopt failed'}`;
+    }
+    _agentRerender(uuid);
+  };
+  const tick = async () => {
+    timer = null;
+    if (stopped) return;
+    if (Date.now() - started > AGENT_LATE_MAX_MS) {
+      stop();
+      if (failure) { _agentSettle(line, { ...failure, error: `${failure.error || 'no response'} — and no late reply reached the Responses index within ${AGENT_LATE_MAX_MS / 60000} min` }); _agentRerender(uuid); }
+      return;
+    }
+    try {
+      const f = await api(q, {}, 8000);
+      if (f.found && !stopped) {
+        found = f;
+        if (failure) return adopt();
+        // Dispatch still in flight: show the reply now, finish when copilot does.
+        line.text = f.text;
+        line.meta = `${f.provider || 'agent'} · arrived in the Responses index — waiting on copilot to finish`;
+        _agentRerender(uuid);
+        return;   // nothing more to poll for; afterFailure/ok settles it
+      }
+    } catch (_) { /* index or idearium briefly unreachable — the next tick retries */ }
+    if (!stopped) timer = setTimeout(tick, AGENT_LATE_POLL_MS);
+  };
+  timer = setTimeout(tick, AGENT_LATE_POLL_MS);
+  return {
+    stop,
+    afterFailure(r, nc) {
+      failure = r; noContext = nc;
+      if (found) return adopt();
+      line.role = 'agent';
+      line.text = 'thinking… (copilot stopped waiting — watching the Responses index for the reply)';
+      line.meta = r.error ? `copilot: ${r.error}` : null;
+      _agentRerender(uuid);
+      if (!timer && !stopped) timer = setTimeout(tick, 0);
+    },
+  };
 }
 
 // §AGENT-DETAIL 2026-09-21 — what the agent was given, and what it learned.

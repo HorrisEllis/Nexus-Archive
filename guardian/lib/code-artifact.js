@@ -62,8 +62,13 @@ const crypto = require('crypto');
 
 const MODULE_ID = 'guardian.lib.code-artifact';
 const ROOT = path.resolve(__dirname, '..', '..');
+// §SANDBOX 0.39.241 — found running tests/modules/test-code-artifact.js: it left
+// data/guardian/code-artifacts/w1, w2, w4 in the REAL tree. This path ignored the
+// test sandbox (lib/test-sandbox.js) and NEXUS_DATA_ROOT, which every other store
+// honours since 0.39.236. ensure() is a no-op outside a test process.
+require('../../lib/test-sandbox.js').ensure();
 const ARTIFACT_DIR = process.env.NEXUS_CODE_ARTIFACT_DIR
-  || path.join(ROOT, 'data', 'guardian', 'code-artifacts');
+  || path.join(process.env.NEXUS_DATA_ROOT || path.join(ROOT, 'data'), 'guardian', 'code-artifacts');
 
 // ── syntax <-> extension ────────────────────────────────────────────────
 // §DERIVED 2026-09-20 — these were two hand-maintained tables here (33
@@ -365,7 +370,8 @@ function recordAgentResponse({ job, text, blocks } = {}) {
         capturedBy: MODULE_ID,
       },
     });
-    if (stored && stored.indexed === false) {
+    // indexSkipped: better-sqlite3 is absent — the index module says so once itself (0.39.241).
+    if (stored && stored.indexed === false && !stored.indexSkipped) {
       console.warn(`[guardian] .response written (${stored.responsePath}) but not indexed: ${stored.indexError}`);
     }
     return stored;

@@ -1,7 +1,11 @@
 spec:
   meta:
     name:        idearium
-    version:     4.2.1   # §2026-09-25 (PATCH, no API change) — every idearium
+    version:     4.3.0   # §0.39.241 (MINOR, two new routes) — GET/POST /api/repos/:uuid/agent/late:
+                         # the Agent tab picks up a reply guardian filed into Clear Glass's
+                         # Responses index after copilot stopped waiting (lib/repo-agent.js
+                         # findLate = read-only, adoptLate = learn/inject/log once per reply).
+                         # Previous — 4.2.1 §2026-09-25 (PATCH, no API change) — every idearium
                          # data path goes through idearium/lib/data-dir.cjs, and a
                          # test process gets a throwaway root (lib/test-sandbox.js);
                          # repo-node.js and chunk-nodes.js stopped ignoring

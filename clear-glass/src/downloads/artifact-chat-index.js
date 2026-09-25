@@ -48,9 +48,33 @@ const COMPARTMENT_NAME = 'clearglass-downloads-index';
 const DATABASE_ARCHETYPE = 'database'; // cos/archetype/registry.js — real, existing, loopback-only, better-sqlite3 in its own detectionHints
 
 let _Database = null;
+// §ONCE 0.39.241 — better-sqlite3 is optional (0.39.153) and absent on James's
+// machine. Each query used to try it, fail, try a rebuild (which also needs it),
+// fail again, then read responses/ — printing two stack traces per call. The
+// Library's Responses tab and the idearium Agent tab's late-reply poll call
+// this every few seconds, so the log filled with them (log of 2026-09-25,
+// 19:12:20 onward). A missing module does not come back mid-process: the
+// require is tried once, the reason kept, and said once.
+let _sqliteError = null;
+let _toldNoSqlite = false;
 function _sqlite() {
-  if (!_Database) _Database = require('better-sqlite3');
+  if (_sqliteError) throw _sqliteError;
+  if (!_Database) {
+    try { _Database = require('better-sqlite3'); }
+    catch (e) {
+      _sqliteError = new Error(`better-sqlite3 is not installed (${String(e.message).split('\n')[0]})`);
+      _sqliteError.code = 'NO_SQLITE';
+      throw _sqliteError;
+    }
+  }
   return _Database;
+}
+/** sqliteAvailable() — whether index.db can be used in this process at all. */
+function sqliteAvailable() { try { _sqlite(); return true; } catch (_) { return false; } }
+function _sayNoSqliteOnce() {
+  if (_toldNoSqlite) return;
+  _toldNoSqlite = true;
+  console.warn(`[${MODULE_ID}] ${_sqliteError ? _sqliteError.message : 'better-sqlite3 unavailable'} — index.db is skipped for this process; responses/ (the source of truth) is read and written directly. Said once.`);
 }
 
 // ── Compartment lifecycle — real create + assign, same event-driven
@@ -216,7 +240,11 @@ function recordResponse(root, { kind, provider, chatId, agentId, jobId, raw, art
   // `indexed` is the honest flag — a caller that needs to know can ask.
   let indexed = false;
   let indexError = null;
-  try {
+  let indexSkipped = false;
+  if (!sqliteAvailable()) {
+    // Not a failure of this write — the index cannot exist in this process.
+    indexError = _sqliteError.message; indexSkipped = true; _sayNoSqliteOnce();
+  } else try {
     const db = _openDb(p);
     try {
       db.prepare(`INSERT INTO items (id, kind, provider, chat_id, agent_id, job_id, captured_at, content_hash, response_path, artifact_path, status)
@@ -231,7 +259,7 @@ function recordResponse(root, { kind, provider, chatId, agentId, jobId, raw, art
     console.warn(`[${MODULE_ID}] recordResponse: the .response file is written and durable at ${responseRelPath}, but indexing it failed (${e.message}) — rebuildIndexFromResponses() recovers this`);
   }
 
-  return { id, kind, agentId: agent, jobId: job, capturedAt, contentHash, responsePath: responseRelPath, artifactPath, indexed, indexError };
+  return { id, kind, agentId: agent, jobId: job, capturedAt, contentHash, responsePath: responseRelPath, artifactPath, indexed, indexError, indexSkipped };
 }
 
 /**
@@ -306,6 +334,7 @@ function rebuildIndexFromResponses(root) {
  */
 function queryItems(root, { kind, provider, chatId, agentId, jobId, limit = 100 } = {}) {
   const p = _paths(root);
+  if (!sqliteAvailable()) { _sayNoSqliteOnce(); return _scanResponses(p, { kind, provider, chatId, agentId, jobId, limit }); }
   const run = () => {
     const db = _openDb(p);
     try {
@@ -438,5 +467,5 @@ function backupSnapshot(host) {
 module.exports = {
   MODULE_ID, COMPARTMENT_NAME,
   ensureCompartment, recordResponse, queryItems, rebuildIndexFromResponses, backupSnapshot,
-  findResponseByJobId, readItem, defaultRoot,
+  findResponseByJobId, readItem, defaultRoot, sqliteAvailable,
 };

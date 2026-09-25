@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """
-tests/probe/clearglass-menu-library.py — v0.39.240
+tests/probe/clearglass-menu-library.py — v0.39.240, updated 0.39.241
 James: "also needs to be clearglass library... added to the 3 lines menu."
 Loads Clear Glass's REAL renderer/browser.html + browser.js in headless Chromium,
 with window.ClearGlass stood in by an object built from the real preload's
 namespaces (every method records its call) and the real toolbar command registry.
 Clicks the ☰ menu (#bookmark-mgr-btn), then "📚 Library", and prints what reached
-cg.window.open. Pass = one call with agentId 'nexus-library' and the /ui/library/
-URL, the menu closed, no page errors.
+cg.window.openLibrary. Pass = one call (0.39.241: the Library is its own Clear Glass
+window, renderer/library.html, not ui/library/ in an agent window), then "⬇ Downloads"
+gives openLibrary('downloads'), the menu closed, no page errors.
 Usage: python3 tests/probe/clearglass-menu-library.py   (needs: pip install playwright)
 """
 import threading, http.server, subprocess, os
@@ -34,7 +35,7 @@ FAKE = ("window.__calls=[];const __shape=" + _json.dumps(_preload_shape()) + ";w
         "for (const ns of Object.keys(__shape)) { window.ClearGlass[ns]={}; for (const m of __shape[ns]) "
         "window.ClearGlass[ns][m]=(...args)=>{ window.__calls.push({path:'cg.'+ns+'.'+m,args}); return Promise.resolve(/list$/i.test(m)?[]:{}); }; }")
 with sync_playwright() as p:
-    b=p.chromium.launch(); pg=b.new_page(viewport={'width':1400,'height':850}); errs=[]
+    b=p.chromium.launch(**({'executable_path': os.environ['PLAYWRIGHT_CHROMIUM']} if os.environ.get('PLAYWRIGHT_CHROMIUM') else {})); pg=b.new_page(viewport={'width':1400,'height':850}); errs=[]
     pg.on('pageerror', lambda e: errs.append(str(e)))
     pg.add_init_script(FAKE + "\nwindow.ClearGlass.toolbar.commands = () => Promise.resolve(" + CMDS + ");")
     pg.goto('http://127.0.0.1:9922/renderer/browser.html'); pg.wait_for_timeout(1500)
@@ -44,8 +45,13 @@ with sync_playwright() as p:
     if not rows: b.close(); srv.shutdown(); raise SystemExit(0)
     pg.screenshot(path='/tmp/clearglass-menu-library.png')
     pg.click('#bookmark-mgr-panel [data-action="library"]'); pg.wait_for_timeout(400)
-    opens=pg.evaluate("window.__calls.filter(c=>c.path==='cg.window.open').map(c=>c.args)")
-    print('cg.window.open calls:', opens)
+    opens=pg.evaluate("window.__calls.filter(c=>c.path==='cg.window.openLibrary').map(c=>c.args)")
+    print('cg.window.openLibrary calls (Library row):', opens)
+    pg.click('#bookmark-mgr-btn'); pg.wait_for_timeout(400)
+    pg.click('#bookmark-mgr-panel [data-action="downloads"]'); pg.wait_for_timeout(400)
+    opens=pg.evaluate("window.__calls.filter(c=>c.path==='cg.window.openLibrary').map(c=>c.args)")
+    print('cg.window.openLibrary calls (+ Downloads row):', opens)
+    assert opens == [[None], ['downloads']] or opens == [[], ['downloads']], opens
     print('menu closed after click:', pg.eval_on_selector('#bookmark-mgr-panel','e=>getComputedStyle(e).display'))
     print('page errors:', errs[:5] or 'none')
     b.close()

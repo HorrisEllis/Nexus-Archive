@@ -41,7 +41,9 @@ const css = fs.readdirSync(path.join(S, 'sections')).filter(f => f.endsWith('.cs
   });
   await test('UF-05', 'core.js sets the area on body and loads that area\u2019s stylesheet once; the page lists every section script', () => {
     const core = fs.readFileSync(path.join(S, 'core.js'), 'utf8');
-    assert.ok(/document\.body\.dataset\.area = def\.id/.test(core) && /loadAreaCss\(def\.id\)/.test(core) && /href: `settings\/sections\/\$\{id\}\.css`/.test(core) && /loadedCss\.has\(id\)/.test(core));
+    // 0.39.241 — the CSS folder is a boot() option (the Library window shares this runtime);
+    // Settings' default is still settings/sections/.
+    assert.ok(/document\.body\.dataset\.area = def\.id/.test(core) && /loadAreaCss\(def\.id\)/.test(core) && /href: `\$\{CFG\.cssBase\}\$\{id\}\.css`/.test(core) && /cssBase: 'settings\/sections\/'/.test(core) && /loadedCss\.has\(id\)/.test(core));
     const html = fs.readFileSync(path.join(ROOT, 'clear-glass/renderer/settings.html'), 'utf8');
     for (const f of js) assert.ok(html.includes(`<script src="settings/sections/${f}"></script>`), f);
   });

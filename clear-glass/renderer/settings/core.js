@@ -167,23 +167,43 @@
   const GROUPS = ['Identity', 'Agents', 'Browser', 'System'];
   function section(def) { sections.push(def); }
 
+  // §LIBRARY 0.39.241 — the Library window (renderer/library.html) runs on this
+  // same runtime so it IS the Settings UI, not a copy of its look: same frame,
+  // rail, panes, rows, modals and toasts. What differs per page is passed to
+  // boot(): its rail groups, first area, where area CSS lives, how the window
+  // closes, and what the rail's search box does ('rail' dims areas — Settings;
+  // 'list' filters the shown area's list — Library, like Firefox's Library).
+  // Settings calls boot() with no options and gets exactly what it had.
+  const CFG = {
+    groups: GROUPS, defaultId: 'accounts', cssBase: 'settings/sections/',
+    close: () => cg.window.closeSettings(), search: 'rail', searchPlaceholder: 'Find a setting',
+  };
+  let listQuery = '';
+  const query = () => listQuery;
+
   let current = null, pollers = [];
   const loadedCss = new Set();
   function loadAreaCss(id) {
     if (loadedCss.has(id)) return;
     loadedCss.add(id);
-    document.head.append(h('link', { rel: 'stylesheet', href: `settings/sections/${id}.css`, dataset: { area: id } }));
+    document.head.append(h('link', { rel: 'stylesheet', href: `${CFG.cssBase}${id}.css`, dataset: { area: id } }));
   }
   function onLeave(fn) { pollers.push(fn); }
 
   async function show(id) {
     const def = sections.find(s => s.id === id) || sections[0];
     pollers.forEach(f => { try { f(); } catch (_) {} }); pollers = [];
+    const same = current === def.id;   // a re-render (search, refresh, poll) keeps what is on screen until the new render is ready
+    if (CFG.search === 'list' && !same) {   // a new area starts unfiltered
+      listQuery = ''; const sb = document.getElementById('search'); if (sb) sb.value = '';
+    }
     current = def.id;
     document.querySelectorAll('.rail-item').forEach(b => b.setAttribute('aria-current', b.dataset.id === def.id ? 'page' : 'false'));
     // The hash is only a bookmark for reopening on the same section — never worth failing a render over.
     if (location.hash !== '#' + def.id) { try { history.replaceState(null, '', '#' + def.id); } catch (_) { /* opaque origin */ } }
     const main = document.getElementById('main');
+    const keep = same ? [...((main.querySelector('.page') || {}).childNodes || [])] : [];
+    const scroll = same ? main.scrollTop : 0;
     main.replaceChildren();
     // v0.39.227 — one stylesheet per area (sections/<id>.css), loaded the first
     // time the area is shown; its rules are scoped to body[data-area="<id>"]
@@ -193,13 +213,15 @@
     loadAreaCss(def.id);
     const tools = h('div', { class: 'tools' });
     main.append(h('header', { class: 'page-head' }, h('h1', { text: def.label }), def.blurb ? h('p', { text: def.blurb }) : null, tools));
-    const page = h('div', { class: 'page' }, h('div', { class: 'loading', text: 'Loading…' }));
+    const page = h('div', { class: 'page' }, keep.length ? keep : h('div', { class: 'loading', text: 'Loading…' }));
     main.append(page);
+    if (scroll) main.scrollTop = scroll;
     const rerender = () => show(def.id);
     try {
-      const nodes = await def.render({ page, tools, rerender });
+      const nodes = await def.render({ page, tools, rerender, query: listQuery });
       if (current !== def.id) return;
       page.replaceChildren(...[].concat(nodes || []));
+      if (scroll) main.scrollTop = scroll;
     } catch (e) {
       if (current !== def.id) return;
       page.replaceChildren(h('div', { class: 'err-box' }, h('div', { style: { flex: 1 } },
@@ -209,14 +231,22 @@
 
   function buildRail() {
     const rail = document.getElementById('rail');
-    const search = h('input', { id: 'search', type: 'search', placeholder: 'Find a setting', 'aria-label': 'Find a setting' });
+    const search = h('input', { id: 'search', type: 'search', placeholder: CFG.searchPlaceholder, 'aria-label': CFG.searchPlaceholder });
     rail.append(search);
-    for (const g of GROUPS) {
+    for (const g of CFG.groups) {
       const items = sections.filter(s => s.group === g);
       if (!items.length) continue;
       rail.append(h('div', { class: 'rail-group' }, h('h3', { text: g }),
         items.map(s => h('button', { class: 'rail-item', dataset: { id: s.id, keys: `${s.label} ${s.keywords || ''}`.toLowerCase() }, onclick: () => show(s.id) },
           h('span', { class: 'ico', 'aria-hidden': 'true', text: s.icon || '•' }), h('span', { text: s.label })))));
+    }
+    if (CFG.search === 'list') {
+      let t = null;
+      search.addEventListener('input', () => {
+        clearTimeout(t);
+        t = setTimeout(() => { listQuery = search.value.trim().toLowerCase(); if (current) show(current); }, 160);
+      });
+      return;
     }
     search.addEventListener('input', () => {
       const q = search.value.trim().toLowerCase();
@@ -229,14 +259,15 @@
     });
   }
 
-  function boot() {
-    document.getElementById('close').addEventListener('click', () => cg.window.closeSettings());
+  function boot(opts = {}) {
+    Object.assign(CFG, opts);
+    document.getElementById('close').addEventListener('click', () => CFG.close());
     buildRail();
-    show((location.hash || '').slice(1) || 'accounts');
+    show((location.hash || '').slice(1) || CFG.defaultId);
     // a link or the back button changing #section re-renders that section
     window.addEventListener('hashchange', () => { const id = location.hash.slice(1); if (id && id !== current) show(id); });
   }
 
   window.CGS = { cg, h, unwrap, call, wire, toast, fail, busy, modal, confirmDo, field, toggle, row, pane, btn, chip, empty, ago, copy,
-    agentOptions, select, section, show, onLeave, boot, WIRE_PORT };
+    agentOptions, select, section, show, onLeave, boot, query, current: () => current, WIRE_PORT };
 })();

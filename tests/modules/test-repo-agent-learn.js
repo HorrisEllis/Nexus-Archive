@@ -134,8 +134,11 @@ async function run() {
   check('learned observations are shown, with ungrounded evidence flagged', /\+ \(fact\) x is y here/.test(learnedHtml) && learnedHtml.includes('ungrounded'));
   check('rejections are shown, not hidden', learnedHtml.includes('rejected: r'));
   check('agent text is escaped in the detail', det({ context: { files: ['<img>'], chunkIds: ['c'] } }).includes('&lt;img&gt;'));
+  // 0.39.241 — agentSend settles its line through _agentSettle (shared with the late-reply watcher),
+  // which attaches the detail whatever the outcome; agentSend calls it on both paths.
   check('agentSend attaches the detail to both success and failure lines',
-    (extractFn(APP, 'agentSend').match(/detail: _agentDetail\(r\)/g) || []).length === 2);
+    /line\.detail = _agentDetail\(r\);/.test(extractFn(APP, '_agentSettle')) &&
+    (extractFn(APP, 'agentSend').match(/_agentSettle\(line, r\)/g) || []).length === 2);
 
   console.log(`\n  ${pass} passed, ${fail} failed\n`);
   process.exitCode = fail === 0 ? 0 : 1;

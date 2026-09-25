@@ -1549,9 +1549,14 @@
       .catch(err => addMsg('assistant', `Failed to reset toolbar: ${err.message}`));
   });
 
-  // The Library window — must match the tray's entry in src/main/index.js.
-  const LIBRARY_AGENT_ID = 'nexus-library';
-  const LIBRARY_URL = 'http://127.0.0.1:9000/ui/library/';
+  // The Library window (renderer/library.html) — opened in the main process by
+  // openLibraryWindow(), the same function the tray and Ctrl+J use.
+  async function _openLibrary(area) {
+    try {
+      const r = await cg.window.openLibrary(area);
+      if (r && r.ok === false) throw new Error(r.error || 'not opened');
+    } catch (err) { console.error(`[menu] could not open the Library: ${err.message}`); toast(`Could not open the Library: ${err.message}`, 'error', 6000); }
+  }
   document.getElementById('bookmark-mgr-btn').addEventListener('click', async (e) => {
     const panel = document.getElementById('bookmark-mgr-panel');
     if (panel.style.display !== 'none') { panel.style.display = 'none'; return; }
@@ -1566,7 +1571,7 @@
         <div id="menu-bookmarks-list"><div style="padding:6px 4px;color:var(--text-dim,#999);font-size:11px">loading…</div></div>
       </div>
       <div class="menu-sep"></div>
-      <div class="menu-item" data-action="downloads">⬇ Downloads</div>
+      <div class="menu-item" data-action="downloads">⬇ Downloads <span class="menu-kbd">Ctrl+J</span></div>
       <div class="menu-item" data-action="site-settings">🛡 Site Settings</div>
       <div class="menu-item" data-action="history">🕐 History</div>
       <div class="menu-item" data-action="library">📚 Library</div>
@@ -1604,7 +1609,7 @@
 
     panel.querySelector('[data-action="downloads"]').addEventListener('click', () => {
       panel.style.display = 'none';
-      _openPanelFromMenu('downloads-panel', _renderDownloadsPanel);
+      _openLibrary('downloads');
     });
     panel.querySelector('[data-action="site-settings"]').addEventListener('click', () => {
       panel.style.display = 'none';
@@ -1614,15 +1619,12 @@
       panel.style.display = 'none';
       _openPanelFromMenu('history-panel', () => _renderHistoryPanel(''));
     });
-    // §LIBRARY 0.39.240 — James: "also needs to be clearglass library... added to
-    // the 3 lines menu". The Library window (ui/library/: bookmarks, history,
-    // downloads, agent RESPONSES, accounts, macros, autofill, passwords) was
-    // reachable only from the tray. Same window the tray opens: same agentId,
-    // same URL, through the real window:open -> openAgentWindow path.
-    panel.querySelector('[data-action="library"]').addEventListener('click', async () => {
+    // §LIBRARY 0.39.240 → 0.39.241 — James: "also needs to be clearglass library... added to
+    // the 3 lines menu", then "the settings ui but with the library". Same window as
+    // the tray entry and Ctrl+J: openLibraryWindow() in src/main/index.js.
+    panel.querySelector('[data-action="library"]').addEventListener('click', () => {
       panel.style.display = 'none';
-      try { await cg.window.open({ agentId: LIBRARY_AGENT_ID, url: LIBRARY_URL }); }
-      catch (err) { console.error(`[menu] could not open the Library (${LIBRARY_URL}): ${err.message}`); toast(`Could not open the Library: ${err.message}`, 'error', 6000); }
+      _openLibrary();
     });
     panel.querySelector('[data-action="bgtabs"]').addEventListener('click', () => {
       panel.style.display = 'none';
@@ -1754,8 +1756,8 @@
         e.preventDefault(); document.getElementById('btn-bookmark').click(); break;
       case 'h': case 'H':
         e.preventDefault(); _openPanelFromMenu('history-panel', () => _renderHistoryPanel('')); break;
-      case 'j': case 'J':
-        e.preventDefault(); _openPanelFromMenu('downloads-panel', _renderDownloadsPanel); break;
+      // Ctrl+J (Library → Downloads) is taken in the main process for every web
+      // contents — this window and the page inside it — so it never reaches here.
       case 'p': case 'P':
         e.preventDefault(); cg.driver.exec({ action: 'print', agentId }); break;
     }
@@ -1771,126 +1773,10 @@
     else if (e.key === 'ArrowRight') { e.preventDefault(); if (wv.canGoForward()) wv.goForward(); }
   });
 
-  // §NEW 2026-08-24 — real downloads manager panel. Same real dropdown
-  // pattern as bookmark-mgr-panel above, against the real downloads IPC
-  // surface (src/downloads/store.js + adapter.js, wired into every real
-  // agent session's will-download).
-  function _formatBytes(n) {
-    if (!n) return '0 B';
-    const units = ['B', 'KB', 'MB', 'GB'];
-    let i = 0; let v = n;
-    while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
-    return `${v.toFixed(v >= 10 || i === 0 ? 0 : 1)} ${units[i]}`;
-  }
-  function _stateLabel(state) {
-    return { in_progress: '⏳', completed: '✓', cancelled: '✕', interrupted: '⚠', paused: '⏸' }[state] || state;
-  }
-  async function _renderDownloadsPanel() {
-    const panel = document.getElementById('downloads-panel');
-    panel.innerHTML = '<div style="padding:8px;color:var(--text-dim,#999);font-size:11px">loading…</div>';
-    try {
-      const [list, listeners] = await Promise.all([
-        cg.downloads.list({}),
-        cg.downloads.listListeners(),
-      ]);
-      const listHtml = !list || !list.length
-        ? '<div style="padding:8px;color:var(--text-dim,#999);font-size:11px">No downloads yet.</div>'
-        : `<div style="display:flex;justify-content:flex-end;padding:2px 4px 6px"><span data-clear-completed style="cursor:pointer;font-size:10px;color:var(--text-dim,#999)">clear completed</span></div>` +
-          list.slice(0, 30).map(d => `
-          <div style="display:flex;align-items:center;gap:6px;padding:6px 4px;border-bottom:1px solid var(--border,#333)">
-            <span title="${d.state}" style="font-size:11px">${_stateLabel(d.state)}</span>
-            <span data-open="${d.id}" style="flex:1;cursor:pointer;font-size:11px;color:var(--text,#ccc);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${(d.savePath || '').replace(/"/g, '&quot;')}">${d.filename.replace(/</g, '&lt;')}</span>
-            <span style="font-size:10px;color:var(--text-dim,#999)">${_formatBytes(d.bytes)}</span>
-            <span data-remove="${d.id}" style="cursor:pointer;opacity:.5;font-size:12px" title="Remove from list">✕</span>
-          </div>`).join('');
-
-      // §2026-08-28 — James: "a download listener for artifacts." Real
-      // config UI, deliberately compact (plain <select>, not the full
-      // guardian-picker.js overlay cards) — this panel is a small chrome
-      // dropdown, not a page overlay, so it gets a scale-appropriate
-      // version of the same real 7 link targets, not a re-skin.
-      const targetLabel = (t) => ({ ledger: '📒 Ledger', intelligence: '🧬 Intelligence', compartment: '🗂 System',
-        'sse-system': '📶 SSE→System', 'copilot-cli': '⌘ Co-pilot CLI', 'copilot-panel': '💬 Co-pilot Panel',
-        'ollama-stream': '🧠 Ollama' }[t] || t);
-      const listenersHtml = `
-        <div style="border-top:1px solid var(--border,#333);margin-top:4px;padding-top:6px">
-          <div style="font-size:9px;letter-spacing:.1em;color:var(--text-dim,#999);padding:0 4px 4px;text-transform:uppercase">Download Listeners</div>
-          ${!listeners.length ? '<div style="padding:2px 4px 6px;font-size:10px;color:var(--text-dim,#999)">None configured.</div>' :
-            listeners.map(l => `
-            <div style="display:flex;align-items:center;gap:6px;padding:4px;font-size:10px;color:var(--text,#ccc)">
-              <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(l.filenamePattern || '*').replace(/</g,'&lt;')} → ${targetLabel(l.linkTarget?.type)}${l.agentId ? ' ('+l.agentId+')' : ''}</span>
-              <span data-dl-remove="${l.id}" style="cursor:pointer;opacity:.5" title="Remove">✕</span>
-            </div>`).join('')}
-          <div style="display:flex;flex-direction:column;gap:4px;padding:6px 4px 2px">
-            <input id="dl-pattern" type="text" placeholder="filename pattern, e.g. *.pdf (blank = all)" style="background:var(--bg1,#0a0a0a);border:1px solid var(--border,#333);color:var(--text,#ccc);border-radius:4px;padding:3px 6px;font-size:10px" />
-            <select id="dl-target" style="background:var(--bg1,#0a0a0a);border:1px solid var(--border,#333);color:var(--text,#ccc);border-radius:4px;padding:3px 6px;font-size:10px">
-              <option value="ledger">📒 Event Ledger</option>
-              <option value="intelligence">🧬 Intelligence System</option>
-              <option value="compartment">🗂 Another System (+ intent)</option>
-              <option value="sse-system">📶 SSE → System</option>
-              <option value="copilot-cli">⌘ Co-pilot CLI (+ intent)</option>
-              <option value="copilot-panel">💬 Co-pilot Panel</option>
-              <option value="ollama-stream">🧠 Ollama Stream</option>
-            </select>
-            <div id="dl-system-row" style="display:none">
-              <select id="dl-system" style="width:100%;background:var(--bg1,#0a0a0a);border:1px solid var(--border,#333);color:var(--text,#ccc);border-radius:4px;padding:3px 6px;font-size:10px">
-                <option value="cortex">cortex</option><option value="guardian">guardian</option>
-                <option value="orchestrator">orchestrator</option><option value="bridge">bridge</option>
-                <option value="loom">loom</option><option value="copilot">copilot</option>
-                <option value="intelligence">intelligence</option><option value="eravos">eravos</option>
-                <option value="idearium">idearium</option><option value="architect">architect</option>
-              </select>
-            </div>
-            <input id="dl-intent" type="text" placeholder="intent, e.g. flag-for-review" style="display:none;background:var(--bg1,#0a0a0a);border:1px solid var(--border,#333);color:var(--text,#ccc);border-radius:4px;padding:3px 6px;font-size:10px" />
-            <button id="dl-add-btn" style="font-size:10px;padding:4px;background:var(--bg1,#0a0a0a);border:1px solid var(--border,#333);color:var(--text,#ccc);border-radius:4px;cursor:pointer">+ Add listener</button>
-          </div>
-        </div>`;
-
-      panel.innerHTML = listHtml + listenersHtml;
-      panel.querySelectorAll('[data-open]').forEach(el => el.addEventListener('click', () => cg.downloads.openFolder(el.dataset.open)));
-      panel.querySelectorAll('[data-remove]').forEach(el => el.addEventListener('click', async (ev) => {
-        ev.stopPropagation();
-        await cg.downloads.clearItem(el.dataset.remove);
-        el.closest('div').remove();
-      }));
-      const clearBtn = panel.querySelector('[data-clear-completed]');
-      if (clearBtn) clearBtn.addEventListener('click', async () => {
-        await cg.downloads.clearCompleted();
-        _renderDownloadsPanel();
-      });
-
-      panel.querySelectorAll('[data-dl-remove]').forEach(el => el.addEventListener('click', async () => {
-        await cg.downloads.removeListener(el.dataset.dlRemove);
-        _renderDownloadsPanel();
-      }));
-      const targetSelect = document.getElementById('dl-target');
-      const systemRow    = document.getElementById('dl-system-row');
-      const intentInput  = document.getElementById('dl-intent');
-      const updateFieldVisibility = () => {
-        const t = targetSelect.value;
-        systemRow.style.display   = (t === 'compartment' || t === 'sse-system') ? 'block' : 'none';
-        intentInput.style.display = (t === 'compartment' || t === 'copilot-cli') ? 'block' : 'none';
-      };
-      targetSelect.addEventListener('change', updateFieldVisibility);
-      updateFieldVisibility();
-      document.getElementById('dl-add-btn').addEventListener('click', async () => {
-        const type = targetSelect.value;
-        const linkTarget = { type };
-        if (type === 'compartment' || type === 'sse-system') linkTarget.system = document.getElementById('dl-system').value;
-        if (type === 'compartment' || type === 'copilot-cli') linkTarget.intent = intentInput.value.trim() || null;
-        const pattern = document.getElementById('dl-pattern').value.trim() || null;
-        const result = await cg.downloads.registerListener({ filenamePattern: pattern, linkTarget });
-        if (result?.error) addMsg('assistant', `Could not add download listener: ${result.error}`);
-        _renderDownloadsPanel();
-      });
-    } catch (err) {
-      panel.innerHTML = `<div style="padding:8px;color:#ff6b6b;font-size:11px">Error: ${err.message}</div>`;
-    }
-  }
-  document.addEventListener('click', (e) => {
-    const panel = document.getElementById('downloads-panel');
-    if (panel.style.display !== 'none' && !panel.contains(e.target) && !e.target.closest('#bookmark-mgr-panel')) panel.style.display = 'none';
-  });
+  // §LIBRARY 0.39.241 — the Downloads dropdown that lived here (2026-08-24, with
+  // its Download Listeners form from 2026-08-28) is replaced by the Library
+  // window's Downloads area (renderer/library/sections/downloads.js), which has
+  // the file list and the listeners. Ctrl+J and ☰ → Downloads open it.
 
   // §NEW 2026-08-24 — real per-site settings panel. Lists every origin
   // with at least one stored setting (currently written by the
