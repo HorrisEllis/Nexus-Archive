@@ -288,9 +288,12 @@ uuid        = unique_identity_assigned_to_every_file_at_creation
 systemid    = first_2_chars_of_uuid
 componentid = next_6_chars_of_uuid
 shortid     = systemid_plus_componentid
-ref         = direct_uuid_reference_from_one_file_to_another_it_calls_or_relates_to
-// Rule: any import, hook binding, or cross-file call must resolve to a ref
-// entry in that file's own manifest block — no untracked coupling.
+depends     = direct_uuid_reference_from_one_file_to_another_it_calls_or_needs_first
+related     = uuid_reference_to_an_associated_file_that_is_not_a_dependency
+// Rule: any hook binding or cross-file call must resolve to a depends
+// entry in that file's own catalog block — no untracked coupling.
+// (was `ref`, which meant both; split 2026-09-25 — a list that generates
+// wiring needs one direction only)
 
 // ══════════════════════════════════════════════════════════════════════════════
 // Domain 6 — Config / Style (anything adjustable lives outside code)
@@ -362,8 +365,12 @@ fidelity_score = 0_to_1_behavioral_match_to_the_nodes_own_declared_contract
 
 // ══════════════════════════════════════════════════════════════════════════════
 // GENESIS FILE TREE — one catalog entry per file. Each file is a chunk:
-// minimal code to execute its one stated intent. uuid + ref[] are literal —
-// ref lists the uuids of files this file is allowed to call or relate to.
+// minimal code to execute its one stated intent. uuid + depends[] are literal:
+//   depends = uuids of files this file calls or needs first (directional —
+//             generates the registry, the graph and the build order)
+//   related = associated files that are NOT dependencies (generates nothing)
+// Generated and checked by `idearium manifest check|generate <spec>`
+// (spec-engine/manifest/) — the list is the source, the wiring is derived.
 // ══════════════════════════════════════════════════════════════════════════════
 
 catalog GENESIS_FILE_TREE {
@@ -372,14 +379,15 @@ catalog GENESIS_FILE_TREE {
     uuid      = ge0000-spec-4000-8000-000000000000
     intent    = this_document
     summary   = "Immutable grammar + file catalog. Compiler and scaffolder both read this before anything is generated."
-    ref       = []
+    depends   = []
   }
 
   file "MANIFEST.json" {
     uuid      = ge0001-mnfst-4000-8000-000000000001
     intent    = declare_system_identity_and_spine_dependency
     summary   = "core_uuid, version, spine: 'warp' + pinned version, decoupling_rule copied from warp's own MANIFEST."
-    ref       = [ "ge0000" ]
+    depends   = []
+    related   = [ "ge0000" ]
   }
 
   domain "kernel/" {
@@ -388,21 +396,21 @@ catalog GENESIS_FILE_TREE {
       uuid    = ge1000-boot0-4000-8000-000000000010
       intent  = cold_start_sequence
       summary = "Loads MANIFEST, instantiates the root warp Stream as the kernel itself, registers every SCHEMA_BASELINE entry as an Axiom, enforces FOUNDATION_IMMUTABLE, then mounts one runtime per configured engine as a Stream.hook."
-      ref     = [ "ge0001", "ge1001", "ge1002", "ge2000", "ge2002" ]
+      depends = [ "ge0001", "ge1001", "ge1002", "ge2000", "ge2002", "geB000" ]
     }
 
     file "kernel/axioms.js" {
       uuid    = ge1001-axiom-4000-8000-000000000011
       intent  = enforce_genesis_axioms_listed_above
       summary = "Same shape as cos/foundation/axioms.js: id, description, enforce(ctx). Throws GenesisAxiomError on violation."
-      ref     = []
+      depends = []
     }
 
     file "kernel/runtime-enum.js" {
       uuid    = ge1002-rtenm-4000-8000-000000000012
       intent  = enumerate_valid_runtime_states
       summary = "booting, mounted, degraded, unmounting, halted — nothing else is a legal runtime state."
-      ref     = []
+      depends = []
     }
   }
 
@@ -412,21 +420,22 @@ catalog GENESIS_FILE_TREE {
       uuid    = ge2000-wrpbr-4000-8000-000000000020
       intent  = single_seam_between_genesis_and_warp
       summary = "require('warp/core') + require('warp/dispatch'); re-exports Event/Gate/Stream/StreamLog/Axiom under genesis's naming. Only file in genesis allowed to import warp directly."
-      ref     = [ "ge1000" ]
+      depends = []
+      related = [ "ge1000" ]
     }
 
     file "spine/scorer-fidelity.js" {
       uuid    = ge2001-scfid-4000-8000-000000000021
       intent  = warp_scorer_plugin_for_pulse_fidelity
       summary = "Registered via Stream.hook('scorer', ...); computes health_score and fidelity_score using warp's four-axis pattern."
-      ref     = [ "ge2000" ]
+      depends = [ "ge2000" ]
     }
 
     file "spine/axiom-baseline.js" {
       uuid    = ge2002-axbl0-4000-8000-000000000022
       intent  = register_every_SCHEMA_BASELINE_entry_as_a_hard_warp_axiom
       summary = "Reads the SCHEMA_BASELINE catalog from this spec, calls Axiom.register() per entry at kernel boot — the only file that turns spec text into an enforced rule."
-      ref     = [ "ge2000", "ge0000" ]
+      depends = [ "ge2000", "ge0000" ]
     }
   }
 
@@ -436,7 +445,7 @@ catalog GENESIS_FILE_TREE {
       uuid    = ge3000-ldgr0-4000-8000-000000000030
       intent  = per_runtime_append_only_ledger
       summary = "Thin wrapper configuring a warp StreamLog instance per mounted runtime; exposes append(), replay(), audit()."
-      ref     = [ "ge2000" ]
+      depends = [ "ge2000" ]
     }
   }
 
@@ -446,14 +455,15 @@ catalog GENESIS_FILE_TREE {
       uuid    = ge4000-icsch-4000-8000-000000000040
       intent  = json_schema_every_component_i_contract_must_pass
       summary = "Mirrors nexus's interaction-contract.json shape: id, version, namespace, ports, uuid, role, health, routes[], axioms[]."
-      ref     = []
+      depends = []
     }
 
     file "contracts/hook-schema.js" {
       uuid    = ge4001-hksch-4000-8000-000000000041
       intent  = validate_hook_objects_before_registration
       summary = "Direct port of cos/foundation/hook-schema.js validators (isUUID, isSemver, isEventType, isKebab); the actual gate is GEN-S2 from spine/axiom-baseline.js — this file only supplies the predicate functions the axiom calls."
-      ref     = [ "ge1001", "ge2002" ]
+      depends = [ "ge1001" ]
+      related = [ "ge2002" ]
     }
   }
 
@@ -463,35 +473,36 @@ catalog GENESIS_FILE_TREE {
       uuid    = ge5000-wreg0-4000-8000-000000000050
       intent  = living_index_of_every_hook_across_every_compartment
       summary = "allHooks(), bySystem(), byId(), withSEAM(), summary() — same query surface as hooks/index.js, auto-discovers new compartments' hooks files."
-      ref     = [ "ge4001" ]
+      depends = [ "ge4001" ]
     }
 
     file "registry/component-registry.js" {
       uuid    = ge5001-creg0-4000-8000-000000000051
       intent  = living_index_of_every_component_and_its_uuid
       summary = "One entry per component file; used by the lattice to seed level.software nodes automatically. Generated from registry/manifest-registry.js at P5 ASSEMBLE — never hand-edited (MANIFEST_BEFORE_CHUNK)."
-      ref     = [ "ge5000" ]
+      depends = [ "ge5002" ]
+      related = [ "ge5000" ]
     }
 
     file "registry/manifest-registry.js" {
       uuid    = ge5002-mreg0-4000-8000-000000000052
       intent  = one_source_of_truth_manifest_entry_per_component_written_before_any_chunk_dispatches
       summary = "P1 MANIFEST's real output: { id, intent, file, consumes[], emits[], data:{reads,writes}, cli, depends[], tests[] } per component, generated in a single whole-spec-context job — the only step in the pipeline allowed that much context. component-registry.js and interaction-contract.json are both derived from this at P5, never hand-declared (I1)."
-      ref     = [ "ge0000" ]
+      depends = [ "ge0000" ]
     }
 
     file "registry/wire-check.js" {
       uuid    = ge5003-wchk0-4000-8000-000000000053
       intent  = static_no_llm_gate_that_a_manifest_must_clear_before_any_component_is_chunked
       summary = "P2 WIRE-CHECK: ONE_PRODUCER_PER_SIGNAL (a signature with 2+ producers is a hard error, not a merge conflict found later), NO_UNDECLARED_RESIDUE (every emit has a consumer or is marked residue:true), producer<->consumer schema compatibility, depends[] acyclic. FAIL returns the violation list to registry/manifest-registry.js's own generation job for retry — never surfaces as a runtime bug the way 0.39.244's three seam bugs did."
-      ref     = [ "ge5002" ]
+      depends = [ "ge5002" ]
     }
 
     file "registry/component-router.js" {
       uuid    = ge5004-crtr0-4000-8000-000000000054
       intent  = route_every_cli_verb_and_every_cross_component_signal_by_id_never_by_import
       summary = "Reads manifest-registry.js's cli field per entry; a CLI call is `verb noun [flags]` resolved to a component_id and dispatched through here, non-linearly — no compartment or component ever imports another to reach it. Doubles as the event bus registry/wire-registry.js's hooks route through, so 'CLI door' and 'event door' are the same underlying map (Domain 2's i_contract rule), not two mechanisms."
-      ref     = [ "ge5002", "ge5000" ]
+      depends = [ "ge5002", "ge5000" ]
     }
   }
 
@@ -501,7 +512,7 @@ catalog GENESIS_FILE_TREE {
       uuid    = ge6000-gcc00-4000-8000-000000000060
       intent  = sole_authorized_path_between_two_compartments
       summary = "Every cross-compartment call passes through here; enforces GATE_BEFORE_CROSS and NOTHING_INLINE, emits a warp Event either way (pass or reject)."
-      ref     = [ "ge2000", "ge5000" ]
+      depends = [ "ge2000", "ge5000" ]
     }
   }
 
@@ -512,63 +523,63 @@ catalog GENESIS_FILE_TREE {
       uuid    = ge6500-seam0-4000-8000-000000000065
       intent  = declare_this_compartments_isolation_boundary_only
       summary = "{ uuid, isolated: true }. No ports, no methods, no event names — SEAM_IS_DUMB. Existence and boundary only; interaction-contract.json (below) is the only file allowed to describe communication."
-      ref     = []
+      depends = []
     }
 
     file "compartments/<name>/manifest.json" {
       uuid    = ge6900-mnfNN-4000-8000-000000000069
       intent  = this_compartments_slice_of_registry_manifest_registry_js_one_entry_per_component_it_owns
       summary = "Written at P1 MANIFEST, before component/<file>.js below exists. interaction-contract.json and component-registry.js entries for this compartment are both generated FROM this file at P5 ASSEMBLE (MANIFEST_BEFORE_CHUNK) — editing either by hand without updating this file first is a wire-check violation, not a style issue."
-      ref     = [ "ge5002" ]
+      depends = [ "ge5002" ]
     }
 
     file "compartments/<name>/interaction-contract.json" {
       uuid    = ge7000-icNNN-4000-8000-000000000070
       intent  = declare_this_compartments_full_surface
       summary = "Must validate against contracts/interaction-contract.schema.json. This is the map referenced by both api.js and cli.js below. Generated from manifest.json's consumes/emits/cli fields, not authored independently."
-      ref     = [ "ge4000", "ge6900" ]
+      depends = [ "ge4000", "ge6900" ]
     }
 
     file "compartments/<name>/api.js" {
       uuid    = ge7001-apiNN-4000-8000-000000000071
       intent  = http_or_rpc_door_into_the_compartment
       summary = "Routes declared in interaction-contract.json only; no route exists here that isn't declared there first."
-      ref     = [ "ge7000", "ge6000" ]
+      depends = [ "ge7000", "ge6000" ]
     }
 
     file "compartments/<name>/cli.js" {
       uuid    = ge7002-cliNN-4000-8000-000000000072
       intent  = command_door_into_the_same_map_as_api
       summary = "Per COS-2 (CLI first) — every capability api.js exposes must also exist here."
-      ref     = [ "ge7000", "ge6000" ]
+      depends = [ "ge7000", "ge6000" ]
     }
 
     file "compartments/<name>/sse.js" {
       uuid    = ge7003-sseNN-4000-8000-000000000073
       intent  = live_state_channel_for_this_compartment
       summary = "Streams warp Events scoped to this compartment's uuid out over SSE; read-only, no mutation path."
-      ref     = [ "ge7000", "ge2000" ]
+      depends = [ "ge7000", "ge2000" ]
     }
 
     file "compartments/<name>/hooks.js" {
       uuid    = ge7004-hkNNN-4000-8000-000000000074
       intent  = this_compartments_hook_declarations
       summary = "Loaded by wire-registry.js on discovery; every export validated against hook-schema.js at load time."
-      ref     = [ "ge4001", "ge5000" ]
+      depends = [ "ge4001", "ge5000" ]
     }
 
     file "compartments/<name>/config.json" {
       uuid    = ge7005-cfgNN-4000-8000-000000000075
       intent  = everything_adjustable_for_this_compartment
       summary = "Ports, timeouts, feature toggles, copy strings — nothing in the other files here is hardcoded if it's in this file's schema."
-      ref     = []
+      depends = []
     }
 
     file "compartments/<name>/component/<file>.js" {
       uuid    = ge7100-cmpNN-4000-8000-000000000080
       intent  = smallest_measurable_unit_of_behavior
       summary = "One component, one file, one intent — the file this compartment's manifest.json already declared at P1, not a new decision made while chunking. Registered in component-registry.js on load. Hot-swappable independently of its siblings. Built at P4 CHUNKS with CONTEXT_IS_NEIGHBOURS_ONLY: the agent sees this component's own manifest_entry plus the consumes/emits SCHEMAS (not source) of the ids in its own depends[] — never another component's file, never the rest of the compartment."
-      ref     = [ "ge5001", "ge6900" ]
+      depends = [ "ge5001", "ge6900" ]
     }
   }
 
@@ -578,21 +589,21 @@ catalog GENESIS_FILE_TREE {
       uuid    = ge8000-lgrid-4000-8000-000000000090
       intent  = mount_micro_listeners_across_every_registered_ui_surface
       summary = "Reads component-registry.js to find surfaces automatically; each listener emits a warp Event on interaction, no polling."
-      ref     = [ "ge5001", "ge2000" ]
+      depends = [ "ge5001", "ge2000" ]
     }
 
     file "nerve/shadow-space.js" {
       uuid    = ge8001-shdw0-4000-8000-000000000091
       intent  = infer_unobserved_attention_from_observed_gaps
       summary = "Consumes the ledger's replay stream; flags regions with activity-adjacent signal but no direct listener hit."
-      ref     = [ "ge3000", "ge8000" ]
+      depends = [ "ge3000", "ge8000" ]
     }
 
     file "nerve/attention-map.js" {
       uuid    = ge8002-attnm-4000-8000-000000000092
       intent  = live_composite_of_listener_grid_plus_shadow_space
       summary = "Consumed by tv-ui/spotlight.js to decide what to surface next; never mutates state, read-only projection."
-      ref     = [ "ge8000", "ge8001" ]
+      depends = [ "ge8000", "ge8001" ]
     }
   }
 
@@ -602,21 +613,21 @@ catalog GENESIS_FILE_TREE {
       uuid    = ge9000-fnav0-4000-8000-000000000100
       intent  = remote_style_directional_menu
       summary = "Reads wire-registry.js for available destinations; renders nothing it can't resolve to a live route."
-      ref     = [ "ge5000" ]
+      depends = [ "ge5000" ]
     }
 
     file "ui/tv-shell/spotlight.js" {
       uuid    = ge9001-splgt-4000-8000-000000000101
       intent  = surface_interactable_ui_for_ai_or_collaboration
       summary = "Driven by nerve/attention-map.js; opens the highest-friction or highest-focus surface first."
-      ref     = [ "ge8002", "ge9000" ]
+      depends = [ "ge8002", "ge9000" ]
     }
 
     file "ui/tv-shell/stylesheet/theme.css" {
       uuid    = ge9002-thm00-4000-8000-000000000102
       intent  = all_visual_tokens_for_tv_shell
       summary = "Colors, radii, motion durations, accent tokens — the only place tv-shell visuals are declared."
-      ref     = []
+      depends = []
     }
   }
 
@@ -626,21 +637,21 @@ catalog GENESIS_FILE_TREE {
       uuid    = ge9500-node0-4000-8000-000000000110
       intent  = define_the_node_shape_for_all_four_levels
       summary = "{ uuid, level: data|network|software|application, ref, meta }. Same UUID_PER_FILE rule applies to lattice nodes."
-      ref     = []
+      depends = []
     }
 
     file "lattice/edge.js" {
       uuid    = ge9501-edge0-4000-8000-000000000111
       intent  = define_weighted_association_between_two_nodes
       summary = "{ from, to, weight, kind }. No implicit hierarchy between levels — an edge can cross any two levels directly."
-      ref     = [ "ge9500" ]
+      depends = [ "ge9500" ]
     }
 
     file "lattice/associative-index.js" {
       uuid    = ge9502-aidx0-4000-8000-000000000112
       intent  = maintain_and_query_the_full_graph
       summary = "associate(), traverse(); seeded automatically from component-registry.js and pulse/self-identify events."
-      ref     = [ "ge9500", "ge9501", "ge5001" ]
+      depends = [ "ge9500", "ge9501", "ge5001" ]
     }
   }
 
@@ -650,21 +661,21 @@ catalog GENESIS_FILE_TREE {
       uuid    = geA000-hbeat-4000-8000-000000000120
       intent  = emit_periodic_liveness_pulse_per_runtime
       summary = "Every pulse is a warp Event scored by spine/scorer-fidelity.js; interval is a config.json key, never hardcoded."
-      ref     = [ "ge2000", "ge2001" ]
+      depends = [ "ge2000", "ge2001", "geB000" ]
     }
 
     file "pulse/peer-webrtc.js" {
       uuid    = geA001-pwrtc-4000-8000-000000000121
       intent  = togglable_direct_node_connection
       summary = "Off by default per COS-11 (network isolation default-on). remote_toggle flips connectivity; self_identify runs on every new peer link."
-      ref     = [ "geA000", "ge9502" ]
+      depends = [ "geA000", "ge9502" ]
     }
 
     file "pulse/fidelity-score.js" {
       uuid    = geA002-fidsc-4000-8000-000000000122
       intent  = expose_health_and_fidelity_as_queryable_values
       summary = "Reads scorer output from spine/scorer-fidelity.js; surfaced on interaction-contract's /health route for every compartment."
-      ref     = [ "ge2001" ]
+      depends = [ "ge2001" ]
     }
   }
 
@@ -674,20 +685,34 @@ catalog GENESIS_FILE_TREE {
       uuid    = geB000-gcfg0-4000-8000-000000000130
       intent  = system_wide_adjustable_values
       summary = "Single source of truth for ports, ledger retention, pulse interval defaults, nerve sampling rate. Compartment config.json files override per-compartment only."
-      ref     = []
+      depends = []
     }
   }
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// Boot order (derived from ref[] graph above — not hand-maintained, verified
-// against GENESIS_FILE_TREE at kernel/boot.js runtime):
-//   MANIFEST → kernel(boot,axioms,runtime-enum) → spine/warp-bridge →
-//   spine/axiom-baseline (SCHEMA_BASELINE → live Axioms) →
-//   spine/scorer-fidelity → ledger/event-ledger →
-//   contracts(schema,hook-schema) → registry(wire,component,manifest,wire-check,router) → gates →
-//   compartments/* (each gated by GEN-S1/GEN-S2 at mount) →
-//   nerve → ui/tv-shell → lattice → pulse → config
+// Boot order — GENERATED from the depends[] graph above by
+// `idearium manifest generate templates/genesis.spec`; never hand-edited.
+// (The hand-written list that stood here had config/ last, after pulse/,
+// though kernel/boot.js and pulse/heartbeat.js both read config. Generating
+// it removed that class of error.) Layers — every file in a layer depends
+// only on earlier layers, so each layer's chunks can build in parallel:
+//   L0 genesis.spec, MANIFEST.json, kernel/axioms, kernel/runtime-enum,
+//      spine/warp-bridge, contracts/interaction-contract.schema,
+//      compartments/<n>/seam, compartments/<n>/config, tv-shell theme,
+//      lattice/node, config/genesis.config
+//   L1 spine/scorer-fidelity, spine/axiom-baseline, ledger/event-ledger,
+//      contracts/hook-schema, registry/manifest-registry, lattice/edge
+//   L2 kernel/boot, registry/wire-registry, registry/component-registry,
+//      registry/wire-check, compartments/<n>/manifest, pulse/heartbeat,
+//      pulse/fidelity-score
+//   L3 registry/component-router, gates/gate-cross-compartment,
+//      compartments/<n>/interaction-contract, compartments/<n>/hooks,
+//      compartments/<n>/component/<file>, nerve/listener-grid,
+//      tv-shell/floating-nav, lattice/associative-index
+//   L4 compartments/<n>/api, cli, sse, nerve/shadow-space, pulse/peer-webrtc
+//   L5 nerve/attention-map
+//   L6 tv-shell/spotlight
 //
 // Nothing after "spine/axiom-baseline" can mount without clearing whichever
 // GEN-S* axiom applies to it — the baseline is live before the first

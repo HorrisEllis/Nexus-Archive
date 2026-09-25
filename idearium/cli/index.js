@@ -246,6 +246,14 @@ function printSpec(spec) {
 
 // ─── Commands ─────────────────────────────────────────────────────────────────
 
+async function _manifest(verb, { positional, flags }) {
+  const { dispatch } = await import('../spec-engine/manifest/commands.js');
+  const r = dispatch([verb, ...positional], flags);
+  if (r.json) console.log(JSON.stringify(r.json, null, 2));
+  for (const l of r.out || []) console.log(r.code ? coral(l) : l);
+  if (r.code) process.exit(r.code);
+}
+
 const COMMANDS = {
 
   // ── idearium idea ──────────────────────────────────────────────────────────
@@ -702,6 +710,14 @@ const COMMANDS = {
     console.log('');
   },
 
+  // ── manifest (phase 1: file list → registry + wiring, no LLM) ────────────
+  // §BUILT 2026-09-25 — logic lives once in spec-engine/manifest/commands.js;
+  // this is the idearium door. The pure door (no store loaded, clean JSON):
+  //   node idearium/spec-engine/manifest/cli.js check|generate|context …
+  async 'manifest.check'(os, a)    { await _manifest('check', a); },
+  async 'manifest.generate'(os, a) { await _manifest('generate', a); },
+  async 'manifest.context'(os, a)  { await _manifest('context', a); },
+
   // ── start API server ───────────────────────────────────────────────────────
 
   async 'start'() {
@@ -726,6 +742,7 @@ async function main() {
     console.log(`  ${sky('idea')}   add | list | show | phase | link | tension | archive | search | tree`);
     console.log(`  ${sky('spec')}   new | show | list | check | export`);
     console.log(`  ${sky('speceng')} list | show <uuid> | build <uuid> | chunk-agent <spec> <chunk> <agent>`);
+    console.log(`  ${sky('manifest')} check <file> [--warnings] | generate <file> [--out dir] | context <file> <id>`);
     console.log(`  ${sky('repo')}   list [--all] | show <uuid> | archive <uuid>`);
     console.log(`  ${sky('gap')}    list | show | open | resolve | ignore`);
     console.log(`  ${sky('push')}   [--message "..."] [--branch main]`);
@@ -743,7 +760,7 @@ async function main() {
 
   if (!handler) die(`unknown command: ${key}\nRun: idearium help`);
 
-  const os       = getIdeaOS();
+  const os       = cmd === 'manifest' ? null : getIdeaOS(); // manifest is pure — no store needed
   const argParsed = parseArgs(sub ? rest : parsed.positional.slice(1));
   // For sub-commands, positional[0] is the first arg after the sub command
   const finalArgs = {

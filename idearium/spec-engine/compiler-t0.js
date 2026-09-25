@@ -58,6 +58,7 @@
 // and a chunk_cap override distinct from the global config default —
 // real, named options, not new hidden constants.
 
+import { order as graphOrder } from './manifest/graph.js';
 import { loadSpec, addChunk } from './index.js';
 import { getValue as getConfigValue } from '../lib/config.js';
 import * as chunkNodes from '../lib/chunk-nodes.js';
@@ -142,31 +143,18 @@ function parseBuildOrder(content) {
  * could drift from them.
  */
 function _topoOrder(files) {
+  // §ONE ORDERING 2026-09-25 — Kahn's algorithm now lives once, in
+  // manifest/graph.js (shared with manifest check/generate). Same result,
+  // same error text on a cycle; this wrapper only keeps T0's own shape.
   const byPath = new Map(files.map(f => [f.path, f]));
-  const dependents = new Map(files.map(f => [f.path, []])); // path -> paths that depend on it
-  for (const f of files) for (const dep of f.dependsOn) dependents.get(dep).push(f.path);
-
-  const remaining = new Map(files.map(f => [f.path, f.dependsOn.length]));
-  const ordered = [];
-  let frontier = files.filter(f => f.dependsOn.length === 0).map(f => f.path);
-  while (frontier.length) {
-    const next = [];
-    for (const p of frontier.sort()) { // sorted for a stable, reproducible order among ties, not insertion-order luck
-      ordered.push(byPath.get(p));
-      for (const dependent of dependents.get(p)) {
-        remaining.set(dependent, remaining.get(dependent) - 1);
-        if (remaining.get(dependent) === 0) next.push(dependent);
-      }
-    }
-    frontier = next;
+  const g = graphOrder(files.map(f => ({ id: f.path, depends: f.dependsOn })));
+  if (g.stuck.length) {
+    throw new Error(`compiler-t0: real dependency cycle detected among — ${g.stuck.join(', ')} — cannot build bottom-up`);
   }
-
-  if (ordered.length !== files.length) {
-    const stuck = files.filter(f => !ordered.includes(f)).map(f => f.path);
-    throw new Error(`compiler-t0: real dependency cycle detected among — ${stuck.join(', ')} — cannot build bottom-up`);
-  }
-
-  return ordered.map(f => ({ ...f, isPrimitive: f.dependsOn.length === 0 && dependents.get(f.path).length > 0 }));
+  return g.order.map(p => {
+    const f = byPath.get(p);
+    return { ...f, isPrimitive: f.dependsOn.length === 0 && g.dependents.get(p).length > 0 };
+  });
 }
 
 /**
