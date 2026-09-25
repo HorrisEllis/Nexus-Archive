@@ -202,6 +202,61 @@ function createDispatcher(deps) {
     });
   }
 
+  // ── §ONE-TAB 0.39.237 — a repo job waits for its own tab ────────────────────
+  const AGENT_TAB_WAIT_MS = Math.max(1000, parseInt(process.env.GUARDIAN_AGENT_TAB_WAIT_MS || '60000', 10) || 60000);
+
+  const _awaitingAgentTab = new Map(); // jobId -> deadline timer, while a repo job waits for its own tab
+  function _stopWaiting(jobId) {
+    const t = _awaitingAgentTab.get(jobId);
+    if (t) clearTimeout(t);
+    _awaitingAgentTab.delete(jobId);
+  }
+
+  function _queueOnce(job) {
+    if (!pendingQueue.has(job.provider)) pendingQueue.set(job.provider, []);
+    const q = pendingQueue.get(job.provider);
+    if (!q.some(j => j.id === job.id)) q.push(job);
+  }
+
+  // Falls a repo job back to the shared tab, loudly, with the reason on the .job.
+  function _fallBackToSharedTab(job, reason) {
+    if (job._agentTabFallback) return;
+    job._agentTabFallback = reason;
+    _stopWaiting(job.id);
+    updateJob(job.id, { transportFallbackReason: reason, agentTabFallback: true });
+    console.warn(`[guardian] ${job.id} → ${job.provider}: ${job.agentId}'s own tab is not coming (${reason}) — delivering via the shared ${job.provider} tab instead`);
+    bus.emit('guardian.job.agent_tab_fallback', { jobId: job.id, provider: job.provider, agentId: job.agentId, reason });
+    dispatchJob(job);
+  }
+
+  // Asks Clear Glass for this repo's own tab. Idempotent on the Clear Glass
+  // side (ProviderHost.start returns already-running for the same agentId).
+  function _requestAgentTab(job) {
+    let spawnProviderTab;
+    try { ({ spawnProviderTab } = require('../clear-glass-bridge.js')); }
+    catch (e) { _fallBackToSharedTab(job, `clear-glass-bridge.js could not be loaded: ${e.message}`); return; }
+    Promise.resolve()
+      .then(() => spawnProviderTab(job.provider, { show: false, agentId: job.agentId }))
+      .then(r => { if (!r || !r.ok) _fallBackToSharedTab(job, `Clear Glass could not open it: ${(r && r.error) || 'no result'}`); })
+      .catch(e => _fallBackToSharedTab(job, `spawnProviderTab threw: ${e.message}`));
+    if (!_awaitingAgentTab.has(job.id)) {
+      const t = setTimeout(() => {
+        if (_awaitingAgentTab.has(job.id) && !job._agentTabFallback) _fallBackToSharedTab(job, `not connected within ${AGENT_TAB_WAIT_MS}ms`);
+      }, AGENT_TAB_WAIT_MS);
+      if (t.unref) t.unref();
+      _awaitingAgentTab.set(job.id, t);
+    }
+  }
+
+  function _awaitAgentTab(job) {
+    _queueOnce(job);
+    updateJob(job.id, { status: 'queued', queuedAt: Date.now(), queueReason: `waiting for ${job.agentId}'s own ${job.provider} tab` });
+    job.status = 'queued';
+    console.log(`[guardian] ${job.id} → ${job.provider}: waiting for ${job.agentId}'s own tab (not the shared one) — opening it`);
+    bus.emit('guardian.job.queued', { jobId: job.id, provider: job.provider, reason: 'awaiting_agent_tab', agentId: job.agentId });
+    _requestAgentTab(job);
+  }
+
   async function _doDispatch(job) {
     // §BUILT 2026-07-13 — Clear Glass command surface, not a chat provider.
     if (job.provider === 'browser') {
@@ -325,7 +380,11 @@ function createDispatcher(deps) {
         deepseek:   'https://chat.deepseek.com/',
       };
       const url = provUrls[job.provider];
-      if (url) {
+      if (job.agentId && !job._agentTabFallback) {
+        // §ONE-TAB 0.39.237 — cold start: open the repo's own tab, not the
+        // shared window (which would then miss pushTab and open a second).
+        _requestAgentTab(job);
+      } else if (url) {
         bus.emit('guardian.tab.needed', { provider: job.provider, url, jobId: job.id });
         cockpitBroadcast({ type: 'GUARDIAN_TAB_NEEDED', provider: job.provider, url, jobId: job.id });
         console.log(`[guardian] tab needed: ${url} — job ${job.id} will flush when connected`);
@@ -420,43 +479,37 @@ function createDispatcher(deps) {
     // NOT yet confirmed this pass: whether clear-glass's own bgTab-open
     // code actually connects with tabId=agentId — that's the other half
     // of this fix, on clear-glass's side, not read this session.
-    let sent = job.agentId ? (ncp.pushTab(job.provider, job.agentId, {
+    // §ONE-TAB 0.39.237 — James, against his 2026-09-25 log: "it shouldn't be
+    // opening two instances. this needs to work end to end." The 2026-09-23
+    // trigger below this note sent a repo job to the SHARED tab AND opened the
+    // repo's own tab for next time: the job ran in the shared window, the
+    // dedicated window sat idle, and from then on two ChatGPT windows stood.
+    // Now a job with an agentId goes to that repo's own tab, or WAITS for it
+    // (queued, reason named) while the tab is opened; flushQueuedJobs(), run
+    // on every NCP connect, delivers it when the tab registers under
+    // tabId=agentId. The shared tab is used for a repo job only when there is
+    // evidence the repo tab cannot come: Clear Glass says it could not open
+    // it, or it has not connected within AGENT_TAB_WAIT_MS. Either fallback is
+    // logged, emitted and written to the .job (transportFallbackReason) —
+    // never silent. Rejected alternative: keep sending to the shared tab and
+    // only stop spawning — that loses tab-per-repo, the reason repo tabs exist
+    // (two repos' jobs contending in one chat).
+    const payload = {
       type: 'GUARDIAN_JOB', jobId: job.id, command: job.command,
       provider: job.provider, prompt: job.prompt, content: job.content,
       tools: job.tools || null,
       hat: job.hat || null,
-    }) ? 1 : 0) : 0;
-    if (!sent && job.agentId) {
-      // §FIX 2026-09-23 — James, direct, against his own real boot log:
-      // "i tried to use this cli as agent. it didn't open the tab."
-      // TR2 (0.39.218) built providerHost.ensureAgentTab() but this was
-      // the missing trigger — named plainly in that commit's own note
-      // ("capability without a trigger... no caller was wired on a
-      // guess"). Fire-and-forget, exactly as that note already scoped
-      // it: THIS job still takes the pushActive() fallback below
-      // (unchanged — no behaviour regression for the job in flight), but
-      // the NEXT job for this repo/provider now finds a real, connected
-      // tab instead of missing again. Reuses spawnProviderTab() (already
-      // real, already auto-spawns Clear Glass on demand) rather than a
-      // second HTTP call invented here — checked first: its opts are
-      // spread straight into providerHost.start()'s own body, the exact
-      // same call ensureAgentTab() itself makes internally, so no new
-      // clear-glass-side route was needed.
-      try {
-        const { spawnProviderTab } = require('../clear-glass-bridge.js');
-        spawnProviderTab(job.provider, { show: false, agentId: job.agentId })
-          .then(r => { if (!r.ok) console.warn(`[guardian] could not open a dedicated tab for ${job.agentId} on ${job.provider} (this job still dispatched via the shared tab): ${r.error}`); })
-          .catch(e => console.warn(`[guardian] spawnProviderTab threw for ${job.agentId}/${job.provider} (non-fatal): ${e.message}`));
-      } catch (e) { console.warn(`[guardian] could not load clear-glass-bridge.js to open a dedicated tab (non-fatal): ${e.message}`); }
+    };
+    let sent = job.agentId ? (ncp.pushTab(job.provider, job.agentId, payload) ? 1 : 0) : 0;
+    const via = sent ? `${job.agentId}'s own tab` : 'active client';
+    if (!sent && job.agentId && !job._agentTabFallback) {
+      _awaitAgentTab(job);
+      return false;
     }
     if (!sent) {
-      sent = ncp.pushActive(job.provider, {
-        type: 'GUARDIAN_JOB', jobId: job.id, command: job.command,
-        provider: job.provider, prompt: job.prompt, content: job.content,
-        tools: job.tools || null,
-        hat: job.hat || null,
-      });
+      sent = ncp.pushActive(job.provider, payload);
     }
+    if (sent) _stopWaiting(job.id);
     if (sent === 0) {
       if (!pendingQueue.has(job.provider)) pendingQueue.set(job.provider, []);
       pendingQueue.get(job.provider).push(job);
@@ -472,7 +525,7 @@ function createDispatcher(deps) {
     // target, not a broadcast count), so the old "(N clients)" phrasing was
     // stale — always printed "(1 client)" and implied a fan-out that no
     // longer happens. Says what actually occurred instead.
-    console.log(`[guardian] dispatched ${job.id} → ${job.provider} via NCP (active client)`);
+    console.log(`[guardian] dispatched ${job.id} → ${job.provider} via NCP (${via})`);
     try {
       const alk = require('../../intelligence/alk');
       alk.record({

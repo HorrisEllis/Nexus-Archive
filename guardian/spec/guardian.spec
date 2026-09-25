@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        guardian
-    version:     3.8.0
+    version:     3.9.0
     foundation:  nexus-system-foundation@1.0.0
     port:        7820
     uuid:        nexus-guardian-v3-0000-2026-0615-jamesbrooks-001
@@ -42,6 +42,7 @@ spec:
       - "guardian.artifact.captured"
       - "guardian.artifact.refused"
       - "guardian.job.progress"
+      - "guardian.job.agent_tab_fallback"   # 0.39.237 — a repo job fell back to the shared tab, with the reason
       - "guardian.response.captured"
       - "guardian.blocks.captured"
     handles:
@@ -279,3 +280,38 @@ spec:
         intake records not finished are marked interrupted and reported as clear_glass_restarted with
         sent:null, which the ladder already treats as never-resend (sent_no_response -> ask the user).
       tests: tests/modules/test-cg-job-intake.test.js (12/12, real store + ladder + mesh-client + HTTP both sides)
+  built_2026_09_25_one_tab_per_repo_job:
+    shipped: "0.39.237"
+    asked_by: James, against his 2026-09-25 boot log — "it shouldn't be opening two instances. this needs to work end to end."
+    found: >-
+      lib/dispatcher.js sent a job carrying an agentId (idearium's repo agent) to the SHARED provider tab
+      whenever that repo's own tab had not registered yet, and in the same call asked Clear Glass to open
+      the repo tab for next time (the 2026-09-23 trigger). The job ran in the shared window and the new
+      one sat idle: two ChatGPT instances from one job, and both stayed. From a cold start (no tab for the
+      provider at all) the queued branch asked Clear Glass for the shared window, which then missed the
+      repo tab and did the same.
+    rule: >-
+      A job with an agentId is delivered ONLY to the tab registered under tabId=agentId. If that tab is not
+      connected, the job is queued (status queued, queueReason "waiting for <agentId>'s own <provider> tab",
+      in pendingQueue once) and Clear Glass is asked to open that tab (spawnProviderTab, show:false). The
+      existing flushQueuedJobs() on every NCP connect delivers it. The shared tab is used for a repo job only
+      on evidence the repo tab is not coming: Clear Glass answers ok:false or cannot be reached, or the tab
+      has not connected within GUARDIAN_AGENT_TAB_WAIT_MS (default 60000). That fallback writes
+      transportFallbackReason + agentTabFallback:true to the .job, logs a warning and emits
+      guardian.job.agent_tab_fallback. A delivered job cancels its deadline.
+    rejected: >-
+      Keep sending the first job to the shared tab and only stop opening the repo tab: loses tab-per-repo,
+      the reason repo tabs exist (two repos' jobs contending in one chat, the 2026-09-23 timeout).
+    replay_retired: >-
+      ncp-handler's GUARDIAN_REPLAY case no longer marks a job complete (it set status complete and emitted
+      guardian.job.complete with no response text). It only ever arrived with jobId undefined, because the
+      userscripts sent their IndexedDB record keyed uuid; the userscripts no longer send it at all. Guardian
+      logs and ignores one from an older installed userscript.
+    open_not_done: >-
+      The ping gate (_pingProvider) pings the provider's active client, not the repo tab the job is aimed
+      at — the source of "ping gate did not clear ... dispatching anyway" in the 2026-09-25 log. The wait
+      holds a dispatch-pool slot, as every other queued path already does.
+    tests: >-
+      tests/dispatcher-agent-tab-trigger.test.js 10/10 (was 5: AT-002/AT-005 pinned the shared-tab delivery
+      and were reversed; mutation-checked, each reverted fix fails its own test);
+      tests/modules/test-guardian-replay-retired.test.js 3/3 (the pre-0.39.237 handler fails RR-01).

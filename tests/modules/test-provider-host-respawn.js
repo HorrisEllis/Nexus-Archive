@@ -38,7 +38,9 @@ test('PHR-000', 'the real shipped file marks the window before the one real inte
   const src = _realReadFile(HOST_SRC);
   if (!src.includes('_nexusIntentionalStop = true')) throw new Error('real intentional-stop flag missing from stop()');
   if (!src.includes('if (!win._nexusIntentionalStop)')) throw new Error("real closed handler no longer gates respawn on the intentional-stop flag");
-  if (!src.includes("setTimeout(() => this.start(providerId), 5000)")) throw new Error('closed handler no longer uses the same 5s respawn delay render-process-gone already established');
+  // 0.39.237: the restart carries the agentId, so an agent tab restarts as itself, not as the
+  // shared window (behaviour proven against the real class in test-provider-host-one-tab).
+  if (!src.includes("setTimeout(() => this.start(providerId, agentId ? { show: false, agentId } : {}), 5000)")) throw new Error('closed handler no longer uses the same 5s respawn delay render-process-gone already established');
 });
 
 // ── Isolated re-implementation of exactly the logic under test, copied

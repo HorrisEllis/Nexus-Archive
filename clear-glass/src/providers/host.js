@@ -279,7 +279,11 @@ class ProviderHost {
     const key = `${providerId}::${agentId}`;
     const e = this.agentTabs.get(key);
     if (!e) return { ok: false, error: `no tab for ${agentId} on ${providerId}` };
-    try { if (!e.win.isDestroyed()) e.win.destroy(); } catch (_) {}
+    // §ONE-TAB 0.39.237 — marked intentional, exactly as stop() marks shared
+    // windows. Without the flag the 'closed' handler treated every idle-sweep
+    // and LRU close as unexpected and, 5 s later, started the SHARED provider
+    // window: each idle repo tab that closed left a second ChatGPT behind.
+    try { if (!e.win.isDestroyed()) { e.win._nexusIntentionalStop = true; e.win.destroy(); } } catch (_) {}
     this.agentTabs.delete(key);
     return { ok: true, providerId, agentId };
   }
@@ -544,8 +548,11 @@ class ProviderHost {
       const crashCount = (st.crashCount || 0) + 1;
       this._status.set(providerId, { ...st, status: 'crashed', health: 0, crashCount, lastCrashAt: Date.now() });
       this.sse.emit('provider.host.crashed', { providerId, reason, ts: Date.now() });
-      // Auto-restart after 5s
-      setTimeout(() => this.start(providerId), 5000);
+      // Auto-restart after 5s — §ONE-TAB 0.39.237: an agent tab restarts AS
+      // that agent's tab. It used to call start(providerId) with no agentId,
+      // which started the SHARED window: one crashed repo tab became a second
+      // instance of the provider.
+      setTimeout(() => this.start(providerId, agentId ? { show: false, agentId } : {}), 5000);
     });
 
     win.on('closed', () => {
@@ -560,8 +567,9 @@ class ProviderHost {
       // (a respawn racing the same resource pressure that likely caused
       // the disappearance would just die again immediately).
       if (!win._nexusIntentionalStop) {
-        this.sse.emit('provider.host.closed_unexpectedly', { providerId, ts: Date.now() });
-        setTimeout(() => this.start(providerId), 5000);
+        this.sse.emit('provider.host.closed_unexpectedly', { providerId, agentId, ts: Date.now() });
+        // §ONE-TAB 0.39.237 — same as the crash path: restart what closed.
+        setTimeout(() => this.start(providerId, agentId ? { show: false, agentId } : {}), 5000);
       }
     });
 

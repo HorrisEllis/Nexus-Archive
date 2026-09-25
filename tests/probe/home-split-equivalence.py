@@ -12,7 +12,7 @@ HTTP, every non-local request aborted identically on both sides.
   rest of the page (health polling, SSE) never starts — the bug 0.39.228 fixes.
 
 Compares, with and without a stored mode: page errors, typeof of every
-top-level name the monolith declared, and 45 computed style properties of
+top-level name the monolith declared, and 40 computed style properties of
 every element across every channel (tune(0..n)) and overlay state. CSS
 animation time is frozen (CDP Animation.setPlaybackRate 0).
 

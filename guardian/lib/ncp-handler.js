@@ -789,12 +789,15 @@ function createNCPMessageHandler(deps) {
         // Without this case the message fell through to 'unhandled' and caused
         // log spam + confused the flapping detector into thinking the tab was
         // misbehaving when it was actually working correctly.
-        if (jobId && jobs.has(jobId)) {
-          const job = jobs.get(jobId);
-          job.status = 'complete';
-          bus.emit('guardian.job.complete', { jobId, provider, replay: true });
-        }
-        console.log(`[guardian] GUARDIAN_REPLAY ack from ${provider}: ${jobId}`);
+        // §RETIRED 0.39.237 — this used to set status 'complete' and emit
+        // guardian.job.complete for the named job: a completion with no
+        // response text, i.e. a job reported done that never returned. It
+        // only ever arrived with jobId undefined (the userscript sent its IDB
+        // record, keyed `uuid`), so it never fired — but it was one field
+        // rename away from falsely completing live jobs. The userscripts no
+        // longer send it; an older installed copy still might, so it is
+        // logged and ignored. Completion comes only from a real result.
+        console.warn(`[guardian] ignored GUARDIAN_REPLAY from ${provider} (jobId=${jobId || msg?.uuid || 'none'}): replay is retired and never completes a job — reinstall the ${provider} userscript`);
         break;
       }
 

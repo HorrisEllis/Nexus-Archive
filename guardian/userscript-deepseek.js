@@ -155,15 +155,13 @@ async function getSessionId() {
   return _sessionId;
 }
 
-async function replayPending() {
-  const pending = await dbGetAll('requests', 'status', 'pending');
-  if (!pending.length) return;
-  _log('sys', `Replaying ${pending.length} pending request(s) from IDB`);
-  for (const r of pending) {
-    ncpPost(NCP_RESULT, { type: 'GUARDIAN_REPLAY', ...r }).catch(() => {});
-    await dbPut('requests', { ...r, status: 'replayed', replayedAt: Date.now() });
-  }
-}
+// §RETIRED 0.39.237 — the IndexedDB replay-on-connect was removed. It re-sent
+// every 'pending' record in this origin's IndexedDB on connect. That store is
+// shared by every window on the origin, so a newly opened window re-sent other
+// windows' requests; the records carry `uuid`, not `jobId`, so guardian never
+// matched one; and had it matched, guardian would have marked a live job
+// complete with no response. Guardian's own .job files (0.39.225) are the
+// restart recovery.
 
 // ── Utils ─────────────────────────────────────────────────────────────────────
 function uid()  { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
@@ -971,7 +969,6 @@ function connect() {
     if (_hb) clearInterval(_hb);
     _hb = setInterval(() => ncpPost(NCP_HB, { type:'GUARDIAN_HEARTBEAT', provider:PROVIDER, tabId:MY_TAB, ts:Date.now(), usage:detectUsageLimit(), chatId:chatId(), claimed:isClaimed }), HB_MS);
     autoClaimIfFree();
-    replayPending();
   };
   _es.onerror = () => {
     connState = 'disconnected'; updatePill();

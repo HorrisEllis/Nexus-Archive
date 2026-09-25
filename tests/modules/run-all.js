@@ -154,6 +154,9 @@ const SUITES = [
   'test-cg-job-intake.test.js',           // §0.39.227 — guardian claim + Clear Glass job intake
   'test-cg-settings-ui-files.test.js',    // §0.39.227 — one JS + one CSS file per Settings area
   'test-home-ui-files.test.js',           // §0.39.228 — one JS + one CSS file per home UI area (ui/home/index.html)
+  '../dispatcher-agent-tab-trigger.test.js', // §0.39.237 — a repo job goes to its own tab or waits for it; never also the shared tab
+  'test-provider-host-one-tab.test.js',   // §0.39.237 — real ProviderHost: agent tabs restart as themselves; intentional closes open nothing
+  'test-guardian-replay-retired.test.js', // §0.39.237 — a replay never completes a job; no userscript sends one
   'test-cg-accounts-portal-settings.test.js', // §0.39.223 — Clear Glass account authority, login portals, sealed vault keys, settings rebuild
   'test-provider-host-respawn.js',
   'test-userscript-mixed-content-fix.js',

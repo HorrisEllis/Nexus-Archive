@@ -222,3 +222,15 @@ Copyright © 2026 James Brooks (Erosmancer). Part of the rheon.world / NEXUS eco
 
 The dispatch ladder takes a `claim` dependency and calls it before any mesh send. `server.js` wires it to a **required** `.job` write: `transport: mesh`, `claimedBy: clear-glass`, `status: dispatched`. A failed claim sends nothing and falls back to NCP (`mesh_claim_failed`). When the ladder falls back to NCP, the dispatcher clears `claimedBy` — a `.job` never names two owners. Clear Glass's intake refuses any job it can't find claimed through `GET /jobs?id=`. `updateJob(id, patch, { required })` — the opt-in is used only for the claim; status updates stay non-fatal.
 
+
+## A repo job goes to its own tab, or waits for it (3.9.0, v0.39.237)
+
+A job carrying an `agentId` (idearium's repo agent) is delivered only to the tab that registered under `tabId=agentId`. If that tab isn't connected, the job is queued with the reason "waiting for `<agentId>`'s own `<provider>` tab", Clear Glass is asked to open it hidden, and the ordinary `flushQueuedJobs()` on connect delivers it. From a cold start the repo tab is what gets opened, not the shared window.
+
+Before this, a repo job with no tab yet went to the **shared** tab while the repo tab was opened "for next time" — the job ran in one window, the other sat idle, and James saw two ChatGPT instances from one job (2026-09-25 log).
+
+The shared tab still serves a repo job when there's evidence the repo tab isn't coming: Clear Glass says it can't open it or can't be reached, or it hasn't connected within `GUARDIAN_AGENT_TAB_WAIT_MS` (60 s). That fallback is logged, emitted as `guardian.job.agent_tab_fallback`, and written to the `.job` as `transportFallbackReason`.
+
+`GUARDIAN_REPLAY` no longer completes a job. It used to mark the named job complete with no response; the userscripts no longer send it.
+
+**Open:** the ping gate still pings the provider's active client, not the repo tab the job is aimed at.

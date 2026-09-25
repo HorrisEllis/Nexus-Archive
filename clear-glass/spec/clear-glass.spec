@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        clear-glass
-    version:     3.11.2
+    version:     3.11.3
     foundation:  nexus-system-foundation@1.1.0
     port:        7702
     uuid:        nexus-clear-glass-v1-0000-2026-0901-jamesbrooks-001
@@ -281,6 +281,19 @@ spec:
         opened: 2026-09-25
 
   version_history:
+    - version: 3.11.3
+      date: 2026-09-25
+      summary: >-
+        PATCH (v0.39.237) — no stray provider windows. src/providers/host.js: an agent tab that crashes or
+        closes unexpectedly restarts as the same agent tab (start(providerId, {show:false, agentId})); it
+        used to call start(providerId) with no agentId, which started the SHARED provider window.
+        closeAgentTab — the idle sweep and the LRU cap both use it — now sets _nexusIntentionalStop before
+        destroy, as stop() does: without it every intentional agent-tab close was treated as unexpected and
+        started the shared window 5 s later. The userscripts guardian injects no longer replay IndexedDB
+        records on connect (guardian 3.9.0). No API surface change; interaction-contract routes unchanged.
+        Tests: tests/modules/test-provider-host-one-tab.test.js 7/7 against the real ProviderHost class
+        (only 'electron' faked), each fix mutation-checked. All seven sync points moved together.
+      versioniumCommitId: null
     - version: 3.11.2
       date: 2026-09-25
       summary: >-

@@ -38,3 +38,6 @@ With a mode in localStorage, `initMode` → `selectMode` → `_logToData` touche
 - DECOMP Phase 3 (iframe cut-over) — blocked on the 7 missing channel documents.
 - Live check on James's machine with services running.
 - Pre-existing, unrelated: `nexus-full-audit` "co-pilot sends uiState" fails (the string is in `ui/copilot/copilot.js`); `test-tablet-homepage` reads a missing `tablet/homepage.html`; 0.39.227's changelog says `test-cg-settings-ui-files` 6/6, the file has 5 tests.
+
+## Correction (recorded 0.39.237)
+The Proof section above says **45** computed properties per element. The probe compares **40** (counted from its own `props` list in `tests/probe/home-split-equivalence.py`). The equivalence result is unchanged; the number was wrong. The same wrong figure is in `lib/version.js`'s 0.39.228 note, left as written there and corrected here.

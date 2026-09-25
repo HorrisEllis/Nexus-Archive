@@ -237,3 +237,11 @@ Full real chain traced and patched this pass, five files, not one:
 ## Copyright
 
 Copyright © 2026 James Brooks (Erosmancer). Part of the rheon.world / NEXUS ecosystem.
+
+## Agent tabs restart as themselves (3.11.3, v0.39.237)
+
+An agent tab (`${providerId}::${agentId}`) that crashes or closes unexpectedly restarts as the same agent tab, hidden. It used to call `start(providerId)` with no agentId, which started the **shared** provider window — a second instance.
+
+`closeAgentTab()` — used by the idle sweep (15 min) and the LRU cap (6 tabs) — marks the window `_nexusIntentionalStop` before destroying it, the same flag `stop()` sets for shared windows. Without it, every intentional agent-tab close looked unexpected and started the shared window 5 s later.
+
+Proven against the real `ProviderHost` class (only `electron` faked): `tests/modules/test-provider-host-one-tab.test.js`, 7/7, each fix mutation-checked.
