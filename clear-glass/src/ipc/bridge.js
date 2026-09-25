@@ -985,6 +985,30 @@ class IpcBridge {
       }
     });
 
+    // §NEW 2026-09-25 — plugins:list / plugins:disable. James: "build all
+    // the ui" (Firefox-reference gap pass, "Extensions and themes"). Real
+    // gap found: src/plugins/host.js's list()/disable() have existed since
+    // 2026-08-24 (checked directly — both real, working methods on the
+    // already-installed pluginHost) but NOTHING ever exposed them past
+    // plugins:invoke, which only fires a toolbar-command signature and
+    // can't enumerate or disable anything. This wires the two read/write
+    // methods that already exist — no new plugin-host behavior invented,
+    // just the missing IPC surface for what was already real. Themes have
+    // no backend anywhere in this codebase (grepped clear-glass/src and
+    // clear-glass/renderer directly — zero matches beyond incidental
+    // strings) so the settings section built on this is named "Plugins",
+    // not "Extensions and themes" — never claims theme support that
+    // doesn't exist.
+    ipcMain.handle('plugins:list', async () => {
+      try { return this.pluginHost?.list() || []; }
+      catch (err) { return { ok: false, error: err.message }; }
+    });
+    ipcMain.handle('plugins:disable', async (e, { id } = {}) => {
+      if (typeof id !== 'string') return { ok: false, error: 'id is required' };
+      try { this.pluginHost?.disable(id); return { ok: true }; }
+      catch (err) { return { ok: false, error: err.message }; }
+    });
+
     // Accounts — §PHASE-3 2026-08-23, real CRUD surface, backend only
     // (per James's own "all backend first, ui after backend is done" —
     // no renderer panel wired to these yet, that's item 6's UI half).

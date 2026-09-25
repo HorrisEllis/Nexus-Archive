@@ -18,6 +18,22 @@
 
   const setOpt = (patch, msg) => call(() => cg.options.set(patch), 'save').then(() => msg && toast(msg));
 
+  // §NEW 2026-09-25 — page zoom. James: "Yes build all the ui" (Firefox-
+  // reference gap: zoom lived under Firefox's Appearance, which this build
+  // has no real backend for — see plugins.js's header comment). The zoom
+  // plugin itself IS real (src/driver/index.js's native
+  // webContents.setZoomFactor(), wired since 2026-08-24) but was only ever
+  // reachable via the command palette's toolbar-command dispatch, never a
+  // settings control. plugins:invoke is fire-and-forget by design (see
+  // bridge.js's own handler comment) — it confirms the command reached the
+  // bus, not the resulting zoom factor, so the toast says exactly that and
+  // nothing more.
+  const ZOOM_PLUGIN_ID = 'b7c8d9e0-1f2a-4b3c-8d9e-0f1a2b3c4d5e';
+  const zoomCmd = (mode) => busy(null, async () => {
+    await call(() => cg.plugins.invoke(`plugin:${ZOOM_PLUGIN_ID}:zoom-${mode}`, { agentId: 'default' }), 'zoom');
+    toast('Zoom command sent to the main window');
+  });
+
   section({
     id: 'general', group: 'Browser', icon: '\u2699', label: 'General',
     keywords: 'tray close start page download folder toolbar pinned copilot pane background tab',
@@ -37,6 +53,9 @@
           row('\u201CMove to background tab\u201D keeps the tab hidden', null, toggle(!o.backgroundTabDefaults || o.backgroundTabDefaults.openInBackground !== false, (on) => setOpt({ backgroundTabDefaults: { openInBackground: on } }))),
         ] }),
         pane({ title: 'Pages and files', body: h('div', { class: 'grid' }, field('Start page', start), field('Download folder', dl, 'Takes effect for the next download')) }),
+        pane({ title: 'Page zoom', sub: 'Applies to the main window.', flush: true, body:
+          row('Zoom level', null, btn('−', () => zoomCmd('out'), 'sm'), btn('Reset', () => zoomCmd('reset'), 'sm'), btn('+', () => zoomCmd('in'), 'sm')),
+        }),
         pane({ title: 'Toolbar', sub: 'Unpinned commands stay in the command palette.', flush: true, body: pinnable.map(c => row(`${c.icon || ''} ${c.label}`, c.group,
           toggle(pinned.has(c.id), async (on) => { on ? pinned.add(c.id) : pinned.delete(c.id); await setOpt({ pinnedToolbarButtons: [...pinned] }); }, `Pin ${c.label}`))) }),
       ];

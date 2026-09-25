@@ -83,7 +83,11 @@ contextBridge.exposeInMainWorld('ClearGlass', {
   // the renderer would subscribe to via SSE/onAny, same as every other
   // async gate result in this app, not a synchronous return from here.
   plugins: {
-    invoke: (signature, data) => ipcRenderer.invoke('plugins:invoke', { signature, data }),
+    invoke:  (signature, data) => ipcRenderer.invoke('plugins:invoke', { signature, data }),
+    // §NEW 2026-09-25 — list()/disable() wired to the real, already-
+    // existing pluginHost methods (see bridge.js's plugins:list handler).
+    list:    ()   => ipcRenderer.invoke('plugins:list'),
+    disable: (id) => ipcRenderer.invoke('plugins:disable', { id }),
   },
 
   // ── Downloads — §NEW 2026-08-24 ─────────────────────────────────────────

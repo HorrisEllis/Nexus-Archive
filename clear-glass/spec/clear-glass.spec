@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        clear-glass
-    version:     3.11.1
+    version:     3.11.2
     foundation:  nexus-system-foundation@1.1.0
     port:        7702
     uuid:        nexus-clear-glass-v1-0000-2026-0901-jamesbrooks-001
@@ -186,6 +186,48 @@ spec:
         'about:blank' after the migration has run. 5 new tests in
         tests/modules/nexus-options-autoboot.test.js (15/15 total).
 
+    - date: 2026-09-25
+      summary: >
+        Settings UI gap pass against James's Firefox-reference screenshot
+        ("i want it nearly identicle to this... Yes build all the ui").
+        Mapped every named Firefox category to real backend capability
+        BEFORE building (non-negotiable: map first, no theater). Two
+        categories had real, working capability sitting unexposed: (1)
+        "Downloads" — cg.downloads.list/clearItem/openFolder have been
+        real IPC handlers since 2026-08-24, but no section ever called
+        list or openFolder, only privacy.js's bulk clearCompleted; new
+        sections/downloads.js is the missing per-item view, plus the same
+        real downloadDirectory field General already has. (2) "Extensions
+        and themes" — src/plugins/host.js's list()/disable() existed since
+        2026-08-24 with zero IPC exposure; added plugins:list/plugins:
+        disable to ipc/bridge.js (thin wrappers, no new plugin-host
+        behavior) + preload, and list() now also surfaces
+        displayName/description (already on every manifest, just never
+        returned). New sections/plugins.js — named "Plugins," not
+        "Extensions and themes," since themes have no backend anywhere in
+        this codebase (grepped directly, zero real matches). Also added a
+        small real "Page zoom" control to General, wired to the zoom
+        plugin's already-real toolbar-command signatures via
+        plugins:invoke (fire-and-forget by that handler's own design, so
+        the toast confirms the command was sent, not a zoom factor it
+        can't see synchronously). FOUND, NOT BUILT — no real backend
+        exists for: search-engine selection, appearance/theme (dark/light
+        mode), accessibility settings, or a dedicated language-preference
+        page (the only real "language" surface is the fingerprint
+        spoofing profile, already covered by sections/fingerprint.js).
+        backgroundTabDefaults.openInBackground (already toggled in
+        General, pre-existing) still has zero real consumer anywhere —
+        confirmed again directly, not touched this pass. Verified live:
+        real Electron app under Xvfb, CDP-connected, all three
+        pages rendered with real data (6 real installed plugins with real
+        manifest text; live options.get()), and a real Disable click on
+        the zoom plugin's row round-tripped through the new IPC handlers
+        and flipped its state to "disabled" on screen.
+        Registry unchanged (no new registry-components.js entries — these
+        are new IPC routes on the existing plugins:* namespace, not new
+        registry-tracked components; interaction-contract.json is derived
+        from registry-components.js alone, so it is untouched).
+
   gaps:
     as_of: 2026-09-01
     entries:
@@ -216,7 +258,39 @@ spec:
           NEW declared-but-unimplemented component going forward.
         opened: 2026-09-22
 
+      - id: FGAP1
+        type: coverage
+        summary: >
+          Four Firefox settings categories James's reference screenshot
+          named have no real NEXUS backend anywhere in this codebase,
+          confirmed by direct grep across clear-glass/src and
+          clear-glass/renderer, not assumed: search-engine selection
+          (zero searchEngine/defaultSearch references anywhere),
+          appearance/theme — dark/light mode (zero real theme config;
+          only incidental comment-string matches on "theme"),
+          accessibility (zero screenReader/a11y/reducedMotion/fontSize
+          references anywhere), and a dedicated language-preference page
+          (the only real "language" surface anywhere is the fingerprint
+          spoofing profile's language/languages fields, already covered
+          by sections/fingerprint.js — not a general browser-language
+          setting). None of these were built as settings sections this
+          pass, per the non-negotiable that a stub with nothing real
+          behind it is worse than the gap itself. Firefox Labs / About
+          Firefox / More from Mozilla / Firefox support have no NEXUS
+          analog at all and were not treated as gaps to close.
+        opened: 2026-09-25
+
   version_history:
+    - version: 3.11.2
+      date: 2026-09-25
+      summary: >-
+        PATCH — two new settings sections (Downloads, Plugins) surfacing real, already-existing backend
+        capability that had no UI before (cg.downloads.list/openFolder/clearItem; src/plugins/host.js's
+        list()/disable(), newly exposed via plugins:list/plugins:disable in ipc/bridge.js + preload).
+        Small real "Page zoom" control added to General. No new registry-components.js entries (plugins:*
+        route additions, not registry-tracked components) so interaction-contract.json is unchanged. All
+        six sync points moved together.
+      versioniumCommitId: null
     - version: 3.11.1
       date: 2026-09-25
       summary: >-

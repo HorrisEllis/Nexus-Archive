@@ -315,8 +315,13 @@ class PluginHost {
   }
 
   list() {
+    // §EXPANDED 2026-09-25 — displayName/description added for
+    // plugins:list's real consumer (settings/sections/plugins.js). Both
+    // already existed on every real manifest (validateManifest requires
+    // them, COS-1) — this just stops dropping them on the floor.
     return [...this.plugins.values()].map(r => ({
       id: r.manifest.id, name: r.manifest.name, version: r.manifest.version,
+      displayName: r.manifest.displayName, description: r.manifest.description,
       state: r.state, contributions: r.registeredSignatures,
     }));
   }
