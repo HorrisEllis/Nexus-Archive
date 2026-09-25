@@ -174,10 +174,12 @@ async function main() {
     /payload\.agentId = agentIdFor\(repo\.uuid\)/.test(RA) && /function agentIdFor\(repoUuid\) \{ return `repo-\$\{repoUuid\}`; \}/.test(RA));
   check('copilot forwards agentId to guardian only on the guardian backend',
     /agentId: body\.backend === 'guardian' \? \(body\.agentId \|\| undefined\) : undefined/.test(fs.readFileSync(path.join(ROOT, 'copilot', 'server.js'), 'utf8')));
-  check('the dispatcher aims a job with an agentId at that tab, not the active one',
-    /job\.agentId \? \(ncp\.pushTab\(job\.provider, job\.agentId/.test(DISP));
-  check('…and falls back to the shared tab when no per-repo tab is open',
-    /if \(!sent\)[\s\S]{0,120}ncp\.pushActive\(job\.provider/.test(DISP));
+  // §ONE-TAB 0.39.247 — replaces the 0.39.237/TR1 per-repo tab checks: every
+  // job, repo or not, goes to the provider's one active tab.
+  check('the dispatcher sends every job, agentId or not, to the provider\'s one active tab',
+    /const sent = ncp\.pushActive\(job\.provider, payload\)/.test(DISP));
+  check('…and never aims at, waits for, or opens a per-repo tab',
+    !/pushTab\(|_awaitAgentTab\(|spawnProviderTab/.test(DISP));
   check('pushTab targets exactly one client and reports miss as false',
     /function pushTab\(provider, tabId, data\)[\s\S]{0,200}if \(!client\) return false/.test(NCP));
   check('the host stamps the agent into the page BEFORE the userscript runs',

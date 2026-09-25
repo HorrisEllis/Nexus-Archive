@@ -29,6 +29,12 @@
  *   require('./lib/dispatch-pool-bridge')(bus, _dispatchPool);
  */
 
+// §0.39.247 — guardian's SISOStream calls listeners with an envelope
+// { type, data }; a plain EventEmitter (tests) passes the payload itself.
+// Listeners that destructured the payload got undefined in production and
+// did nothing. This accepts both.
+const _payload = (e) => (e && typeof e === 'object' && typeof e.type === 'string' && e.data && typeof e.data === 'object') ? e.data : (e || {});
+
 function wireDispatchPoolRelease(bus, pool) {
   if (!bus || typeof bus.on !== 'function') {
     throw new Error('[dispatch-pool-bridge] bus with .on() is required');
@@ -37,12 +43,14 @@ function wireDispatchPoolRelease(bus, pool) {
     throw new Error('[dispatch-pool-bridge] pool with .complete()/.fail() is required');
   }
 
-  bus.on('guardian.job.complete', (payload) => {
+  bus.on('guardian.job.complete', (ev) => {
+    const payload = _payload(ev);
     if (!payload || !payload.provider || !payload.jobId) return; // §AX-2: malformed payload, not our job to guess
     pool.complete(payload.provider, payload.jobId);
   });
 
-  bus.on('guardian.job.error', (payload) => {
+  bus.on('guardian.job.error', (ev) => {
+    const payload = _payload(ev);
     if (!payload || !payload.provider || !payload.jobId) return;
     pool.fail(payload.provider, payload.jobId, payload.error || 'unknown');
   });

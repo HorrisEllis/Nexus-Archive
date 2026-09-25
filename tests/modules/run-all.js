@@ -154,7 +154,6 @@ const SUITES = [
   'test-cg-job-intake.test.js',           // §0.39.227 — guardian claim + Clear Glass job intake
   'test-cg-settings-ui-files.test.js',    // §0.39.227 — one JS + one CSS file per Settings area
   'test-home-ui-files.test.js',           // §0.39.228 — one JS + one CSS file per home UI area (ui/home/index.html)
-  '../dispatcher-agent-tab-trigger.test.js', // §0.39.237 — a repo job goes to its own tab or waits for it; never also the shared tab
   'test-provider-host-one-tab.test.js',   // §0.39.237 — real ProviderHost: agent tabs restart as themselves; intentional closes open nothing
   'test-guardian-replay-retired.test.js', // §0.39.237 — a replay never completes a job; no userscript sends one
   'test-downloads-responses.test.js',     // §0.39.239 — replies and downloads filed under their agent; Library Responses routes
@@ -291,7 +290,8 @@ const SUITES = [
   'idearium-phase-compartment.test.mjs',
   'test-manifest-phase1.test.mjs',
   'test-three-graphs.test.mjs',      // 0.39.246 — code · execution · spec graphs hooked into repo import
-  'test-response-downloads.test.js', // 0.39.246 — responses land in the Clear Glass downloads manager   // 0.39.245 — spec-engine/manifest phase 1: file list → wire-check → manifest + registry
+  'test-response-downloads.test.js', // 0.39.246 — responses land in the Clear Glass downloads manager
+  'test-one-tab-e2e.test.js',        // 0.39.247 — real guardian, one tab: job → reply → .response   // 0.39.245 — spec-engine/manifest phase 1: file list → wire-check → manifest + registry
   'idearium-phase-compartment-integration.test.js',
   'idearium-agent-routing.test.mjs',
   'lifeline-fluid-routing.test.js',

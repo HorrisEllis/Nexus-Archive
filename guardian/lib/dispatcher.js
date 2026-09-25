@@ -44,6 +44,12 @@ const { randomUUID } = require('crypto');
  * push(provider, ...), pendingQueue as a Map<provider, job[]>,
  * cockpitBroadcast(data), dispatchToMistral(job) → Promise).
  */
+// §0.39.247 — guardian's SISOStream calls listeners with an envelope
+// { type, data }; a plain EventEmitter (tests) passes the payload itself.
+// Listeners that destructured the payload got undefined in production and
+// did nothing. This accepts both.
+const _payload = (e) => (e && typeof e === 'object' && typeof e.type === 'string' && e.data && typeof e.data === 'object') ? e.data : (e || {});
+
 function createDispatcher(deps) {
   const { updateJob, bus, ncp, pendingQueue, cockpitBroadcast, dispatchToMistral, dispatchToDeepseek, pingTimeoutMs, completionTimeoutMs,
           ladder, completeFromMesh } = deps;   // 2026-09-19: optional mesh-first ladder (guardian/lib/dispatch-ladder.js)
@@ -87,9 +93,16 @@ function createDispatcher(deps) {
     const retries = (job._timeoutRetries || 0) + 1;
     job._timeoutRetries = retries;
     bus.emit('guardian.job.timeout', { jobId: job.id, provider: job.provider, waitedMs, retry: retries, reason });
+    // §0.39.247 — either way the tab slot comes back: with one tab per
+    // provider, a timed-out job holding it blocked every job behind it.
+    _dispatchPool.release(job.provider, job.id);
     if (retries > _MAX_TIMEOUT_RETRIES) {
-      updateJob(job.id, { status: 'failed', failedAt: Date.now(), failReason: `${reason} after ${retries - 1} retr${retries - 1 === 1 ? 'y' : 'ies'} — giving up, not requeuing forever` });
+      const failReason = `${reason} after ${retries - 1} retr${retries - 1 === 1 ? 'y' : 'ies'} — giving up, not requeuing forever`;
+      updateJob(job.id, { status: 'failed', failedAt: Date.now(), failReason });
       console.warn(`[guardian] ${job.id} → ${job.provider}: ${reason}, retries exhausted — marked failed`);
+      // Said on the bus too: a caller waiting on this job (askSync, idearium's
+      // repo-agent) learns it failed instead of waiting out its own timeout.
+      bus.emit('guardian.job.error', { jobId: job.id, provider: job.provider, agentId: job.agentId || null, error: failReason });
       return;
     }
     updateJob(job.id, { status: 'queued', queuedAt: Date.now(), queueReason: `${reason} — requeued (attempt ${retries})` });
@@ -112,15 +125,15 @@ function createDispatcher(deps) {
     if (t) { clearTimeout(t); _completionWatch.delete(jobId); }
   }
   // activity => the generation is alive: restart the idle window instead of letting it expire mid-stream
-  const _touch = ({ jobId }) => { if (_completionWatch.has(jobId) && _watchedJobs.get(jobId)) _armCompletionWatch(_watchedJobs.get(jobId)); };
+  const _touch = (ev) => { const { jobId } = _payload(ev); if (_completionWatch.has(jobId) && _watchedJobs.get(jobId)) _armCompletionWatch(_watchedJobs.get(jobId)); };
   bus.on('guardian.job.chunk', _touch);
   bus.on('guardian.job.confirmed', _touch);
-  bus.on('guardian.job.complete', ({ jobId }) => _watchedJobs.delete(jobId));
+  bus.on('guardian.job.complete', (ev) => _watchedJobs.delete(_payload(ev).jobId));
 
   // Real completion, from anywhere (NCP GUARDIAN_COMPLETE, GUARDIAN_REPLAY's
   // non-replay branch, dispatch-pool-bridge) all emit this same bus event —
   // see this file's own header comment on why that's the one correct place.
-  bus.on('guardian.job.complete', ({ jobId }) => _clearCompletionWatch(jobId));
+  bus.on('guardian.job.complete', (ev) => _clearCompletionWatch(_payload(ev).jobId));
 
   // §BUILT 2026-09-20 — James, from a real pasted log: a job dispatched to
   // chatgpt whose ping gate had already failed (line 362 below, "dispatching
@@ -136,7 +149,7 @@ function createDispatcher(deps) {
   // the same bounded-retry path the idle-timeout uses; a fresh tab
   // reconnecting (as ClearGlass's re-spawn-and-reinject already does,
   // separately, within seconds) picks the requeued job back up normally.
-  bus.on('guardian.provider.disconnected', ({ provider }) => {
+  bus.on('guardian.provider.disconnected', (ev) => { const { provider } = _payload(ev);
     for (const job of _watchedJobs.values()) {
       if (job.provider !== provider) continue;
       _watchedJobs.delete(job.id);
@@ -148,7 +161,20 @@ function createDispatcher(deps) {
     // §P11: route through dispatch pool — per-provider semaphore, job stealing.
     // Slot release is NOT here — see dispatch-pool-bridge.js's header for why.
     _dispatchPool.enqueue(job.provider, { id: job.id, provider: job.provider, priority: job.priority || 'normal', payload: job },
-      (poolJob) => _doDispatch(poolJob.payload));
+      (poolJob) => {
+        // §0.39.247 — a job handed a slot but NOT delivered (no tab, stale
+        // socket) went back on pendingQueue still holding that slot; on the
+        // tab's connect, flushQueuedJobs re-enqueued it and it waited on
+        // itself. _doDispatch returns false exactly when it queued instead
+        // of delivering, so the slot goes back then. true/undefined = handed
+        // on (delivered, or a non-tab transport that completes via the bus).
+        Promise.resolve(_doDispatch(poolJob.payload)).then((delivered) => {
+          if (delivered === false) _dispatchPool.release(poolJob.provider, poolJob.id);
+        }, (e) => {
+          _dispatchPool.release(poolJob.provider, poolJob.id);
+          console.error(`[guardian] ${poolJob.id} → ${poolJob.provider}: dispatch threw — ${e.message}`);
+        });
+      });
     // If pool enqueued (slot available) _doDispatch was called synchronously.
     // If queued or stolen, it will be called when a slot frees.
     return;
@@ -202,60 +228,15 @@ function createDispatcher(deps) {
     });
   }
 
-  // ── §ONE-TAB 0.39.237 — a repo job waits for its own tab ────────────────────
-  const AGENT_TAB_WAIT_MS = Math.max(1000, parseInt(process.env.GUARDIAN_AGENT_TAB_WAIT_MS || '60000', 10) || 60000);
-
-  const _awaitingAgentTab = new Map(); // jobId -> deadline timer, while a repo job waits for its own tab
-  function _stopWaiting(jobId) {
-    const t = _awaitingAgentTab.get(jobId);
-    if (t) clearTimeout(t);
-    _awaitingAgentTab.delete(jobId);
-  }
-
-  function _queueOnce(job) {
-    if (!pendingQueue.has(job.provider)) pendingQueue.set(job.provider, []);
-    const q = pendingQueue.get(job.provider);
-    if (!q.some(j => j.id === job.id)) q.push(job);
-  }
-
-  // Falls a repo job back to the shared tab, loudly, with the reason on the .job.
-  function _fallBackToSharedTab(job, reason) {
-    if (job._agentTabFallback) return;
-    job._agentTabFallback = reason;
-    _stopWaiting(job.id);
-    updateJob(job.id, { transportFallbackReason: reason, agentTabFallback: true });
-    console.warn(`[guardian] ${job.id} → ${job.provider}: ${job.agentId}'s own tab is not coming (${reason}) — delivering via the shared ${job.provider} tab instead`);
-    bus.emit('guardian.job.agent_tab_fallback', { jobId: job.id, provider: job.provider, agentId: job.agentId, reason });
-    dispatchJob(job);
-  }
-
-  // Asks Clear Glass for this repo's own tab. Idempotent on the Clear Glass
-  // side (ProviderHost.start returns already-running for the same agentId).
-  function _requestAgentTab(job) {
-    let spawnProviderTab;
-    try { ({ spawnProviderTab } = require('../clear-glass-bridge.js')); }
-    catch (e) { _fallBackToSharedTab(job, `clear-glass-bridge.js could not be loaded: ${e.message}`); return; }
-    Promise.resolve()
-      .then(() => spawnProviderTab(job.provider, { show: false, agentId: job.agentId }))
-      .then(r => { if (!r || !r.ok) _fallBackToSharedTab(job, `Clear Glass could not open it: ${(r && r.error) || 'no result'}`); })
-      .catch(e => _fallBackToSharedTab(job, `spawnProviderTab threw: ${e.message}`));
-    if (!_awaitingAgentTab.has(job.id)) {
-      const t = setTimeout(() => {
-        if (_awaitingAgentTab.has(job.id) && !job._agentTabFallback) _fallBackToSharedTab(job, `not connected within ${AGENT_TAB_WAIT_MS}ms`);
-      }, AGENT_TAB_WAIT_MS);
-      if (t.unref) t.unref();
-      _awaitingAgentTab.set(job.id, t);
-    }
-  }
-
-  function _awaitAgentTab(job) {
-    _queueOnce(job);
-    updateJob(job.id, { status: 'queued', queuedAt: Date.now(), queueReason: `waiting for ${job.agentId}'s own ${job.provider} tab` });
-    job.status = 'queued';
-    console.log(`[guardian] ${job.id} → ${job.provider}: waiting for ${job.agentId}'s own tab (not the shared one) — opening it`);
-    bus.emit('guardian.job.queued', { jobId: job.id, provider: job.provider, reason: 'awaiting_agent_tab', agentId: job.agentId });
-    _requestAgentTab(job);
-  }
+  // ── §ONE-TAB 0.39.247 — one tab per provider, jobs take turns ──────────────
+  // James (2026-09-25): "repo-agent jobs must use ONE ChatGPT tab". The
+  // 0.39.237 design sent a repo job to that repo's OWN tab and, when the tab
+  // had not registered within 60 s, fell back to the shared one while the
+  // repo tab kept opening — the two-window symptom. Removed: a job carrying
+  // an agentId now goes to the provider's one tab like any other. agentId is
+  // still carried on the job, so the reply is filed under the repo that
+  // asked (.response node, downloads entry, Library). One-at-a-time is
+  // enforced by dispatch-pool.js (browser providers capped at 1).
 
   async function _doDispatch(job) {
     // §BUILT 2026-07-13 — Clear Glass command surface, not a chat provider.
@@ -380,11 +361,7 @@ function createDispatcher(deps) {
         deepseek:   'https://chat.deepseek.com/',
       };
       const url = provUrls[job.provider];
-      if (job.agentId && !job._agentTabFallback) {
-        // §ONE-TAB 0.39.237 — cold start: open the repo's own tab, not the
-        // shared window (which would then miss pushTab and open a second).
-        _requestAgentTab(job);
-      } else if (url) {
+      if (url) {
         bus.emit('guardian.tab.needed', { provider: job.provider, url, jobId: job.id });
         cockpitBroadcast({ type: 'GUARDIAN_TAB_NEEDED', provider: job.provider, url, jobId: job.id });
         console.log(`[guardian] tab needed: ${url} — job ${job.id} will flush when connected`);
@@ -461,55 +438,19 @@ function createDispatcher(deps) {
     // guardian/lib/ncp.js's own §FIXED note on why nothing gets force-
     // closed to make that true, just correctly aimed.
     //
-    // §TR1 2026-09-22 — a job carrying a real, repo-derived agentId
-    // (idearium's lib/repo-agent.js, traced end to end this pass) should
-    // reach that repo's OWN dedicated tab, not whichever tab happens to
-    // be "active" for the provider — the actual bug tab-per-repo exists
-    // to fix (two repos' jobs contending in one shared tab). ncp.js's
-    // own handleChannel already lets a connecting tab register under any
-    // caller-chosen tabId (`url.searchParams.get('tabId') || randomUUID()`)
-    // — so a clear-glass background tab opened FOR this repo, connecting
-    // with `tabId=job.agentId`, is reachable via pushTab() directly, no
-    // new registry needed: agentId and tabId are the same string by
-    // convention. Falls back to pushActive() — unchanged existing
-    // behavior — when no tab has registered under that id yet, so a
-    // repo with no dedicated tab open still dispatches, exactly the
-    // "fail open when there's no evidence yet" pattern already used
-    // elsewhere in this file (see the ping-gate comment above).
-    // NOT yet confirmed this pass: whether clear-glass's own bgTab-open
-    // code actually connects with tabId=agentId — that's the other half
-    // of this fix, on clear-glass's side, not read this session.
-    // §ONE-TAB 0.39.237 — James, against his 2026-09-25 log: "it shouldn't be
-    // opening two instances. this needs to work end to end." The 2026-09-23
-    // trigger below this note sent a repo job to the SHARED tab AND opened the
-    // repo's own tab for next time: the job ran in the shared window, the
-    // dedicated window sat idle, and from then on two ChatGPT windows stood.
-    // Now a job with an agentId goes to that repo's own tab, or WAITS for it
-    // (queued, reason named) while the tab is opened; flushQueuedJobs(), run
-    // on every NCP connect, delivers it when the tab registers under
-    // tabId=agentId. The shared tab is used for a repo job only when there is
-    // evidence the repo tab cannot come: Clear Glass says it could not open
-    // it, or it has not connected within AGENT_TAB_WAIT_MS. Either fallback is
-    // logged, emitted and written to the .job (transportFallbackReason) —
-    // never silent. Rejected alternative: keep sending to the shared tab and
-    // only stop spawning — that loses tab-per-repo, the reason repo tabs exist
-    // (two repos' jobs contending in one chat).
+    // §ONE-TAB 0.39.247 — every job, repo or not, goes to the provider's one
+    // active tab (pushActive). The 0.39.237/TR1 per-repo tab routing
+    // (pushTab by agentId, wait for the repo tab, fall back after 60 s) is
+    // removed — see the §ONE-TAB note above _doDispatch. The job keeps its
+    // agentId so the reply is still filed under the repo that asked.
     const payload = {
       type: 'GUARDIAN_JOB', jobId: job.id, command: job.command,
       provider: job.provider, prompt: job.prompt, content: job.content,
       tools: job.tools || null,
       hat: job.hat || null,
     };
-    let sent = job.agentId ? (ncp.pushTab(job.provider, job.agentId, payload) ? 1 : 0) : 0;
-    const via = sent ? `${job.agentId}'s own tab` : 'active client';
-    if (!sent && job.agentId && !job._agentTabFallback) {
-      _awaitAgentTab(job);
-      return false;
-    }
-    if (!sent) {
-      sent = ncp.pushActive(job.provider, payload);
-    }
-    if (sent) _stopWaiting(job.id);
+    const sent = ncp.pushActive(job.provider, payload);
+    const via = job.agentId ? `the ${job.provider} tab, for ${job.agentId}` : `the ${job.provider} tab`;
     if (sent === 0) {
       if (!pendingQueue.has(job.provider)) pendingQueue.set(job.provider, []);
       pendingQueue.get(job.provider).push(job);

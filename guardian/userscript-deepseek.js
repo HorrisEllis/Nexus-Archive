@@ -1039,7 +1039,15 @@ function _handleServerMessage(msg) {
     // §BUILT 2026-09-13 — real ping/pong gate, same shape as GUARDIAN_CLAIM/GUARDIAN_CLAIM_ACK above.
     case 'GUARDIAN_PING': ncpPost(NCP_RESULT,{type:'GUARDIAN_PING_ACK',pingId:msg.pingId,tabId:MY_TAB,provider:PROVIDER}); break;
     case 'GUARDIAN_RELEASE': releaseTab(); break;
-    case 'GUARDIAN_JOB': currentJobId = msg.jobId; handleJob(msg); break;
+    case 'GUARDIAN_JOB': // §ONE-TAB 0.39.247 — never overwrite a job mid-reply: that killed the
+      // running job's reply watcher. Guardian's pool sends one job per tab at a
+      // time; if a second still arrives, refuse it with the reason, loudly.
+      if (jobActive && currentJobId && currentJobId !== msg.jobId) {
+        ncpPost(NCP_RESULT, { type:'GUARDIAN_ERROR', jobId:msg.jobId, provider:PROVIDER, gate:'tab_busy',
+          error:`this ${PROVIDER} tab is still answering job ${currentJobId} — refused job ${msg.jobId} rather than overwrite it` });
+        break;
+      }
+      currentJobId = msg.jobId; handleJob(msg); break;
     case 'NEXUS_CONTEXT_RESPONSE': if (msg.context) _intelligenceCtx = msg.context; break;
     case 'GUARDIAN_SYNC_REQUEST': handleSyncRequest(msg); break;
     default: _log('debug', `NCP: ${msg.type}`);

@@ -14,11 +14,20 @@
 const EventEmitter = require('events');
 
 // Default concurrency caps
+// §ONE-TAB 0.39.247 — a browser provider is ONE tab, and one tab answers
+// one prompt at a time: a second GUARDIAN_JOB arriving mid-reply replaced
+// the userscript's currentJobId, killing the first job's reply watcher.
+// So every browser-tab provider is capped at 1; jobs wait their turn in
+// this pool. ollama is a local model server and keeps real concurrency.
 const DEFAULT_CAP = {
-  claude:   3, // browser tab processes sequentially — cap at 3 in-flight
-  chatgpt:  3,
-  ollama:   8, // local, can handle more
-  default:  2,
+  chatgpt:    1,
+  claude:     1,
+  gemini:     1,
+  perplexity: 1,
+  deepseek:   1,
+  mistral:    1,
+  ollama:     8,
+  default:    1,
 };
 
 class DispatchPool extends EventEmitter {
@@ -57,15 +66,14 @@ class DispatchPool extends EventEmitter {
       return this._dispatch(provider, job, dispatchFn);
     }
 
-    // Try job stealing — find an idle provider that can handle this job type
-    const stolen = this._trySteal(provider, job, dispatchFn);
-    if (stolen) {
-      this._stats.stolen++;
-      return { dispatched: true, stolen: true, provider: stolen };
-    }
+    // §0.39.247 — job stealing removed. It moved the SLOT to another
+    // provider but the job still carried its own provider, so dispatch went
+    // to the original (full) tab anyway: the cap was bypassed and the
+    // borrowed slot was never released (completion releases the job's own
+    // provider). A job goes where it was sent, or waits.
 
     // Queue it — will flush when a slot opens
-    this._enqueueWaiting(provider, job);
+    this._enqueueWaiting(provider, job, dispatchFn);
     return { dispatched: false, queued: true, provider };
   }
 
@@ -77,6 +85,20 @@ class DispatchPool extends EventEmitter {
     this.emit('slot-freed', { provider, jobId });
     // Flush waiting queue for this provider
     this._flush(provider);
+  }
+
+  // ── release(provider, jobId) — give a slot back without counting an outcome.
+  // §0.39.247 — for a job that was handed a slot but NOT delivered (no tab
+  // connected, stale socket, timed out and requeued). It goes back on
+  // guardian's pendingQueue and comes through enqueue() again on flush;
+  // holding its slot meant it later waited on itself. Idempotent.
+  release(provider, jobId) {
+    const active = this._active.get(provider);
+    if (!active || !active.has(jobId)) return false;
+    active.delete(jobId);
+    this.emit('slot-freed', { provider, jobId, released: true });
+    this._flush(provider);
+    return true;
   }
 
   fail(provider, jobId, reason) {
@@ -96,26 +118,16 @@ class DispatchPool extends EventEmitter {
     return { dispatched: true, stolen: false, provider };
   }
 
-  // ── _trySteal — reroute to an idle provider ──────────────────────────────
-  _trySteal(originalProvider, job, dispatchFn) {
-    // Only steal to providers that have available slots
-    for (const [provider, cap] of Object.entries(this._caps)) {
-      if (provider === originalProvider) continue;
-      if (provider === 'default') continue;
-      if (this.available(provider) > 0) {
-        const stolenJob = { ...job, provider, _stolenFrom: originalProvider };
-        this._dispatch(provider, stolenJob, dispatchFn);
-        this.emit('job-stolen', { from: originalProvider, to: provider, jobId: job.id });
-        return provider;
-      }
-    }
-    return null;
-  }
-
   // ── _enqueueWaiting — priority queue ────────────────────────────────────
-  _enqueueWaiting(provider, job) {
+  // §0.39.247 — the waiting job keeps the function that dispatches it. A
+  // freed slot used to call _flush(provider) with no function, which took
+  // the job off this queue and emitted 'dispatch-ready' — an event nothing
+  // listens to. The job was dropped. Invisible at a cap of 3 until a 4th
+  // concurrent job; at a cap of 1 it was every job after the first.
+  _enqueueWaiting(provider, job, dispatchFn = null) {
     if (!this._waiting.has(provider)) this._waiting.set(provider, []);
     const queue = this._waiting.get(provider);
+    if (dispatchFn) Object.defineProperty(job, '_dispatchFn', { value: dispatchFn, enumerable: false, configurable: true });
     queue.push(job);
     // Sort: high > normal > low
     const pri = { high: 0, normal: 1, low: 2 };
@@ -127,8 +139,9 @@ class DispatchPool extends EventEmitter {
     const queue = this._waiting.get(provider) || [];
     while (queue.length > 0 && this.available(provider) > 0) {
       const job = queue.shift();
-      if (dispatchFn) this._dispatch(provider, job, dispatchFn);
-      else this.emit('dispatch-ready', { provider, job });
+      const fn = dispatchFn || job._dispatchFn;
+      if (fn) this._dispatch(provider, job, fn);
+      else this.emit('dispatch-ready', { provider, job }); // a job enqueued without a function (direct pool users)
     }
   }
 

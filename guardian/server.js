@@ -679,7 +679,7 @@ const _wakeLoop = _wakeLoopMod.createWakeLoop({
   askCopilot: _wakeLoopMod.createCopilotAsk(), createJob, dispatchJob, getJob: (id) => jobs.get(id), bus,
   log: (m) => console.log(`[guardian/wake] ${m}`),
 });
-bus.on('guardian.job.complete', (d) => { _wakeLoop.handleComplete({ jobId: d && d.jobId }).catch((e) => console.warn(`[guardian/wake] ${e.message}`)); });
+bus.on('guardian.job.complete', (d) => { _wakeLoop.handleComplete({ jobId: d && (d.data ? d.data.jobId : d.jobId) }) /* 0.39.247 — SISOStream passes {type,data} */.catch((e) => console.warn(`[guardian/wake] ${e.message}`)); });
 
 // §BUILT 2026-09-11 — James: "persistent and doesn't leave until it's
 // delivered." createJobStore() (guardian/lib/jobs.js, this same pass)
