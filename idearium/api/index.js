@@ -963,6 +963,9 @@ function matchRoute(method, url) {
     ['GET',    ['api','repos',    ':uuid','graph'],          'repo.graph'],
     ['GET',    ['api','repos',    ':uuid','graph','traverse'], 'repo.graph.traverse'],
     ['GET',    ['api','repos',    ':uuid','graph','cone'],   'repo.graph.cone'],
+    // 0.39.246 — the other two of the three graphs (code · execution · spec)
+    ['GET',    ['api','repos',    ':uuid','graph','spec'],   'repo.graph.spec'],
+    ['GET',    ['api','repos',    ':uuid','graphs'],         'repo.graphs'],
     ['GET',    ['api','repos',    ':uuid','verification'],  'repo.verification'],
     // §SCAN 2026-09-20 — the Intelligence subtab's data. Pure read over
     // graph.json/verification.json/verification-lazy.json; computes no
@@ -2333,6 +2336,43 @@ async function handle(req, res, route, query, body) {
       if (query.full === '1' || query.full === 'true') return ok(res, graph);
       const { nodes, edges, ...summary } = graph;
       return ok(res, { ...summary, note: 'summary only — add ?full=1 for all nodes and edges, or use /graph/traverse and /graph/cone to ask a question instead' });
+    }
+
+    // §0.39.246 — the specification graph: what the repo's catalog .spec
+    // files declare, and where that disagrees with the code graph.
+    case 'repo.graph.spec': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const dir = _repoDiskDir(params.uuid);
+      if (!dir) return err(res, 500, 'could not resolve repo directory');
+      const { readSpecGraph } = await import('../repo/spec-graph.js');
+      const sg = readSpecGraph(dir);
+      if (!sg) return err(res, 404, 'no spec graph yet — repo has not been through the import pipeline since 0.39.246 (see POST .../reindex)');
+      if (query.full === '1' || query.full === 'true') return ok(res, sg);
+      const { sources, disagreements, ...rest } = sg;
+      return ok(res, { ...rest, sources: sources.map(({ entriesDetail, ...s }) => ({ ...s, violations: s.violations.filter(v => v.severity === 'error') })),
+        disagreements: disagreements.slice(0, 50), note: 'add ?full=1 for every entry and every disagreement' });
+    }
+
+    // §0.39.246 — all three graphs side by side, each with its own real
+    // state: built, pending, not_applicable, missing (never imported), or
+    // failed with the reason. One question: "are the three graphs there?"
+    case 'repo.graphs': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const dir = _repoDiskDir(params.uuid);
+      if (!dir) return err(res, 500, 'could not resolve repo directory');
+      const read = (f) => { try { return JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8')); } catch (_) { return null; } };
+      const code = read('graph.json');
+      const spec = read('spec-graph.json');
+      const lazy = read('verification.lazy.json');
+      const proof = read('proof.json');
+      return ok(res, { repoUuid: params.uuid, graphs: {
+        code: code ? { status: 'built', nodes: code.nodeCount, edges: code.edgeCount, unresolved: code.unresolvedCount } : { status: 'missing' },
+        execution: proof ? { status: 'built', summary: proof.summary, generatedAt: proof.generatedAt, ...(lazy && lazy.runtimeProof && lazy.runtimeProof.status !== 'built' ? { rerun: lazy.runtimeProof } : {}) }
+                 : (lazy && lazy.runtimeProof) ? lazy.runtimeProof : { status: 'missing' },
+        spec: spec ? { status: spec.status, ...spec.summary, ...(spec.reason ? { reason: spec.reason } : {}) } : { status: 'missing' },
+      } });
     }
 
     case 'repo.graph.traverse': {

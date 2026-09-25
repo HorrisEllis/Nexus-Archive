@@ -59,6 +59,7 @@ const MODULE_ID = 'idearium/repo/import-pipeline';
 // call site's convenience). Both files are ESM in the same package, so a
 // plain import costs nothing here.
 import { buildGraph, writeGraph } from './graph.js';
+import { buildSpecGraph, writeSpecGraph } from './spec-graph.js';
 import { makeEmitter } from './pipeline-events.js';
 
 // §MCO2 — the lazy L6-L8 pass. Same static-import reasoning as MCO1's
@@ -538,13 +539,13 @@ export function searchRepo(repoDir, query) {
 export function runImportPipeline(repo, repoDir, opts = {}) {
   const emit = makeEmitter(repo.uuid, opts.onEvent);
   emit('repository:import:start', { fileCount: (repo.files || []).length });
-  const r = _runImportPipeline(repo, repoDir, emit);
+  const r = _runImportPipeline(repo, repoDir, emit, opts);
   if (r.state === 'FAULT') emit('repository:import:failed', { error: r.error || 'see verification tiers' });
   else emit('repository:import:ready', { state: r.state, chunks: r.chunks?.count ?? null });
   return r;
 }
 
-function _runImportPipeline(repo, repoDir, emit) {
+function _runImportPipeline(repo, repoDir, emit, opts = {}) {
   const result = { repository: repo.uuid, state: 'PARSING', startedAt: Date.now() };
 
   let parsed;
@@ -696,6 +697,22 @@ function _runImportPipeline(repo, repoDir, emit) {
     graphSummary = { error: e.message, nodeCount: 0, edgeCount: 0 };
   }
 
+  // §SPEC-GRAPHING 0.39.246 — the specification graph (what is declared),
+  // built from every catalog .spec in the repo and compared against the code
+  // graph just built. Third of the three graphs (code · execution · spec).
+  // Non-fatal by the same rule as GRAPHING: it never displaces READY/FAULT.
+  let specGraphSummary = null;
+  try {
+    const sg = buildSpecGraph({ repoDir, files: indexes.files, codeGraph: graphObj });
+    writeSpecGraph(repoDir, sg);
+    specGraphSummary = { status: sg.status, ...sg.summary, ...(sg.reason ? { reason: sg.reason } : {}) };
+    emit('spec:graph:complete', specGraphSummary);
+  } catch (e) {
+    console.error(`[${MODULE_ID}] repository:spec-graph:failed — ${e.message}`);
+    specGraphSummary = { status: 'failed', error: e.message };
+    emit('spec:graph:failed', { error: e.message });
+  }
+
   // §MCO2 DEEPENING — L4 (semantic) and L5 (dependency) extend verify()'s
   // L0-L3 now that indexes.symbols/chunks (INDEXING) and the graph
   // (GRAPHING, just above) both exist. Merged into the SAME
@@ -726,6 +743,7 @@ function _runImportPipeline(repo, repoDir, emit) {
     try {
       lazyScheduled = scheduleLazyVerification({
         repoDir, repository: repo.uuid, graph: graphObj, changedFiles: changedFilePaths,
+        runtimeProof: opts.runtimeProof !== false, // 0.39.246 — execution graph on by default; a caller may opt out
       });
     } catch (e) {
       console.error(`[${MODULE_ID}] repository:lazy-verification-schedule:failed — ${e.message}`);
@@ -754,6 +772,7 @@ function _runImportPipeline(repo, repoDir, emit) {
     verification,
     indexes: { fileCount: indexes.files.length, symbolCount: indexes.symbols.length, chunkCount: indexes.chunks.length },
     graph: graphSummary,
+    specGraph: specGraphSummary, // 0.39.246 — spec graph (spec-graph.json)
     lazyVerification: lazyScheduled, // §MCO2 — L6-L8 status; see verification.lazy.json
   };
 

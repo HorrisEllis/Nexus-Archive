@@ -111,3 +111,9 @@ spec:
     - N3 "i need to be able to manage nexus in idearium, this is too much in my head all the time"
          → run P1b over NEXUS itself (backfill a file list from code, G3) so NEXUS has a generated map;
            this is also the substrate for the permanent NEXUS repo (step 2 of the 2026-09-25 order)
+
+  # ── 0.39.246 ─────────────────────────────────────────────────────────────
+  graphs_hooked:
+    - code (graph.json) · execution (proof.json, now auto-queued per import) · spec (spec-graph.json, new — built from this manifest builder)
+    - spec↔code disagreements recorded as ledger_divergence (declared_not_imported · imported_not_declared)
+    - open: execution↔code / execution↔spec comparison

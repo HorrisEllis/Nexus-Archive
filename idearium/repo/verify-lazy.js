@@ -39,6 +39,11 @@ const workQueue = _require('../../lib/work-queue.js');
 
 const MODULE_ID = 'idearium/repo/verify-lazy';
 const QUEUE_NAME = 'mco2-deep-verify';
+// §EXECUTION GRAPH 0.39.246 — its own queue: runtime proof runs every
+// runnable test under coverage (15 s each), which can outlast the 60 s
+// ceiling the L6-L8 pass is held to. Same one-at-a-time rule.
+const PROOF_QUEUE = 'idearium-runtime-proof';
+const PROOF_TIMEOUT_MS = 10 * 60 * 1000;
 
 function loadJsonSafe(p, fallback = null) {
   try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch { return fallback; }
@@ -152,7 +157,7 @@ function runL8(repoDir, allFiles) {
  * synchronously before returning, so a reader can never mistake a stale
  * prior result for the current one while this run is in flight.
  */
-export function scheduleLazyVerification({ repoDir, repository, graph, changedFiles = [] }) {
+export function scheduleLazyVerification({ repoDir, repository, graph, changedFiles = [], runtimeProof = true }) {
   const outPath = path.join(repoDir, 'verification.lazy.json');
   const scope = affected(graph, changedFiles);
   const scopedTo = scope.files.map(f => f.file).filter(Boolean);
@@ -197,7 +202,32 @@ export function scheduleLazyVerification({ repoDir, repository, graph, changedFi
     } catch (_) { /* best effort — the pending file simply stays as last written */ }
   });
 
-  return { scheduled: true, scopedTo };
+  // §EXECUTION GRAPH 0.39.246 — the second of the three graphs (code ·
+  // execution · spec), hooked into every import instead of only running
+  // when someone POSTs /api/repos/:uuid/proof. Queued AFTER the L6-L8 job
+  // for this repo, so proof.json always reflects the chunks this import
+  // just wrote. Its state lands in verification.lazy.json under
+  // `runtimeProof` — pending, then the summary, or the real error.
+  if (!runtimeProof) return { scheduled: true, scopedTo, runtimeProof: 'off' };
+  const proofQueue = workQueue.get(PROOF_QUEUE, { concurrency: 1, maxDepth: 50, timeoutMs: PROOF_TIMEOUT_MS });
+  const _mark = (runtimeProof) => {
+    try {
+      const cur = loadJsonSafe(outPath, {}) || {};
+      fs.writeFileSync(outPath, JSON.stringify({ ...cur, runtimeProof }, null, 2), 'utf8');
+    } catch (e) { console.error(`[${MODULE_ID}] could not record runtime proof state: ${e.message}`); }
+  };
+  const proofJob = job.catch(() => {}).then(() => { _mark({ status: 'pending', scheduledAt: Date.now() });
+    return proofQueue.push(async () => {
+      const { computeRuntimeProof } = await import('./runtime-proof.js');
+      const r = computeRuntimeProof({ repoDir, repository });
+      _mark(r.ok ? { status: 'built', summary: r.proof.summary, generatedAt: r.proof.generatedAt }
+                 : { status: 'failed', error: r.error });
+      return r;
+    }, `runtime-proof:${repository}`);
+  });
+  proofJob.catch(e => _mark({ status: 'failed', error: e.message }));
+
+  return { scheduled: true, scopedTo, runtimeProof: 'queued' };
 }
 
 /** readLazyVerification(repoDir) — the current L6-L8 state, whatever it
@@ -206,4 +236,4 @@ export function readLazyVerification(repoDir) {
   return loadJsonSafe(path.join(repoDir, 'verification.lazy.json'), null);
 }
 
-export { MODULE_ID, QUEUE_NAME };
+export { MODULE_ID, QUEUE_NAME, PROOF_QUEUE };

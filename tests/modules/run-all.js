@@ -289,7 +289,9 @@ const SUITES = [
   'idearium-warp-dispatch.test.mjs',
   'idearium-phase-sync.test.mjs',
   'idearium-phase-compartment.test.mjs',
-  'test-manifest-phase1.test.mjs',   // 0.39.245 — spec-engine/manifest phase 1: file list → wire-check → manifest + registry
+  'test-manifest-phase1.test.mjs',
+  'test-three-graphs.test.mjs',      // 0.39.246 — code · execution · spec graphs hooked into repo import
+  'test-response-downloads.test.js', // 0.39.246 — responses land in the Clear Glass downloads manager   // 0.39.245 — spec-engine/manifest phase 1: file list → wire-check → manifest + registry
   'idearium-phase-compartment-integration.test.js',
   'idearium-agent-routing.test.mjs',
   'lifeline-fluid-routing.test.js',

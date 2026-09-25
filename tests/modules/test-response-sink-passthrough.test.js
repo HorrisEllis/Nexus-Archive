@@ -23,6 +23,11 @@ const assert = require('assert');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+// §0.39.246 — scratch node dir and a closed port, set BEFORE the require:
+// this suite used to write j1..j7.response into guardian's live data and
+// post to the real Clear Glass on :7702.
+process.env.GUARDIAN_RESPONSE_NODES_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'rs-pass-')) + '/data/nodes/response';
+process.env.CLEARGL_IPC_PORT = '1'; // nothing listens on port 1 — the downloads sink fails fast and queues
 const { deliver, synthesize } = require('../../guardian/lib/response-sink.js');
 
 let passed = 0, failed = 0;

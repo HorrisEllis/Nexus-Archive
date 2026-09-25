@@ -29,7 +29,7 @@ async function t(name, fn) {
     const dir = path.join(tmp, name); made.push(name);
     for (const [rel, c] of Object.entries(files)) { fs.mkdirSync(path.dirname(path.join(dir, rel)), { recursive: true }); fs.writeFileSync(path.join(dir, rel), c); }
     const repo = { uuid: name, name, files: Object.keys(files).map(p => ({ path: p })) };
-    pipeline.runImportPipeline(repo, dir); await workQueue.get(lazy.QUEUE_NAME).drain();
+    pipeline.runImportPipeline(repo, dir, { runtimeProof: false }); await workQueue.get(lazy.QUEUE_NAME).drain();
     return { repo, dir };
   }
   const fn = (name, body) => `function ${name}(a) {\n  const v = ${body};\n  return v;\n}\n\n`;
@@ -90,7 +90,9 @@ async function t(name, fn) {
     const r = rp.readRuntimeProof(A.dir); assert.strictEqual(r.staleCount, 0);
   });
   fs.writeFileSync(path.join(A.dir, 'src/calc.js'), FILES['src/calc.js'].replace('a + 1', 'a + 100'));
-  pipeline.runImportPipeline(A.repo, A.dir); await workQueue.get(lazy.QUEUE_NAME).drain();
+  // 0.39.246 — this suite drives proof itself; the import's own auto-proof
+  // would erase the stale window it tests, so it is switched off here.
+  pipeline.runImportPipeline(A.repo, A.dir, { runtimeProof: false }); await workQueue.get(lazy.QUEUE_NAME).drain();
   await t('after the code CHANGES and is re-indexed, the old proof for it is stale; untouched chunks stay valid', () => {
     const r = rp.readRuntimeProof(A.dir);
     const oldAdd = r.chunks.find(c => c.file === 'src/calc.js' && c.proof === 'passed');

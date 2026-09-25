@@ -68,9 +68,16 @@ const crypto = require('crypto');
 const nodeExport = require('../../lib/node-export.js');
 
 const MODULE_ID = 'guardian/response-sink';
-const VERSION   = '1.0.0';
+const VERSION   = '1.1.0';
 
-const NODES_DIR = path.join(__dirname, '..', 'data', 'nodes', 'response');
+// §0.39.246 — overridable so tests never write into live data (the
+// passthrough test used to leave j1..j7.response in the real folder).
+const NODES_DIR = process.env.GUARDIAN_RESPONSE_NODES_DIR || path.join(__dirname, '..', 'data', 'nodes', 'response');
+// Download entries Clear Glass could not take (not running, timed out,
+// refused). Replayed in order on the next successful post — a response
+// is never missing from the downloads manager just because the browser
+// was closed when it arrived.
+const DOWNLOADS_PENDING = path.join(path.dirname(path.dirname(NODES_DIR)), 'downloads-pending.jsonl');
 
 const CG_IPC_PORT = parseInt(process.env.CLEARGL_IPC_PORT || '7702', 10);
 
@@ -100,6 +107,7 @@ function writeNode(rec, sinks = {}) {
     const payload = {
       jobId: rec.jobId,
       provider: rec.provider || 'unknown',
+      agentId: rec.agentId || null,
       status: rec.status,
       text: rec.text || '',
       chars: (rec.text || '').length,
@@ -120,7 +128,7 @@ function writeNode(rec, sinks = {}) {
       context: 'guardian agent response — durable return-point record',
       system: 'guardian',
       summary: `${payload.provider} ${payload.status} (${payload.chars} chars)`,
-      tags: [`provider:${payload.provider}`, `status:${payload.status}`, `source:${payload.source}`],
+      tags: [`provider:${payload.provider}`, `status:${payload.status}`, `source:${payload.source}`, ...(payload.agentId ? [`agent:${payload.agentId}`] : [])],
     }, NODES_DIR);
     return { ok: true, detail: filePath };
   } catch (e) {
@@ -207,19 +215,30 @@ function writeLedger(rec, { evLedger, jaa }) {
  * it there makes it recoverable by hand when every programmatic path has
  * failed — which is the fallback case this whole module exists for.
  */
-function postToDownloads(rec, { savePath = null, timeoutMs = 2500 } = {}) {
+function _downloadEntry(rec, savePath) {
+  return {
+    // §0.39.246 — the entry belongs to the agent that asked (a repo's
+    // `repo-<uuid>`), not to the provider tab that answered. Provider is
+    // kept as its own field. Routing by provider filed every repo's
+    // replies together under "chatgpt".
+    agentId: rec.agentId || rec.provider || 'guardian',
+    provider: rec.provider || null,
+    compartmentId: rec.compartmentId || null,
+    kind: 'response',
+    filename: `${rec.jobId}.response`,
+    url: `guardian://response/${rec.jobId}`,
+    savePath: savePath || path.join(NODES_DIR, `${rec.jobId}.response`),
+    mimeType: 'application/x-nexus-response+yaml',
+    bytes: Buffer.byteLength(rec.text || '', 'utf8'),
+    state: rec.status === 'complete' ? 'completed' : rec.status === 'error' ? 'interrupted' : 'in_progress',
+    source: 'guardian.response-sink',
+    jobId: rec.jobId,
+  };
+}
+
+function _post(entry, timeoutMs) {
   return new Promise((resolve) => {
-    const body = JSON.stringify({
-      agentId: rec.provider || 'guardian',
-      filename: `${rec.jobId}.response.txt`,
-      url: `guardian://response/${rec.jobId}`,
-      savePath: savePath || path.join(NODES_DIR, `${rec.jobId}.response`),
-      mimeType: 'text/plain',
-      bytes: Buffer.byteLength(rec.text || '', 'utf8'),
-      state: rec.status === 'complete' ? 'completed' : rec.status === 'error' ? 'interrupted' : 'in_progress',
-      source: 'guardian.response-sink',
-      jobId: rec.jobId,
-    });
+    const body = JSON.stringify(entry);
     const req = http.request({
       hostname: '127.0.0.1', port: CG_IPC_PORT, path: '/cli/downloads',
       method: 'POST', timeout: timeoutMs,
@@ -235,6 +254,52 @@ function postToDownloads(rec, { savePath = null, timeoutMs = 2500 } = {}) {
     req.on('error', (e) => resolve({ ok: false, detail: `clear-glass unreachable: ${e.message}` }));
     req.write(body); req.end();
   });
+}
+
+function _readPending() {
+  try { return fs.readFileSync(DOWNLOADS_PENDING, 'utf8').split('\n').filter(Boolean).map(l => JSON.parse(l)); }
+  catch (_) { return []; }
+}
+function _writePending(list) {
+  fs.mkdirSync(path.dirname(DOWNLOADS_PENDING), { recursive: true });
+  if (!list.length) { try { fs.unlinkSync(DOWNLOADS_PENDING); } catch (_) {} return; }
+  fs.writeFileSync(DOWNLOADS_PENDING, list.map(e => JSON.stringify(e)).join('\n') + '\n');
+}
+
+/** flushPendingDownloads() — replay queued entries in order; stops at the first refusal. */
+async function flushPendingDownloads({ timeoutMs = 2500 } = {}) {
+  const list = _readPending();
+  let sent = 0;
+  while (sent < list.length) {
+    const r = await _post(list[sent], timeoutMs);
+    if (!r.ok) break;
+    sent++;
+  }
+  _writePending(list.slice(sent));
+  return { sent, remaining: list.length - sent };
+}
+
+/**
+ * postToDownloads(rec, { savePath }) -> Promise<{ ok, detail, queued? }>
+ * Posts the response into Clear Glass's downloads manager (POST
+ * /cli/downloads). Never throws, never waits long. On failure the entry
+ * is queued to downloads-pending.jsonl and `queued: true` is reported —
+ * the entry is late, not lost. On success, anything queued is replayed.
+ *
+ * §WHY A RESPONSE BELONGS IN A DOWNLOADS LIST AT ALL — that list is where
+ * a user already looks for "things an agent produced that I can open",
+ * and it makes a response recoverable by hand when every programmatic
+ * path has failed — the fallback case this whole module exists for.
+ */
+async function postToDownloads(rec, { savePath = null, timeoutMs = 2500 } = {}) {
+  const entry = _downloadEntry(rec, savePath);
+  const r = await _post(entry, timeoutMs);
+  if (!r.ok) {
+    try { _writePending([..._readPending(), entry]); return { ...r, queued: true }; }
+    catch (e) { return { ...r, queued: false, detail: `${r.detail}; could not queue: ${e.message}` }; }
+  }
+  const flushed = await flushPendingDownloads({ timeoutMs });
+  return flushed.sent ? { ...r, detail: `${r.detail}; replayed ${flushed.sent} queued` } : r;
 }
 
 // ── sink 4: SSE ──────────────────────────────────────────────────────────
@@ -302,6 +367,8 @@ async function deliver(rec, deps = {}) {
   const record = {
     jobId: rec.jobId,
     provider: rec.provider || 'unknown',
+    agentId: rec.agentId || null,
+    compartmentId: rec.compartmentId || null,
     status: rec.status || 'complete',
     text: rec.text || '',
     source: rec.source || 'api',
@@ -327,12 +394,17 @@ async function deliver(rec, deps = {}) {
 
   sinks.ledger = writeLedger(record, { evLedger, jaa });
 
-  sinks.downloads = await postToDownloads(record);
-
-  // The node is written LAST, because it carries the other three
-  // results. That ordering is the reason the sinks record is truthful
-  // rather than optimistic.
-  const nodeResult = writeNode(record, sinks);
+  // §0.39.246 — the node is written BEFORE the downloads post, so the
+  // entry's savePath names a file that exists (it used to be posted first,
+  // pointing at a file not yet written — or never, if the write failed).
+  // It is then rewritten with the downloads result, so the honesty record
+  // on the node still carries what every other sink really did.
+  sinks.downloads = { ok: null, detail: 'pending' };
+  const first = writeNode(record, sinks);
+  sinks.downloads = first.ok
+    ? await postToDownloads(record, { savePath: first.detail })
+    : { ok: false, detail: `not posted: the .response file could not be written (${first.detail})` };
+  const nodeResult = first.ok ? writeNode(record, sinks) : first;
   sinks.node = nodeResult;
 
   // Keep the live job in step, so the EXISTING return point (which reads
@@ -454,5 +526,5 @@ function synthesize(jobId, deps = {}) {
 module.exports = {
   deliver, synthesize,
   writeNode, readNode, writeLedger, postToDownloads, emitToStream,
-  NODES_DIR, MODULE_ID, VERSION,
+  NODES_DIR, DOWNLOADS_PENDING, MODULE_ID, VERSION, flushPendingDownloads,
 };

@@ -2067,6 +2067,7 @@ function handleExtendedRoutes(req, res, url, method) {
         // than defaulting to a guess — an unattributable response is
         // worse than one honestly marked 'unknown'.
         provider: b.provider || (job && job.provider) || 'unknown',
+        agentId:  b.agentId || (job && job.agentId) || null,
         status:   b.status || (b.done === false ? 'partial' : (b.error ? 'error' : 'complete')),
         text:     b.text || b.response || '',
         error:    b.error || null,

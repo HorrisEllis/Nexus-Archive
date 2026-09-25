@@ -1831,7 +1831,9 @@ async function renderRepoPhasemap(repo) {
   let verification = null, verificationError = null, graph = null, graphError = null;
   try { verification = await api(`/api/repos/${repo.uuid}/verification`, {}, 15000); }
   catch (e) { verificationError = e.message; }
-  try { graph = await api(`/api/repos/${repo.uuid}/graph`, {}, 15000); }
+  // §0.39.246 — all three graphs (code · execution · spec), each with its own
+  // real state, instead of the code graph alone.
+  try { graph = await api(`/api/repos/${repo.uuid}/graphs`, {}, 15000); }
   catch (e) { graphError = e.message; }
   // repo switched away while these were in flight — don't paint stale data
   if (CURRENT_API_REPO?.uuid !== repo.uuid || CURRENT_REPO_SUBTAB !== 'phasemap') return;
@@ -1853,9 +1855,17 @@ async function renderRepoPhasemap(repo) {
       <div class="ds"><div class="ds-label">verification — lazy (L6-L8) · ${escapeHtml(lazyStatus)}</div>${lazyTiers.map(tierRow).join('') || '<span style="color:var(--text3);font-size:10px">pending or not yet scheduled</span>'}</div>`;
   }
 
+  const g = graph?.graphs || {};
+  const st = (x) => `<span style="color:${x?.status==='built'?'var(--mint)':x?.status==='failed'?'var(--coral)':'var(--text3)'}">${escapeHtml(x?.status || 'missing')}</span>`;
+  const codeTxt = g.code?.status === 'built' ? `${g.code.nodes ?? '—'} nodes · ${g.code.edges ?? '—'} edges · ${g.code.unresolved ?? 0} unresolved` : 'not built — reindex the repo';
+  const ps = g.execution?.summary;
+  const execTxt = g.execution?.status === 'built' && ps ? Object.entries(ps).filter(([,v]) => typeof v === 'number').map(([k,v]) => `${k} ${v}`).join(' · ')
+    : g.execution?.status === 'failed' ? escapeHtml(g.execution.error || 'failed') : g.execution?.status === 'pending' ? 'running the repo\'s tests under coverage…' : 'not built';
+  const specTxt = g.spec?.status === 'built' ? `${g.spec.specs} spec(s) · ${g.spec.entries} entries · ${g.spec.errors} wiring error(s) · ${g.spec.disagreements} disagreement(s) with code`
+    : g.spec?.status === 'not_applicable' ? escapeHtml(g.spec.reason || 'no catalog .spec in this repo') : 'not built — reindex the repo';
   const graphHtml = graphError
     ? `<div class="detail-empty">${escapeHtml(graphError)}</div>`
-    : `<div class="ds"><div class="ds-label">dependency graph</div><div class="ds-mono">${graph.nodeCount ?? '—'} nodes\n${graph.edgeCount ?? '—'} edges\n${graph.unresolvedCount ?? 0} unresolved references</div></div>`;
+    : `<div class="ds"><div class="ds-label">graphs — code · execution · spec</div><div class="ds-mono">code       ${st(g.code)}  ${codeTxt}\nexecution  ${st(g.execution)}  ${execTxt}\nspec       ${st(g.spec)}  ${specTxt}</div></div>`;
 
   el.innerHTML = verificationHtml + graphHtml;
 }
@@ -3775,7 +3785,9 @@ const _repoPipelineStage = {
   'chunk:decompose:complete': { label: 'chunked',                       pct: 65  },
   'chunk:verify:complete':    { label: 'verified',                      pct: 80  },
   'index:build:complete':     { label: 'index built',                   pct: 90  },
-  'graph:build:complete':     { label: 'graph built',                   pct: 97  },
+  'graph:build:complete':     { label: 'code graph built',              pct: 96  },
+  'spec:graph:complete':      { label: 'spec graph built',              pct: 98  },
+  'spec:graph:failed':        { label: 'spec graph failed',             pct: 98  },
 };
 document.addEventListener('keydown', e => {
   if (e.key==='Escape') { closeModal(); closeNewSpecModal(); closeUploadProjectModal(); }

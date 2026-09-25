@@ -77,6 +77,14 @@ class DownloadsStore {
       mimeType:  entry.mimeType || null,
       bytes:     entry.bytes || 0,
       state:     entry.state || 'in_progress', // in_progress | completed | cancelled | interrupted
+      // §0.39.246 — kept, not dropped: a response entry must stay linked to
+      // its job and to the agent/compartment that asked, and be tellable
+      // apart from a browser download. Absent for ordinary downloads.
+      ...(entry.jobId ? { jobId: entry.jobId } : {}),
+      ...(entry.kind ? { kind: entry.kind } : {}),
+      ...(entry.provider ? { provider: entry.provider } : {}),
+      ...(entry.compartmentId ? { compartmentId: entry.compartmentId } : {}),
+      ...(entry.source ? { source: entry.source } : {}),
       startedAt: entry.startedAt || Date.now(),
       updatedAt: Date.now(),
     };

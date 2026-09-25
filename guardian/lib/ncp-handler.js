@@ -469,6 +469,7 @@ function createNCPMessageHandler(deps) {
           const jobRec2 = jobs.get(jobId);
           require('./response-sink.js').deliver({
             jobId, provider, text: finalText, status: 'complete', source: 'ncp',
+            agentId: jobRec2?.agentId || null, // §0.39.246 — the downloads entry is filed under the repo that asked
             prompt: jobRec2?.prompt || null, chatUrl, gaps: gaps.length, gapDrift,
             command: jobRec2?.command || null,
             codeArtifact: codeArtifact && codeArtifact.ok ? codeArtifact : null,
