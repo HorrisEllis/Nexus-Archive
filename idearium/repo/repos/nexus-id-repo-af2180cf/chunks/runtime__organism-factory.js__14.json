@@ -1,0 +1,23 @@
+{
+  "id": "chunk-dce349c49f5cc1be",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "runtime/organism-factory.js",
+  "range": {
+    "start_line": 258,
+    "end_line": 258
+  },
+  "symbols": [
+    "btnPlay"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "a693b90198296fc1ac2cb2ef04c13d557b495b54d1f00b3474a9f2245489a378"
+  },
+  "status": "complete",
+  "content": "    const btnPlay=mkBtn(null,'▶',()=>_pub('ui:play_press',{}));"
+}

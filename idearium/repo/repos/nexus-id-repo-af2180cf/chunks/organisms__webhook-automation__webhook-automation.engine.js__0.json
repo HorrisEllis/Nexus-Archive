@@ -1,0 +1,21 @@
+{
+  "id": "chunk-94922c7d32ad506d",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/webhook-automation/webhook-automation.engine.js",
+  "range": {
+    "start_line": 1,
+    "end_line": 16
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "395dd1094e4e7298aa935027a84de6ad3d0fc05bf5a500d60e42d8781956364d"
+  },
+  "status": "complete",
+  "content": "/* ═══════════════════════════════════════════════════════════\n   ORGANISM: WEBHOOK AUTOMATION  v1.0.0\n   id: eravos.webhook-automation\n\n   External/OS-level automation bridge. A browser sandbox cannot\n   exec shell commands — so this organism fires an HTTP request\n   to a configured webhook URL whenever a chosen bus event fires.\n   That's the real, honest bridge point: external automation\n   tools (Home Assistant, n8n, Shortcuts HTTP triggers, Keyboard\n   Maestro web triggers, IFTTT Webhooks, a local listener script)\n   all consume webhooks the same way.\n   ═══════════════════════════════════════════════════════════ */\n\nwindow.WebhookAutomationEngine = (() => {\n'use strict';\n"
+}

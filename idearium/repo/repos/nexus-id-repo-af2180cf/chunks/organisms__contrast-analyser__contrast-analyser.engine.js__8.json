@@ -1,0 +1,23 @@
+{
+  "id": "chunk-3607c3729fd34225",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/contrast-analyser/contrast-analyser.engine.js",
+  "range": {
+    "start_line": 119,
+    "end_line": 136
+  },
+  "symbols": [
+    "clashScore"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "2c7114e3c644bc24d4f3f209b9a768e251b6e8c34158daf9195644a9c6593b1c"
+  },
+  "status": "complete",
+  "content": "function clashScore(fftA, fftB) {\n  let overlap = 0, totalA = 0, totalB = 0;\n  const len = Math.min(fftA.length, fftB.length);\n  for (let i = 0; i < len; i++) {\n    const a = fftA[i] / 255;\n    const b = fftB[i] / 255;\n    overlap += Math.min(a, b);\n    totalA  += a;\n    totalB  += b;\n  }\n  const denom = Math.max(totalA, totalB, 0.001);\n  return Math.round((overlap / denom) * 100);\n}\n\n/* ── Displacement score (rhythmic tension) ───────────────\n   How far apart are A and B transients from each other\n   relative to a beat grid.\n   0 = locked. 100 = maximum fight.                       */"
+}

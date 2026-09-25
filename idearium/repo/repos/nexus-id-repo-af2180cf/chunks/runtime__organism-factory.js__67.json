@@ -1,0 +1,23 @@
+{
+  "id": "chunk-82075258868dacf2",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "runtime/organism-factory.js",
+  "range": {
+    "start_line": 1873,
+    "end_line": 1888
+  },
+  "symbols": [
+    "mkSlotZone"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "fbca35a823c88c7f4753ec801e0ea2acdc92b2d9ae58feef326f6d642090d068"
+  },
+  "status": "complete",
+  "content": "    function mkSlotZone(slot, color, label) {\n      const z = document.createElement('div');\n      z.style.cssText = `flex:1;display:flex;align-items:center;gap:8px;padding:0 12px;cursor:pointer;transition:background .15s;border-right:2px solid ${color}33;position:relative;`;\n      const dot = document.createElement('div');\n      dot.style.cssText = `width:8px;height:8px;border-radius:50%;background:${color};opacity:.35;flex-shrink:0;transition:opacity .2s,box-shadow .2s;`;\n      const nameEl = document.createElement('div');\n      nameEl.style.cssText = `font-family:var(--mono);font-size:8px;color:${color};letter-spacing:.1em;opacity:.5;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;`;\n      nameEl.textContent = `SLOT ${slot}  —  DROP AUDIO`;\n      const durEl = document.createElement('div');\n      durEl.style.cssText = `font-family:var(--mono);font-size:7px;color:var(--dim);letter-spacing:.06em;flex-shrink:0;`;\n      z.appendChild(dot); z.appendChild(nameEl); z.appendChild(durEl);\n      z.addEventListener('dragover', e => { e.preventDefault(); z.style.background=`${color}12`; });\n      z.addEventListener('dragleave', () => z.style.background='');\n      z.addEventListener('drop', async e => {\n        e.preventDefault(); z.style.background='';\n        const results = await Intake.ingestAll(e.dataTransfer.files, KERNEL.bus);"
+}

@@ -1,0 +1,6 @@
+{"action":"forge_shell_unavailable","reason":"ui/forge-shell.html missing","fix":"Deploy ui/forge-shell.html","ts":1790367341570}
+{"action":"forge_shell_unavailable","reason":"ui/forge-shell.html missing","fix":"Deploy ui/forge-shell.html","ts":1790367992273}
+{"action":"forge_shell_unavailable","reason":"ui/forge-shell.html missing","fix":"Deploy ui/forge-shell.html","ts":1790368220928}
+{"action":"gap_escalated","type":"system_offline","system":"intelligence","port":3753,"severity":"high","offlineMs":30015,"fix":"Start intelligence: node intelligence/boot.js or node service/intelligence-service.js","body":"intelligence offline for 30s — :3753 not responding — orchestrator's own pulse watchdog also missed 3 consecutive heartbeat(s) from intelligence","gapUuid":"e1bc6452-5b03-41c8-be60-53b99ce241cb","ts":1790368941164}
+{"action":"forge_shell_unavailable","reason":"ui/forge-shell.html missing","fix":"Deploy ui/forge-shell.html","ts":1790369512104}
+{"action":"system_recovered","system":"loom","downMs":30013,"ts":1790369572110}

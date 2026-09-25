@@ -1,0 +1,23 @@
+{
+  "id": "chunk-12c3dadbca6ab097",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "runtime/precision-clock.js",
+  "range": {
+    "start_line": 292,
+    "end_line": 302
+  },
+  "symbols": [
+    "getReduction"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "1f1b6de0ef2d53fa1a2d0491e184bac635e21dd0b1ffd4c9c20cda0a1c28389e"
+  },
+  "status": "complete",
+  "content": "function getReduction() {\n  if (!_compressor) return { comp: 0, limit: 0 };\n  return {\n    comp:  Math.abs(_compressor.reduction),\n    limit: Math.abs(_limiter.reduction),\n  };\n}\n\nreturn { boot, getReduction };\n})();\n"
+}

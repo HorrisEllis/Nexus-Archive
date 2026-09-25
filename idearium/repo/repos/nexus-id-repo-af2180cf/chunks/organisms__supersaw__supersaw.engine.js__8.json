@@ -1,0 +1,23 @@
+{
+  "id": "chunk-775a8b576aa7ac32",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/supersaw/supersaw.engine.js",
+  "range": {
+    "start_line": 111,
+    "end_line": 151
+  },
+  "symbols": [
+    "_syncUI"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "f9de6103bf91a3c8b448dd5b116c99bc38a536a95a2a45d54376b498d2967523"
+  },
+  "status": "complete",
+  "content": "  function _syncUI() {\n    sBus.publish('org:state_sync', { active: _params.active, params: { ..._params } });\n  }\n\n  const _unsubs = [\n    gBus.subscribe('ui:supersaw_trigger:' + instanceId, ({ vel }) => _trigger(vel || 1)),\n    gBus.subscribe('ui:supersaw_toggle:'  + instanceId, () => _params.active ? _stop() : _start()),\n    gBus.subscribe('ui:config_change:'    + instanceId, ({ key, value }) => _updateParam(key, value)),\n    gBus.subscribe('pad:trigger', ({ sound }) => { if (sound === 'supersaw') _trigger(0.9); }),\n    gBus.subscribe('midi:note',  ({ note, velocity, on }) => {\n      if (on === false) return;\n      _params.pitch = note;\n      _trigger((velocity || 100) / 127);\n    }),\n  ];\n\n  _syncUI();\n\n  KERNEL.registry.register({\n    instanceId,\n    id:       'eravos.supersaw',\n    label:    'Supersaw',\n    provides: ['capability.audio_out', 'capability.lead_voice'],\n    requires: ['capability.audio_context'],\n    permissions: ['audio_out', 'bus_publish', 'bus_subscribe'],\n    hooks: [\n      { hook_id: 'supersaw.hook.trig_in',   direction: 'in',  event_type: 'pad:trigger',  contract_version: '1.0.0' },\n      { hook_id: 'supersaw.hook.audio_out', direction: 'out', event_type: 'audio:signal', contract_version: '1.0.0' },\n    ],\n  });\n\n  return {\n    unmount() { _stop(); _unsubs.forEach(u => u()); KERNEL.registry.unregister(instanceId); },\n    trigger: _trigger, start: _start, stop: _stop,\n    get params() { return { ..._params }; },\n  };\n}\n\nreturn { mount };\n})();\n"
+}

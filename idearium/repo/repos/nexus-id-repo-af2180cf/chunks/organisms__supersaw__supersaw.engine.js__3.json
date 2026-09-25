@@ -1,0 +1,23 @@
+{
+  "id": "chunk-afd4c95cbb14168c",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/supersaw/supersaw.engine.js",
+  "range": {
+    "start_line": 32,
+    "end_line": 57
+  },
+  "symbols": [
+    "_buildStack"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "5192bdf0caf86e8393525a067f47b59276164817616deb729057e8ccee15f88a"
+  },
+  "status": "complete",
+  "content": "  function _buildStack(AC, freq, gainNode) {\n    const filt = AC.createBiquadFilter();\n    filt.type = 'lowpass';\n    filt.frequency.value = _params.cutoff;\n    filt.Q.value = 0.7;\n    filt.connect(gainNode);\n\n    const n = _params.voices;\n    const oscs = [];\n    for (let i = 0; i < n; i++) {\n      const o = AC.createOscillator();\n      o.type = 'sawtooth';\n      /* Spread detune symmetrically across voices: center voice = 0 detune */\n      const pos = n === 1 ? 0 : (i / (n - 1)) * 2 - 1; /* -1..1 */\n      o.detune.value = pos * _params.detune;\n      o.frequency.value = freq;\n\n      const pan = AC.createStereoPanner ? AC.createStereoPanner() : null;\n      if (pan) { pan.pan.value = pos * _params.spread; o.connect(pan); pan.connect(filt); }\n      else       { o.connect(filt); }\n\n      oscs.push(o);\n    }\n    return { oscs, filt };\n  }\n"
+}

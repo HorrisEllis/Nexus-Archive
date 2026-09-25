@@ -35,7 +35,7 @@ const REPO = { uuid: `late-test-${Date.now()}`, name: 'late scratch', compartmen
 const AGENT = `repo-${REPO.uuid}`;
 const MSG = 'explain the organism factory';
 
-let copilotReply = { status: 200, body: { ok: false, error: 'guardian did not answer within 300000ms' } };
+let copilotReply = { status: 502, body: { ok: false, error: 'guardian did not answer within 300000ms', jobId: 'job-live-1' } };   // copilot's real 502 shape (0.39.244: carries the jobId guardian created)
 function stubCopilot() {
   return new Promise((resolve, reject) => {
     const srv = http.createServer((req, res) => {
@@ -64,7 +64,19 @@ const guardianFiles = (text, { agentId = AGENT, prompt, jobId = `job-${Math.rand
       assert.ok(r.awaitLate, `no awaitLate: ${JSON.stringify(r)}`);
       assert.strictEqual(r.awaitLate.agentId, AGENT);
       assert.ok(r.awaitLate.since > 0 && r.awaitLate.since <= Date.now());
+      assert.strictEqual(r.awaitLate.jobId, 'job-live-1', 'the job guardian created is carried, so the match can be exact');
       started = r.awaitLate.since;
+    });
+
+    await test('LR-01b', 'a guardian refusal with NO job (nothing was ever dispatched) does not await — nothing can arrive', async () => {
+      const keep = copilotReply;
+      copilotReply = { status: 502, body: { ok: false, error: "guardian reports no chatgpt tab connected (GET /providers: null)" } };
+      try {
+        const r = await RA.dispatch({ repo: REPO, repoDir: null, message: MSG, provider: 'chatgpt' });
+        assert.strictEqual(r.ok, false);
+        assert.strictEqual(r.awaitLate, undefined);
+        assert.ok(/no chatgpt tab connected/.test(r.error), `the real reason must reach the tab, got: ${r.error}`);
+      } finally { copilotReply = keep; }
     });
 
     await test('LR-02', 'an ollama dispatch that fails does NOT await a late reply (no tab exists to answer)', async () => {
@@ -121,6 +133,17 @@ const guardianFiles = (text, { agentId = AGENT, prompt, jobId = `job-${Math.rand
       assert.strictEqual(RA.history(REPO.uuid, 100).filter((r) => r.responseId === late.id).length, 1);
     });
 
+    await test('LR-07b', 'with the job id, the match is exact — another job’s reply for the same agent and question is not taken', async () => {
+      const other = guardianFiles('reply to a DIFFERENT job, same agent and question', { jobId: 'job-other' });
+      const mine = guardianFiles('reply to MY job', { jobId: 'job-mine' });
+      const f = RA.findLate({ repo: REPO, since: started, message: MSG, jobId: 'job-mine' });
+      assert.strictEqual(f.found, true); assert.strictEqual(f.responseId, mine.id);
+      assert.strictEqual(RA.findLate({ repo: REPO, since: started, message: MSG, jobId: 'job-nope' }).found, false);
+      // tidy: adopt both so LR-08's "nothing left to offer" still holds
+      await RA.adoptLate({ repo: REPO, responseId: other.id, message: MSG, since: started });
+      await RA.adoptLate({ repo: REPO, responseId: mine.id, message: MSG, since: started });
+    });
+
     await test('LR-08', 'an adopted reply is not offered again to the next exchange', async () => {
       assert.strictEqual(RA.findLate({ repo: REPO, since: started, message: MSG }).found, false);
     });
@@ -154,7 +177,7 @@ const guardianFiles = (text, { agentId = AGENT, prompt, jobId = `job-${Math.rand
       const calls = [];
       const ctx = { setTimeout, clearTimeout, encodeURIComponent, CURRENT_API_REPO: { uuid: 'u1' }, renderRepoAgent() {}, _agentDetail: () => '', calls };
       ctx.api = async (url, opts) => {
-        calls.push([opts && opts.method || 'GET', url.split('?')[0]]);
+        calls.push([opts && opts.method || 'GET', url.split('?')[0], url]);
         if (opts && opts.method === 'POST') return adoptReply;
         return findSeq.length > 1 ? findSeq.shift() : findSeq[0];
       };
@@ -178,8 +201,9 @@ const guardianFiles = (text, { agentId = AGENT, prompt, jobId = `job-${Math.rand
         adoptReply: { ok: true, text: 'late text', hatName: 'hat', providerUsed: 'chatgpt', late: { responseId: 'r2' }, elapsedMs: 400000 } });
       const line = { role: 'agent', text: 'thinking…' };
       const w = ctx._agentLateWatch('u1', MSG, Date.now(), line);
-      w.afterFailure({ ok: false, error: 'guardian did not answer', awaitLate: {} }, false);
+      w.afterFailure({ ok: false, error: 'guardian did not answer', awaitLate: { jobId: 'job-live-1' } }, false);
       assert.ok(/watching the Responses index/.test(line.text), line.text);
+      await until(() => ctx.calls.some(c => c[0] === 'GET' && c[2] && /jobId=job-live-1/.test(c[2])));
       await until(() => line.text === 'late text');
       assert.ok(/late — from the Responses index/.test(line.meta), line.meta);
       assert.strictEqual(ctx.calls.filter((c) => c[0] === 'POST').length, 1);
@@ -197,6 +221,8 @@ const guardianFiles = (text, { agentId = AGENT, prompt, jobId = `job-${Math.rand
 
     await test('LR-14', 'tab: agentSend only waits on the index when the server said a tab may answer, or the tab itself timed out', async () => {
       assert.ok(/if \(!r\.awaitLate && !r\.clientTimeout\) \{ watch\.stop\(\); _agentSettle\(line, r\);/.test(APP));
+      // 0.39.244 — the refusal body survives api()'s throw (before, awaitLate was lost and the watch never started)
+      assert.ok(/e\.data = data;/.test(APP) && /r = \(e\.data && typeof e\.data === 'object'\) \? \{ \.\.\.e\.data, ok: false/.test(APP));
       assert.ok(!/lines\.pop\(\); \/\/ drop the placeholder/.test(APP), 'the old pop-and-replace path is gone');
     });
 

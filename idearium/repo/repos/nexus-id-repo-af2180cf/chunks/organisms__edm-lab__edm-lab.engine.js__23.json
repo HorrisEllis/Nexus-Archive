@@ -1,0 +1,23 @@
+{
+  "id": "chunk-bc5cfbe34e36aecf",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/edm-lab/edm-lab.engine.js",
+  "range": {
+    "start_line": 280,
+    "end_line": 284
+  },
+  "symbols": [
+    "setTension"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "085b2667808273ff0c28cd6993121ce19d52f40b892c7140ca295814063210ba"
+  },
+  "status": "complete",
+  "content": "  function setTension(val) {\n    _tension = Math.max(0, Math.min(100, val));\n    _rebuild();\n  }\n"
+}

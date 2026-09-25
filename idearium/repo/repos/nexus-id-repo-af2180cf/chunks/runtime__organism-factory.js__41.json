@@ -1,0 +1,23 @@
+{
+  "id": "chunk-2953fb71233e5631",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "runtime/organism-factory.js",
+  "range": {
+    "start_line": 997,
+    "end_line": 1015
+  },
+  "symbols": [
+    "_m"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "3f9e0d22d3d407b6676d46a9f119ca23d20df2ec9116b47f784c9f19a7437e9e"
+  },
+  "status": "complete",
+  "content": "    function _m(e){const r=xy.getBoundingClientRect();const px=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width));const py=Math.max(0,Math.min(1,(e.clientY-r.top)/r.height));dot.style.left=(px*100)+'%';dot.style.top=(py*100)+'%';ch.style.top=(py*100)+'%';cv.style.left=(px*100)+'%';KERNEL.bus.publish('mod:xy',{x:px,y:py,xDest:xSel.value,yDest:ySel.value});}\n    wrap.appendChild(selRow); wrap.appendChild(xy);\n    content.appendChild(wrap);\n  },\n});\n\n/* ═══════════════════════════════════════════════════════\n   NEXUS DIAGNOSTIC NODES — 7 separate organisms, one per\n   NEXUS subsystem. No fabricated status: a card that can't\n   be reached says UNREACHABLE, not a guess.\n\n   Polling is NOT this card's own clock — it starts/stops with\n   the global ▶ ⏺ transport bar (see nexus-node-core.js), so\n   these stay agnostic the same way every audio organism reacts\n   to seq:play/seq:stop instead of running its own timer.\n\n   Diagnose routes through the Orchestrator for every node\n   except the Orchestrator card itself, which diagnoses itself.\n═══════════════════════════════════════════════════════ */"
+}

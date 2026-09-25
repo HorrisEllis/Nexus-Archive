@@ -1,0 +1,23 @@
+{
+  "id": "chunk-c0bf139079ba2c20",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/timeline/timeline.engine.js",
+  "range": {
+    "start_line": 12,
+    "end_line": 13
+  },
+  "symbols": [
+    "_uid"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "2e5c6f5c9679c6909b4fb48141238e0bbc65726b629f6958acdde3ef059f14c6"
+  },
+  "status": "complete",
+  "content": "  function _uid() { return Math.random().toString(36).slice(2,9); }\n"
+}

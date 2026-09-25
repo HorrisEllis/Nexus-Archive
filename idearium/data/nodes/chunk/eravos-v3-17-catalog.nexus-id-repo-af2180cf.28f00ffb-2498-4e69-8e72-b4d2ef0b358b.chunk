@@ -1,0 +1,40 @@
+envelope: 1
+uuid: nexus-export-chunk-eravos-v3-17-catalog.nexus-id-repo-af2180cf.28f00ffb-2498-4e69-8e72-b4d2ef0b358b
+type: chunk
+id: eravos-v3-17-catalog.nexus-id-repo-af2180cf.28f00ffb-2498-4e69-8e72-b4d2ef0b358b
+context: idearium spec-engine chunk of spec ced8d1a8-ea48-4c70-88e9-ab5758ff3a3f
+intent: null
+summary: organisms-nexus-orchestrator-schema-schema (complete)
+system: idearium
+tags:
+  - spec:ced8d1a8-ea48-4c70-88e9-ab5758ff3a3f
+  - status:complete
+  - section:organisms-nexus-orchestrator-schema-schema
+  - specName:eravos-v3-17-catalog
+  - agent:ingest
+  - repo:nexus-id-repo-af2180cf
+exported_at: 1790367431543
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1790367431543
+lastSeenAt: 1790367431543
+fingerprint: null
+payload:
+  uuid: 28f00ffb-2498-4e69-8e72-b4d2ef0b358b
+  specUuid: ced8d1a8-ea48-4c70-88e9-ab5758ff3a3f
+  sectionId: organisms-nexus-orchestrator-schema-schema
+  sectionTitle: organisms/nexus-orchestrator/schema/schema.json
+  chunkIdx: 49
+  status: complete
+  realPath: organisms/nexus-orchestrator/schema/schema.json
+  fileName: 49-organisms-nexus-orchestrator-schema-schema.md
+  filePath: D:\Backups\Downloads\Nexus_v0_39_241\idearium\data\specs\ced8d1a8-ea48-4c70-88e9-ab5758ff3a3f\49-organisms-nexus-orchestrator-schema-schema-28f00ffb.md
+  agent: ingest
+  agentModel: ingest:drop
+  attempts: 1
+  failureMode: null
+  byteSize: 1423
+  contentHash: 21044a40bf88099fba12b0c184de7f935a5a59a1459c717aee75783277fbc572
+  createdAt: 1790367431337
+  updatedAt: 1790367431369
+  completedAt: 1790367431369

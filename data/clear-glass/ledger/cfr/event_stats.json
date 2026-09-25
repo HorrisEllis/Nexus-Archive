@@ -1,0 +1,78 @@
+{
+  "stats": {
+    "provider.host.starting": {
+      "count": 6,
+      "lastTs": 1790369593325,
+      "intervals": [
+        194590,
+        448917,
+        228548,
+        1291044,
+        95289
+      ],
+      "totalMs": 2258388
+    },
+    "clear-glass.registered": {
+      "count": 4,
+      "lastTs": 1790369498077,
+      "intervals": [
+        643517,
+        228551,
+        1291032
+      ],
+      "totalMs": 2163100
+    },
+    "clear-glass.bgtab.opened": {
+      "count": 4,
+      "lastTs": 1790369498124,
+      "intervals": [
+        643538,
+        228478,
+        1291096
+      ],
+      "totalMs": 2163112
+    },
+    "clear-glass.window.opened": {
+      "count": 4,
+      "lastTs": 1790369498129,
+      "intervals": [
+        643539,
+        228560,
+        1291012
+      ],
+      "totalMs": 2163111
+    },
+    "clear-glass.boot.complete": {
+      "count": 4,
+      "lastTs": 1790369498130,
+      "intervals": [
+        643540,
+        228560,
+        1291012
+      ],
+      "totalMs": 2163112
+    },
+    "provider.host.wake-intro": {
+      "count": 5,
+      "lastTs": 1790369594573,
+      "intervals": [
+        193761,
+        678456,
+        1291321,
+        94196
+      ],
+      "totalMs": 2257734
+    },
+    "clear-glass.providers.booted": {
+      "count": 4,
+      "lastTs": 1790369501215,
+      "intervals": [
+        640647,
+        229057,
+        1291067
+      ],
+      "totalMs": 2160771
+    }
+  },
+  "baseline": {}
+}

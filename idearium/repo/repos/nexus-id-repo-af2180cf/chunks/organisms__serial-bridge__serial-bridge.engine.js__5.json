@@ -1,0 +1,23 @@
+{
+  "id": "chunk-3122523f72e777c3",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/serial-bridge/serial-bridge.engine.js",
+  "range": {
+    "start_line": 87,
+    "end_line": 96
+  },
+  "symbols": [
+    "send"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "386631ee570b02aa53d6021d6319d17f03872bf5f0fe25d89d75378e6b399fee"
+  },
+  "status": "complete",
+  "content": "  async function send(line) {\n    if (!_connected || !_writer) {\n      sBus.publish('org:error', { message: 'Not connected — click CONNECT and choose a port first.' });\n      return;\n    }\n    const encoder = new TextEncoder();\n    await _writer.write(encoder.encode(line + _params.lineEnding));\n    sBus.publish('org:tx', { line });\n  }\n"
+}

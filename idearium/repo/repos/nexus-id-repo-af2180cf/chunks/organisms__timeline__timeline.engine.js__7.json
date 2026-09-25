@@ -1,0 +1,23 @@
+{
+  "id": "chunk-e5ef3a47b33a275c",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/timeline/timeline.engine.js",
+  "range": {
+    "start_line": 39,
+    "end_line": 45
+  },
+  "symbols": [
+    "_stop"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "9ef4bce6d0077bd60024a390398fca8f4442daccc8d35777145e5b889a6b2f2b"
+  },
+  "status": "complete",
+  "content": "  function _stop() {\n    playing=false; clearTimeout(_timer); cursor=0; cursorAtPlay=0;\n    gBus.publish('seq:stop',{});\n    sBus.publish('org:state_sync',{playing:false,position_sec:0});\n    _emitPH();\n  }\n"
+}

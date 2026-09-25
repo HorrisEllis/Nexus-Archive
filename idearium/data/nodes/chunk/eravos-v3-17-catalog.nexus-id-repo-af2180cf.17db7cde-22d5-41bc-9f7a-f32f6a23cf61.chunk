@@ -1,0 +1,40 @@
+envelope: 1
+uuid: nexus-export-chunk-eravos-v3-17-catalog.nexus-id-repo-af2180cf.17db7cde-22d5-41bc-9f7a-f32f6a23cf61
+type: chunk
+id: eravos-v3-17-catalog.nexus-id-repo-af2180cf.17db7cde-22d5-41bc-9f7a-f32f6a23cf61
+context: idearium spec-engine chunk of spec ced8d1a8-ea48-4c70-88e9-ab5758ff3a3f
+intent: null
+summary: manifest (complete)
+system: idearium
+tags:
+  - spec:ced8d1a8-ea48-4c70-88e9-ab5758ff3a3f
+  - status:complete
+  - section:manifest
+  - specName:eravos-v3-17-catalog
+  - agent:ingest
+  - repo:nexus-id-repo-af2180cf
+exported_at: 1790367431572
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1790367431572
+lastSeenAt: 1790367431572
+fingerprint: null
+payload:
+  uuid: 17db7cde-22d5-41bc-9f7a-f32f6a23cf61
+  specUuid: ced8d1a8-ea48-4c70-88e9-ab5758ff3a3f
+  sectionId: manifest
+  sectionTitle: manifest.json
+  chunkIdx: 76
+  status: complete
+  realPath: manifest.json
+  fileName: 76-manifest.md
+  filePath: D:\Backups\Downloads\Nexus_v0_39_241\idearium\data\specs\ced8d1a8-ea48-4c70-88e9-ab5758ff3a3f\76-manifest-17db7cde.md
+  agent: ingest
+  agentModel: ingest:drop
+  attempts: 1
+  failureMode: null
+  byteSize: 6644
+  contentHash: d90e3e8f413c5176e390ac1246bf60898de995b715cc29073474839013d3ba05
+  createdAt: 1790367431337
+  updatedAt: 1790367431379
+  completedAt: 1790367431379

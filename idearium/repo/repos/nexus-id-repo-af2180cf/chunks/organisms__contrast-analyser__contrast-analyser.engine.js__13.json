@@ -1,0 +1,23 @@
+{
+  "id": "chunk-6962a5ed9d21826c",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/contrast-analyser/contrast-analyser.engine.js",
+  "range": {
+    "start_line": 207,
+    "end_line": 214
+  },
+  "symbols": [
+    "_bootAnalysers"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "ac656583436bb21bc39f1eeefa533f4ac42e5be225522824de2752d4712fa47d"
+  },
+  "status": "complete",
+  "content": "  function _bootAnalysers() {\n    const AC = audio.boot();\n    if (!analyserA) {\n      analyserA = AC.createAnalyser(); analyserA.fftSize = fftSize;\n      analyserB = AC.createAnalyser(); analyserB.fftSize = fftSize;\n    }\n  }\n"
+}

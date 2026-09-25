@@ -1,0 +1,23 @@
+{
+  "id": "chunk-457eb818c636fa8d",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/nexus-cortex/nexus-cortex.engine.js",
+  "range": {
+    "start_line": 14,
+    "end_line": 33
+  },
+  "symbols": [
+    "mount"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "aea842d895cc8aeed958716fc9b620646438047cda0e2db86b5a2709e2b9c16d"
+  },
+  "status": "complete",
+  "content": "function mount(instanceId, sBus, audio, config = {}) {\n  return NexusNodeCore.mount(instanceId, sBus, {\n    key: 'cortex',\n    label: 'NEXUS_CORTEX',\n    icon: '🧠',\n    accent: '#00ff88',\n    base: 'http://127.0.0.1:3748',\n    statusPath: '/api/status',\n    snapshotsPath: '/snapshots',\n    orchestratorBase: 'http://127.0.0.1:9000',\n    diagnosePath: '/diagnose',\n    idLink: 'http://127.0.0.1:4800',\n    isOrchestrator: false,\n    ...config,\n  });\n}\n\nreturn { mount };\n})();\n"
+}

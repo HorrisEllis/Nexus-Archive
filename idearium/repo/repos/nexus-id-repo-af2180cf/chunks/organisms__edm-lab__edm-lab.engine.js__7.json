@@ -1,0 +1,23 @@
+{
+  "id": "chunk-5250a0b2bf6ccd49",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/edm-lab/edm-lab.engine.js",
+  "range": {
+    "start_line": 96,
+    "end_line": 117
+  },
+  "symbols": [
+    "impact"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "1fc50afc7636f7fe17676600f30e5ecf4c200b1611321431b3d770e50898c92b"
+  },
+  "status": "complete",
+  "content": "  function impact(t) {\n    /* Hard filter close → snap open on the drop */\n    const { filt } = _nodes; if (!filt) return;\n    filt.frequency.setValueAtTime(80, t);\n    filt.frequency.exponentialRampToValueAtTime(_params.cutoff * 3, t + 0.04);\n    filt.frequency.exponentialRampToValueAtTime(_params.cutoff, t + 0.4);\n  }\n\n  return { start, stop, set, impact, get filterPos() { return _filterPos; }, get params() { return _params; }, get running() { return _running; } };\n}\n\n/* ═══════════════════════════════════════════════════════\n   RHYTHM ENGINE\n   Internal clock. Density map: 8 kit pieces × 32 positions.\n   Each cell has a density value 0–1.\n   On each 16th note, fires if Math.random() < density[track][step].\n   This produces probabilistic rhythm, not deterministic steps.\n   Publishes beat events for UI cursor.\n═══════════════════════════════════════════════════════ */\nconst KIT_NAMES = ['KICK','SNARE','GALLOP','GALLOP2','OPEN HAT','CLAP','808','RISER'];\nconst KIT_COLORS = ['#00ff88','#00ff88','#00d4ff','#00d4ff','#6a88a8','#00ff88','#ff2266','#aa44ff'];\n"
+}

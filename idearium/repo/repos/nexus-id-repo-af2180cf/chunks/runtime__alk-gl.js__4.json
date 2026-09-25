@@ -1,0 +1,23 @@
+{
+  "id": "chunk-532095b9a380ded3",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "runtime/alk-gl.js",
+  "range": {
+    "start_line": 470,
+    "end_line": 528
+  },
+  "symbols": [
+    "au"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "246cd2120643e462ed601bec6af571bf03ced05fce966a85bd1278537dca82d8"
+  },
+  "status": "complete",
+  "content": "    const au = (p,n) => gl.getUniformLocation(p,n);\n    this._au = {\n      current:    au(ap,'u_current'),    history:    au(ap,'u_history'),\n      decay:      au(ap,'u_decay'),      weight:     au(ap,'u_weight'),\n      faceCenter: au(ap,'u_faceCenter'), faceRadius: au(ap,'u_faceRadius'),\n    };\n    this._cu2 = {\n      accum:    au(cp,'u_accum'),    exposure: au(cp,'u_exposure'),\n      gamma:    au(cp,'u_gamma'),    bloom:    au(cp,'u_bloom'),\n    };\n    // Accumulation VAO\n    this._accumVAO = gl.createVertexArray();\n    gl.bindVertexArray(this._accumVAO);\n    const b2 = gl.createBuffer();\n    gl.bindBuffer(gl.ARRAY_BUFFER,b2);\n    gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);\n    const loc2 = gl.getAttribLocation(this._accumProg,'a_quad');\n    gl.enableVertexAttribArray(loc2);\n    gl.vertexAttribPointer(loc2,2,gl.FLOAT,false,0,0);\n    // Also bind for comp pass\n    this._compVAO = gl.createVertexArray();\n    gl.bindVertexArray(this._compVAO);\n    const b3 = gl.createBuffer();\n    gl.bindBuffer(gl.ARRAY_BUFFER,b3);\n    gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);\n    const loc3 = gl.getAttribLocation(this._compProg2,'a_quad');\n    gl.enableVertexAttribArray(loc3);\n    gl.vertexAttribPointer(loc3,2,gl.FLOAT,false,0,0);\n    gl.bindVertexArray(null);\n  }\n\n  _mkScreenTex() {\n    const gl = this._gl;\n    const W = this._canvas.width || 640, H = this._canvas.height || 480;\n    const t = gl.createTexture();\n    gl.bindTexture(gl.TEXTURE_2D,t);\n    gl.texImage2D(gl.TEXTURE_2D,0,this._accumInternalFormat,W,H,0,gl.RGBA,this._accumType,null);\n    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);\n    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);\n    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);\n    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);\n    return t;\n  }\n\n  _mkFBO(tex) {\n    const gl = this._gl;\n    const fbo = gl.createFramebuffer();\n    gl.bindFramebuffer(gl.FRAMEBUFFER,fbo);\n    gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,tex,0);\n    gl.bindFramebuffer(gl.FRAMEBUFFER,null);\n    return fbo;\n  }\n\n  _upload() {\n    const gl=this._gl,N=this._texN,W=this._texW,H=this._texH;\n    const BZ=this._boundZ*3*.9;\n    const dXY=new Float32Array(N*4),dZ=new Float32Array(N*4);\n    // Box-Muller for Gaussian initialization — particles spawn near face zone\n    // sigma=2.5 so 95% within ±5 world units, centered at (0,0)"
+}

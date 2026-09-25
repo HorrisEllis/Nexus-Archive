@@ -1,0 +1,23 @@
+{
+  "id": "chunk-91155f6b9c518292",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/contrast-analyser/contrast-analyser.engine.js",
+  "range": {
+    "start_line": 248,
+    "end_line": 273
+  },
+  "symbols": [
+    "_runAnalysis"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "2bd3a35ecdf30aeaebf2552e3169281fe403e33c2970e0b41de13d98590b90fc"
+  },
+  "status": "complete",
+  "content": "  function _runAnalysis() {\n    if (!slots.A.buffer && !slots.B.buffer) return;\n\n    const peaksA      = slots.A.peaks;\n    const peaksB      = slots.B.peaks;\n    const transientsA = slots.A.transients;\n    const transientsB = slots.B.transients;\n\n    /* Displacement always uses current bpm */\n    const displacement = (transientsA.length && transientsB.length)\n      ? displacementScore(transientsA, transientsB, bpm)\n      : 0;\n\n    const dynContrast = (peaksA.length && peaksB.length)\n      ? dynamicContrastScore(peaksA, peaksB)\n      : 0;\n\n    /* Clash needs live FFT — approximate from buffer FFT if not live */\n    let clash = 0;\n    if (slots.A.buffer && slots.B.buffer) {\n      /* Approximate: take centre-point FFT from each buffer */\n      const fftA = _bufferFFT(slots.A.buffer, fftSize);\n      const fftB = _bufferFFT(slots.B.buffer, fftSize);\n      clash = clashScore(fftA, fftB);\n    }\n"
+}

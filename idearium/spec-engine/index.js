@@ -1238,7 +1238,66 @@ function _buildFilePrompt(manifest, chunk, systemContext = '') {
   ].filter(Boolean).join('\n');
 }
 
+// ── Build prompt for a MANIFEST-FIRST component chunk — I5, minimal input ─────
+// §MANIFEST-FIRST 2026-09-25 — spec-engine-manifest-first-phasemap v0.1.0.
+// _buildFilePrompt (above) hands an agent up to 12 full files / 24000 chars
+// of everything already built in lower layers — real, but the opposite of
+// I5 ("a chunk's context = its own manifest entry + its neighbours'
+// schemas; nothing else"). That's fine for a layer-gated file-tree spec
+// where "what's below" genuinely isn't known in advance. It is NOT fine
+// once a manifest exists (P1, before any chunk dispatches): at that point
+// every component's consumes/emits SCHEMAS are already on disk, so a
+// neighbour's full source is never the right thing to spend context on —
+// its schema is. This function is picked by buildChunkPrompt() whenever
+// the chunk carries a manifestEntry (set by createComponentManifestSpec /
+// P4 CHUNKS dispatch — see the manifest domain in genesis.spec), and is
+// additive: _buildFilePrompt and the section-based path below are both
+// unchanged for every spec that isn't manifest-first yet.
+function _buildManifestEntryPrompt(manifest, chunk, systemContext = '') {
+  const entry = chunk.manifestEntry;
+  const byId  = new Map((manifest.componentManifest || []).map(e => [e.id, e]));
+
+  // I5: neighbours are ONLY the ids this entry itself declares in depends[]
+  // — not "everything built so far," not "everything in this compartment."
+  // Only the SHAPE crosses the boundary (signature/schema), never the
+  // neighbour's own file content, intent prose, or test bodies.
+  const neighbourSchemas = (entry.depends || []).map(depId => {
+    const dep = byId.get(depId);
+    if (!dep) return `- ${depId}: (no manifest entry found — wire-check should have caught this before dispatch)`;
+    const consumes = (dep.consumes || []).map(c => `    consumes ${c.signature}: ${JSON.stringify(c.schema)}`);
+    const emits    = (dep.emits    || []).map(e => `    emits ${e.event}${e.residue ? ' (residue)' : ''}: ${JSON.stringify(e.schema)}`);
+    return [`- ${depId} (${dep.file}):`, ...consumes, ...emits].join('\n');
+  }).join('\n');
+
+  return [
+    `Write the complete file \`${entry.file}\` for the project "${manifest.name}".`,
+    ``,
+    `Component: ${entry.id}`,
+    `Intent (the ONE thing this component does — build nothing beyond it): ${entry.intent}`,
+    ``,
+    systemContext ? `SYSTEM STATE:\n${systemContext}\n` : '',
+    `YOUR OWN MANIFEST ENTRY (this is your full contract — implement exactly this, nothing implied beyond it):`,
+    `  consumes: ${JSON.stringify(entry.consumes || [], null, 2)}`,
+    `  emits:    ${JSON.stringify(entry.emits    || [], null, 2)}`,
+    `  data:     ${JSON.stringify(entry.data || { reads: [], writes: [] })}`,
+    `  cli:      ${entry.cli || 'null — no CLI surface for this component'}`,
+    `  tests:    ${JSON.stringify(entry.tests || [], null, 2)}`,
+    ``,
+    entry.depends && entry.depends.length
+      ? `NEIGHBOUR SCHEMAS — the shape you may call/consume/emit against for each id in your own depends[]. This is a schema, not source: do not guess at how a neighbour is implemented internally, and do not ask for more than its signature shape.\n${neighbourSchemas}\n`
+      : `NEIGHBOURS: none — this entry's depends[] is empty.\n`,
+    `Rules:`,
+    `- Reach every neighbour by its component_id through registry/component-router.js. Never write an import statement to another component/<file>.js.`,
+    `- Every event you emit must match one of your declared emits[] entries exactly, including residue:true/false.`,
+    `- Every event/command you consume must match one of your declared consumes[] entries exactly.`,
+    `- Touch only the directories in data.reads / data.writes above.`,
+    `- Write the contract tests from tests[] as real, runnable tests in the same file or its paired test file — not a description of what a test would check.`,
+    `- Output ONLY the file's full content in one fenced code block. Real, working code — no placeholders, no TODO stubs, no "rest of implementation" comments.`,
+  ].filter(Boolean).join('\n');
+}
+
 export function buildChunkPrompt(manifest, chunk, systemContext = '') {
+  if (chunk.manifestEntry) return _buildManifestEntryPrompt(manifest, chunk, systemContext);
   if (chunk.file && chunk.realPath) return _buildFilePrompt(manifest, chunk, systemContext);
   const completedChunks = manifest.chunks
     .filter(c => c.status === CHUNK_STATES.COMPLETE && c.chunkIdx < chunk.chunkIdx)

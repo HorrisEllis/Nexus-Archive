@@ -75,7 +75,9 @@ async function main() {
     // _tryGuardian's own catch returns null on any exception (a timeout included) —
     // this IS the real, existing behavior; this test proves timeoutMs really
     // governed how long it waited before that null, not that null is wrong.
-    assert.strictEqual(r, null, 'a real request that outlives its own explicit, short timeoutMs must time out — proving the value is actually used');
+    // 0.39.244 — _tryGuardian now returns { ok:false, error } instead of a bare null, so the
+    // reason reaches the caller ("guardian unavailable or returned no real response" said nothing).
+    assert.ok(r && r.ok === false && /time(d)? ?out/i.test(r.error || ''), 'a real request that outlives its own explicit, short timeoutMs must time out — proving the value is actually used; got ' + JSON.stringify(r));
     slowServer.close();
   });
 

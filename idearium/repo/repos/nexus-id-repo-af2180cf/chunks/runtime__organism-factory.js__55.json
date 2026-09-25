@@ -1,0 +1,23 @@
+{
+  "id": "chunk-4e7a222dedcd64a7",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "runtime/organism-factory.js",
+  "range": {
+    "start_line": 1342,
+    "end_line": 1342
+  },
+  "symbols": [
+    "rateSlider"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "283130485957cd7bbfaf6d890449888963b7f45e4439144f0a7610dbeea26753"
+  },
+  "status": "complete",
+  "content": "    const rateSlider  = mkParamRow('LFO Hz', 0.1, 16,  4,   0.1, 'Hz','#00d4ff', v => _pub('ui:bass-param', { key:'lfoRate',  val:v }));"
+}

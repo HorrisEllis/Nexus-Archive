@@ -159,7 +159,7 @@ function createNCPMessageHandler(deps) {
           // complete). Checked first: zero real strict-equality readers
           // of the old string anywhere in the codebase, safe rename.
           updateJob(jobId, { status: 'responding', lastChunk: Date.now() });
-          bus.emit('guardian.job.chunk', { jobId, text, full, provider });
+          bus.emit('guardian.job.chunk', { jobId, text, full, provider, anchor: msg.anchor || null, mutations: msg.mutations ?? null });
           cockpitBroadcast({ type: 'job.chunk', jobId, text, full, provider, ts: Date.now() });
 
           // ── Stream to cortex: batch before writing ────────────────────────
@@ -574,7 +574,8 @@ function createNCPMessageHandler(deps) {
       // §SUBMIT-EVIDENCE 2026-09-23 — stage reports from the page, so a run's
       // log shows WHERE a job stopped rather than going quiet after dispatch.
       case 'GUARDIAN_PROGRESS':
-        bus.emit('guardian.job.progress', { jobId: msg.jobId, stage: msg.stage, how: msg.how, chatUrl: msg.chatUrl });
+        // 0.39.244 — anchor/mutations/generating: the page's own evidence (the node read, how much it changed)
+        bus.emit('guardian.job.progress', { jobId: msg.jobId, stage: msg.stage, how: msg.how, chatUrl: msg.chatUrl, anchor: msg.anchor || null, mutations: msg.mutations ?? null, generating: msg.generating ?? null });
         break;
 
       case 'GUARDIAN_ERROR':

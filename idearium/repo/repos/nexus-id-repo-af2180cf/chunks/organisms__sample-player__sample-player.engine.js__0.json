@@ -1,0 +1,21 @@
+{
+  "id": "chunk-494a006e0856fba5",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/sample-player/sample-player.engine.js",
+  "range": {
+    "start_line": 1,
+    "end_line": 6
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "375e051b354f0d83e2b639fc9adb887bfb10c6ec968c00364b604242a16cc04f"
+  },
+  "status": "complete",
+  "content": "/* ═══════════════════════════════════════════════════════════\n   ORGANISM: SAMPLE PLAYER  v3.1.0\n   ═══════════════════════════════════════════════════════════ */\nwindow.SamplePlayerOrganism = (() => {\n'use strict';\n"
+}

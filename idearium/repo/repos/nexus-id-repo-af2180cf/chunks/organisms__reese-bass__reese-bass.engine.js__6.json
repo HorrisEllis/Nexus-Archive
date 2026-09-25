@@ -1,0 +1,23 @@
+{
+  "id": "chunk-ab18673c9904db6b",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/reese-bass/reese-bass.engine.js",
+  "range": {
+    "start_line": 114,
+    "end_line": 149
+  },
+  "symbols": [
+    "_syncUI"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "3465c0223501ab73a8683ae09ce4948819add0d6da179f8c9a8117f6a21b23e0"
+  },
+  "status": "complete",
+  "content": "  function _syncUI() {\n    sBus.publish('org:state_sync', { active: _params.active, params: { ..._params } });\n  }\n\n  const _unsubs = [\n    gBus.subscribe('ui:reese_toggle:' + instanceId, () => _params.active ? _stop() : _start()),\n    gBus.subscribe('ui:reese_trigger:' + instanceId, ({ vel }) => _trigger(vel || 1)),\n    gBus.subscribe('ui:config_change:' + instanceId, ({ key, value }) => _updateParam(key, value)),\n    gBus.subscribe('pad:trigger', ({ sound }) => { if (sound === 'reese') _trigger(0.88); }),\n  ];\n\n  _syncUI();\n\n  KERNEL.registry.register({\n    instanceId,\n    id:       'eravos.reese-bass',\n    label:    'Reese Bass',\n    provides: ['capability.audio_out'],\n    requires: ['capability.audio_context'],\n    permissions: ['audio_out', 'bus_publish', 'bus_subscribe'],\n    hooks: [\n      { hook_id: 'reese.hook.trig_in',   direction: 'in',  event_type: 'pad:trigger',  contract_version: '1.0.0' },\n      { hook_id: 'reese.hook.audio_out', direction: 'out', event_type: 'audio:signal', contract_version: '1.0.0' },\n    ],\n  });\n\n  return {\n    unmount() { _stop(); _unsubs.forEach(u => u()); KERNEL.registry.unregister(instanceId); },\n    start: _start, stop: _stop, trigger: _trigger,\n    get params() { return { ..._params }; },\n  };\n}\n\nreturn { mount };\n})();\n"
+}

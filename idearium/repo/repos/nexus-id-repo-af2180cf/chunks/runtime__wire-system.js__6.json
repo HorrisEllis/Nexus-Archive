@@ -1,0 +1,23 @@
+{
+  "id": "chunk-7fe4cf0cf16e40ed",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "runtime/wire-system.js",
+  "range": {
+    "start_line": 141,
+    "end_line": 162
+  },
+  "symbols": [
+    "_onDragEnd"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "d05827c2cfe02fc495c064186b45fcfc76bddcc6c965c2c960f2075904141896"
+  },
+  "status": "complete",
+  "content": "function _onDragEnd(e) {\n  if (!_dragging) return;\n  _clearHighlights();\n\n  /* Check if we're over a compatible input */\n  const target = document.elementFromPoint(e.clientX, e.clientY);\n  const hookEl = target?.closest('[data-hook-input]');\n  if (hookEl) {\n    const toInstanceId = hookEl.dataset.instanceId;\n    const toHookId     = hookEl.dataset.hookId;\n    const toEventType  = hookEl.dataset.eventType;\n    const { fromInstanceId, fromHook } = _dragging;\n\n    /* Draw permanent wire */\n    _drawWire(fromInstanceId, fromHook.hook_id, fromHook.event_type,\n              toInstanceId,   toHookId,         toEventType);\n  }\n\n  _dragging.path.remove();\n  _dragging = null;\n}\n"
+}

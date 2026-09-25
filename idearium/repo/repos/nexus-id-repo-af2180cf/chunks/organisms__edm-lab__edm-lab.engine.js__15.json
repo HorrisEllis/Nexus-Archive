@@ -1,0 +1,23 @@
+{
+  "id": "chunk-051a683f43d59087",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/edm-lab/edm-lab.engine.js",
+  "range": {
+    "start_line": 205,
+    "end_line": 208
+  },
+  "symbols": [
+    "setDensity"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "bf8919816f9655fcf63467733c8e2a913851d36488071b545f55310250de4f49"
+  },
+  "status": "complete",
+  "content": "  function setDensity(track, step, val) {\n    if (density[track]) density[track][step] = Math.max(0, Math.min(1, val));\n  }\n"
+}

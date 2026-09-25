@@ -1,0 +1,23 @@
+{
+  "id": "chunk-e086bc0cfadd9c0d",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "runtime/wire-system.js",
+  "range": {
+    "start_line": 40,
+    "end_line": 47
+  },
+  "symbols": [
+    "_attachContextMenu"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "5c8c4426d89eba07cd6b84be59eccd37621844f5bb31e8e1b2e40cd1428fb8c4"
+  },
+  "status": "complete",
+  "content": "function _attachContextMenu(win, instanceId) {\n  win.addEventListener('contextmenu', e => {\n    e.preventDefault();\n    e.stopPropagation();\n    _showHookMenu(instanceId, e.clientX, e.clientY);\n  });\n}\n"
+}

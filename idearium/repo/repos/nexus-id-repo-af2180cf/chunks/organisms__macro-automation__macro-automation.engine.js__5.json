@@ -1,0 +1,23 @@
+{
+  "id": "chunk-c5ee8f0d383e979c",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/macro-automation/macro-automation.engine.js",
+  "range": {
+    "start_line": 52,
+    "end_line": 56
+  },
+  "symbols": [
+    "stopRecording"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "ffaf8e375c2cd960f4714a74b27980bd613ab8d00c3a2a976fbb13737007e454"
+  },
+  "status": "complete",
+  "content": "  function stopRecording() {\n    _recording = false;\n    sBus.publish('org:state_sync', { recording: false, playing: _playing, count: _events.length });\n  }\n"
+}

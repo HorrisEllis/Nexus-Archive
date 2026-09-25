@@ -1,0 +1,23 @@
+{
+  "id": "chunk-36e01a784a4bb6ed",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "runtime/organism-factory.js",
+  "range": {
+    "start_line": 109,
+    "end_line": 113
+  },
+  "symbols": [
+    "draw"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "0b4db291b80f66bf26087deac3f4f6e25822266be4f9320d9602162b16e29f6d"
+  },
+  "status": "complete",
+  "content": "  function draw(){ requestAnimationFrame(draw); ctx.clearRect(0,0,200,height); ctx.strokeStyle=color; ctx.lineWidth=1.5; ctx.beginPath(); for(let x=0;x<200;x++){const y=height/2+Math.sin(x*.08+ph)*Math.sin(x*.033+ph*.5)*(height*.3); x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);} ctx.stroke(); ph+=.04; }\n  draw();\n  return scope;\n}\n"
+}

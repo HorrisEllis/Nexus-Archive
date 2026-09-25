@@ -1,0 +1,23 @@
+{
+  "id": "chunk-a4629b7f8cf33b93",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/pads/pads.engine.js",
+  "range": {
+    "start_line": 76,
+    "end_line": 88
+  },
+  "symbols": [
+    "_fire"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "c8fb582ca656a8cc887d66c8bad62b2e46a9b3f17e5317b1973e0729f03975cc"
+  },
+  "status": "complete",
+  "content": "  function _fire(index, velocity) {\n    if (!audio.AC) return;\n    const pad = banks[curBank].pads[index];\n    if (!pad) return;\n    const voice = VOICES[pad.sound];\n    if (voice) {\n      const t = audio.AC.currentTime + 0.01;\n      voice(t, velocity * volume, { pitch: Math.pow(2, pitch/12), decay }, audio);\n    }\n    gBus.publish('pad:trigger', { index, sound: pad.sound, velocity, bank: curBank, timestamp: audio.AC?.currentTime });\n    sBus.publish('org:pad_lit', { index, color: pad.color, duration_ms: 130 });\n  }\n"
+}

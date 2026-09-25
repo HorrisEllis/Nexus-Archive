@@ -1,0 +1,47 @@
+envelope: 1
+uuid: nexus-export-contract-af2756bd-8655-4a9d-9113-42e53f0f174a
+type: contract
+id: af2756bd-8655-4a9d-9113-42e53f0f174a
+context: null
+intent: translate.utl
+summary: null
+system: null
+tags: []
+exported_at: 1790368220967
+source: architect
+occurrences: 1
+firstSeenAt: 1790368220967
+lastSeenAt: 1790368220967
+fingerprint: null
+payload:
+  uuid: af2756bd-8655-4a9d-9113-42e53f0f174a
+  status: queued
+  intention: translate.utl
+  dir: null
+  language: null
+  stage: queued
+  system: null
+  source: architect
+  sourceDropId: null
+  boundary:
+    key: architect:translate.utl
+    primitive: architect/service.js POST /api/translate/utl
+    invariants: []
+    principles:
+      - §1.2
+      - §5.2
+  file: null
+  title: translate.utl
+  forAgent: null
+  contract:
+    content: translate.utl:dangling-hook hook 'nexus.tests.modules.error-capture.test.import' is declared a
+    title: translate.utl
+  dependsOn: []
+  onFail:
+    action: retry
+    maxRetries: 2
+  retryCount: 0
+  compartmentId: null
+  verdict: null
+  createdAt: 1790368220967
+  updatedAt: 1790368220967

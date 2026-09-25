@@ -174,7 +174,12 @@ async function reconcileInFlightChunks(se) {
 // caller, matches every other real stream-subscriber's own failure mode
 // in this codebase (copilot's _connectGuardianStream/_connectCortexStream).
 let _connected = false;
-function connectGuardianStream(se) {
+// §FEED 0.39.244 — opts.onFeed(ev): every guardian.job.* frame for a repo agent
+// (data.agentId 'repo-<uuid>', now carried by guardian's /events — see its _feedFrame),
+// for the Agent tab's live feed. Observation only; the chunk resolution below is unchanged.
+let _onFeed = null;
+function connectGuardianStream(se, opts = {}) {
+  if (typeof opts.onFeed === 'function') _onFeed = opts.onFeed;
   if (_connected) return; // idempotent — a boot-phase retry must not open a second connection
   try {
     const req = http.request({ hostname: '127.0.0.1', port: GUARDIAN_PORT, path: '/events', headers: { Accept: 'text/event-stream' } }, (res) => {
@@ -191,6 +196,9 @@ function connectGuardianStream(se) {
           if (!line) continue;
           let ev;
           try { ev = JSON.parse(line.slice(5)); } catch { continue; }
+          if (_onFeed && typeof ev?.type === 'string' && ev.type.startsWith('guardian.job.') && typeof ev.data?.agentId === 'string' && ev.data.agentId.startsWith('repo-')) {
+            try { _onFeed(ev); } catch (e) { console.warn(`[idearium/guardian-stream] feed relay failed: ${e.message}`); }
+          }
           if (ev?.type !== 'guardian.job.complete' && ev?.type !== 'guardian.job.error') continue;
           _handleGuardianEvent(se, ev).catch(e => console.warn(`[idearium/guardian-stream] event handling failed: ${e.message}`));
         }

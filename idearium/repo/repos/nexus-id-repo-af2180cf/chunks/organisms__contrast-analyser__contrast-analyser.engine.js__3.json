@@ -1,0 +1,23 @@
+{
+  "id": "chunk-4113e653224799a8",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/contrast-analyser/contrast-analyser.engine.js",
+  "range": {
+    "start_line": 60,
+    "end_line": 83
+  },
+  "symbols": [
+    "times"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "225ed9f6e87063f56ad8fea1841b27ab87b5e6e3915c7bb96cc6f281cccbf1e1"
+  },
+  "status": "complete",
+  "content": "  const times = transients.map(t => t.time_sec);\n  const gaps  = [];\n  for (let i = 1; i < times.length; i++) gaps.push(times[i] - times[i - 1]);\n\n  /* Find most common gap */\n  const buckets = {};\n  const bpmRes  = 0.02; /* 20ms resolution */\n  gaps.forEach(g => {\n    const key = Math.round(g / bpmRes) * bpmRes;\n    buckets[key] = (buckets[key] || 0) + 1;\n  });\n\n  let bestGap = 0, bestCount = 0;\n  Object.entries(buckets).forEach(([k, v]) => {\n    if (v > bestCount) { bestCount = v; bestGap = +k; }\n  });\n\n  if (!bestGap) return null;\n  const bpm = Math.round(60 / bestGap);\n  const confidence = Math.min(1, bestCount / gaps.length);\n  return { bpm: Math.max(60, Math.min(220, bpm)), confidence };\n}\n\n/* ── RMS peaks (for dynamic waveform) ─────────────────── */"
+}

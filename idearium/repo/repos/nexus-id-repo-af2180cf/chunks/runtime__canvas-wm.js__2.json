@@ -1,0 +1,23 @@
+{
+  "id": "chunk-46ac4ec217373c61",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "runtime/canvas-wm.js",
+  "range": {
+    "start_line": 18,
+    "end_line": 19
+  },
+  "symbols": [
+    "snap"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "728d7b7a9aa11e36eb87576f5f6306914948bead692a53d4fd15310e2d6730d2"
+  },
+  "status": "complete",
+  "content": "function snap(v) { return Math.round(v / SNAP) * SNAP; }\n"
+}

@@ -1,0 +1,23 @@
+{
+  "id": "chunk-fc7a87ffca8ea0c2",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "runtime/organism-factory.js",
+  "range": {
+    "start_line": 2959,
+    "end_line": 2960
+  },
+  "symbols": [
+    "redraw"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "fc00c2206b7ac56edfedbb41de3e903907769a25e4ec96ee18b74d8769921672"
+  },
+  "status": "complete",
+  "content": "    function redraw(){ if(engine) engine.draw(canvas); }\n"
+}

@@ -1,0 +1,23 @@
+{
+  "id": "chunk-a9c8a052e0639da1",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/pads/pads.engine.js",
+  "range": {
+    "start_line": 89,
+    "end_line": 94
+  },
+  "symbols": [
+    "_setBank"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "293500ddaa0e8bacb8ff9823461e2e785689e5dc7712f4432417633eda2b8dad"
+  },
+  "status": "complete",
+  "content": "  function _setBank(bankIdx) {\n    curBank = Math.max(0, Math.min(banks.length - 1, bankIdx));\n    gBus.publish('pad:bank-change', { bank: curBank, pads: banks[curBank].pads });\n    _syncUI();\n  }\n"
+}

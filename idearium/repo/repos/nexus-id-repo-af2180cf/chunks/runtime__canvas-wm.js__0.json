@@ -1,0 +1,21 @@
+{
+  "id": "chunk-bd0d56d6e6a2c4a6",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "runtime/canvas-wm.js",
+  "range": {
+    "start_line": 1,
+    "end_line": 13
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "ce323465d3d83813b527b5e057ca706a172d20a94ad86b054ca46e8c2f990448"
+  },
+  "status": "complete",
+  "content": "/* ═══════════════════════════════════════════════════════════\n   ERAVOS CANVAS WM  v3.0.0\n   Window manager for the canvas space.\n   Drag · resize · snap-to-8px · collapse · z-order · close\n   ═══════════════════════════════════════════════════════════ */\n\nwindow.CanvasWM = (() => {\n'use strict';\n\nlet _canvas = null;\nlet _zTop   = 100;\nconst SNAP  = 8;\n"
+}

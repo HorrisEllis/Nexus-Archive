@@ -1,0 +1,23 @@
+{
+  "id": "chunk-5fd79f1e131108e0",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "runtime/organism-factory.js",
+  "range": {
+    "start_line": 80,
+    "end_line": 98
+  },
+  "symbols": [
+    "mkSelect"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "9af07df926062b4dc469943263c1220b96df94a0c659a6f057ce46a57d0948eb"
+  },
+  "status": "complete",
+  "content": "function mkSelect(parent, opts) {\n  const { label, options, value, onChange, eventKey, pub } = opts;\n  const _pubFn = pub || _pub;\n  const row = document.createElement('div'); row.style.cssText='display:flex;align-items:center;gap:6px;';\n  const lbl = document.createElement('div'); lbl.style.cssText='font-family:var(--mono);font-size:7px;letter-spacing:.09em;color:var(--dim2);min-width:34px;flex-shrink:0;'; lbl.textContent=label;\n  const sel = document.createElement('select'); sel.style.cssText='flex:1;background:var(--bg3);border:1px solid var(--b2);border-radius:3px;color:var(--white);font-family:var(--mono);font-size:8px;padding:3px 5px;outline:none;cursor:pointer;';\n  options.forEach(o => {\n    const opt = document.createElement('option'); opt.value=o.v||o; opt.textContent=o.l||o;\n    if((o.v||o)===value) opt.selected=true; sel.appendChild(opt);\n  });\n  sel.addEventListener('change', () => {\n    if(onChange) onChange(sel.value);\n    if(eventKey) _pubFn('ui:config_change',{key:eventKey,value:sel.value});\n  });\n  row.appendChild(lbl); row.appendChild(sel);\n  parent.appendChild(row);\n  return sel;\n}\n"
+}

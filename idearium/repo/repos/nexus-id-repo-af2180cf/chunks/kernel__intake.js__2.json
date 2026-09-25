@@ -1,0 +1,23 @@
+{
+  "id": "chunk-4c15b29399032a46",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "kernel/intake.js",
+  "range": {
+    "start_line": 42,
+    "end_line": 47
+  },
+  "symbols": [
+    "_matchMagic"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "6692e416a73c2564bbadcf5cde44bfa24c42d5fbea8b66f8bb34b6f83a5e94b1"
+  },
+  "status": "complete",
+  "content": "function _matchMagic(bytes, magic) {\n  if (!magic || !bytes || bytes.byteLength < magic.length) return false;\n  const v = new Uint8Array(bytes);\n  return magic.every((b, i) => v[i] === b);\n}\n"
+}

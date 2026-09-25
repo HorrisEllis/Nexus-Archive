@@ -1,0 +1,23 @@
+{
+  "id": "chunk-76be1bffdb73f277",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "runtime/organism-factory.js",
+  "range": {
+    "start_line": 2051,
+    "end_line": 2104
+  },
+  "symbols": [
+    "drawBars"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "61d9d3df1b3c9e749bd637679a74dcd74045a349bf7ed1962217a981f34ff12a"
+  },
+  "status": "complete",
+  "content": "      function drawBars(peaks, color, offset) {\n        if (!peaks.length) return;\n        const BAR_W = W / peaks.length;\n        peaks.forEach((amp, i) => {\n          const x = i * BAR_W + offset;\n          const h = Math.max(1, amp * (H - 20));\n          const y = H - 20 - h;\n          /* Bar segments with LED style */\n          const segs = Math.ceil(h / 4);\n          for (let s = 0; s < segs; s++) {\n            const sy = H - 20 - s * 4 - 3;\n            const alpha = 0.4 + (s / segs) * 0.5;\n            ctx.fillStyle = color + Math.round(alpha * 255).toString(16).padStart(2,'0');\n            ctx.fillRect(x, sy, BAR_W * 0.8, 2.5);\n          }\n          /* Peak cap */\n          ctx.fillStyle = color;\n          ctx.fillRect(x, y, BAR_W * 0.8, 1.5);\n        });\n      }\n\n      /* Clash region first (white bg) */\n      if (pA.length && pB.length) {\n        const n = Math.min(pA.length, pB.length);\n        const BAR_W = W / n;\n        for (let i = 0; i < n; i++) {\n          const overlap = Math.min(pA[i]||0, pB[i]||0);\n          if (overlap > 0.08) {\n            const h = overlap * (H - 20);\n            ctx.fillStyle = `rgba(255,255,255,${overlap * 0.15})`;\n            ctx.fillRect(i * BAR_W, H - 20 - h, BAR_W, h);\n          }\n        }\n      }\n\n      drawBars(pA, '#00d4ff', 0);\n      drawBars(pB, '#aa44ff', 0);\n\n      /* Score */\n      const clash = state.clash;\n      const clashColor = clash > 70 ? '#ff2266' : clash > 40 ? '#ffaa00' : '#00ff88';\n      ctx.fillStyle = clashColor; ctx.font='bold 11px \"Orbitron\",monospace'; ctx.textAlign='right';\n      ctx.fillText(`CLASH  ${clash}`, W-8, 16);\n\n      /* Legend */\n      ctx.fillStyle='#00d4ff'; ctx.font='7px \"Share Tech Mono\",monospace'; ctx.textAlign='left';\n      ctx.fillText('▌ A', 6, 16);\n      ctx.fillStyle='#aa44ff';\n      ctx.fillText('▌ B', 26, 16);\n    }\n\n    /* ─ DYNAMIC MODE ─\n       Dual mirrored waveform. A top half (inverted), B bottom.\n       RMS average line. Peak dB labels. Energy delta shaded. */"
+}

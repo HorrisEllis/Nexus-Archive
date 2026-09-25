@@ -1,0 +1,40 @@
+envelope: 1
+uuid: nexus-export-chunk-eravos-v3-17-catalog.nexus-id-repo-af2180cf.ff2b8abc-e8ee-4191-8b8a-569b156e7e59
+type: chunk
+id: eravos-v3-17-catalog.nexus-id-repo-af2180cf.ff2b8abc-e8ee-4191-8b8a-569b156e7e59
+context: idearium spec-engine chunk of spec ced8d1a8-ea48-4c70-88e9-ab5758ff3a3f
+intent: null
+summary: organisms-supersaw-schema-schema (complete)
+system: idearium
+tags:
+  - spec:ced8d1a8-ea48-4c70-88e9-ab5758ff3a3f
+  - status:complete
+  - section:organisms-supersaw-schema-schema
+  - specName:eravos-v3-17-catalog
+  - agent:ingest
+  - repo:nexus-id-repo-af2180cf
+exported_at: 1790367431538
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1790367431538
+lastSeenAt: 1790367431538
+fingerprint: null
+payload:
+  uuid: ff2b8abc-e8ee-4191-8b8a-569b156e7e59
+  specUuid: ced8d1a8-ea48-4c70-88e9-ab5758ff3a3f
+  sectionId: organisms-supersaw-schema-schema
+  sectionTitle: organisms/supersaw/schema/schema.json
+  chunkIdx: 43
+  status: complete
+  realPath: organisms/supersaw/schema/schema.json
+  fileName: 43-organisms-supersaw-schema-schema.md
+  filePath: D:\Backups\Downloads\Nexus_v0_39_241\idearium\data\specs\ced8d1a8-ea48-4c70-88e9-ab5758ff3a3f\43-organisms-supersaw-schema-schema-ff2b8abc.md
+  agent: ingest
+  agentModel: ingest:drop
+  attempts: 1
+  failureMode: null
+  byteSize: 2239
+  contentHash: 5f7a380dde3f3dfb99ddddf02548303f243fd4d4e8f2627e11417e7126b184a9
+  createdAt: 1790367431337
+  updatedAt: 1790367431367
+  completedAt: 1790367431367

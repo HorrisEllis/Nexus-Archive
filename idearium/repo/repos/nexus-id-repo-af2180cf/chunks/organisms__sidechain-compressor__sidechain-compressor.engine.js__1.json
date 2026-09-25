@@ -1,0 +1,23 @@
+{
+  "id": "chunk-b59d91cae30d5b99",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/sidechain-compressor/sidechain-compressor.engine.js",
+  "range": {
+    "start_line": 14,
+    "end_line": 26
+  },
+  "symbols": [
+    "mount"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "32c89ffc526b395194496e10905f1fb7c7547d74e901d17a5324af5138f15107"
+  },
+  "status": "complete",
+  "content": "function mount(instanceId, sBus, audio, config = {}) {\n  const gBus = KERNEL.bus;\n\n  let _params = {\n    source:  config.source  || 'kick',\n    amount:  config.amount != null ? config.amount : 0.7,\n    attack:  config.attack != null ? config.attack : 0.005,\n    release: config.release || 0.28,\n    enabled: config.enabled !== false,\n  };\n\n  let _pumpCount = 0;\n"
+}

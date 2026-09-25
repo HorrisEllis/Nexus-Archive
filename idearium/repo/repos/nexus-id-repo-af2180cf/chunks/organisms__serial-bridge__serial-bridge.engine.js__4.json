@@ -1,0 +1,23 @@
+{
+  "id": "chunk-bf5db0ca54b99eba",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/serial-bridge/serial-bridge.engine.js",
+  "range": {
+    "start_line": 61,
+    "end_line": 86
+  },
+  "symbols": [
+    "_readLoop"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "d25dfe6f83615b26f60f154c39f92d735dc4da4c4aeca992443168a63511453a"
+  },
+  "status": "complete",
+  "content": "  async function _readLoop() {\n    const decoder = new TextDecoderStream();\n    const readable = _port.readable.pipeThrough(decoder);\n    _reader = readable.getReader();\n    try {\n      while (!_readLoopStop) {\n        const { value, done } = await _reader.read();\n        if (done) break;\n        if (value) {\n          _rxBuf += value;\n          let idx;\n          while ((idx = _rxBuf.indexOf('\\n')) >= 0) {\n            const line = _rxBuf.slice(0, idx).replace(/\\r$/, '');\n            _rxBuf = _rxBuf.slice(idx + 1);\n            if (line.length) {\n              gBus.publish('serial:rx', { instanceId, line });\n              sBus.publish('org:rx', { line });\n            }\n          }\n        }\n      }\n    } catch (err) {\n      sBus.publish('org:error', { message: 'Read error: ' + err.message });\n    }\n  }\n"
+}

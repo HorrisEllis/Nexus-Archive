@@ -229,7 +229,14 @@ async function _tryGuardian(prompt, opts = {}) {
     //   - /providers itself is unreachable -> FAIL OPEN. We have no
     //     evidence at all; proceed and let the server decide, rather than
     //     blocking on a check that may itself be the broken thing.
-    if (ragProvider && ragProvider !== 'auto') {
+    // §AGENT-TAB 0.39.244 — James: a repo agent's "hello" failed instantly with "guardian
+    // unavailable or returned no real response". A job carrying agentId goes to that repo's
+    // OWN tab, which guardian's dispatcher opens itself (lib/dispatcher.js _awaitAgentTab,
+    // waits up to 60s, then falls back to the shared tab). Checking whether the SHARED
+    // provider tab is connected refused the job before guardian could open the one it
+    // needed. Skipped for an agentId job; guardian decides with real evidence.
+    if (opts.agentId) { /* guardian opens the repo's own tab — no shared-tab pre-check */ }
+    else if (ragProvider && ragProvider !== 'auto') {
       const provCheck = await _get(`${GD_URL}/providers`, 3000).catch(() => null);
       // §BUGFIX 2026-08-28, RE-APPLIED — this exact fix (originally
       // commit e2f68f6) was silently lost when a parallel session's own
@@ -244,7 +251,9 @@ async function _tryGuardian(prompt, opts = {}) {
       // and returned null before ever attempting a real dispatch,
       // regardless of actual connection state.
       if (provCheck?.providers && provCheck.providers[ragProvider] !== 'connected') {
-        return null; // real evidence of not-connected — fall through to the cascade
+        // real evidence of not-connected — fall through to the cascade, SAYING why (0.39.244: was a bare null,
+        // which surfaced as "guardian unavailable or returned no real response" with no reason)
+        return { ok: false, text: null, provider: ragProvider, error: `guardian reports no ${ragProvider} tab connected (GET /providers: ${provCheck.providers[ragProvider] || 'absent'})` };
       }
     } else if (ragProvider === 'auto') {
       // §REGRESSION FIXED 2026-07-09 — introduced by the sovereignty refactor
@@ -261,7 +270,7 @@ async function _tryGuardian(prompt, opts = {}) {
       // undefined, so .some() always returned false and this branch
       // always concluded "nothing is connected" regardless of real state.
       if (provCheck?.providers && !Object.values(provCheck.providers).some(p => p === 'connected')) {
-        return null;
+        return { ok: false, text: null, provider: 'auto', error: 'guardian reports no provider tab connected at all (GET /providers)' };
       }
     }
 
@@ -321,7 +330,8 @@ async function _tryGuardian(prompt, opts = {}) {
       // -> matching artifact) reachable at all. Returning null threw
       // away the key to a real, working recovery path tool-runtime.js
       // had no way to use.
-      return { ok: false, text: null, jobId: result?.jobId || null, provider: ragProvider };
+      // 0.39.244 — guardian's own reason travels up (it was dropped, leaving only copilot's generic text).
+      return { ok: false, text: null, jobId: result?.jobId || null, provider: ragProvider, error: result?.error || (result ? `guardian job ${result.jobId || '?'} ended with no reply text` : 'guardian did not answer /api/copilot/prompt') };
     }
     const confidence = _estimateConfidence(result.text, prompt);
     // §BUG FIXED 2026-07-09 — this fell back to the literal string
@@ -343,7 +353,7 @@ async function _tryGuardian(prompt, opts = {}) {
       const gapField = require('../lib/gap-field');
       gapField.report({ type: 'lifeline.provider-error', body: `guardian call threw: ${e.message}`, source: 'guardian', domain: 'system', severity: 'medium', meta: { requestId: opts.requestId, error: e.message } });
     } catch (_) {}
-    return null;
+    return { ok: false, text: null, error: `guardian call failed: ${e.message}` };
   }
 }
 

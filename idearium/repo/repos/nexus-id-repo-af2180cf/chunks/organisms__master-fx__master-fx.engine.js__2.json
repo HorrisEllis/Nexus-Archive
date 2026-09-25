@@ -1,0 +1,23 @@
+{
+  "id": "chunk-27029777df95187a",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/master-fx/master-fx.engine.js",
+  "range": {
+    "start_line": 28,
+    "end_line": 42
+  },
+  "symbols": [
+    "_apply"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "76f1340aa8f4ffacff0b00e949d657c6a0aef7185be5aa94916482004c729e50"
+  },
+  "status": "complete",
+  "content": "  function _apply(key, val) {\n    _params[key] = val;\n    audio.boot();\n    switch (key) {\n      case 'reverbMix':   audio.setReverb({ mix: val }); break;\n      case 'reverbTime':  audio.setReverb({ time: val, decay: _params.reverbDecay }); break;\n      case 'reverbDecay': audio.setReverb({ time: _params.reverbTime, decay: val }); break;\n      case 'delayMix':    audio.setDelay({ mix: val }); break;\n      case 'delayTime':   audio.setDelay({ time: val }); break;\n      case 'delayFB':     audio.setDelay({ feedback: val }); break;\n      case 'compThresh':  audio.setCompressor({ threshold: val }); break;\n      case 'compRatio':   audio.setCompressor({ ratio: val }); break;\n    }\n  }\n"
+}

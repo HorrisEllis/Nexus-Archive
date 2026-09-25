@@ -1,0 +1,23 @@
+{
+  "id": "chunk-491d992f173c4e32",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/edm-lab/edm-lab.engine.js",
+  "range": {
+    "start_line": 39,
+    "end_line": 61
+  },
+  "symbols": [
+    "start"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "28f4ccd7d1926cf9564901dee81976ecc7004f58a199616575c4e3b150ec7861"
+  },
+  "status": "complete",
+  "content": "  function start() {\n    if (_running) return;\n    _running = true;\n\n    const o1  = AC.createOscillator(); o1.type = _params.wave; o1.frequency.value = _params.freq;\n    const o2  = AC.createOscillator(); o2.type = _params.wave; o2.frequency.value = _params.freq * 1.006;\n    const sub = AC.createOscillator(); sub.type = 'sine';      sub.frequency.value = _params.freq * 0.5;\n    const lfo = AC.createOscillator(); lfo.type = 'sine';      lfo.frequency.value = _params.lfoRate;\n    const lfoG = AC.createGain();       lfoG.gain.value = _params.lfoDepth;\n    const filt = AC.createBiquadFilter(); filt.type = 'lowpass'; filt.frequency.value = _params.cutoff; filt.Q.value = _params.res;\n    const dist = _dist(AC, _params.drive);\n    const gMain = AC.createGain(); gMain.gain.value = 0.7;\n    const gSub  = AC.createGain(); gSub.gain.value  = _params.subLevel * 0.6;\n\n    lfo.connect(lfoG); lfoG.connect(filt.frequency);\n    o1.connect(dist); o2.connect(dist); dist.connect(filt); filt.connect(gMain);\n    sub.connect(gSub);\n    gMain.connect(masterOut); gSub.connect(masterOut);\n\n    [o1, o2, sub, lfo].forEach(n => n.start());\n    _nodes = { o1, o2, sub, lfo, lfoG, filt, dist, gMain, gSub };\n\n    /* Track filter position for UI */"
+}

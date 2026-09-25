@@ -2716,7 +2716,7 @@ async function handle(req, res, route, query, body) {
       const repo = getRepoLayer().get(params.uuid);
       if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
       const RA = _require('../../lib/repo-agent.js');
-      const r = RA.findLate({ repo, since: parseInt(query.since || '0', 10) || 0, message: query.message || null });
+      const r = RA.findLate({ repo, since: parseInt(query.since || '0', 10) || 0, message: query.message || null, jobId: query.jobId || null });
       if (!r.ok) return err(res, 503, r.error);
       return ok(res, r);
     }
@@ -4198,7 +4198,10 @@ export function startAPI() {
         else {
           const { reconcileInFlightChunks, connectGuardianStream } = _require('../lib/guardian-stream.cjs');
           await reconcileInFlightChunks(se);
-          connectGuardianStream(se);
+          // §FEED 0.39.244 — a repo agent's guardian job, live, to the Agent tab (SSE only).
+          connectGuardianStream(se, { onFeed: (ev) => os.broadcast('idearium.repo.agent.feed', {
+            repoUuid: ev.data.agentId.slice('repo-'.length), event: ev.type.slice('guardian.job.'.length), guardianTs: ev.ts, ...ev.data,
+          }) });
         }
         // §RECONCILE 2026-09-21 — adopt any spec with no repo into a
         // compartment (see _reconcileSpecRepos). Kept inside this phase, not

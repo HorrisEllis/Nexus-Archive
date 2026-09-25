@@ -2359,7 +2359,8 @@ const server = http.createServer(async (req, res) => {
         if (result?.ok || result?.text) {
           json(res, 200, { ok: true, text: result.text, provider_used: body.backend === 'guardian' ? (result.provider || body.agent) : 'ollama', requestId });
         } else {
-          json(res, 502, { ok: false, error: result?.error || `${body.backend} unavailable or returned no real response`, requestId });
+          // 0.39.244 — jobId: guardian DID create a job (its reply may still come, late); absent = none was created.
+          json(res, 502, { ok: false, error: result?.error || `${body.backend} unavailable or returned no real response`, jobId: result?.jobId || null, requestId });
         }
       } catch (e) {
         json(res, 502, { ok: false, error: e.message, requestId });

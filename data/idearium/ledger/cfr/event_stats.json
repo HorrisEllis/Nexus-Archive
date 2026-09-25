@@ -1,0 +1,86 @@
+{
+  "stats": {
+    "idearium.boot.started": {
+      "count": 4,
+      "lastTs": 1790369497778,
+      "intervals": [
+        648745,
+        228766,
+        1291117
+      ],
+      "totalMs": 2168628
+    },
+    "idearium.phase.ok": {
+      "count": 36,
+      "lastTs": 1790369497882,
+      "intervals": [
+        16,
+        2,
+        11,
+        4,
+        1,
+        7,
+        1,
+        0,
+        648703,
+        15,
+        2,
+        11,
+        8,
+        1,
+        28,
+        0,
+        1,
+        228700,
+        25,
+        2,
+        12,
+        5,
+        3,
+        40,
+        1,
+        1,
+        1291029,
+        26,
+        2,
+        15,
+        10,
+        3,
+        45,
+        0,
+        1
+      ],
+      "totalMs": 2168731
+    },
+    "idearium.booted": {
+      "count": 4,
+      "lastTs": 1790369497835,
+      "intervals": [
+        648749,
+        228775,
+        1291127
+      ],
+      "totalMs": 2168651
+    },
+    "idearium.boot.complete": {
+      "count": 4,
+      "lastTs": 1790369497884,
+      "intervals": [
+        648769,
+        228791,
+        1291131
+      ],
+      "totalMs": 2168691
+    }
+  },
+  "baseline": {
+    "idearium.phase.ok": {
+      "avgIntervalMs": 74781,
+      "stddevMs": 261145,
+      "consistency": 0,
+      "count": 30,
+      "sampleSize": 29,
+      "computedAt": 1790369497808
+    }
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "id": "chunk-51a26be6db0a1c59",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/nexus-idearium/nexus-idearium.engine.js",
+  "range": {
+    "start_line": 14,
+    "end_line": 33
+  },
+  "symbols": [
+    "mount"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "7730efe99177ab9b78000130435991ea38ba852503c9a869ba7bad7fda93329e"
+  },
+  "status": "complete",
+  "content": "function mount(instanceId, sBus, audio, config = {}) {\n  return NexusNodeCore.mount(instanceId, sBus, {\n    key: 'idearium',\n    label: 'IDEARIUM',\n    icon: '💡',\n    accent: '#ffaa00',\n    base: 'http://127.0.0.1:4800',\n    statusPath: '/api/status',\n    snapshotsPath: '/snapshots',\n    orchestratorBase: 'http://127.0.0.1:9000',\n    diagnosePath: '/diagnose',\n    idLink: 'http://127.0.0.1:4800',\n    isOrchestrator: false,\n    ...config,\n  });\n}\n\nreturn { mount };\n})();\n"
+}

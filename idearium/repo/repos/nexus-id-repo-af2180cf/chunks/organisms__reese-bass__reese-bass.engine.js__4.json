@@ -1,0 +1,23 @@
+{
+  "id": "chunk-eeda37a5e6e2efe4",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/reese-bass/reese-bass.engine.js",
+  "range": {
+    "start_line": 69,
+    "end_line": 101
+  },
+  "symbols": [
+    "_trigger"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "b209b95a843b5c69b9a4773295e4d41613e2f2285a24657c5423dfa87a9b8fdd"
+  },
+  "status": "complete",
+  "content": "  function _trigger(vel = 1) {\n    const AC = audio.boot();\n    const t  = AC.currentTime + 0.01;\n    const dur = _params.sweep + 0.1;\n\n    const o1 = AC.createOscillator(); o1.type = 'sawtooth';\n    const o2 = AC.createOscillator(); o2.type = 'sawtooth';\n    o1.frequency.value = _params.pitch * Math.pow(2,  _params.detune / 1200);\n    o2.frequency.value = _params.pitch * Math.pow(2, -_params.detune / 1200);\n\n    const filt = AC.createBiquadFilter(); filt.type = 'lowpass'; filt.Q.value = 1.8;\n    filt.frequency.setValueAtTime(_params.cutoff * 0.4, t);\n    filt.frequency.linearRampToValueAtTime(_params.cutoff * 2.6, t + _params.sweep * 0.4);\n    filt.frequency.exponentialRampToValueAtTime(_params.cutoff * 0.5, t + _params.sweep);\n\n    const gain = AC.createGain();\n    gain.gain.setValueAtTime(vel * _params.gain, t);\n    gain.gain.exponentialRampToValueAtTime(0.001, t + dur);\n\n    o1.connect(filt); o2.connect(filt); filt.connect(gain); audio.send(gain, true, false, true);\n    [o1, o2].forEach(n => { n.start(t); n.stop(t + dur + 0.05); });\n\n    if (_params.sub) {\n      const subO = AC.createOscillator(); subO.type = 'sine';\n      subO.frequency.value = _params.pitch * 0.5;\n      const subG = AC.createGain();\n      subG.gain.setValueAtTime(vel * 0.4, t);\n      subG.gain.exponentialRampToValueAtTime(0.001, t + dur + 0.05);\n      subO.connect(subG); audio.send(subG, false, false, true);\n      subO.start(t); subO.stop(t + dur + 0.1);\n    }\n  }\n"
+}

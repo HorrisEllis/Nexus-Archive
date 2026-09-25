@@ -1,0 +1,23 @@
+{
+  "id": "chunk-90de698a417f298d",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "runtime/organism-factory.js",
+  "range": {
+    "start_line": 1266,
+    "end_line": 1317
+  },
+  "symbols": [
+    "mkSection"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "f8add63c9648a40cc0d900568e86acb57d7a6361edb70aa99eac9cc2842c47bd"
+  },
+  "status": "complete",
+  "content": "    function mkSection(title, color, onToggle) {\n      const wrap = document.createElement('div');\n      wrap.style.cssText = `display:flex;flex-direction:column;flex:1;background:var(--bg1);min-width:0;`;\n\n      const hdr = document.createElement('div');\n      hdr.style.cssText = `display:flex;align-items:center;gap:7px;padding:7px 10px;border-bottom:1px solid var(--b1);flex-shrink:0;background:var(--bg2);`;\n\n      const dot = document.createElement('div');\n      dot.style.cssText = `width:7px;height:7px;border-radius:50%;background:${color};opacity:.4;flex-shrink:0;transition:opacity .2s,box-shadow .2s;cursor:pointer;`;\n      dot.title = 'Toggle engine';\n      dot.addEventListener('click', () => onToggle(dot));\n\n      const lbl = document.createElement('div');\n      lbl.style.cssText = `font-family:var(--orb);font-size:8px;font-weight:700;letter-spacing:.2em;color:${color};opacity:.7;`;\n      lbl.textContent = title;\n\n      const status = document.createElement('div');\n      status.style.cssText = `font-family:var(--mono);font-size:6.5px;color:var(--dim);letter-spacing:.1em;margin-left:auto;`;\n      status.textContent = 'OFF';\n\n      hdr.appendChild(dot); hdr.appendChild(lbl); hdr.appendChild(status);\n      wrap.appendChild(hdr);\n      return { wrap, dot, status, color };\n    }\n\n    /* ═════════════════════════════════════════════════════\n       COLUMN 1 — BASS ENGINE\n       A filter frequency response curve you interact with.\n       Drag the cutoff point on the curve itself.\n       LFO makes the curve breathe live.\n    ═════════════════════════════════════════════════════ */\n    let bassRunning = false;\n\n    const { wrap: bassWrap, dot: bassDot, status: bassStatus } = mkSection('BASS ENGINE', '#00ff88', (dot) => {\n      bassRunning = !bassRunning;\n      _pub('ui:bass-toggle', {});\n      dot.style.opacity    = bassRunning ? '1' : '.4';\n      dot.style.boxShadow  = bassRunning ? `0 0 8px #00ff88` : '';\n      bassStatus.textContent = bassRunning ? 'ON' : 'OFF';\n      bassStatus.style.color = bassRunning ? '#00ff88' : 'var(--dim)';\n    });\n\n    /* Filter curve canvas */\n    const filterCanvas = document.createElement('canvas');\n    filterCanvas.style.cssText = 'width:100%;flex:1;display:block;cursor:crosshair;';\n    bassWrap.appendChild(filterCanvas);\n\n    /* Bass params below canvas */\n    const bassParams = document.createElement('div');\n    bassParams.style.cssText = 'display:flex;flex-direction:column;gap:5px;padding:8px;border-top:1px solid var(--b1);flex-shrink:0;';\n\n    /* Mini param rows */"
+}

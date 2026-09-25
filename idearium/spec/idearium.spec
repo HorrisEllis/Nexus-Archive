@@ -1,7 +1,10 @@
 spec:
   meta:
     name:        idearium
-    version:     4.3.0   # §0.39.241 (MINOR, two new routes) — GET/POST /api/repos/:uuid/agent/late:
+    version:     4.3.1   # §0.39.244 (PATCH) — the Agent tab's live feed of the provider tab
+                         # (DOM mutations, the reply's node anchor, stages, streaming text) via
+                         # guardian-stream onFeed → os.broadcast (SSE only); late-reply lookup
+                         # takes the guardian jobId. Previous — 4.3.0 §0.39.241 (MINOR, two new routes) — GET/POST /api/repos/:uuid/agent/late:
                          # the Agent tab picks up a reply guardian filed into Clear Glass's
                          # Responses index after copilot stopped waiting (lib/repo-agent.js
                          # findLate = read-only, adoptLate = learn/inject/log once per reply).

@@ -1,0 +1,23 @@
+{
+  "id": "chunk-d339065dc712c9f5",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/contrast-analyser/contrast-analyser.engine.js",
+  "range": {
+    "start_line": 19,
+    "end_line": 57
+  },
+  "symbols": [
+    "detectTransients"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "bedb16da7a35a8fccacb0b1f7045d89a84405adb0aeef9a64fef9db8182bb059"
+  },
+  "status": "complete",
+  "content": "function detectTransients(audioBuffer, sensitivity = 0.3) {\n  const data     = audioBuffer.getChannelData(0);\n  const sr       = audioBuffer.sampleRate;\n  const hop      = Math.floor(sr * 0.005);   /* 5ms hop */\n  const win      = Math.floor(sr * 0.02);    /* 20ms window */\n  const transients = [];\n\n  let maxEnergy = 0;\n  const energies = [];\n\n  for (let i = 0; i < data.length - win; i += hop) {\n    let e = 0;\n    for (let j = 0; j < win; j++) e += data[i + j] ** 2;\n    e = Math.sqrt(e / win);\n    energies.push({ time: i / sr, e });\n    if (e > maxEnergy) maxEnergy = e;\n  }\n\n  const threshold = maxEnergy * (0.1 + sensitivity * 0.5);\n  let lastPeak = -1;\n  const minGapSec = 0.05; /* min 50ms between transients */\n\n  for (let i = 1; i < energies.length - 1; i++) {\n    const { time, e } = energies[i];\n    if (\n      e > threshold &&\n      e > energies[i - 1].e &&\n      e >= energies[i + 1].e &&\n      time - lastPeak > minGapSec\n    ) {\n      transients.push({ time_sec: time, amplitude: e / maxEnergy });\n      lastPeak = time;\n    }\n  }\n\n  return transients;\n}\n\n/* ── BPM from transients (autocorrelation) ─────────────── */"
+}

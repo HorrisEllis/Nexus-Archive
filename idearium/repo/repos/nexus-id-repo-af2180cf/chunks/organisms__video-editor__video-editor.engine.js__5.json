@@ -1,0 +1,23 @@
+{
+  "id": "chunk-b22cf3f240b5b367",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/video-editor/video-editor.engine.js",
+  "range": {
+    "start_line": 68,
+    "end_line": 75
+  },
+  "symbols": [
+    "_pickMime"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "c0a2217aa0e43499fd262fd3ceb8633563a21b2364999da65c955b656d2d5bf9"
+  },
+  "status": "complete",
+  "content": "  function _pickMime() {\n    const candidates = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];\n    for (const c of candidates) if (window.MediaRecorder && MediaRecorder.isTypeSupported(c)) return c;\n    return 'video/webm';\n  }\n\n  /* Play [inPoint, outPoint] once, recording the filtered canvas + original\n     audio track to a WebM blob, then trigger a download. */"
+}

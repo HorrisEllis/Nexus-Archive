@@ -1,0 +1,23 @@
+{
+  "id": "chunk-fd0bc795958d371e",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "runtime/master-transport.js",
+  "range": {
+    "start_line": 23,
+    "end_line": 24
+  },
+  "symbols": [
+    "gBus"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "7d7a33fd7bd7c337de645c74b6bf684ac357e5237d45a25d664721b0047acce0"
+  },
+  "status": "complete",
+  "content": "const gBus = () => KERNEL.bus;\n"
+}

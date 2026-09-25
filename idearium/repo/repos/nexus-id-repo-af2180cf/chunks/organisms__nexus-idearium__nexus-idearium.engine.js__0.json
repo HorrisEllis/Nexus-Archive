@@ -1,0 +1,21 @@
+{
+  "id": "chunk-2160e3f1c06be037",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/nexus-idearium/nexus-idearium.engine.js",
+  "range": {
+    "start_line": 1,
+    "end_line": 13
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "1a3baac02d68135ecda53cd1a89c71027580ed86848c0334f74711f2edf1acba"
+  },
+  "status": "complete",
+  "content": "/* ═══════════════════════════════════════════════════════════\n   ORGANISM: IDEARIUM  v1.0.0\n   id: eravos.nexus-idearium\n\n   Thin per-system wrapper around NexusNodeCore. All polling,\n   diagnose, snapshot, and idearium logic lives in the shared\n   core (organisms/nexus-shared/nexus-node-core.js) -- this file\n   only supplies this node's identity and endpoint.\n   ═══════════════════════════════════════════════════════════ */\n\nwindow.NexusIdeariumEngine = (() => {\n'use strict';\n"
+}

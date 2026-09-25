@@ -1,0 +1,23 @@
+{
+  "id": "chunk-d271201bbf2aa5a6",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/edm-lab/edm-lab.engine.js",
+  "range": {
+    "start_line": 199,
+    "end_line": 204
+  },
+  "symbols": [
+    "stop"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "0b00bd11c7dd5aedf92022a4786027996db2d58b2ebe8d9fb70f8db433bbfdd5"
+  },
+  "status": "complete",
+  "content": "  function stop() {\n    _running = false;\n    if (_pclock) _pclock.stop();\n    _step = 0;\n  }\n"
+}

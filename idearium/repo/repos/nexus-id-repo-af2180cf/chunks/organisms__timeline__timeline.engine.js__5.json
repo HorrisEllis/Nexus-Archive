@@ -1,0 +1,23 @@
+{
+  "id": "chunk-3a6275cf0b4440ce",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/timeline/timeline.engine.js",
+  "range": {
+    "start_line": 22,
+    "end_line": 30
+  },
+  "symbols": [
+    "lane"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "18ab142e6d14f81912ed96ab129462ff0e22904bc3e15d562557bfcc2c2778f4"
+  },
+  "status": "complete",
+  "content": "    const lane = _lanes.find(l => l.laneId === laneId); if (!lane) return null;\n    const clipId = 'clip-' + _uid();\n    const { name, icon='♪', startSec=0, durSec=4, assetId=null } = opts;\n    lane.clips.push({ clipId, name: name||lane.name, icon, startSec, durSec, assetId });\n    _clipCount++;\n    sBus.publish('org:clip_added', { clipId, laneId, startSec, durSec, name });\n    return clipId;\n  }\n"
+}

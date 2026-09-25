@@ -1,0 +1,21 @@
+{
+  "id": "chunk-77a521cc2723f762",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/lfo/lfo.engine.js",
+  "range": {
+    "start_line": 1,
+    "end_line": 15
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "9aaea74a22f5b3e530647a381cdd340feb5e6bbbec049b0b1d9c860498990383"
+  },
+  "status": "complete",
+  "content": "/* ═══════════════════════════════════════════════════════════\n   ORGANISM: LFO  v1.0.0\n   id: eravos.lfo\n\n   Generates a continuous low-frequency modulation signal.\n   Publishes mod:signal on the bus every animation frame.\n   Other organisms can subscribe to mod:signal and apply\n   the value to any parameter.\n\n   Shapes: sine, triangle, square, sawtooth, S&H (random)\n   ═══════════════════════════════════════════════════════════ */\n\nwindow.LFOEngine = (() => {\n'use strict';\n"
+}

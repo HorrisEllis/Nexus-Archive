@@ -1,0 +1,23 @@
+{
+  "id": "chunk-813d3ebea83cb82d",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/webhook-automation/webhook-automation.engine.js",
+  "range": {
+    "start_line": 75,
+    "end_line": 109
+  },
+  "symbols": [
+    "_syncUI"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "8e9a6a5745a3a649219a4913a02af840b7b9fb5ac98285f3ca6a5870f94ef5e3"
+  },
+  "status": "complete",
+  "content": "  function _syncUI() {\n    sBus.publish('org:state_sync', { params: { ..._params }, fireCount: _fireCount });\n  }\n\n  const _unsubs = [\n    gBus.subscribe('ui:webhook_test:'  + instanceId, testFire),\n    gBus.subscribe('ui:config_change:' + instanceId, ({ key, value }) => _updateParam(key, value)),\n  ];\n\n  _resubscribe();\n  _syncUI();\n\n  KERNEL.registry.register({\n    instanceId,\n    id:       'eravos.webhook-automation',\n    label:    'Webhook Automation',\n    provides: ['capability.external_automation'],\n    requires: [],\n    permissions: ['network_fetch', 'bus_publish', 'bus_subscribe'],\n    hooks: [\n      { hook_id: 'webhook.hook.trig_in', direction: 'in', event_type: 'pad:trigger', contract_version: '1.0.0' },\n    ],\n  });\n\n  return {\n    unmount() { if (_topicSub) _topicSub(); _unsubs.forEach(u => u()); KERNEL.registry.unregister(instanceId); },\n    testFire,\n    get params() { return { ..._params }; },\n    get fireCount() { return _fireCount; },\n  };\n}\n\nreturn { mount };\n})();\n"
+}

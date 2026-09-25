@@ -1,0 +1,23 @@
+{
+  "id": "chunk-acf6f5d6384fa684",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/sequencer/sequencer.engine.js",
+  "range": {
+    "start_line": 12,
+    "end_line": 43
+  },
+  "symbols": [
+    "mount"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "d17a5aa627d43d6eeddc58c65f75a1d9464ea225d0ab60d762c5320f51ca9c11"
+  },
+  "status": "complete",
+  "content": "function mount(instanceId, sBus, audio, clock, config = {}) {\n  const gBus = KERNEL.bus;\n\n  let bpm        = config.bpm    ?? 128;\n  let stepCount  = config.steps  ?? 16;\n  let swing      = 0;\n  let playing    = false;\n  let recording  = false;\n\n  const tracks = [\n    {sound:'kick',   color:'#00ff88',steps:[1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,...Array(16).fill(0)]},\n    {sound:'snare',  color:'#00ff88',steps:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,...Array(16).fill(0)]},\n    {sound:'hat',    color:'#00d4ff',steps:[0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,...Array(16).fill(0)]},\n    {sound:'clap',   color:'#00ff88',steps:Array(32).fill(0)},\n    {sound:'808',    color:'#ff2266',steps:Array(32).fill(0)},\n    {sound:'rim',    color:'#6a88a8',steps:Array(32).fill(0)},\n    {sound:'reese',  color:'#aa44ff',steps:Array(32).fill(0)},\n    {sound:'wobble', color:'#aa44ff',steps:Array(32).fill(0)},\n    {sound:'acid',   color:'#ffaa00',steps:Array(32).fill(0)},\n    {sound:'stab',   color:'#00d4ff',steps:Array(32).fill(0)},\n    {sound:'openhat',color:'#00d4ff',steps:Array(32).fill(0)},\n    {sound:'crash',  color:'#00d4ff',steps:Array(32).fill(0)},\n    {sound:'laser',  color:'#00ff88',steps:Array(32).fill(0)},\n    {sound:'glitch', color:'#6a88a8',steps:Array(32).fill(0)},\n    {sound:'noise',  color:'#6a88a8',steps:Array(32).fill(0)},\n    {sound:'riser',  color:'#aa44ff',steps:Array(32).fill(0)},\n  ];\n\n  /* ── PrecisionClock ──────────────────────────────────── */\n  let _pclock = null;\n  let _cursorTimer = null;\n"
+}

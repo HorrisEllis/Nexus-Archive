@@ -1,0 +1,23 @@
+{
+  "id": "chunk-d38ceee953f542a3",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/contrast-analyser/contrast-analyser.engine.js",
+  "range": {
+    "start_line": 84,
+    "end_line": 99
+  },
+  "symbols": [
+    "buildRMSPeaks"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "2b1196ccf5e86f278e9eb7eca39a398320ef30174b5d53a58435ce4b136ebb9f"
+  },
+  "status": "complete",
+  "content": "function buildRMSPeaks(audioBuffer, buckets = 300) {\n  const data  = audioBuffer.getChannelData(0);\n  const step  = Math.ceil(data.length / buckets);\n  const peaks = [];\n  for (let i = 0; i < buckets; i++) {\n    let rms = 0, count = 0;\n    for (let j = 0; j < step; j++) {\n      const s = data[i * step + j] || 0;\n      rms += s * s; count++;\n    }\n    peaks.push(Math.sqrt(rms / count));\n  }\n  return peaks;\n}\n\n/* ── Peak amplitude ─────────────────────────────────────── */"
+}

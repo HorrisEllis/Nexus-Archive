@@ -1,0 +1,23 @@
+{
+  "id": "chunk-9e5079008d6d95e5",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "runtime/organism-factory.js",
+  "range": {
+    "start_line": 1036,
+    "end_line": 1036
+  },
+  "symbols": [
+    "snapBtn"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "3c8f15ec40a54a0a88becff3324fba4058a3ecedc4248b621a2b01262be634f2"
+  },
+  "status": "complete",
+  "content": "    const snapBtn = mkBtn(null,'▤ SNAPSHOTS',  ()=>_pub('ui:open-snapshots',{}));"
+}

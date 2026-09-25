@@ -1,0 +1,23 @@
+{
+  "id": "chunk-a4db96876fea874a",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/video-editor/video-editor.engine.js",
+  "range": {
+    "start_line": 39,
+    "end_line": 56
+  },
+  "symbols": [
+    "loadFile"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "8dcacfa889ef69079d27e53a3a45b2be05e35f49712898e8f41210c893ff3b16"
+  },
+  "status": "complete",
+  "content": "  function loadFile(file) {\n    return new Promise((resolve, reject) => {\n      const url = URL.createObjectURL(file);\n      const v = document.createElement('video');\n      v.src = url; v.muted = false; v.playsInline = true; v.crossOrigin = 'anonymous';\n      v.addEventListener('loadedmetadata', () => {\n        _video = v;\n        _params.outPoint = v.duration;\n        sBus.publish('org:video_loaded', { duration: v.duration, w: v.videoWidth, h: v.videoHeight });\n        resolve(v);\n      }, { once: true });\n      v.addEventListener('error', reject, { once: true });\n    });\n  }\n\n  /* Draw current video frame into canvas with live filters. Caller drives\n     the requestAnimationFrame loop from buildUI (so it can stop cleanly\n     when the window is closed) and calls this once per frame. */"
+}

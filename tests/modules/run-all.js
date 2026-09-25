@@ -158,6 +158,7 @@ const SUITES = [
   'test-provider-host-one-tab.test.js',   // §0.39.237 — real ProviderHost: agent tabs restart as themselves; intentional closes open nothing
   'test-guardian-replay-retired.test.js', // §0.39.237 — a replay never completes a job; no userscript sends one
   'test-downloads-responses.test.js',     // §0.39.239 — replies and downloads filed under their agent; Library Responses routes
+  'test-agent-feed.test.js',              // §0.39.244 — repo jobs reach their own tab; the Agent tab's live DOM feed
   'test-cookie-vault-jaa.test.js',        // §0.39.243 — cookie vault on JAA; file-store records imported, deletes stick
   'test-artifact-index-jaa.test.js',      // §0.39.242 — the Responses index is JAA, self-healing against responses/
   'test-repo-agent-late.test.js',         // §0.39.241 — the Agent tab picks up a late reply from the Responses index, once

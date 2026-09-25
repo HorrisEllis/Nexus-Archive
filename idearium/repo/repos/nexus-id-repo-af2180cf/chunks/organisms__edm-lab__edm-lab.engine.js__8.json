@@ -1,0 +1,23 @@
+{
+  "id": "chunk-ba0d70b0d09c9376",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/edm-lab/edm-lab.engine.js",
+  "range": {
+    "start_line": 118,
+    "end_line": 126
+  },
+  "symbols": [
+    "RhythmEngine"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "66b0513e66481935bd2916704e0a349865b221b5b1eb44ee117ad533fb775860"
+  },
+  "status": "complete",
+  "content": "function RhythmEngine(AC, masterOut, bus) {\n  let _running = false;\n  let _step    = 0;\n  let _timer   = null;\n  let _bpm     = 128;\n  const STEPS  = 32;\n  const TRACKS = 8;\n\n  /* Density map — float32 0-1 per cell */"
+}

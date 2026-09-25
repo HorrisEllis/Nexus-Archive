@@ -1,0 +1,23 @@
+{
+  "id": "chunk-58eb549d695563b4",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/edm-lab/edm-lab.engine.js",
+  "range": {
+    "start_line": 18,
+    "end_line": 31
+  },
+  "symbols": [
+    "_dist"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "2131c3b5af76d5e491b05e283321bfd063199f83fb466472a312f531c6b5547d"
+  },
+  "status": "complete",
+  "content": "function _dist(AC, amt = 0.5) {\n  const s = AC.createWaveShaper();\n  const n = 256, c = new Float32Array(n), k = amt * 100;\n  for (let i = 0; i < n; i++) { const x = (i*2)/n-1; c[i]=((Math.PI+k)*x)/(Math.PI+k*Math.abs(x)); }\n  s.curve = c; s.oversample = '4x'; return s;\n}\n\n/* ═══════════════════════════════════════════════════════\n   BASS ENGINE\n   Continuous oscillator + resonant filter controlled by LFO.\n   Parameters: freq, cutoff, resonance, lfoRate, lfoDepth,\n               drive, waveform, subLevel.\n   Publishes filter position every frame for visualisation.\n═══════════════════════════════════════════════════════ */"
+}

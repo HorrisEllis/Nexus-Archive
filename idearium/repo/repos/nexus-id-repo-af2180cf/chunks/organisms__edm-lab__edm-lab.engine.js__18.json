@@ -1,0 +1,23 @@
+{
+  "id": "chunk-9a8bd3186b7fd46f",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/edm-lab/edm-lab.engine.js",
+  "range": {
+    "start_line": 224,
+    "end_line": 236
+  },
+  "symbols": [
+    "setBPM"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "bff8dd5977e5b2f7abf67356567feda3bd0a4eb4419eceb2875354936c7f2ba7"
+  },
+  "status": "complete",
+  "content": "  function setBPM(bpm) { _bpm = Math.max(60, Math.min(220, bpm)); if (_pclock) _pclock.setBPM(_bpm); }\n\n  return { start, stop, setDensity, getDensityMap, paintBrush, setBPM,\n           get running() { return _running; }, get step() { return _step; },\n           KIT_NAMES, KIT_COLORS, STEPS, TRACKS };\n}\n\n/* ═══════════════════════════════════════════════════════\n   TENSION ENGINE\n   Harmonic dissonance stack. Consonance=0 → Dissonance=100.\n   Overtones spread apart as tension increases.\n   Publishes overtone positions for visualisation.\n═══════════════════════════════════════════════════════ */"
+}

@@ -1,11 +1,11 @@
 {
   "format": "NEX-BLUEPRINT-INDEX/1.0",
-  "uuid": "bpi_7f17b196",
+  "uuid": "bpi_0fce4102",
   "version": "1.0.0",
-  "builtAt": 1789824798751,
+  "builtAt": 1790369500192,
   "builtBy": "blueprint-index",
   "systemCount": 11,
-  "totalComponents": 178,
+  "totalComponents": 213,
   "systems": [
     {
       "systemId": "orchestrator",
@@ -4870,7 +4870,7 @@
         {
           "id": "eravos.canvas",
           "name": "canvas",
-          "description": "Main ERAVOS canvas — organisms, wires, transport",
+          "description": "Main ERAVOS canvas — mods, wires, transport",
           "route": {
             "method": "GET",
             "path": "/"
@@ -4885,55 +4885,55 @@
           ]
         },
         {
-          "id": "eravos.organism.spawn",
-          "name": "organism.spawn",
-          "description": "Spawn an organism by id onto the canvas",
+          "id": "eravos.mod.spawn",
+          "name": "mod.spawn",
+          "description": "Spawn an mod by id onto the canvas",
           "route": {
             "method": "POST",
-            "path": "/api/organisms"
+            "path": "/api/mods"
           },
           "tags": [
             "eravos"
           ],
           "grammar": [
             "eravos spawn",
-            "spawn organism"
+            "spawn mod"
           ]
         },
         {
-          "id": "eravos.organism.list",
-          "name": "organism.list",
-          "description": "List all mounted organisms",
+          "id": "eravos.mod.list",
+          "name": "mod.list",
+          "description": "List all mounted mods",
           "route": {
             "method": "GET",
-            "path": "/api/organisms"
+            "path": "/api/mods"
           },
           "tags": [
             "eravos"
           ],
           "grammar": [
-            "eravos organisms"
+            "eravos mods"
           ]
         },
         {
-          "id": "eravos.organism.remove",
-          "name": "organism.remove",
-          "description": "Remove an organism",
+          "id": "eravos.mod.remove",
+          "name": "mod.remove",
+          "description": "Remove an mod",
           "route": {
             "method": "DELETE",
-            "path": "/api/organisms/:uuid"
+            "path": "/api/mods/:uuid"
           },
           "tags": [
             "eravos"
           ],
           "grammar": [
-            "eravos organism remove"
+            "eravos mod remove"
           ]
         },
         {
           "id": "eravos.wire.connect",
           "name": "wire.connect",
-          "description": "Connect two organism hooks",
+          "description": "Connect two mod hooks",
           "route": {
             "method": "POST",
             "path": "/api/wires"
@@ -4963,7 +4963,7 @@
         {
           "id": "eravos.catalog.list",
           "name": "catalog.list",
-          "description": "Available organisms from registry",
+          "description": "Available mods from registry",
           "route": {
             "method": "GET",
             "path": "/api/catalog"
@@ -4978,7 +4978,7 @@
         {
           "id": "eravos.pack.install",
           "name": "pack.install",
-          "description": "Install a .zip organism pack",
+          "description": "Install a .zip mod pack",
           "route": {
             "method": "POST",
             "path": "/api/pack/install"
@@ -5062,7 +5062,7 @@
           "usage": "canvas",
           "method": "GET",
           "path": "/",
-          "description": "Main ERAVOS canvas — organisms, wires, transport",
+          "description": "Main ERAVOS canvas — mods, wires, transport",
           "componentId": "eravos.canvas",
           "systemId": "eravos",
           "tags": [
@@ -5070,46 +5070,46 @@
           ]
         },
         {
-          "command": "organism-spawn",
+          "command": "mod-spawn",
           "aliases": [
             "eravos spawn",
-            "spawn organism"
+            "spawn mod"
           ],
-          "usage": "organism-spawn",
+          "usage": "mod-spawn",
           "method": "POST",
-          "path": "/api/organisms",
-          "description": "Spawn an organism by id onto the canvas",
-          "componentId": "eravos.organism.spawn",
+          "path": "/api/mods",
+          "description": "Spawn an mod by id onto the canvas",
+          "componentId": "eravos.mod.spawn",
           "systemId": "eravos",
           "tags": [
             "eravos"
           ]
         },
         {
-          "command": "organism-list",
+          "command": "mod-list",
           "aliases": [
-            "eravos organisms"
+            "eravos mods"
           ],
-          "usage": "organism-list",
+          "usage": "mod-list",
           "method": "GET",
-          "path": "/api/organisms",
-          "description": "List all mounted organisms",
-          "componentId": "eravos.organism.list",
+          "path": "/api/mods",
+          "description": "List all mounted mods",
+          "componentId": "eravos.mod.list",
           "systemId": "eravos",
           "tags": [
             "eravos"
           ]
         },
         {
-          "command": "organism-remove",
+          "command": "mod-remove",
           "aliases": [
-            "eravos organism remove"
+            "eravos mod remove"
           ],
-          "usage": "organism-remove",
+          "usage": "mod-remove",
           "method": "DELETE",
-          "path": "/api/organisms/:uuid",
-          "description": "Remove an organism",
-          "componentId": "eravos.organism.remove",
+          "path": "/api/mods/:uuid",
+          "description": "Remove an mod",
+          "componentId": "eravos.mod.remove",
           "systemId": "eravos",
           "tags": [
             "eravos"
@@ -5123,7 +5123,7 @@
           "usage": "wire-connect",
           "method": "POST",
           "path": "/api/wires",
-          "description": "Connect two organism hooks",
+          "description": "Connect two mod hooks",
           "componentId": "eravos.wire.connect",
           "systemId": "eravos",
           "tags": [
@@ -5153,7 +5153,7 @@
           "usage": "catalog-list",
           "method": "GET",
           "path": "/api/catalog",
-          "description": "Available organisms from registry",
+          "description": "Available mods from registry",
           "componentId": "eravos.catalog.list",
           "systemId": "eravos",
           "tags": [
@@ -5168,7 +5168,7 @@
           "usage": "pack-install",
           "method": "POST",
           "path": "/api/pack/install",
-          "description": "Install a .zip organism pack",
+          "description": "Install a .zip mod pack",
           "componentId": "eravos.pack.install",
           "systemId": "eravos",
           "tags": [
@@ -5238,10 +5238,10 @@
       ],
       "seamHooks": [
         {
-          "componentId": "eravos.organism.spawn",
+          "componentId": "eravos.mod.spawn",
           "in": [
             {
-              "id": "eravos.organism.spawn.receive",
+              "id": "eravos.mod.spawn.receive",
               "intent": [
                 "compose",
                 "visualize",
@@ -5255,7 +5255,7 @@
           ],
           "out": [
             {
-              "id": "eravos.organism.spawn.complete",
+              "id": "eravos.mod.spawn.complete",
               "wires_to": [
                 "cortex.raid.feedback"
               ],
@@ -5270,7 +5270,7 @@
         {
           "componentId": "eravos.canvas",
           "label": "canvas",
-          "description": "Main ERAVOS canvas — organisms, wires, transport",
+          "description": "Main ERAVOS canvas — mods, wires, transport",
           "intents": [
             "eravos",
             "canvas",
@@ -5280,35 +5280,35 @@
           "hookId": null
         },
         {
-          "componentId": "eravos.organism.spawn",
-          "label": "organism.spawn",
-          "description": "Spawn an organism by id onto the canvas",
+          "componentId": "eravos.mod.spawn",
+          "label": "mod.spawn",
+          "description": "Spawn an mod by id onto the canvas",
           "intents": [
             "compose",
             "visualize",
             "spawn",
             "eravos spawn",
-            "spawn organism"
+            "spawn mod"
           ],
           "contract": "nexus-interaction-contract-v1::eravos",
-          "hookId": "eravos.organism.spawn.receive"
+          "hookId": "eravos.mod.spawn.receive"
         },
         {
-          "componentId": "eravos.organism.list",
-          "label": "organism.list",
-          "description": "List all mounted organisms",
+          "componentId": "eravos.mod.list",
+          "label": "mod.list",
+          "description": "List all mounted mods",
           "intents": [
-            "eravos organisms"
+            "eravos mods"
           ],
           "contract": null,
           "hookId": null
         },
         {
-          "componentId": "eravos.organism.remove",
-          "label": "organism.remove",
-          "description": "Remove an organism",
+          "componentId": "eravos.mod.remove",
+          "label": "mod.remove",
+          "description": "Remove an mod",
           "intents": [
-            "eravos organism remove"
+            "eravos mod remove"
           ],
           "contract": null,
           "hookId": null
@@ -5316,7 +5316,7 @@
         {
           "componentId": "eravos.wire.connect",
           "label": "wire.connect",
-          "description": "Connect two organism hooks",
+          "description": "Connect two mod hooks",
           "intents": [
             "eravos wire"
           ],
@@ -5336,7 +5336,7 @@
         {
           "componentId": "eravos.catalog.list",
           "label": "catalog.list",
-          "description": "Available organisms from registry",
+          "description": "Available mods from registry",
           "intents": [
             "eravos catalog"
           ],
@@ -5346,7 +5346,7 @@
         {
           "componentId": "eravos.pack.install",
           "label": "pack.install",
-          "description": "Install a .zip organism pack",
+          "description": "Install a .zip mod pack",
           "intents": [
             "eravos install"
           ],
@@ -5399,7 +5399,7 @@
       "systemId": "clear-glass",
       "label": "Clear Glass",
       "port": 7701,
-      "componentCount": 67,
+      "componentCount": 102,
       "components": [
         {
           "id": "cg.health",
@@ -6488,6 +6488,594 @@
           ],
           "grammar": [
             "bgtab list"
+          ]
+        },
+        {
+          "id": "cg.autofill.listProfiles",
+          "name": "autofill.listProfiles",
+          "description": "List real AutofillProfile records",
+          "route": {
+            "method": "IPC",
+            "path": "autofill:profile:list"
+          },
+          "tags": [
+            "cg",
+            "autofill"
+          ],
+          "grammar": [
+            "autofill listProfiles"
+          ]
+        },
+        {
+          "id": "cg.autofill.getProfile",
+          "name": "autofill.getProfile",
+          "description": "Get one real autofill profile",
+          "route": {
+            "method": "IPC",
+            "path": "autofill:profile:get"
+          },
+          "tags": [
+            "cg",
+            "autofill"
+          ],
+          "grammar": [
+            "autofill getProfile"
+          ]
+        },
+        {
+          "id": "cg.autofill.createProfile",
+          "name": "autofill.createProfile",
+          "description": "Create a real autofill profile",
+          "route": {
+            "method": "IPC",
+            "path": "autofill:profile:create"
+          },
+          "tags": [
+            "cg",
+            "autofill"
+          ],
+          "grammar": [
+            "autofill createProfile"
+          ]
+        },
+        {
+          "id": "cg.autofill.updateProfile",
+          "name": "autofill.updateProfile",
+          "description": "Update a real autofill profile",
+          "route": {
+            "method": "IPC",
+            "path": "autofill:profile:update"
+          },
+          "tags": [
+            "cg",
+            "autofill"
+          ],
+          "grammar": [
+            "autofill updateProfile"
+          ]
+        },
+        {
+          "id": "cg.autofill.deleteProfile",
+          "name": "autofill.deleteProfile",
+          "description": "Delete a real autofill profile",
+          "route": {
+            "method": "IPC",
+            "path": "autofill:profile:delete"
+          },
+          "tags": [
+            "cg",
+            "autofill"
+          ],
+          "grammar": [
+            "autofill deleteProfile"
+          ]
+        },
+        {
+          "id": "cg.autofill.detect",
+          "name": "autofill.detect",
+          "description": "Detect real form fields an autofill profile would confidently fill",
+          "route": {
+            "method": "IPC",
+            "path": "autofill:detect"
+          },
+          "tags": [
+            "cg",
+            "autofill"
+          ],
+          "grammar": [
+            "autofill detect"
+          ]
+        },
+        {
+          "id": "cg.autofill.fill",
+          "name": "autofill.fill",
+          "description": "Fill real form fields from an autofill profile",
+          "route": {
+            "method": "IPC",
+            "path": "autofill:fill"
+          },
+          "tags": [
+            "cg",
+            "autofill"
+          ],
+          "grammar": [
+            "autofill fill"
+          ]
+        },
+        {
+          "id": "cg.screenQa.detect",
+          "name": "screenQa.detect",
+          "description": "Detect real open-ended questions on the page, excluding whatever autofill would already confidently fill",
+          "route": {
+            "method": "IPC",
+            "path": "screen-qa:detect"
+          },
+          "tags": [
+            "cg",
+            "screen-qa"
+          ],
+          "grammar": [
+            "screenQa detect"
+          ]
+        },
+        {
+          "id": "cg.screenQa.answer",
+          "name": "screenQa.answer",
+          "description": "Answer a real question through the real copilot bridge (text only — never writes to the page)",
+          "route": {
+            "method": "IPC",
+            "path": "screen-qa:answer"
+          },
+          "tags": [
+            "cg",
+            "screen-qa"
+          ],
+          "grammar": [
+            "screenQa answer"
+          ]
+        },
+        {
+          "id": "cg.screenQa.inject",
+          "name": "screenQa.inject",
+          "description": "Write a chosen answer into one real field",
+          "route": {
+            "method": "IPC",
+            "path": "screen-qa:inject"
+          },
+          "tags": [
+            "cg",
+            "screen-qa"
+          ],
+          "grammar": [
+            "screenQa inject"
+          ]
+        },
+        {
+          "id": "cg.screenQa.elementAt",
+          "name": "screenQa.elementAt",
+          "description": "The real field at a window-relative point — the right-click path's own target",
+          "route": {
+            "method": "IPC",
+            "path": "screen-qa:element-at"
+          },
+          "tags": [
+            "cg",
+            "screen-qa"
+          ],
+          "grammar": [
+            "screenQa elementAt"
+          ]
+        },
+        {
+          "id": "cg.screenQa.deriveQuestion",
+          "name": "screenQa.deriveQuestion",
+          "description": "Derive a question from one real field's metadata (label/aria-label/placeholder/name)",
+          "route": {
+            "method": "IPC",
+            "path": "screen-qa:derive-question"
+          },
+          "tags": [
+            "cg",
+            "screen-qa"
+          ],
+          "grammar": [
+            "screenQa deriveQuestion"
+          ]
+        },
+        {
+          "id": "cg.accounts.setDefault",
+          "name": "accounts.setDefault",
+          "description": "Set/clear the per-provider default account (Clear Glass is the account authority guardian resolves against)",
+          "route": {
+            "method": "IPC",
+            "path": "accounts:setDefault"
+          },
+          "tags": [
+            "cg",
+            "accounts"
+          ],
+          "grammar": [
+            "accounts setDefault"
+          ]
+        },
+        {
+          "id": "cg.accounts.defaults",
+          "name": "accounts.defaults",
+          "description": "Per-provider default account map",
+          "route": {
+            "method": "IPC",
+            "path": "accounts:defaults"
+          },
+          "tags": [
+            "cg",
+            "accounts"
+          ],
+          "grammar": [
+            "accounts defaults"
+          ]
+        },
+        {
+          "id": "cg.accounts.resolve",
+          "name": "accounts.resolve",
+          "description": "Resolve the account a dispatch to this provider would use (never auto-creates)",
+          "route": {
+            "method": "IPC",
+            "path": "accounts:resolve"
+          },
+          "tags": [
+            "cg",
+            "accounts"
+          ],
+          "grammar": [
+            "accounts resolve"
+          ]
+        },
+        {
+          "id": "cg.accounts.portal.providers",
+          "name": "accounts.portal.providers",
+          "description": "Providers a login portal can open, with their sign-in urls",
+          "route": {
+            "method": "IPC",
+            "path": "accounts:portal:providers"
+          },
+          "tags": [
+            "cg",
+            "accounts",
+            "portal"
+          ],
+          "grammar": [
+            "accounts portal providers"
+          ]
+        },
+        {
+          "id": "cg.accounts.portal.open",
+          "name": "accounts.portal.open",
+          "description": "Open a provider sign-in window in the account's own mesh partition",
+          "route": {
+            "method": "IPC",
+            "path": "accounts:portal:open"
+          },
+          "tags": [
+            "cg",
+            "accounts",
+            "portal"
+          ],
+          "grammar": [
+            "accounts portal open"
+          ]
+        },
+        {
+          "id": "cg.accounts.portal.capture",
+          "name": "accounts.portal.capture",
+          "description": "Capture the signed-in session into the cookie vault + link the provider identity",
+          "route": {
+            "method": "IPC",
+            "path": "accounts:portal:capture"
+          },
+          "tags": [
+            "cg",
+            "accounts",
+            "portal",
+            "vault"
+          ],
+          "grammar": [
+            "accounts portal capture"
+          ]
+        },
+        {
+          "id": "cg.accounts.portal.status",
+          "name": "accounts.portal.status",
+          "description": "Live cookies, vault copy, identity and portal state for one account/provider",
+          "route": {
+            "method": "IPC",
+            "path": "accounts:portal:status"
+          },
+          "tags": [
+            "cg",
+            "accounts",
+            "portal",
+            "vault"
+          ],
+          "grammar": [
+            "accounts portal status"
+          ]
+        },
+        {
+          "id": "cg.accounts.portal.close",
+          "name": "accounts.portal.close",
+          "description": "Close an open sign-in window",
+          "route": {
+            "method": "IPC",
+            "path": "accounts:portal:close"
+          },
+          "tags": [
+            "cg",
+            "accounts",
+            "portal"
+          ],
+          "grammar": [
+            "accounts portal close"
+          ]
+        },
+        {
+          "id": "cg.accounts.portal.signOut",
+          "name": "accounts.portal.signOut",
+          "description": "Clear the account's partition and delete its vault copy",
+          "route": {
+            "method": "IPC",
+            "path": "accounts:portal:signOut"
+          },
+          "tags": [
+            "cg",
+            "accounts",
+            "portal",
+            "vault"
+          ],
+          "grammar": [
+            "accounts portal signOut"
+          ]
+        },
+        {
+          "id": "cg.accounts.portal.credentials",
+          "name": "accounts.portal.credentials",
+          "description": "Seal optional sign-in credentials in the password vault for pre-fill",
+          "route": {
+            "method": "IPC",
+            "path": "accounts:portal:credentials"
+          },
+          "tags": [
+            "cg",
+            "accounts",
+            "portal",
+            "passwords",
+            "security"
+          ],
+          "grammar": [
+            "accounts portal credentials"
+          ]
+        },
+        {
+          "id": "cg.accounts.portal.list",
+          "name": "accounts.portal.list",
+          "description": "List open sign-in windows",
+          "route": {
+            "method": "IPC",
+            "path": "accounts:portal:list"
+          },
+          "tags": [
+            "cg",
+            "accounts",
+            "portal"
+          ],
+          "grammar": [
+            "accounts portal list"
+          ]
+        },
+        {
+          "id": "cg.vault.status",
+          "name": "vault.status",
+          "description": "Which key protects each vault — OS-sealed (safeStorage) or legacy",
+          "route": {
+            "method": "IPC",
+            "path": "vault:status"
+          },
+          "tags": [
+            "cg",
+            "vault",
+            "security"
+          ],
+          "grammar": [
+            "vault status"
+          ]
+        },
+        {
+          "id": "cg.macros.create",
+          "name": "macros.create",
+          "description": "Create a macro through macro.js's own validation (step builder)",
+          "route": {
+            "method": "IPC",
+            "path": "macros:create"
+          },
+          "tags": [
+            "cg",
+            "macros"
+          ],
+          "grammar": [
+            "macros create"
+          ]
+        },
+        {
+          "id": "cg.macros.delete",
+          "name": "macros.delete",
+          "description": "Delete a macro (soft-delete, audit trail kept)",
+          "route": {
+            "method": "IPC",
+            "path": "macros:delete"
+          },
+          "tags": [
+            "cg",
+            "macros"
+          ],
+          "grammar": [
+            "macros delete"
+          ]
+        },
+        {
+          "id": "cg.macros.schema",
+          "name": "macros.schema",
+          "description": "Real browser_action enum + erosmancer actions + behavior profiles for the step builder",
+          "route": {
+            "method": "IPC",
+            "path": "macros:schema"
+          },
+          "tags": [
+            "cg",
+            "macros",
+            "eros"
+          ],
+          "grammar": [
+            "macros schema"
+          ]
+        },
+        {
+          "id": "cg.mesh.jobSend",
+          "name": "mesh.jobSend",
+          "description": "Guardian hands Clear Glass a job it CLAIMED on its .job; the intake verifies the claim via guardian /jobs?id= before queueing (idempotent by jobId)",
+          "route": {
+            "method": "POST",
+            "path": "/agent-mesh/send"
+          },
+          "tags": [
+            "cg",
+            "mesh",
+            "jobs",
+            "intake"
+          ],
+          "grammar": [
+            "mesh jobSend"
+          ]
+        },
+        {
+          "id": "cg.mesh.jobStatus",
+          "name": "mesh.jobStatus",
+          "description": "Status of a mesh job; survives a Clear Glass restart as clear_glass_restarted (sent:null, never resend)",
+          "route": {
+            "method": "GET",
+            "path": "/agent-mesh/job?jobId={jobId}"
+          },
+          "tags": [
+            "cg",
+            "mesh",
+            "jobs",
+            "intake"
+          ],
+          "grammar": [
+            "mesh jobStatus"
+          ]
+        },
+        {
+          "id": "cg.mesh.jobIntake",
+          "name": "mesh.jobIntake",
+          "description": "Jobs Clear Glass has taken in from guardian (only jobs guardian claimed for it on their .job), with each <jobId>.intake record",
+          "route": {
+            "method": "GET",
+            "path": "/agent-mesh/intake"
+          },
+          "tags": [
+            "cg",
+            "mesh",
+            "jobs",
+            "intake"
+          ],
+          "grammar": [
+            "mesh jobIntake"
+          ]
+        },
+        {
+          "id": "cg.downloads.responses",
+          "name": "downloads.responses",
+          "description": "Agent replies and provider-tab downloads in the downloads index, each filed under its agent; filters agentId, jobId, provider, kind",
+          "route": {
+            "method": "GET",
+            "path": "/cli/downloads/responses"
+          },
+          "tags": [
+            "cg",
+            "downloads",
+            "responses",
+            "agent"
+          ],
+          "grammar": [
+            "downloads responses"
+          ]
+        },
+        {
+          "id": "cg.downloads.responseItem",
+          "name": "downloads.responseItem",
+          "description": "One downloads-index item in full: the reply text and code blocks, or the downloaded file record",
+          "route": {
+            "method": "GET",
+            "path": "/cli/downloads/responses/:id"
+          },
+          "tags": [
+            "cg",
+            "downloads",
+            "responses",
+            "agent"
+          ],
+          "grammar": [
+            "downloads responseItem"
+          ]
+        },
+        {
+          "id": "cg.window.openLibrary",
+          "name": "window.openLibrary",
+          "description": "Open (or focus) the Library window at an area — downloads, responses, bookmarks, history, accounts, passwords, autofill, macros",
+          "route": {
+            "method": "IPC",
+            "path": "window:openLibrary"
+          },
+          "tags": [
+            "cg",
+            "window",
+            "library"
+          ],
+          "grammar": [
+            "window openLibrary"
+          ]
+        },
+        {
+          "id": "cg.window.closeLibrary",
+          "name": "window.closeLibrary",
+          "description": "Close the Library window",
+          "route": {
+            "method": "IPC",
+            "path": "window:closeLibrary"
+          },
+          "tags": [
+            "cg",
+            "window",
+            "library"
+          ],
+          "grammar": [
+            "window closeLibrary"
+          ]
+        },
+        {
+          "id": "cg.downloads.openFile",
+          "name": "downloads.openFile",
+          "description": "Open a completed download with the OS default app (Library → Downloads, click the name)",
+          "route": {
+            "method": "IPC",
+            "path": "downloads:openFile"
+          },
+          "tags": [
+            "cg",
+            "downloads",
+            "library"
+          ],
+          "grammar": [
+            "downloads openFile"
           ]
         }
       ],
@@ -7580,6 +8168,594 @@
             "cg",
             "bgtab"
           ]
+        },
+        {
+          "command": "autofill-listprofiles",
+          "aliases": [
+            "autofill listProfiles"
+          ],
+          "usage": "autofill-listprofiles",
+          "method": "IPC",
+          "path": "autofill:profile:list",
+          "description": "List real AutofillProfile records",
+          "componentId": "cg.autofill.listProfiles",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "autofill"
+          ]
+        },
+        {
+          "command": "autofill-getprofile",
+          "aliases": [
+            "autofill getProfile"
+          ],
+          "usage": "autofill-getprofile",
+          "method": "IPC",
+          "path": "autofill:profile:get",
+          "description": "Get one real autofill profile",
+          "componentId": "cg.autofill.getProfile",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "autofill"
+          ]
+        },
+        {
+          "command": "autofill-createprofile",
+          "aliases": [
+            "autofill createProfile"
+          ],
+          "usage": "autofill-createprofile",
+          "method": "IPC",
+          "path": "autofill:profile:create",
+          "description": "Create a real autofill profile",
+          "componentId": "cg.autofill.createProfile",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "autofill"
+          ]
+        },
+        {
+          "command": "autofill-updateprofile",
+          "aliases": [
+            "autofill updateProfile"
+          ],
+          "usage": "autofill-updateprofile",
+          "method": "IPC",
+          "path": "autofill:profile:update",
+          "description": "Update a real autofill profile",
+          "componentId": "cg.autofill.updateProfile",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "autofill"
+          ]
+        },
+        {
+          "command": "autofill-deleteprofile",
+          "aliases": [
+            "autofill deleteProfile"
+          ],
+          "usage": "autofill-deleteprofile",
+          "method": "IPC",
+          "path": "autofill:profile:delete",
+          "description": "Delete a real autofill profile",
+          "componentId": "cg.autofill.deleteProfile",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "autofill"
+          ]
+        },
+        {
+          "command": "autofill-detect",
+          "aliases": [
+            "autofill detect"
+          ],
+          "usage": "autofill-detect",
+          "method": "IPC",
+          "path": "autofill:detect",
+          "description": "Detect real form fields an autofill profile would confidently fill",
+          "componentId": "cg.autofill.detect",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "autofill"
+          ]
+        },
+        {
+          "command": "autofill-fill",
+          "aliases": [
+            "autofill fill"
+          ],
+          "usage": "autofill-fill",
+          "method": "IPC",
+          "path": "autofill:fill",
+          "description": "Fill real form fields from an autofill profile",
+          "componentId": "cg.autofill.fill",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "autofill"
+          ]
+        },
+        {
+          "command": "screenqa-detect",
+          "aliases": [
+            "screenQa detect"
+          ],
+          "usage": "screenqa-detect",
+          "method": "IPC",
+          "path": "screen-qa:detect",
+          "description": "Detect real open-ended questions on the page, excluding whatever autofill would already confidently fill",
+          "componentId": "cg.screenQa.detect",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "screen-qa"
+          ]
+        },
+        {
+          "command": "screenqa-answer",
+          "aliases": [
+            "screenQa answer"
+          ],
+          "usage": "screenqa-answer",
+          "method": "IPC",
+          "path": "screen-qa:answer",
+          "description": "Answer a real question through the real copilot bridge (text only — never writes to the page)",
+          "componentId": "cg.screenQa.answer",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "screen-qa"
+          ]
+        },
+        {
+          "command": "screenqa-inject",
+          "aliases": [
+            "screenQa inject"
+          ],
+          "usage": "screenqa-inject",
+          "method": "IPC",
+          "path": "screen-qa:inject",
+          "description": "Write a chosen answer into one real field",
+          "componentId": "cg.screenQa.inject",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "screen-qa"
+          ]
+        },
+        {
+          "command": "screenqa-elementat",
+          "aliases": [
+            "screenQa elementAt"
+          ],
+          "usage": "screenqa-elementat",
+          "method": "IPC",
+          "path": "screen-qa:element-at",
+          "description": "The real field at a window-relative point — the right-click path's own target",
+          "componentId": "cg.screenQa.elementAt",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "screen-qa"
+          ]
+        },
+        {
+          "command": "screenqa-derivequestion",
+          "aliases": [
+            "screenQa deriveQuestion"
+          ],
+          "usage": "screenqa-derivequestion",
+          "method": "IPC",
+          "path": "screen-qa:derive-question",
+          "description": "Derive a question from one real field's metadata (label/aria-label/placeholder/name)",
+          "componentId": "cg.screenQa.deriveQuestion",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "screen-qa"
+          ]
+        },
+        {
+          "command": "accounts-setdefault",
+          "aliases": [
+            "accounts setDefault"
+          ],
+          "usage": "accounts-setdefault",
+          "method": "IPC",
+          "path": "accounts:setDefault",
+          "description": "Set/clear the per-provider default account (Clear Glass is the account authority guardian resolves against)",
+          "componentId": "cg.accounts.setDefault",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "accounts"
+          ]
+        },
+        {
+          "command": "accounts-defaults",
+          "aliases": [
+            "accounts defaults"
+          ],
+          "usage": "accounts-defaults",
+          "method": "IPC",
+          "path": "accounts:defaults",
+          "description": "Per-provider default account map",
+          "componentId": "cg.accounts.defaults",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "accounts"
+          ]
+        },
+        {
+          "command": "accounts-resolve",
+          "aliases": [
+            "accounts resolve"
+          ],
+          "usage": "accounts-resolve",
+          "method": "IPC",
+          "path": "accounts:resolve",
+          "description": "Resolve the account a dispatch to this provider would use (never auto-creates)",
+          "componentId": "cg.accounts.resolve",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "accounts"
+          ]
+        },
+        {
+          "command": "accounts-portal-providers",
+          "aliases": [
+            "accounts portal providers"
+          ],
+          "usage": "accounts-portal-providers",
+          "method": "IPC",
+          "path": "accounts:portal:providers",
+          "description": "Providers a login portal can open, with their sign-in urls",
+          "componentId": "cg.accounts.portal.providers",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "accounts",
+            "portal"
+          ]
+        },
+        {
+          "command": "accounts-portal-open",
+          "aliases": [
+            "accounts portal open"
+          ],
+          "usage": "accounts-portal-open",
+          "method": "IPC",
+          "path": "accounts:portal:open",
+          "description": "Open a provider sign-in window in the account's own mesh partition",
+          "componentId": "cg.accounts.portal.open",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "accounts",
+            "portal"
+          ]
+        },
+        {
+          "command": "accounts-portal-capture",
+          "aliases": [
+            "accounts portal capture"
+          ],
+          "usage": "accounts-portal-capture",
+          "method": "IPC",
+          "path": "accounts:portal:capture",
+          "description": "Capture the signed-in session into the cookie vault + link the provider identity",
+          "componentId": "cg.accounts.portal.capture",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "accounts",
+            "portal",
+            "vault"
+          ]
+        },
+        {
+          "command": "accounts-portal-status",
+          "aliases": [
+            "accounts portal status"
+          ],
+          "usage": "accounts-portal-status",
+          "method": "IPC",
+          "path": "accounts:portal:status",
+          "description": "Live cookies, vault copy, identity and portal state for one account/provider",
+          "componentId": "cg.accounts.portal.status",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "accounts",
+            "portal",
+            "vault"
+          ]
+        },
+        {
+          "command": "accounts-portal-close",
+          "aliases": [
+            "accounts portal close"
+          ],
+          "usage": "accounts-portal-close",
+          "method": "IPC",
+          "path": "accounts:portal:close",
+          "description": "Close an open sign-in window",
+          "componentId": "cg.accounts.portal.close",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "accounts",
+            "portal"
+          ]
+        },
+        {
+          "command": "accounts-portal-signout",
+          "aliases": [
+            "accounts portal signOut"
+          ],
+          "usage": "accounts-portal-signout",
+          "method": "IPC",
+          "path": "accounts:portal:signOut",
+          "description": "Clear the account's partition and delete its vault copy",
+          "componentId": "cg.accounts.portal.signOut",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "accounts",
+            "portal",
+            "vault"
+          ]
+        },
+        {
+          "command": "accounts-portal-credentials",
+          "aliases": [
+            "accounts portal credentials"
+          ],
+          "usage": "accounts-portal-credentials",
+          "method": "IPC",
+          "path": "accounts:portal:credentials",
+          "description": "Seal optional sign-in credentials in the password vault for pre-fill",
+          "componentId": "cg.accounts.portal.credentials",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "accounts",
+            "portal",
+            "passwords",
+            "security"
+          ]
+        },
+        {
+          "command": "accounts-portal-list",
+          "aliases": [
+            "accounts portal list"
+          ],
+          "usage": "accounts-portal-list",
+          "method": "IPC",
+          "path": "accounts:portal:list",
+          "description": "List open sign-in windows",
+          "componentId": "cg.accounts.portal.list",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "accounts",
+            "portal"
+          ]
+        },
+        {
+          "command": "vault-status",
+          "aliases": [
+            "vault status"
+          ],
+          "usage": "vault-status",
+          "method": "IPC",
+          "path": "vault:status",
+          "description": "Which key protects each vault — OS-sealed (safeStorage) or legacy",
+          "componentId": "cg.vault.status",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "vault",
+            "security"
+          ]
+        },
+        {
+          "command": "macros-create",
+          "aliases": [
+            "macros create"
+          ],
+          "usage": "macros-create",
+          "method": "IPC",
+          "path": "macros:create",
+          "description": "Create a macro through macro.js's own validation (step builder)",
+          "componentId": "cg.macros.create",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "macros"
+          ]
+        },
+        {
+          "command": "macros-delete",
+          "aliases": [
+            "macros delete"
+          ],
+          "usage": "macros-delete",
+          "method": "IPC",
+          "path": "macros:delete",
+          "description": "Delete a macro (soft-delete, audit trail kept)",
+          "componentId": "cg.macros.delete",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "macros"
+          ]
+        },
+        {
+          "command": "macros-schema",
+          "aliases": [
+            "macros schema"
+          ],
+          "usage": "macros-schema",
+          "method": "IPC",
+          "path": "macros:schema",
+          "description": "Real browser_action enum + erosmancer actions + behavior profiles for the step builder",
+          "componentId": "cg.macros.schema",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "macros",
+            "eros"
+          ]
+        },
+        {
+          "command": "mesh-jobsend",
+          "aliases": [
+            "mesh jobSend"
+          ],
+          "usage": "mesh-jobsend",
+          "method": "POST",
+          "path": "/agent-mesh/send",
+          "description": "Guardian hands Clear Glass a job it CLAIMED on its .job; the intake verifies the claim via guardian /jobs?id= before queueing (idempotent by jobId)",
+          "componentId": "cg.mesh.jobSend",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "mesh",
+            "jobs",
+            "intake"
+          ]
+        },
+        {
+          "command": "mesh-jobstatus",
+          "aliases": [
+            "mesh jobStatus"
+          ],
+          "usage": "mesh-jobstatus",
+          "method": "GET",
+          "path": "/agent-mesh/job?jobId={jobId}",
+          "description": "Status of a mesh job; survives a Clear Glass restart as clear_glass_restarted (sent:null, never resend)",
+          "componentId": "cg.mesh.jobStatus",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "mesh",
+            "jobs",
+            "intake"
+          ]
+        },
+        {
+          "command": "mesh-jobintake",
+          "aliases": [
+            "mesh jobIntake"
+          ],
+          "usage": "mesh-jobintake",
+          "method": "GET",
+          "path": "/agent-mesh/intake",
+          "description": "Jobs Clear Glass has taken in from guardian (only jobs guardian claimed for it on their .job), with each <jobId>.intake record",
+          "componentId": "cg.mesh.jobIntake",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "mesh",
+            "jobs",
+            "intake"
+          ]
+        },
+        {
+          "command": "downloads-responses",
+          "aliases": [
+            "downloads responses"
+          ],
+          "usage": "downloads-responses",
+          "method": "GET",
+          "path": "/cli/downloads/responses",
+          "description": "Agent replies and provider-tab downloads in the downloads index, each filed under its agent; filters agentId, jobId, provider, kind",
+          "componentId": "cg.downloads.responses",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "downloads",
+            "responses",
+            "agent"
+          ]
+        },
+        {
+          "command": "downloads-responseitem",
+          "aliases": [
+            "downloads responseItem"
+          ],
+          "usage": "downloads-responseitem",
+          "method": "GET",
+          "path": "/cli/downloads/responses/:id",
+          "description": "One downloads-index item in full: the reply text and code blocks, or the downloaded file record",
+          "componentId": "cg.downloads.responseItem",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "downloads",
+            "responses",
+            "agent"
+          ]
+        },
+        {
+          "command": "window-openlibrary",
+          "aliases": [
+            "window openLibrary"
+          ],
+          "usage": "window-openlibrary",
+          "method": "IPC",
+          "path": "window:openLibrary",
+          "description": "Open (or focus) the Library window at an area — downloads, responses, bookmarks, history, accounts, passwords, autofill, macros",
+          "componentId": "cg.window.openLibrary",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "window",
+            "library"
+          ]
+        },
+        {
+          "command": "window-closelibrary",
+          "aliases": [
+            "window closeLibrary"
+          ],
+          "usage": "window-closelibrary",
+          "method": "IPC",
+          "path": "window:closeLibrary",
+          "description": "Close the Library window",
+          "componentId": "cg.window.closeLibrary",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "window",
+            "library"
+          ]
+        },
+        {
+          "command": "downloads-openfile",
+          "aliases": [
+            "downloads openFile"
+          ],
+          "usage": "downloads-openfile",
+          "method": "IPC",
+          "path": "downloads:openFile",
+          "description": "Open a completed download with the OS default app (Library → Downloads, click the name)",
+          "componentId": "cg.downloads.openFile",
+          "systemId": "cg",
+          "tags": [
+            "cg",
+            "downloads",
+            "library"
+          ]
         }
       ],
       "seamHooks": [],
@@ -8250,6 +9426,356 @@
           "description": "List real open background tabs",
           "intents": [
             "bgtab list"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.autofill.listProfiles",
+          "label": "autofill.listProfiles",
+          "description": "List real AutofillProfile records",
+          "intents": [
+            "autofill listProfiles"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.autofill.getProfile",
+          "label": "autofill.getProfile",
+          "description": "Get one real autofill profile",
+          "intents": [
+            "autofill getProfile"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.autofill.createProfile",
+          "label": "autofill.createProfile",
+          "description": "Create a real autofill profile",
+          "intents": [
+            "autofill createProfile"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.autofill.updateProfile",
+          "label": "autofill.updateProfile",
+          "description": "Update a real autofill profile",
+          "intents": [
+            "autofill updateProfile"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.autofill.deleteProfile",
+          "label": "autofill.deleteProfile",
+          "description": "Delete a real autofill profile",
+          "intents": [
+            "autofill deleteProfile"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.autofill.detect",
+          "label": "autofill.detect",
+          "description": "Detect real form fields an autofill profile would confidently fill",
+          "intents": [
+            "autofill detect"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.autofill.fill",
+          "label": "autofill.fill",
+          "description": "Fill real form fields from an autofill profile",
+          "intents": [
+            "autofill fill"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.screenQa.detect",
+          "label": "screenQa.detect",
+          "description": "Detect real open-ended questions on the page, excluding whatever autofill would already confidently fill",
+          "intents": [
+            "screenQa detect"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.screenQa.answer",
+          "label": "screenQa.answer",
+          "description": "Answer a real question through the real copilot bridge (text only — never writes to the page)",
+          "intents": [
+            "screenQa answer"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.screenQa.inject",
+          "label": "screenQa.inject",
+          "description": "Write a chosen answer into one real field",
+          "intents": [
+            "screenQa inject"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.screenQa.elementAt",
+          "label": "screenQa.elementAt",
+          "description": "The real field at a window-relative point — the right-click path's own target",
+          "intents": [
+            "screenQa elementAt"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.screenQa.deriveQuestion",
+          "label": "screenQa.deriveQuestion",
+          "description": "Derive a question from one real field's metadata (label/aria-label/placeholder/name)",
+          "intents": [
+            "screenQa deriveQuestion"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.accounts.setDefault",
+          "label": "accounts.setDefault",
+          "description": "Set/clear the per-provider default account (Clear Glass is the account authority guardian resolves against)",
+          "intents": [
+            "accounts setDefault"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.accounts.defaults",
+          "label": "accounts.defaults",
+          "description": "Per-provider default account map",
+          "intents": [
+            "accounts defaults"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.accounts.resolve",
+          "label": "accounts.resolve",
+          "description": "Resolve the account a dispatch to this provider would use (never auto-creates)",
+          "intents": [
+            "accounts resolve"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.accounts.portal.providers",
+          "label": "accounts.portal.providers",
+          "description": "Providers a login portal can open, with their sign-in urls",
+          "intents": [
+            "accounts portal providers"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.accounts.portal.open",
+          "label": "accounts.portal.open",
+          "description": "Open a provider sign-in window in the account's own mesh partition",
+          "intents": [
+            "accounts portal open"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.accounts.portal.capture",
+          "label": "accounts.portal.capture",
+          "description": "Capture the signed-in session into the cookie vault + link the provider identity",
+          "intents": [
+            "accounts portal capture"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.accounts.portal.status",
+          "label": "accounts.portal.status",
+          "description": "Live cookies, vault copy, identity and portal state for one account/provider",
+          "intents": [
+            "accounts portal status"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.accounts.portal.close",
+          "label": "accounts.portal.close",
+          "description": "Close an open sign-in window",
+          "intents": [
+            "accounts portal close"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.accounts.portal.signOut",
+          "label": "accounts.portal.signOut",
+          "description": "Clear the account's partition and delete its vault copy",
+          "intents": [
+            "accounts portal signOut"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.accounts.portal.credentials",
+          "label": "accounts.portal.credentials",
+          "description": "Seal optional sign-in credentials in the password vault for pre-fill",
+          "intents": [
+            "accounts portal credentials"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.accounts.portal.list",
+          "label": "accounts.portal.list",
+          "description": "List open sign-in windows",
+          "intents": [
+            "accounts portal list"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.vault.status",
+          "label": "vault.status",
+          "description": "Which key protects each vault — OS-sealed (safeStorage) or legacy",
+          "intents": [
+            "vault status"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.macros.create",
+          "label": "macros.create",
+          "description": "Create a macro through macro.js's own validation (step builder)",
+          "intents": [
+            "macros create"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.macros.delete",
+          "label": "macros.delete",
+          "description": "Delete a macro (soft-delete, audit trail kept)",
+          "intents": [
+            "macros delete"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.macros.schema",
+          "label": "macros.schema",
+          "description": "Real browser_action enum + erosmancer actions + behavior profiles for the step builder",
+          "intents": [
+            "macros schema"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.mesh.jobSend",
+          "label": "mesh.jobSend",
+          "description": "Guardian hands Clear Glass a job it CLAIMED on its .job; the intake verifies the claim via guardian /jobs?id= before queueing (idempotent by jobId)",
+          "intents": [
+            "mesh jobSend"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.mesh.jobStatus",
+          "label": "mesh.jobStatus",
+          "description": "Status of a mesh job; survives a Clear Glass restart as clear_glass_restarted (sent:null, never resend)",
+          "intents": [
+            "mesh jobStatus"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.mesh.jobIntake",
+          "label": "mesh.jobIntake",
+          "description": "Jobs Clear Glass has taken in from guardian (only jobs guardian claimed for it on their .job), with each <jobId>.intake record",
+          "intents": [
+            "mesh jobIntake"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.downloads.responses",
+          "label": "downloads.responses",
+          "description": "Agent replies and provider-tab downloads in the downloads index, each filed under its agent; filters agentId, jobId, provider, kind",
+          "intents": [
+            "downloads responses"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.downloads.responseItem",
+          "label": "downloads.responseItem",
+          "description": "One downloads-index item in full: the reply text and code blocks, or the downloaded file record",
+          "intents": [
+            "downloads responseItem"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.window.openLibrary",
+          "label": "window.openLibrary",
+          "description": "Open (or focus) the Library window at an area — downloads, responses, bookmarks, history, accounts, passwords, autofill, macros",
+          "intents": [
+            "window openLibrary"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.window.closeLibrary",
+          "label": "window.closeLibrary",
+          "description": "Close the Library window",
+          "intents": [
+            "window closeLibrary"
+          ],
+          "contract": null,
+          "hookId": null
+        },
+        {
+          "componentId": "cg.downloads.openFile",
+          "label": "downloads.openFile",
+          "description": "Open a completed download with the OS default app (Library → Downloads, click the name)",
+          "intents": [
+            "downloads openFile"
           ],
           "contract": null,
           "hookId": null
@@ -9877,7 +11403,7 @@
       "usage": "canvas",
       "method": "GET",
       "path": "/",
-      "description": "Main ERAVOS canvas — organisms, wires, transport",
+      "description": "Main ERAVOS canvas — mods, wires, transport",
       "componentId": "eravos.canvas",
       "systemId": "eravos",
       "tags": [
@@ -9885,46 +11411,46 @@
       ]
     },
     {
-      "command": "organism-spawn",
+      "command": "mod-spawn",
       "aliases": [
         "eravos spawn",
-        "spawn organism"
+        "spawn mod"
       ],
-      "usage": "organism-spawn",
+      "usage": "mod-spawn",
       "method": "POST",
-      "path": "/api/organisms",
-      "description": "Spawn an organism by id onto the canvas",
-      "componentId": "eravos.organism.spawn",
+      "path": "/api/mods",
+      "description": "Spawn an mod by id onto the canvas",
+      "componentId": "eravos.mod.spawn",
       "systemId": "eravos",
       "tags": [
         "eravos"
       ]
     },
     {
-      "command": "organism-list",
+      "command": "mod-list",
       "aliases": [
-        "eravos organisms"
+        "eravos mods"
       ],
-      "usage": "organism-list",
+      "usage": "mod-list",
       "method": "GET",
-      "path": "/api/organisms",
-      "description": "List all mounted organisms",
-      "componentId": "eravos.organism.list",
+      "path": "/api/mods",
+      "description": "List all mounted mods",
+      "componentId": "eravos.mod.list",
       "systemId": "eravos",
       "tags": [
         "eravos"
       ]
     },
     {
-      "command": "organism-remove",
+      "command": "mod-remove",
       "aliases": [
-        "eravos organism remove"
+        "eravos mod remove"
       ],
-      "usage": "organism-remove",
+      "usage": "mod-remove",
       "method": "DELETE",
-      "path": "/api/organisms/:uuid",
-      "description": "Remove an organism",
-      "componentId": "eravos.organism.remove",
+      "path": "/api/mods/:uuid",
+      "description": "Remove an mod",
+      "componentId": "eravos.mod.remove",
       "systemId": "eravos",
       "tags": [
         "eravos"
@@ -9938,7 +11464,7 @@
       "usage": "wire-connect",
       "method": "POST",
       "path": "/api/wires",
-      "description": "Connect two organism hooks",
+      "description": "Connect two mod hooks",
       "componentId": "eravos.wire.connect",
       "systemId": "eravos",
       "tags": [
@@ -9968,7 +11494,7 @@
       "usage": "catalog-list",
       "method": "GET",
       "path": "/api/catalog",
-      "description": "Available organisms from registry",
+      "description": "Available mods from registry",
       "componentId": "eravos.catalog.list",
       "systemId": "eravos",
       "tags": [
@@ -9983,7 +11509,7 @@
       "usage": "pack-install",
       "method": "POST",
       "path": "/api/pack/install",
-      "description": "Install a .zip organism pack",
+      "description": "Install a .zip mod pack",
       "componentId": "eravos.pack.install",
       "systemId": "eravos",
       "tags": [
@@ -11138,6 +12664,594 @@
         "cg",
         "bgtab"
       ]
+    },
+    {
+      "command": "autofill-listprofiles",
+      "aliases": [
+        "autofill listProfiles"
+      ],
+      "usage": "autofill-listprofiles",
+      "method": "IPC",
+      "path": "autofill:profile:list",
+      "description": "List real AutofillProfile records",
+      "componentId": "cg.autofill.listProfiles",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "autofill"
+      ]
+    },
+    {
+      "command": "autofill-getprofile",
+      "aliases": [
+        "autofill getProfile"
+      ],
+      "usage": "autofill-getprofile",
+      "method": "IPC",
+      "path": "autofill:profile:get",
+      "description": "Get one real autofill profile",
+      "componentId": "cg.autofill.getProfile",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "autofill"
+      ]
+    },
+    {
+      "command": "autofill-createprofile",
+      "aliases": [
+        "autofill createProfile"
+      ],
+      "usage": "autofill-createprofile",
+      "method": "IPC",
+      "path": "autofill:profile:create",
+      "description": "Create a real autofill profile",
+      "componentId": "cg.autofill.createProfile",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "autofill"
+      ]
+    },
+    {
+      "command": "autofill-updateprofile",
+      "aliases": [
+        "autofill updateProfile"
+      ],
+      "usage": "autofill-updateprofile",
+      "method": "IPC",
+      "path": "autofill:profile:update",
+      "description": "Update a real autofill profile",
+      "componentId": "cg.autofill.updateProfile",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "autofill"
+      ]
+    },
+    {
+      "command": "autofill-deleteprofile",
+      "aliases": [
+        "autofill deleteProfile"
+      ],
+      "usage": "autofill-deleteprofile",
+      "method": "IPC",
+      "path": "autofill:profile:delete",
+      "description": "Delete a real autofill profile",
+      "componentId": "cg.autofill.deleteProfile",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "autofill"
+      ]
+    },
+    {
+      "command": "autofill-detect",
+      "aliases": [
+        "autofill detect"
+      ],
+      "usage": "autofill-detect",
+      "method": "IPC",
+      "path": "autofill:detect",
+      "description": "Detect real form fields an autofill profile would confidently fill",
+      "componentId": "cg.autofill.detect",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "autofill"
+      ]
+    },
+    {
+      "command": "autofill-fill",
+      "aliases": [
+        "autofill fill"
+      ],
+      "usage": "autofill-fill",
+      "method": "IPC",
+      "path": "autofill:fill",
+      "description": "Fill real form fields from an autofill profile",
+      "componentId": "cg.autofill.fill",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "autofill"
+      ]
+    },
+    {
+      "command": "screenqa-detect",
+      "aliases": [
+        "screenQa detect"
+      ],
+      "usage": "screenqa-detect",
+      "method": "IPC",
+      "path": "screen-qa:detect",
+      "description": "Detect real open-ended questions on the page, excluding whatever autofill would already confidently fill",
+      "componentId": "cg.screenQa.detect",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "screen-qa"
+      ]
+    },
+    {
+      "command": "screenqa-answer",
+      "aliases": [
+        "screenQa answer"
+      ],
+      "usage": "screenqa-answer",
+      "method": "IPC",
+      "path": "screen-qa:answer",
+      "description": "Answer a real question through the real copilot bridge (text only — never writes to the page)",
+      "componentId": "cg.screenQa.answer",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "screen-qa"
+      ]
+    },
+    {
+      "command": "screenqa-inject",
+      "aliases": [
+        "screenQa inject"
+      ],
+      "usage": "screenqa-inject",
+      "method": "IPC",
+      "path": "screen-qa:inject",
+      "description": "Write a chosen answer into one real field",
+      "componentId": "cg.screenQa.inject",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "screen-qa"
+      ]
+    },
+    {
+      "command": "screenqa-elementat",
+      "aliases": [
+        "screenQa elementAt"
+      ],
+      "usage": "screenqa-elementat",
+      "method": "IPC",
+      "path": "screen-qa:element-at",
+      "description": "The real field at a window-relative point — the right-click path's own target",
+      "componentId": "cg.screenQa.elementAt",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "screen-qa"
+      ]
+    },
+    {
+      "command": "screenqa-derivequestion",
+      "aliases": [
+        "screenQa deriveQuestion"
+      ],
+      "usage": "screenqa-derivequestion",
+      "method": "IPC",
+      "path": "screen-qa:derive-question",
+      "description": "Derive a question from one real field's metadata (label/aria-label/placeholder/name)",
+      "componentId": "cg.screenQa.deriveQuestion",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "screen-qa"
+      ]
+    },
+    {
+      "command": "accounts-setdefault",
+      "aliases": [
+        "accounts setDefault"
+      ],
+      "usage": "accounts-setdefault",
+      "method": "IPC",
+      "path": "accounts:setDefault",
+      "description": "Set/clear the per-provider default account (Clear Glass is the account authority guardian resolves against)",
+      "componentId": "cg.accounts.setDefault",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "accounts"
+      ]
+    },
+    {
+      "command": "accounts-defaults",
+      "aliases": [
+        "accounts defaults"
+      ],
+      "usage": "accounts-defaults",
+      "method": "IPC",
+      "path": "accounts:defaults",
+      "description": "Per-provider default account map",
+      "componentId": "cg.accounts.defaults",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "accounts"
+      ]
+    },
+    {
+      "command": "accounts-resolve",
+      "aliases": [
+        "accounts resolve"
+      ],
+      "usage": "accounts-resolve",
+      "method": "IPC",
+      "path": "accounts:resolve",
+      "description": "Resolve the account a dispatch to this provider would use (never auto-creates)",
+      "componentId": "cg.accounts.resolve",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "accounts"
+      ]
+    },
+    {
+      "command": "accounts-portal-providers",
+      "aliases": [
+        "accounts portal providers"
+      ],
+      "usage": "accounts-portal-providers",
+      "method": "IPC",
+      "path": "accounts:portal:providers",
+      "description": "Providers a login portal can open, with their sign-in urls",
+      "componentId": "cg.accounts.portal.providers",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "accounts",
+        "portal"
+      ]
+    },
+    {
+      "command": "accounts-portal-open",
+      "aliases": [
+        "accounts portal open"
+      ],
+      "usage": "accounts-portal-open",
+      "method": "IPC",
+      "path": "accounts:portal:open",
+      "description": "Open a provider sign-in window in the account's own mesh partition",
+      "componentId": "cg.accounts.portal.open",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "accounts",
+        "portal"
+      ]
+    },
+    {
+      "command": "accounts-portal-capture",
+      "aliases": [
+        "accounts portal capture"
+      ],
+      "usage": "accounts-portal-capture",
+      "method": "IPC",
+      "path": "accounts:portal:capture",
+      "description": "Capture the signed-in session into the cookie vault + link the provider identity",
+      "componentId": "cg.accounts.portal.capture",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "accounts",
+        "portal",
+        "vault"
+      ]
+    },
+    {
+      "command": "accounts-portal-status",
+      "aliases": [
+        "accounts portal status"
+      ],
+      "usage": "accounts-portal-status",
+      "method": "IPC",
+      "path": "accounts:portal:status",
+      "description": "Live cookies, vault copy, identity and portal state for one account/provider",
+      "componentId": "cg.accounts.portal.status",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "accounts",
+        "portal",
+        "vault"
+      ]
+    },
+    {
+      "command": "accounts-portal-close",
+      "aliases": [
+        "accounts portal close"
+      ],
+      "usage": "accounts-portal-close",
+      "method": "IPC",
+      "path": "accounts:portal:close",
+      "description": "Close an open sign-in window",
+      "componentId": "cg.accounts.portal.close",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "accounts",
+        "portal"
+      ]
+    },
+    {
+      "command": "accounts-portal-signout",
+      "aliases": [
+        "accounts portal signOut"
+      ],
+      "usage": "accounts-portal-signout",
+      "method": "IPC",
+      "path": "accounts:portal:signOut",
+      "description": "Clear the account's partition and delete its vault copy",
+      "componentId": "cg.accounts.portal.signOut",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "accounts",
+        "portal",
+        "vault"
+      ]
+    },
+    {
+      "command": "accounts-portal-credentials",
+      "aliases": [
+        "accounts portal credentials"
+      ],
+      "usage": "accounts-portal-credentials",
+      "method": "IPC",
+      "path": "accounts:portal:credentials",
+      "description": "Seal optional sign-in credentials in the password vault for pre-fill",
+      "componentId": "cg.accounts.portal.credentials",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "accounts",
+        "portal",
+        "passwords",
+        "security"
+      ]
+    },
+    {
+      "command": "accounts-portal-list",
+      "aliases": [
+        "accounts portal list"
+      ],
+      "usage": "accounts-portal-list",
+      "method": "IPC",
+      "path": "accounts:portal:list",
+      "description": "List open sign-in windows",
+      "componentId": "cg.accounts.portal.list",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "accounts",
+        "portal"
+      ]
+    },
+    {
+      "command": "vault-status",
+      "aliases": [
+        "vault status"
+      ],
+      "usage": "vault-status",
+      "method": "IPC",
+      "path": "vault:status",
+      "description": "Which key protects each vault — OS-sealed (safeStorage) or legacy",
+      "componentId": "cg.vault.status",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "vault",
+        "security"
+      ]
+    },
+    {
+      "command": "macros-create",
+      "aliases": [
+        "macros create"
+      ],
+      "usage": "macros-create",
+      "method": "IPC",
+      "path": "macros:create",
+      "description": "Create a macro through macro.js's own validation (step builder)",
+      "componentId": "cg.macros.create",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "macros"
+      ]
+    },
+    {
+      "command": "macros-delete",
+      "aliases": [
+        "macros delete"
+      ],
+      "usage": "macros-delete",
+      "method": "IPC",
+      "path": "macros:delete",
+      "description": "Delete a macro (soft-delete, audit trail kept)",
+      "componentId": "cg.macros.delete",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "macros"
+      ]
+    },
+    {
+      "command": "macros-schema",
+      "aliases": [
+        "macros schema"
+      ],
+      "usage": "macros-schema",
+      "method": "IPC",
+      "path": "macros:schema",
+      "description": "Real browser_action enum + erosmancer actions + behavior profiles for the step builder",
+      "componentId": "cg.macros.schema",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "macros",
+        "eros"
+      ]
+    },
+    {
+      "command": "mesh-jobsend",
+      "aliases": [
+        "mesh jobSend"
+      ],
+      "usage": "mesh-jobsend",
+      "method": "POST",
+      "path": "/agent-mesh/send",
+      "description": "Guardian hands Clear Glass a job it CLAIMED on its .job; the intake verifies the claim via guardian /jobs?id= before queueing (idempotent by jobId)",
+      "componentId": "cg.mesh.jobSend",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "mesh",
+        "jobs",
+        "intake"
+      ]
+    },
+    {
+      "command": "mesh-jobstatus",
+      "aliases": [
+        "mesh jobStatus"
+      ],
+      "usage": "mesh-jobstatus",
+      "method": "GET",
+      "path": "/agent-mesh/job?jobId={jobId}",
+      "description": "Status of a mesh job; survives a Clear Glass restart as clear_glass_restarted (sent:null, never resend)",
+      "componentId": "cg.mesh.jobStatus",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "mesh",
+        "jobs",
+        "intake"
+      ]
+    },
+    {
+      "command": "mesh-jobintake",
+      "aliases": [
+        "mesh jobIntake"
+      ],
+      "usage": "mesh-jobintake",
+      "method": "GET",
+      "path": "/agent-mesh/intake",
+      "description": "Jobs Clear Glass has taken in from guardian (only jobs guardian claimed for it on their .job), with each <jobId>.intake record",
+      "componentId": "cg.mesh.jobIntake",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "mesh",
+        "jobs",
+        "intake"
+      ]
+    },
+    {
+      "command": "downloads-responses",
+      "aliases": [
+        "downloads responses"
+      ],
+      "usage": "downloads-responses",
+      "method": "GET",
+      "path": "/cli/downloads/responses",
+      "description": "Agent replies and provider-tab downloads in the downloads index, each filed under its agent; filters agentId, jobId, provider, kind",
+      "componentId": "cg.downloads.responses",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "downloads",
+        "responses",
+        "agent"
+      ]
+    },
+    {
+      "command": "downloads-responseitem",
+      "aliases": [
+        "downloads responseItem"
+      ],
+      "usage": "downloads-responseitem",
+      "method": "GET",
+      "path": "/cli/downloads/responses/:id",
+      "description": "One downloads-index item in full: the reply text and code blocks, or the downloaded file record",
+      "componentId": "cg.downloads.responseItem",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "downloads",
+        "responses",
+        "agent"
+      ]
+    },
+    {
+      "command": "window-openlibrary",
+      "aliases": [
+        "window openLibrary"
+      ],
+      "usage": "window-openlibrary",
+      "method": "IPC",
+      "path": "window:openLibrary",
+      "description": "Open (or focus) the Library window at an area — downloads, responses, bookmarks, history, accounts, passwords, autofill, macros",
+      "componentId": "cg.window.openLibrary",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "window",
+        "library"
+      ]
+    },
+    {
+      "command": "window-closelibrary",
+      "aliases": [
+        "window closeLibrary"
+      ],
+      "usage": "window-closelibrary",
+      "method": "IPC",
+      "path": "window:closeLibrary",
+      "description": "Close the Library window",
+      "componentId": "cg.window.closeLibrary",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "window",
+        "library"
+      ]
+    },
+    {
+      "command": "downloads-openfile",
+      "aliases": [
+        "downloads openFile"
+      ],
+      "usage": "downloads-openfile",
+      "method": "IPC",
+      "path": "downloads:openFile",
+      "description": "Open a completed download with the OS default app (Library → Downloads, click the name)",
+      "componentId": "cg.downloads.openFile",
+      "systemId": "cg",
+      "tags": [
+        "cg",
+        "downloads",
+        "library"
+      ]
     }
   ],
   "allSEAM": [
@@ -11568,10 +13682,10 @@
       ]
     },
     {
-      "componentId": "eravos.organism.spawn",
+      "componentId": "eravos.mod.spawn",
       "in": [
         {
-          "id": "eravos.organism.spawn.receive",
+          "id": "eravos.mod.spawn.receive",
           "intent": [
             "compose",
             "visualize",
@@ -11585,7 +13699,7 @@
       ],
       "out": [
         {
-          "id": "eravos.organism.spawn.complete",
+          "id": "eravos.mod.spawn.complete",
           "wires_to": [
             "cortex.raid.feedback"
           ],
@@ -12699,7 +14813,7 @@
     {
       "componentId": "eravos.canvas",
       "label": "canvas",
-      "description": "Main ERAVOS canvas — organisms, wires, transport",
+      "description": "Main ERAVOS canvas — mods, wires, transport",
       "intents": [
         "eravos",
         "canvas",
@@ -12709,35 +14823,35 @@
       "hookId": null
     },
     {
-      "componentId": "eravos.organism.spawn",
-      "label": "organism.spawn",
-      "description": "Spawn an organism by id onto the canvas",
+      "componentId": "eravos.mod.spawn",
+      "label": "mod.spawn",
+      "description": "Spawn an mod by id onto the canvas",
       "intents": [
         "compose",
         "visualize",
         "spawn",
         "eravos spawn",
-        "spawn organism"
+        "spawn mod"
       ],
       "contract": "nexus-interaction-contract-v1::eravos",
-      "hookId": "eravos.organism.spawn.receive"
+      "hookId": "eravos.mod.spawn.receive"
     },
     {
-      "componentId": "eravos.organism.list",
-      "label": "organism.list",
-      "description": "List all mounted organisms",
+      "componentId": "eravos.mod.list",
+      "label": "mod.list",
+      "description": "List all mounted mods",
       "intents": [
-        "eravos organisms"
+        "eravos mods"
       ],
       "contract": null,
       "hookId": null
     },
     {
-      "componentId": "eravos.organism.remove",
-      "label": "organism.remove",
-      "description": "Remove an organism",
+      "componentId": "eravos.mod.remove",
+      "label": "mod.remove",
+      "description": "Remove an mod",
       "intents": [
-        "eravos organism remove"
+        "eravos mod remove"
       ],
       "contract": null,
       "hookId": null
@@ -12745,7 +14859,7 @@
     {
       "componentId": "eravos.wire.connect",
       "label": "wire.connect",
-      "description": "Connect two organism hooks",
+      "description": "Connect two mod hooks",
       "intents": [
         "eravos wire"
       ],
@@ -12765,7 +14879,7 @@
     {
       "componentId": "eravos.catalog.list",
       "label": "catalog.list",
-      "description": "Available organisms from registry",
+      "description": "Available mods from registry",
       "intents": [
         "eravos catalog"
       ],
@@ -12775,7 +14889,7 @@
     {
       "componentId": "eravos.pack.install",
       "label": "pack.install",
-      "description": "Install a .zip organism pack",
+      "description": "Install a .zip mod pack",
       "intents": [
         "eravos install"
       ],
@@ -13491,6 +15605,356 @@
       ],
       "contract": null,
       "hookId": null
+    },
+    {
+      "componentId": "cg.autofill.listProfiles",
+      "label": "autofill.listProfiles",
+      "description": "List real AutofillProfile records",
+      "intents": [
+        "autofill listProfiles"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.autofill.getProfile",
+      "label": "autofill.getProfile",
+      "description": "Get one real autofill profile",
+      "intents": [
+        "autofill getProfile"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.autofill.createProfile",
+      "label": "autofill.createProfile",
+      "description": "Create a real autofill profile",
+      "intents": [
+        "autofill createProfile"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.autofill.updateProfile",
+      "label": "autofill.updateProfile",
+      "description": "Update a real autofill profile",
+      "intents": [
+        "autofill updateProfile"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.autofill.deleteProfile",
+      "label": "autofill.deleteProfile",
+      "description": "Delete a real autofill profile",
+      "intents": [
+        "autofill deleteProfile"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.autofill.detect",
+      "label": "autofill.detect",
+      "description": "Detect real form fields an autofill profile would confidently fill",
+      "intents": [
+        "autofill detect"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.autofill.fill",
+      "label": "autofill.fill",
+      "description": "Fill real form fields from an autofill profile",
+      "intents": [
+        "autofill fill"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.screenQa.detect",
+      "label": "screenQa.detect",
+      "description": "Detect real open-ended questions on the page, excluding whatever autofill would already confidently fill",
+      "intents": [
+        "screenQa detect"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.screenQa.answer",
+      "label": "screenQa.answer",
+      "description": "Answer a real question through the real copilot bridge (text only — never writes to the page)",
+      "intents": [
+        "screenQa answer"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.screenQa.inject",
+      "label": "screenQa.inject",
+      "description": "Write a chosen answer into one real field",
+      "intents": [
+        "screenQa inject"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.screenQa.elementAt",
+      "label": "screenQa.elementAt",
+      "description": "The real field at a window-relative point — the right-click path's own target",
+      "intents": [
+        "screenQa elementAt"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.screenQa.deriveQuestion",
+      "label": "screenQa.deriveQuestion",
+      "description": "Derive a question from one real field's metadata (label/aria-label/placeholder/name)",
+      "intents": [
+        "screenQa deriveQuestion"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.accounts.setDefault",
+      "label": "accounts.setDefault",
+      "description": "Set/clear the per-provider default account (Clear Glass is the account authority guardian resolves against)",
+      "intents": [
+        "accounts setDefault"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.accounts.defaults",
+      "label": "accounts.defaults",
+      "description": "Per-provider default account map",
+      "intents": [
+        "accounts defaults"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.accounts.resolve",
+      "label": "accounts.resolve",
+      "description": "Resolve the account a dispatch to this provider would use (never auto-creates)",
+      "intents": [
+        "accounts resolve"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.accounts.portal.providers",
+      "label": "accounts.portal.providers",
+      "description": "Providers a login portal can open, with their sign-in urls",
+      "intents": [
+        "accounts portal providers"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.accounts.portal.open",
+      "label": "accounts.portal.open",
+      "description": "Open a provider sign-in window in the account's own mesh partition",
+      "intents": [
+        "accounts portal open"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.accounts.portal.capture",
+      "label": "accounts.portal.capture",
+      "description": "Capture the signed-in session into the cookie vault + link the provider identity",
+      "intents": [
+        "accounts portal capture"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.accounts.portal.status",
+      "label": "accounts.portal.status",
+      "description": "Live cookies, vault copy, identity and portal state for one account/provider",
+      "intents": [
+        "accounts portal status"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.accounts.portal.close",
+      "label": "accounts.portal.close",
+      "description": "Close an open sign-in window",
+      "intents": [
+        "accounts portal close"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.accounts.portal.signOut",
+      "label": "accounts.portal.signOut",
+      "description": "Clear the account's partition and delete its vault copy",
+      "intents": [
+        "accounts portal signOut"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.accounts.portal.credentials",
+      "label": "accounts.portal.credentials",
+      "description": "Seal optional sign-in credentials in the password vault for pre-fill",
+      "intents": [
+        "accounts portal credentials"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.accounts.portal.list",
+      "label": "accounts.portal.list",
+      "description": "List open sign-in windows",
+      "intents": [
+        "accounts portal list"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.vault.status",
+      "label": "vault.status",
+      "description": "Which key protects each vault — OS-sealed (safeStorage) or legacy",
+      "intents": [
+        "vault status"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.macros.create",
+      "label": "macros.create",
+      "description": "Create a macro through macro.js's own validation (step builder)",
+      "intents": [
+        "macros create"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.macros.delete",
+      "label": "macros.delete",
+      "description": "Delete a macro (soft-delete, audit trail kept)",
+      "intents": [
+        "macros delete"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.macros.schema",
+      "label": "macros.schema",
+      "description": "Real browser_action enum + erosmancer actions + behavior profiles for the step builder",
+      "intents": [
+        "macros schema"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.mesh.jobSend",
+      "label": "mesh.jobSend",
+      "description": "Guardian hands Clear Glass a job it CLAIMED on its .job; the intake verifies the claim via guardian /jobs?id= before queueing (idempotent by jobId)",
+      "intents": [
+        "mesh jobSend"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.mesh.jobStatus",
+      "label": "mesh.jobStatus",
+      "description": "Status of a mesh job; survives a Clear Glass restart as clear_glass_restarted (sent:null, never resend)",
+      "intents": [
+        "mesh jobStatus"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.mesh.jobIntake",
+      "label": "mesh.jobIntake",
+      "description": "Jobs Clear Glass has taken in from guardian (only jobs guardian claimed for it on their .job), with each <jobId>.intake record",
+      "intents": [
+        "mesh jobIntake"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.downloads.responses",
+      "label": "downloads.responses",
+      "description": "Agent replies and provider-tab downloads in the downloads index, each filed under its agent; filters agentId, jobId, provider, kind",
+      "intents": [
+        "downloads responses"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.downloads.responseItem",
+      "label": "downloads.responseItem",
+      "description": "One downloads-index item in full: the reply text and code blocks, or the downloaded file record",
+      "intents": [
+        "downloads responseItem"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.window.openLibrary",
+      "label": "window.openLibrary",
+      "description": "Open (or focus) the Library window at an area — downloads, responses, bookmarks, history, accounts, passwords, autofill, macros",
+      "intents": [
+        "window openLibrary"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.window.closeLibrary",
+      "label": "window.closeLibrary",
+      "description": "Close the Library window",
+      "intents": [
+        "window closeLibrary"
+      ],
+      "contract": null,
+      "hookId": null
+    },
+    {
+      "componentId": "cg.downloads.openFile",
+      "label": "downloads.openFile",
+      "description": "Open a completed download with the OS default app (Library → Downloads, click the name)",
+      "intents": [
+        "downloads openFile"
+      ],
+      "contract": null,
+      "hookId": null
     }
   ],
   "grammarIndex": {
@@ -13682,6 +16146,11 @@
         "componentId": "guardian.providers.list",
         "systemId": "guardian",
         "description": "Connected NCP browser tab providers"
+      },
+      {
+        "componentId": "cg.accounts.portal.providers",
+        "systemId": "clear-glass",
+        "description": "Providers a login portal can open, with their sign-in urls"
       }
     ],
     "list": [
@@ -13784,6 +16253,11 @@
         "componentId": "cg.bgtab.list",
         "systemId": "clear-glass",
         "description": "List real open background tabs"
+      },
+      {
+        "componentId": "cg.accounts.portal.list",
+        "systemId": "clear-glass",
+        "description": "List open sign-in windows"
       }
     ],
     "providers-list": [
@@ -13962,6 +16436,16 @@
         "componentId": "cg.status",
         "systemId": "clear-glass",
         "description": "Full system status — bus sample, agents, listeners, TLS"
+      },
+      {
+        "componentId": "cg.accounts.portal.status",
+        "systemId": "clear-glass",
+        "description": "Live cookies, vault copy, identity and portal state for one account/provider"
+      },
+      {
+        "componentId": "cg.vault.status",
+        "systemId": "clear-glass",
+        "description": "Which key protects each vault — OS-sealed (safeStorage) or legacy"
       }
     ],
     "job statu": [
@@ -14214,6 +16698,11 @@
         "componentId": "cg.context.create",
         "systemId": "clear-glass",
         "description": "Create isolated Chromium partition"
+      },
+      {
+        "componentId": "cg.macros.create",
+        "systemId": "clear-glass",
+        "description": "Create a macro through macro.js's own validation (step builder)"
       }
     ],
     "seam-session-create": [
@@ -14820,9 +17309,9 @@
         "description": "Remove a runtime axiom"
       },
       {
-        "componentId": "eravos.organism.remove",
+        "componentId": "eravos.mod.remove",
         "systemId": "eravos",
-        "description": "Remove an organism"
+        "description": "Remove an mod"
       },
       {
         "componentId": "cg.calltos.remove",
@@ -15600,6 +18089,11 @@
         "componentId": "copilot.introspect.examine",
         "systemId": "copilot",
         "description": "Examine the last answer against REAL signals — reflection score, contract shape, gaps, ledger. Never the model’s own opinion"
+      },
+      {
+        "componentId": "cg.screenQa.answer",
+        "systemId": "clear-glass",
+        "description": "Answer a real question through the real copilot bridge (text only — never writes to the page)"
       }
     ],
     "was that right": [
@@ -16487,7 +18981,7 @@
       {
         "componentId": "eravos.wire.connect",
         "systemId": "eravos",
-        "description": "Connect two organism hooks"
+        "description": "Connect two mod hooks"
       },
       {
         "componentId": "eravos.wire.list",
@@ -16717,27 +19211,27 @@
       {
         "componentId": "eravos.canvas",
         "systemId": "eravos",
-        "description": "Main ERAVOS canvas — organisms, wires, transport"
+        "description": "Main ERAVOS canvas — mods, wires, transport"
       },
       {
-        "componentId": "eravos.organism.spawn",
+        "componentId": "eravos.mod.spawn",
         "systemId": "eravos",
-        "description": "Spawn an organism by id onto the canvas"
+        "description": "Spawn an mod by id onto the canvas"
       },
       {
-        "componentId": "eravos.organism.list",
+        "componentId": "eravos.mod.list",
         "systemId": "eravos",
-        "description": "List all mounted organisms"
+        "description": "List all mounted mods"
       },
       {
-        "componentId": "eravos.organism.remove",
+        "componentId": "eravos.mod.remove",
         "systemId": "eravos",
-        "description": "Remove an organism"
+        "description": "Remove an mod"
       },
       {
         "componentId": "eravos.wire.connect",
         "systemId": "eravos",
-        "description": "Connect two organism hooks"
+        "description": "Connect two mod hooks"
       },
       {
         "componentId": "eravos.wire.list",
@@ -16747,12 +19241,12 @@
       {
         "componentId": "eravos.catalog.list",
         "systemId": "eravos",
-        "description": "Available organisms from registry"
+        "description": "Available mods from registry"
       },
       {
         "componentId": "eravos.pack.install",
         "systemId": "eravos",
-        "description": "Install a .zip organism pack"
+        "description": "Install a .zip mod pack"
       },
       {
         "componentId": "eravos.transport.play",
@@ -16779,35 +19273,35 @@
       {
         "componentId": "eravos.canvas",
         "systemId": "eravos",
-        "description": "Main ERAVOS canvas — organisms, wires, transport"
+        "description": "Main ERAVOS canvas — mods, wires, transport"
       }
     ],
     "canvas": [
       {
         "componentId": "eravos.canvas",
         "systemId": "eravos",
-        "description": "Main ERAVOS canvas — organisms, wires, transport"
+        "description": "Main ERAVOS canvas — mods, wires, transport"
       }
     ],
     "canva": [
       {
         "componentId": "eravos.canvas",
         "systemId": "eravos",
-        "description": "Main ERAVOS canvas — organisms, wires, transport"
+        "description": "Main ERAVOS canvas — mods, wires, transport"
       }
     ],
     "open canvas": [
       {
         "componentId": "eravos.canvas",
         "systemId": "eravos",
-        "description": "Main ERAVOS canvas — organisms, wires, transport"
+        "description": "Main ERAVOS canvas — mods, wires, transport"
       }
     ],
     "open": [
       {
         "componentId": "eravos.canvas",
         "systemId": "eravos",
-        "description": "Main ERAVOS canvas — organisms, wires, transport"
+        "description": "Main ERAVOS canvas — mods, wires, transport"
       },
       {
         "componentId": "cg.window.open",
@@ -16818,27 +19312,32 @@
         "componentId": "cg.bgtab.open",
         "systemId": "clear-glass",
         "description": "Open a real background service tab"
+      },
+      {
+        "componentId": "cg.accounts.portal.open",
+        "systemId": "clear-glass",
+        "description": "Open a provider sign-in window in the account's own mesh partition"
       }
     ],
     "open canva": [
       {
         "componentId": "eravos.canvas",
         "systemId": "eravos",
-        "description": "Main ERAVOS canvas — organisms, wires, transport"
+        "description": "Main ERAVOS canvas — mods, wires, transport"
       }
     ],
     "eravos spawn": [
       {
-        "componentId": "eravos.organism.spawn",
+        "componentId": "eravos.mod.spawn",
         "systemId": "eravos",
-        "description": "Spawn an organism by id onto the canvas"
+        "description": "Spawn an mod by id onto the canvas"
       }
     ],
     "spawn": [
       {
-        "componentId": "eravos.organism.spawn",
+        "componentId": "eravos.mod.spawn",
         "systemId": "eravos",
-        "description": "Spawn an organism by id onto the canvas"
+        "description": "Spawn an mod by id onto the canvas"
       },
       {
         "componentId": "cg.mesh.spawn",
@@ -16846,86 +19345,86 @@
         "description": "Spawn free AI agent"
       }
     ],
-    "spawn organism": [
+    "spawn mod": [
       {
-        "componentId": "eravos.organism.spawn",
+        "componentId": "eravos.mod.spawn",
         "systemId": "eravos",
-        "description": "Spawn an organism by id onto the canvas"
+        "description": "Spawn an mod by id onto the canvas"
       }
     ],
-    "organism": [
+    "mod": [
       {
-        "componentId": "eravos.organism.spawn",
+        "componentId": "eravos.mod.spawn",
         "systemId": "eravos",
-        "description": "Spawn an organism by id onto the canvas"
+        "description": "Spawn an mod by id onto the canvas"
       },
       {
-        "componentId": "eravos.organism.remove",
+        "componentId": "eravos.mod.remove",
         "systemId": "eravos",
-        "description": "Remove an organism"
+        "description": "Remove an mod"
       }
     ],
-    "organism-spawn": [
+    "mod-spawn": [
       {
-        "componentId": "eravos.organism.spawn",
+        "componentId": "eravos.mod.spawn",
         "systemId": "eravos",
-        "description": "Spawn an organism by id onto the canvas"
+        "description": "Spawn an mod by id onto the canvas"
       }
     ],
-    "eravos organisms": [
+    "eravos mods": [
       {
-        "componentId": "eravos.organism.list",
+        "componentId": "eravos.mod.list",
         "systemId": "eravos",
-        "description": "List all mounted organisms"
+        "description": "List all mounted mods"
       }
     ],
-    "organisms": [
+    "mods": [
       {
-        "componentId": "eravos.organism.list",
+        "componentId": "eravos.mod.list",
         "systemId": "eravos",
-        "description": "List all mounted organisms"
+        "description": "List all mounted mods"
       }
     ],
-    "eravos organism": [
+    "eravos mod": [
       {
-        "componentId": "eravos.organism.list",
+        "componentId": "eravos.mod.list",
         "systemId": "eravos",
-        "description": "List all mounted organisms"
+        "description": "List all mounted mods"
       }
     ],
-    "organism-list": [
+    "mod-list": [
       {
-        "componentId": "eravos.organism.list",
+        "componentId": "eravos.mod.list",
         "systemId": "eravos",
-        "description": "List all mounted organisms"
+        "description": "List all mounted mods"
       }
     ],
-    "eravos organism remove": [
+    "eravos mod remove": [
       {
-        "componentId": "eravos.organism.remove",
+        "componentId": "eravos.mod.remove",
         "systemId": "eravos",
-        "description": "Remove an organism"
+        "description": "Remove an mod"
       }
     ],
-    "organism-remove": [
+    "mod-remove": [
       {
-        "componentId": "eravos.organism.remove",
+        "componentId": "eravos.mod.remove",
         "systemId": "eravos",
-        "description": "Remove an organism"
+        "description": "Remove an mod"
       }
     ],
     "eravos wire": [
       {
         "componentId": "eravos.wire.connect",
         "systemId": "eravos",
-        "description": "Connect two organism hooks"
+        "description": "Connect two mod hooks"
       }
     ],
     "wire-connect": [
       {
         "componentId": "eravos.wire.connect",
         "systemId": "eravos",
-        "description": "Connect two organism hooks"
+        "description": "Connect two mod hooks"
       }
     ],
     "eravos wire list": [
@@ -16946,42 +19445,42 @@
       {
         "componentId": "eravos.catalog.list",
         "systemId": "eravos",
-        "description": "Available organisms from registry"
+        "description": "Available mods from registry"
       }
     ],
     "catalog": [
       {
         "componentId": "eravos.catalog.list",
         "systemId": "eravos",
-        "description": "Available organisms from registry"
+        "description": "Available mods from registry"
       }
     ],
     "catalog-list": [
       {
         "componentId": "eravos.catalog.list",
         "systemId": "eravos",
-        "description": "Available organisms from registry"
+        "description": "Available mods from registry"
       }
     ],
     "eravos install": [
       {
         "componentId": "eravos.pack.install",
         "systemId": "eravos",
-        "description": "Install a .zip organism pack"
+        "description": "Install a .zip mod pack"
       }
     ],
     "install": [
       {
         "componentId": "eravos.pack.install",
         "systemId": "eravos",
-        "description": "Install a .zip organism pack"
+        "description": "Install a .zip mod pack"
       }
     ],
     "pack-install": [
       {
         "componentId": "eravos.pack.install",
         "systemId": "eravos",
-        "description": "Install a .zip organism pack"
+        "description": "Install a .zip mod pack"
       }
     ],
     "eravos play": [
@@ -17390,6 +19889,21 @@
         "componentId": "cg.mesh.list",
         "systemId": "clear-glass",
         "description": "List mesh agents"
+      },
+      {
+        "componentId": "cg.mesh.jobSend",
+        "systemId": "clear-glass",
+        "description": "Guardian hands Clear Glass a job it CLAIMED on its .job; the intake verifies the claim via guardian /jobs?id= before queueing (idempotent by jobId)"
+      },
+      {
+        "componentId": "cg.mesh.jobStatus",
+        "systemId": "clear-glass",
+        "description": "Status of a mesh job; survives a Clear Glass restart as clear_glass_restarted (sent:null, never resend)"
+      },
+      {
+        "componentId": "cg.mesh.jobIntake",
+        "systemId": "clear-glass",
+        "description": "Jobs Clear Glass has taken in from guardian (only jobs guardian claimed for it on their .job), with each <jobId>.intake record"
       }
     ],
     "mesh-spawn": [
@@ -17571,6 +20085,16 @@
         "componentId": "cg.window.close",
         "systemId": "clear-glass",
         "description": "Close agent window to tray"
+      },
+      {
+        "componentId": "cg.window.openLibrary",
+        "systemId": "clear-glass",
+        "description": "Open (or focus) the Library window at an area — downloads, responses, bookmarks, history, accounts, passwords, autofill, macros"
+      },
+      {
+        "componentId": "cg.window.closeLibrary",
+        "systemId": "clear-glass",
+        "description": "Close the Library window"
       }
     ],
     "window-open": [
@@ -17597,6 +20121,11 @@
         "componentId": "cg.bgtab.close",
         "systemId": "clear-glass",
         "description": "Close a real background tab"
+      },
+      {
+        "componentId": "cg.accounts.portal.close",
+        "systemId": "clear-glass",
+        "description": "Close an open sign-in window"
       }
     ],
     "window-close": [
@@ -17804,6 +20333,21 @@
         "componentId": "cg.downloads.removeListener",
         "systemId": "clear-glass",
         "description": "Remove a download listener"
+      },
+      {
+        "componentId": "cg.downloads.responses",
+        "systemId": "clear-glass",
+        "description": "Agent replies and provider-tab downloads in the downloads index, each filed under its agent; filters agentId, jobId, provider, kind"
+      },
+      {
+        "componentId": "cg.downloads.responseItem",
+        "systemId": "clear-glass",
+        "description": "One downloads-index item in full: the reply text and code blocks, or the downloaded file record"
+      },
+      {
+        "componentId": "cg.downloads.openFile",
+        "systemId": "clear-glass",
+        "description": "Open a completed download with the OS default app (Library → Downloads, click the name)"
       }
     ],
     "listlisteners": [
@@ -18089,6 +20633,11 @@
         "componentId": "cg.passwords.delete",
         "systemId": "clear-glass",
         "description": "Delete a real saved password"
+      },
+      {
+        "componentId": "cg.macros.delete",
+        "systemId": "clear-glass",
+        "description": "Delete a macro (soft-delete, audit trail kept)"
       }
     ],
     "history-delete": [
@@ -18452,6 +21001,21 @@
         "componentId": "cg.macros.run",
         "systemId": "clear-glass",
         "description": "Run a real macro against a real agent"
+      },
+      {
+        "componentId": "cg.macros.create",
+        "systemId": "clear-glass",
+        "description": "Create a macro through macro.js's own validation (step builder)"
+      },
+      {
+        "componentId": "cg.macros.delete",
+        "systemId": "clear-glass",
+        "description": "Delete a macro (soft-delete, audit trail kept)"
+      },
+      {
+        "componentId": "cg.macros.schema",
+        "systemId": "clear-glass",
+        "description": "Real browser_action enum + erosmancer actions + behavior profiles for the step builder"
       }
     ],
     "macros-list": [
@@ -18547,6 +21111,902 @@
         "systemId": "clear-glass",
         "description": "List real open background tabs"
       }
+    ],
+    "autofill listprofiles": [
+      {
+        "componentId": "cg.autofill.listProfiles",
+        "systemId": "clear-glass",
+        "description": "List real AutofillProfile records"
+      }
+    ],
+    "autofill": [
+      {
+        "componentId": "cg.autofill.listProfiles",
+        "systemId": "clear-glass",
+        "description": "List real AutofillProfile records"
+      },
+      {
+        "componentId": "cg.autofill.getProfile",
+        "systemId": "clear-glass",
+        "description": "Get one real autofill profile"
+      },
+      {
+        "componentId": "cg.autofill.createProfile",
+        "systemId": "clear-glass",
+        "description": "Create a real autofill profile"
+      },
+      {
+        "componentId": "cg.autofill.updateProfile",
+        "systemId": "clear-glass",
+        "description": "Update a real autofill profile"
+      },
+      {
+        "componentId": "cg.autofill.deleteProfile",
+        "systemId": "clear-glass",
+        "description": "Delete a real autofill profile"
+      },
+      {
+        "componentId": "cg.autofill.detect",
+        "systemId": "clear-glass",
+        "description": "Detect real form fields an autofill profile would confidently fill"
+      },
+      {
+        "componentId": "cg.autofill.fill",
+        "systemId": "clear-glass",
+        "description": "Fill real form fields from an autofill profile"
+      }
+    ],
+    "listprofiles": [
+      {
+        "componentId": "cg.autofill.listProfiles",
+        "systemId": "clear-glass",
+        "description": "List real AutofillProfile records"
+      }
+    ],
+    "autofill listprofile": [
+      {
+        "componentId": "cg.autofill.listProfiles",
+        "systemId": "clear-glass",
+        "description": "List real AutofillProfile records"
+      }
+    ],
+    "autofill-listprofiles": [
+      {
+        "componentId": "cg.autofill.listProfiles",
+        "systemId": "clear-glass",
+        "description": "List real AutofillProfile records"
+      }
+    ],
+    "autofill getprofile": [
+      {
+        "componentId": "cg.autofill.getProfile",
+        "systemId": "clear-glass",
+        "description": "Get one real autofill profile"
+      }
+    ],
+    "getprofile": [
+      {
+        "componentId": "cg.autofill.getProfile",
+        "systemId": "clear-glass",
+        "description": "Get one real autofill profile"
+      }
+    ],
+    "autofill-getprofile": [
+      {
+        "componentId": "cg.autofill.getProfile",
+        "systemId": "clear-glass",
+        "description": "Get one real autofill profile"
+      }
+    ],
+    "autofill createprofile": [
+      {
+        "componentId": "cg.autofill.createProfile",
+        "systemId": "clear-glass",
+        "description": "Create a real autofill profile"
+      }
+    ],
+    "createprofile": [
+      {
+        "componentId": "cg.autofill.createProfile",
+        "systemId": "clear-glass",
+        "description": "Create a real autofill profile"
+      }
+    ],
+    "autofill-createprofile": [
+      {
+        "componentId": "cg.autofill.createProfile",
+        "systemId": "clear-glass",
+        "description": "Create a real autofill profile"
+      }
+    ],
+    "autofill updateprofile": [
+      {
+        "componentId": "cg.autofill.updateProfile",
+        "systemId": "clear-glass",
+        "description": "Update a real autofill profile"
+      }
+    ],
+    "updateprofile": [
+      {
+        "componentId": "cg.autofill.updateProfile",
+        "systemId": "clear-glass",
+        "description": "Update a real autofill profile"
+      }
+    ],
+    "autofill-updateprofile": [
+      {
+        "componentId": "cg.autofill.updateProfile",
+        "systemId": "clear-glass",
+        "description": "Update a real autofill profile"
+      }
+    ],
+    "autofill deleteprofile": [
+      {
+        "componentId": "cg.autofill.deleteProfile",
+        "systemId": "clear-glass",
+        "description": "Delete a real autofill profile"
+      }
+    ],
+    "deleteprofile": [
+      {
+        "componentId": "cg.autofill.deleteProfile",
+        "systemId": "clear-glass",
+        "description": "Delete a real autofill profile"
+      }
+    ],
+    "autofill-deleteprofile": [
+      {
+        "componentId": "cg.autofill.deleteProfile",
+        "systemId": "clear-glass",
+        "description": "Delete a real autofill profile"
+      }
+    ],
+    "autofill detect": [
+      {
+        "componentId": "cg.autofill.detect",
+        "systemId": "clear-glass",
+        "description": "Detect real form fields an autofill profile would confidently fill"
+      }
+    ],
+    "detect": [
+      {
+        "componentId": "cg.autofill.detect",
+        "systemId": "clear-glass",
+        "description": "Detect real form fields an autofill profile would confidently fill"
+      },
+      {
+        "componentId": "cg.screenQa.detect",
+        "systemId": "clear-glass",
+        "description": "Detect real open-ended questions on the page, excluding whatever autofill would already confidently fill"
+      }
+    ],
+    "autofill-detect": [
+      {
+        "componentId": "cg.autofill.detect",
+        "systemId": "clear-glass",
+        "description": "Detect real form fields an autofill profile would confidently fill"
+      }
+    ],
+    "autofill fill": [
+      {
+        "componentId": "cg.autofill.fill",
+        "systemId": "clear-glass",
+        "description": "Fill real form fields from an autofill profile"
+      }
+    ],
+    "fill": [
+      {
+        "componentId": "cg.autofill.fill",
+        "systemId": "clear-glass",
+        "description": "Fill real form fields from an autofill profile"
+      }
+    ],
+    "autofill-fill": [
+      {
+        "componentId": "cg.autofill.fill",
+        "systemId": "clear-glass",
+        "description": "Fill real form fields from an autofill profile"
+      }
+    ],
+    "screenqa detect": [
+      {
+        "componentId": "cg.screenQa.detect",
+        "systemId": "clear-glass",
+        "description": "Detect real open-ended questions on the page, excluding whatever autofill would already confidently fill"
+      }
+    ],
+    "screenqa": [
+      {
+        "componentId": "cg.screenQa.detect",
+        "systemId": "clear-glass",
+        "description": "Detect real open-ended questions on the page, excluding whatever autofill would already confidently fill"
+      },
+      {
+        "componentId": "cg.screenQa.answer",
+        "systemId": "clear-glass",
+        "description": "Answer a real question through the real copilot bridge (text only — never writes to the page)"
+      },
+      {
+        "componentId": "cg.screenQa.inject",
+        "systemId": "clear-glass",
+        "description": "Write a chosen answer into one real field"
+      },
+      {
+        "componentId": "cg.screenQa.elementAt",
+        "systemId": "clear-glass",
+        "description": "The real field at a window-relative point — the right-click path's own target"
+      },
+      {
+        "componentId": "cg.screenQa.deriveQuestion",
+        "systemId": "clear-glass",
+        "description": "Derive a question from one real field's metadata (label/aria-label/placeholder/name)"
+      }
+    ],
+    "screenqa-detect": [
+      {
+        "componentId": "cg.screenQa.detect",
+        "systemId": "clear-glass",
+        "description": "Detect real open-ended questions on the page, excluding whatever autofill would already confidently fill"
+      }
+    ],
+    "screenqa answer": [
+      {
+        "componentId": "cg.screenQa.answer",
+        "systemId": "clear-glass",
+        "description": "Answer a real question through the real copilot bridge (text only — never writes to the page)"
+      }
+    ],
+    "screenqa-answer": [
+      {
+        "componentId": "cg.screenQa.answer",
+        "systemId": "clear-glass",
+        "description": "Answer a real question through the real copilot bridge (text only — never writes to the page)"
+      }
+    ],
+    "screenqa inject": [
+      {
+        "componentId": "cg.screenQa.inject",
+        "systemId": "clear-glass",
+        "description": "Write a chosen answer into one real field"
+      }
+    ],
+    "inject": [
+      {
+        "componentId": "cg.screenQa.inject",
+        "systemId": "clear-glass",
+        "description": "Write a chosen answer into one real field"
+      }
+    ],
+    "screenqa-inject": [
+      {
+        "componentId": "cg.screenQa.inject",
+        "systemId": "clear-glass",
+        "description": "Write a chosen answer into one real field"
+      }
+    ],
+    "screenqa elementat": [
+      {
+        "componentId": "cg.screenQa.elementAt",
+        "systemId": "clear-glass",
+        "description": "The real field at a window-relative point — the right-click path's own target"
+      }
+    ],
+    "elementat": [
+      {
+        "componentId": "cg.screenQa.elementAt",
+        "systemId": "clear-glass",
+        "description": "The real field at a window-relative point — the right-click path's own target"
+      }
+    ],
+    "screenqa-elementat": [
+      {
+        "componentId": "cg.screenQa.elementAt",
+        "systemId": "clear-glass",
+        "description": "The real field at a window-relative point — the right-click path's own target"
+      }
+    ],
+    "screenqa derivequestion": [
+      {
+        "componentId": "cg.screenQa.deriveQuestion",
+        "systemId": "clear-glass",
+        "description": "Derive a question from one real field's metadata (label/aria-label/placeholder/name)"
+      }
+    ],
+    "derivequestion": [
+      {
+        "componentId": "cg.screenQa.deriveQuestion",
+        "systemId": "clear-glass",
+        "description": "Derive a question from one real field's metadata (label/aria-label/placeholder/name)"
+      }
+    ],
+    "screenqa-derivequestion": [
+      {
+        "componentId": "cg.screenQa.deriveQuestion",
+        "systemId": "clear-glass",
+        "description": "Derive a question from one real field's metadata (label/aria-label/placeholder/name)"
+      }
+    ],
+    "accounts setdefault": [
+      {
+        "componentId": "cg.accounts.setDefault",
+        "systemId": "clear-glass",
+        "description": "Set/clear the per-provider default account (Clear Glass is the account authority guardian resolves against)"
+      }
+    ],
+    "accounts": [
+      {
+        "componentId": "cg.accounts.setDefault",
+        "systemId": "clear-glass",
+        "description": "Set/clear the per-provider default account (Clear Glass is the account authority guardian resolves against)"
+      },
+      {
+        "componentId": "cg.accounts.defaults",
+        "systemId": "clear-glass",
+        "description": "Per-provider default account map"
+      },
+      {
+        "componentId": "cg.accounts.resolve",
+        "systemId": "clear-glass",
+        "description": "Resolve the account a dispatch to this provider would use (never auto-creates)"
+      },
+      {
+        "componentId": "cg.accounts.portal.providers",
+        "systemId": "clear-glass",
+        "description": "Providers a login portal can open, with their sign-in urls"
+      },
+      {
+        "componentId": "cg.accounts.portal.open",
+        "systemId": "clear-glass",
+        "description": "Open a provider sign-in window in the account's own mesh partition"
+      },
+      {
+        "componentId": "cg.accounts.portal.capture",
+        "systemId": "clear-glass",
+        "description": "Capture the signed-in session into the cookie vault + link the provider identity"
+      },
+      {
+        "componentId": "cg.accounts.portal.status",
+        "systemId": "clear-glass",
+        "description": "Live cookies, vault copy, identity and portal state for one account/provider"
+      },
+      {
+        "componentId": "cg.accounts.portal.close",
+        "systemId": "clear-glass",
+        "description": "Close an open sign-in window"
+      },
+      {
+        "componentId": "cg.accounts.portal.signOut",
+        "systemId": "clear-glass",
+        "description": "Clear the account's partition and delete its vault copy"
+      },
+      {
+        "componentId": "cg.accounts.portal.credentials",
+        "systemId": "clear-glass",
+        "description": "Seal optional sign-in credentials in the password vault for pre-fill"
+      },
+      {
+        "componentId": "cg.accounts.portal.list",
+        "systemId": "clear-glass",
+        "description": "List open sign-in windows"
+      }
+    ],
+    "setdefault": [
+      {
+        "componentId": "cg.accounts.setDefault",
+        "systemId": "clear-glass",
+        "description": "Set/clear the per-provider default account (Clear Glass is the account authority guardian resolves against)"
+      }
+    ],
+    "accounts-setdefault": [
+      {
+        "componentId": "cg.accounts.setDefault",
+        "systemId": "clear-glass",
+        "description": "Set/clear the per-provider default account (Clear Glass is the account authority guardian resolves against)"
+      }
+    ],
+    "accounts defaults": [
+      {
+        "componentId": "cg.accounts.defaults",
+        "systemId": "clear-glass",
+        "description": "Per-provider default account map"
+      }
+    ],
+    "defaults": [
+      {
+        "componentId": "cg.accounts.defaults",
+        "systemId": "clear-glass",
+        "description": "Per-provider default account map"
+      }
+    ],
+    "accounts default": [
+      {
+        "componentId": "cg.accounts.defaults",
+        "systemId": "clear-glass",
+        "description": "Per-provider default account map"
+      }
+    ],
+    "accounts-defaults": [
+      {
+        "componentId": "cg.accounts.defaults",
+        "systemId": "clear-glass",
+        "description": "Per-provider default account map"
+      }
+    ],
+    "accounts resolve": [
+      {
+        "componentId": "cg.accounts.resolve",
+        "systemId": "clear-glass",
+        "description": "Resolve the account a dispatch to this provider would use (never auto-creates)"
+      }
+    ],
+    "resolve": [
+      {
+        "componentId": "cg.accounts.resolve",
+        "systemId": "clear-glass",
+        "description": "Resolve the account a dispatch to this provider would use (never auto-creates)"
+      }
+    ],
+    "accounts-resolve": [
+      {
+        "componentId": "cg.accounts.resolve",
+        "systemId": "clear-glass",
+        "description": "Resolve the account a dispatch to this provider would use (never auto-creates)"
+      }
+    ],
+    "accounts portal providers": [
+      {
+        "componentId": "cg.accounts.portal.providers",
+        "systemId": "clear-glass",
+        "description": "Providers a login portal can open, with their sign-in urls"
+      }
+    ],
+    "portal": [
+      {
+        "componentId": "cg.accounts.portal.providers",
+        "systemId": "clear-glass",
+        "description": "Providers a login portal can open, with their sign-in urls"
+      },
+      {
+        "componentId": "cg.accounts.portal.open",
+        "systemId": "clear-glass",
+        "description": "Open a provider sign-in window in the account's own mesh partition"
+      },
+      {
+        "componentId": "cg.accounts.portal.capture",
+        "systemId": "clear-glass",
+        "description": "Capture the signed-in session into the cookie vault + link the provider identity"
+      },
+      {
+        "componentId": "cg.accounts.portal.status",
+        "systemId": "clear-glass",
+        "description": "Live cookies, vault copy, identity and portal state for one account/provider"
+      },
+      {
+        "componentId": "cg.accounts.portal.close",
+        "systemId": "clear-glass",
+        "description": "Close an open sign-in window"
+      },
+      {
+        "componentId": "cg.accounts.portal.signOut",
+        "systemId": "clear-glass",
+        "description": "Clear the account's partition and delete its vault copy"
+      },
+      {
+        "componentId": "cg.accounts.portal.credentials",
+        "systemId": "clear-glass",
+        "description": "Seal optional sign-in credentials in the password vault for pre-fill"
+      },
+      {
+        "componentId": "cg.accounts.portal.list",
+        "systemId": "clear-glass",
+        "description": "List open sign-in windows"
+      }
+    ],
+    "accounts portal provider": [
+      {
+        "componentId": "cg.accounts.portal.providers",
+        "systemId": "clear-glass",
+        "description": "Providers a login portal can open, with their sign-in urls"
+      }
+    ],
+    "accounts-portal-providers": [
+      {
+        "componentId": "cg.accounts.portal.providers",
+        "systemId": "clear-glass",
+        "description": "Providers a login portal can open, with their sign-in urls"
+      }
+    ],
+    "accounts portal open": [
+      {
+        "componentId": "cg.accounts.portal.open",
+        "systemId": "clear-glass",
+        "description": "Open a provider sign-in window in the account's own mesh partition"
+      }
+    ],
+    "accounts-portal-open": [
+      {
+        "componentId": "cg.accounts.portal.open",
+        "systemId": "clear-glass",
+        "description": "Open a provider sign-in window in the account's own mesh partition"
+      }
+    ],
+    "accounts portal capture": [
+      {
+        "componentId": "cg.accounts.portal.capture",
+        "systemId": "clear-glass",
+        "description": "Capture the signed-in session into the cookie vault + link the provider identity"
+      }
+    ],
+    "capture": [
+      {
+        "componentId": "cg.accounts.portal.capture",
+        "systemId": "clear-glass",
+        "description": "Capture the signed-in session into the cookie vault + link the provider identity"
+      }
+    ],
+    "accounts-portal-capture": [
+      {
+        "componentId": "cg.accounts.portal.capture",
+        "systemId": "clear-glass",
+        "description": "Capture the signed-in session into the cookie vault + link the provider identity"
+      }
+    ],
+    "accounts portal status": [
+      {
+        "componentId": "cg.accounts.portal.status",
+        "systemId": "clear-glass",
+        "description": "Live cookies, vault copy, identity and portal state for one account/provider"
+      }
+    ],
+    "accounts portal statu": [
+      {
+        "componentId": "cg.accounts.portal.status",
+        "systemId": "clear-glass",
+        "description": "Live cookies, vault copy, identity and portal state for one account/provider"
+      }
+    ],
+    "accounts-portal-status": [
+      {
+        "componentId": "cg.accounts.portal.status",
+        "systemId": "clear-glass",
+        "description": "Live cookies, vault copy, identity and portal state for one account/provider"
+      }
+    ],
+    "accounts portal close": [
+      {
+        "componentId": "cg.accounts.portal.close",
+        "systemId": "clear-glass",
+        "description": "Close an open sign-in window"
+      }
+    ],
+    "accounts-portal-close": [
+      {
+        "componentId": "cg.accounts.portal.close",
+        "systemId": "clear-glass",
+        "description": "Close an open sign-in window"
+      }
+    ],
+    "accounts portal signout": [
+      {
+        "componentId": "cg.accounts.portal.signOut",
+        "systemId": "clear-glass",
+        "description": "Clear the account's partition and delete its vault copy"
+      }
+    ],
+    "signout": [
+      {
+        "componentId": "cg.accounts.portal.signOut",
+        "systemId": "clear-glass",
+        "description": "Clear the account's partition and delete its vault copy"
+      }
+    ],
+    "accounts-portal-signout": [
+      {
+        "componentId": "cg.accounts.portal.signOut",
+        "systemId": "clear-glass",
+        "description": "Clear the account's partition and delete its vault copy"
+      }
+    ],
+    "accounts portal credentials": [
+      {
+        "componentId": "cg.accounts.portal.credentials",
+        "systemId": "clear-glass",
+        "description": "Seal optional sign-in credentials in the password vault for pre-fill"
+      }
+    ],
+    "credentials": [
+      {
+        "componentId": "cg.accounts.portal.credentials",
+        "systemId": "clear-glass",
+        "description": "Seal optional sign-in credentials in the password vault for pre-fill"
+      }
+    ],
+    "accounts portal credential": [
+      {
+        "componentId": "cg.accounts.portal.credentials",
+        "systemId": "clear-glass",
+        "description": "Seal optional sign-in credentials in the password vault for pre-fill"
+      }
+    ],
+    "accounts-portal-credentials": [
+      {
+        "componentId": "cg.accounts.portal.credentials",
+        "systemId": "clear-glass",
+        "description": "Seal optional sign-in credentials in the password vault for pre-fill"
+      }
+    ],
+    "accounts portal list": [
+      {
+        "componentId": "cg.accounts.portal.list",
+        "systemId": "clear-glass",
+        "description": "List open sign-in windows"
+      }
+    ],
+    "accounts-portal-list": [
+      {
+        "componentId": "cg.accounts.portal.list",
+        "systemId": "clear-glass",
+        "description": "List open sign-in windows"
+      }
+    ],
+    "vault status": [
+      {
+        "componentId": "cg.vault.status",
+        "systemId": "clear-glass",
+        "description": "Which key protects each vault — OS-sealed (safeStorage) or legacy"
+      }
+    ],
+    "vault": [
+      {
+        "componentId": "cg.vault.status",
+        "systemId": "clear-glass",
+        "description": "Which key protects each vault — OS-sealed (safeStorage) or legacy"
+      }
+    ],
+    "vault statu": [
+      {
+        "componentId": "cg.vault.status",
+        "systemId": "clear-glass",
+        "description": "Which key protects each vault — OS-sealed (safeStorage) or legacy"
+      }
+    ],
+    "vault-status": [
+      {
+        "componentId": "cg.vault.status",
+        "systemId": "clear-glass",
+        "description": "Which key protects each vault — OS-sealed (safeStorage) or legacy"
+      }
+    ],
+    "macros create": [
+      {
+        "componentId": "cg.macros.create",
+        "systemId": "clear-glass",
+        "description": "Create a macro through macro.js's own validation (step builder)"
+      }
+    ],
+    "macros-create": [
+      {
+        "componentId": "cg.macros.create",
+        "systemId": "clear-glass",
+        "description": "Create a macro through macro.js's own validation (step builder)"
+      }
+    ],
+    "macros delete": [
+      {
+        "componentId": "cg.macros.delete",
+        "systemId": "clear-glass",
+        "description": "Delete a macro (soft-delete, audit trail kept)"
+      }
+    ],
+    "macros-delete": [
+      {
+        "componentId": "cg.macros.delete",
+        "systemId": "clear-glass",
+        "description": "Delete a macro (soft-delete, audit trail kept)"
+      }
+    ],
+    "macros schema": [
+      {
+        "componentId": "cg.macros.schema",
+        "systemId": "clear-glass",
+        "description": "Real browser_action enum + erosmancer actions + behavior profiles for the step builder"
+      }
+    ],
+    "schema": [
+      {
+        "componentId": "cg.macros.schema",
+        "systemId": "clear-glass",
+        "description": "Real browser_action enum + erosmancer actions + behavior profiles for the step builder"
+      }
+    ],
+    "macros-schema": [
+      {
+        "componentId": "cg.macros.schema",
+        "systemId": "clear-glass",
+        "description": "Real browser_action enum + erosmancer actions + behavior profiles for the step builder"
+      }
+    ],
+    "mesh jobsend": [
+      {
+        "componentId": "cg.mesh.jobSend",
+        "systemId": "clear-glass",
+        "description": "Guardian hands Clear Glass a job it CLAIMED on its .job; the intake verifies the claim via guardian /jobs?id= before queueing (idempotent by jobId)"
+      }
+    ],
+    "jobsend": [
+      {
+        "componentId": "cg.mesh.jobSend",
+        "systemId": "clear-glass",
+        "description": "Guardian hands Clear Glass a job it CLAIMED on its .job; the intake verifies the claim via guardian /jobs?id= before queueing (idempotent by jobId)"
+      }
+    ],
+    "mesh-jobsend": [
+      {
+        "componentId": "cg.mesh.jobSend",
+        "systemId": "clear-glass",
+        "description": "Guardian hands Clear Glass a job it CLAIMED on its .job; the intake verifies the claim via guardian /jobs?id= before queueing (idempotent by jobId)"
+      }
+    ],
+    "mesh jobstatus": [
+      {
+        "componentId": "cg.mesh.jobStatus",
+        "systemId": "clear-glass",
+        "description": "Status of a mesh job; survives a Clear Glass restart as clear_glass_restarted (sent:null, never resend)"
+      }
+    ],
+    "jobstatus": [
+      {
+        "componentId": "cg.mesh.jobStatus",
+        "systemId": "clear-glass",
+        "description": "Status of a mesh job; survives a Clear Glass restart as clear_glass_restarted (sent:null, never resend)"
+      }
+    ],
+    "mesh jobstatu": [
+      {
+        "componentId": "cg.mesh.jobStatus",
+        "systemId": "clear-glass",
+        "description": "Status of a mesh job; survives a Clear Glass restart as clear_glass_restarted (sent:null, never resend)"
+      }
+    ],
+    "mesh-jobstatus": [
+      {
+        "componentId": "cg.mesh.jobStatus",
+        "systemId": "clear-glass",
+        "description": "Status of a mesh job; survives a Clear Glass restart as clear_glass_restarted (sent:null, never resend)"
+      }
+    ],
+    "mesh jobintake": [
+      {
+        "componentId": "cg.mesh.jobIntake",
+        "systemId": "clear-glass",
+        "description": "Jobs Clear Glass has taken in from guardian (only jobs guardian claimed for it on their .job), with each <jobId>.intake record"
+      }
+    ],
+    "jobintake": [
+      {
+        "componentId": "cg.mesh.jobIntake",
+        "systemId": "clear-glass",
+        "description": "Jobs Clear Glass has taken in from guardian (only jobs guardian claimed for it on their .job), with each <jobId>.intake record"
+      }
+    ],
+    "mesh-jobintake": [
+      {
+        "componentId": "cg.mesh.jobIntake",
+        "systemId": "clear-glass",
+        "description": "Jobs Clear Glass has taken in from guardian (only jobs guardian claimed for it on their .job), with each <jobId>.intake record"
+      }
+    ],
+    "downloads responses": [
+      {
+        "componentId": "cg.downloads.responses",
+        "systemId": "clear-glass",
+        "description": "Agent replies and provider-tab downloads in the downloads index, each filed under its agent; filters agentId, jobId, provider, kind"
+      }
+    ],
+    "responses": [
+      {
+        "componentId": "cg.downloads.responses",
+        "systemId": "clear-glass",
+        "description": "Agent replies and provider-tab downloads in the downloads index, each filed under its agent; filters agentId, jobId, provider, kind"
+      }
+    ],
+    "downloads response": [
+      {
+        "componentId": "cg.downloads.responses",
+        "systemId": "clear-glass",
+        "description": "Agent replies and provider-tab downloads in the downloads index, each filed under its agent; filters agentId, jobId, provider, kind"
+      }
+    ],
+    "downloads-responses": [
+      {
+        "componentId": "cg.downloads.responses",
+        "systemId": "clear-glass",
+        "description": "Agent replies and provider-tab downloads in the downloads index, each filed under its agent; filters agentId, jobId, provider, kind"
+      }
+    ],
+    "downloads responseitem": [
+      {
+        "componentId": "cg.downloads.responseItem",
+        "systemId": "clear-glass",
+        "description": "One downloads-index item in full: the reply text and code blocks, or the downloaded file record"
+      }
+    ],
+    "responseitem": [
+      {
+        "componentId": "cg.downloads.responseItem",
+        "systemId": "clear-glass",
+        "description": "One downloads-index item in full: the reply text and code blocks, or the downloaded file record"
+      }
+    ],
+    "downloads-responseitem": [
+      {
+        "componentId": "cg.downloads.responseItem",
+        "systemId": "clear-glass",
+        "description": "One downloads-index item in full: the reply text and code blocks, or the downloaded file record"
+      }
+    ],
+    "window openlibrary": [
+      {
+        "componentId": "cg.window.openLibrary",
+        "systemId": "clear-glass",
+        "description": "Open (or focus) the Library window at an area — downloads, responses, bookmarks, history, accounts, passwords, autofill, macros"
+      }
+    ],
+    "openlibrary": [
+      {
+        "componentId": "cg.window.openLibrary",
+        "systemId": "clear-glass",
+        "description": "Open (or focus) the Library window at an area — downloads, responses, bookmarks, history, accounts, passwords, autofill, macros"
+      }
+    ],
+    "window-openlibrary": [
+      {
+        "componentId": "cg.window.openLibrary",
+        "systemId": "clear-glass",
+        "description": "Open (or focus) the Library window at an area — downloads, responses, bookmarks, history, accounts, passwords, autofill, macros"
+      }
+    ],
+    "window closelibrary": [
+      {
+        "componentId": "cg.window.closeLibrary",
+        "systemId": "clear-glass",
+        "description": "Close the Library window"
+      }
+    ],
+    "closelibrary": [
+      {
+        "componentId": "cg.window.closeLibrary",
+        "systemId": "clear-glass",
+        "description": "Close the Library window"
+      }
+    ],
+    "window-closelibrary": [
+      {
+        "componentId": "cg.window.closeLibrary",
+        "systemId": "clear-glass",
+        "description": "Close the Library window"
+      }
+    ],
+    "downloads openfile": [
+      {
+        "componentId": "cg.downloads.openFile",
+        "systemId": "clear-glass",
+        "description": "Open a completed download with the OS default app (Library → Downloads, click the name)"
+      }
+    ],
+    "openfile": [
+      {
+        "componentId": "cg.downloads.openFile",
+        "systemId": "clear-glass",
+        "description": "Open a completed download with the OS default app (Library → Downloads, click the name)"
+      }
+    ],
+    "downloads-openfile": [
+      {
+        "componentId": "cg.downloads.openFile",
+        "systemId": "clear-glass",
+        "description": "Open a completed download with the OS default app (Library → Downloads, click the name)"
+      }
     ]
   },
   "errors": [
@@ -18555,5 +22015,5 @@
       "error": "registry not found: bridge/registry-components.js"
     }
   ],
-  "buildMs": 27
+  "buildMs": 31
 }

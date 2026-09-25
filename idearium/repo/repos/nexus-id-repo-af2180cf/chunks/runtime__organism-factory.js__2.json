@@ -1,0 +1,23 @@
+{
+  "id": "chunk-152f4f1489ba20fb",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "runtime/organism-factory.js",
+  "range": {
+    "start_line": 56,
+    "end_line": 79
+  },
+  "symbols": [
+    "mkToggle"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "2448e79e7a1084389e6e27a6b1b048425e790af81a0b3c7ae94adcd7acde4905"
+  },
+  "status": "complete",
+  "content": "function mkToggle(parent, opts) {\n  const { label, value=false, onChange, eventKey, pub } = opts;\n  const _pubFn = pub || _pub;\n  const el  = document.createElement('div');\n  el.style.cssText = `display:flex;align-items:center;gap:6px;padding:4px 7px;border-radius:3px;border:1px solid ${value?'var(--accent)':'var(--b2)'};background:${value?'rgba(0,255,136,.07)':'transparent'};cursor:pointer;transition:all .12s;`;\n  const led = document.createElement('div'); led.style.cssText=`width:6px;height:6px;border-radius:50%;background:${value?'var(--accent)':'var(--dim)'};flex-shrink:0;transition:background .12s,box-shadow .12s;${value?'box-shadow:0 0 5px var(--accent);':''}`;\n  const lbl = document.createElement('div'); lbl.style.cssText='font-family:var(--mono);font-size:7.5px;letter-spacing:.1em;color:var(--dim2);';\n  lbl.textContent = label;\n  el.appendChild(led); el.appendChild(lbl);\n  let cur = value;\n  el.addEventListener('click', () => {\n    cur = !cur;\n    el.style.borderColor = cur ? 'var(--accent)' : 'var(--b2)';\n    el.style.background  = cur ? 'rgba(0,255,136,.07)' : 'transparent';\n    led.style.background = cur ? 'var(--accent)' : 'var(--dim)';\n    led.style.boxShadow  = cur ? '0 0 5px var(--accent)' : '';\n    lbl.style.color      = cur ? 'var(--accent)' : 'var(--dim2)';\n    if(onChange) onChange(cur);\n    if(eventKey) _pubFn('ui:config_change',{key:eventKey,value:cur});\n  });\n  parent.appendChild(el);\n  return { el, get value(){return cur;} };\n}\n"
+}

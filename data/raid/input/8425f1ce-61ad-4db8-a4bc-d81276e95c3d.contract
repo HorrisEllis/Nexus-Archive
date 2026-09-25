@@ -1,0 +1,47 @@
+envelope: 1
+uuid: nexus-export-contract-8425f1ce-61ad-4db8-a4bc-d81276e95c3d
+type: contract
+id: 8425f1ce-61ad-4db8-a4bc-d81276e95c3d
+context: null
+intent: translate.utl
+summary: null
+system: null
+tags: []
+exported_at: 1790367992353
+source: architect
+occurrences: 1
+firstSeenAt: 1790367992353
+lastSeenAt: 1790367992353
+fingerprint: null
+payload:
+  uuid: 8425f1ce-61ad-4db8-a4bc-d81276e95c3d
+  status: queued
+  intention: translate.utl
+  dir: null
+  language: null
+  stage: queued
+  system: null
+  source: architect
+  sourceDropId: null
+  boundary:
+    key: architect:translate.utl
+    primitive: architect/service.js POST /api/translate/utl
+    invariants: []
+    principles:
+      - §1.2
+      - §5.2
+  file: null
+  title: translate.utl
+  forAgent: null
+  contract:
+    content: translate.utl:dangling-hook hook 'nexus.lib.gap-priority.import' is declared as an INPUT but n
+    title: translate.utl
+  dependsOn: []
+  onFail:
+    action: retry
+    maxRetries: 2
+  retryCount: 0
+  compartmentId: null
+  verdict: null
+  createdAt: 1790367992353
+  updatedAt: 1790367992353

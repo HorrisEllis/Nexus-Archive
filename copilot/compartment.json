@@ -11,7 +11,7 @@
       "copilot/",
       "data/copilot/"
     ],
-    "versionLine": "3.5.0",
+    "versionLine": "3.5.1",
     "versionNote": "from lib/version.js modules"
   },
   "cos": {

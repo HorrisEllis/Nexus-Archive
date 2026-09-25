@@ -1,0 +1,21 @@
+{
+  "id": "chunk-a1b7573bdb356ab5",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/photo-editor/schema/schema.json",
+  "range": {
+    "start_line": 1,
+    "end_line": 31
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "8524a471d60e75d6294ac6606d536eb6baf987d8fe874bd35df3e72b7bb06c14"
+  },
+  "status": "complete",
+  "content": "{\n  \"schema_version\": \"1.0.0\",\n  \"id\": \"eravos.photo-editor\",\n  \"label\": \"Photo Editor\",\n  \"icon\": \"🖼\",\n  \"accent\": \"#00d4ff\",\n  \"domain\": [\"image\", \"photo\", \"editing\", \"raster\"],\n  \"description\": \"Drop-in raster image editor. Load a photo, adjust brightness/contrast/saturation/hue/blur/grayscale/invert/sepia live on canvas, crop by drag-rectangle, export as PNG. Fully client-side, no upload.\",\n  \"permissions\": [\"filesystem_read\", \"bus_publish\", \"bus_subscribe\"],\n  \"provides\": [\"capability.image_edit\", \"capability.image_export\"],\n  \"requires\": [],\n  \"dependencies\": {\n    \"runtime\": [\"kernel/kernel.js\"],\n    \"browser_apis\": [\"Canvas2D (CanvasRenderingContext2D.filter)\", \"File API\", \"URL.createObjectURL\"],\n    \"external_libs\": []\n  },\n  \"hooks\": [\n    { \"hook_id\": \"photo.hook.exported\", \"direction\": \"out\", \"event_type\": \"photo:exported\", \"contract_version\": \"1.0.0\" }\n  ],\n  \"params\": {\n    \"brightness\": { \"type\": \"float\", \"min\": 0, \"max\": 2,   \"default\": 1,   \"unit\": \"\" },\n    \"contrast\":   { \"type\": \"float\", \"min\": 0, \"max\": 2,   \"default\": 1,   \"unit\": \"\" },\n    \"saturation\": { \"type\": \"float\", \"min\": 0, \"max\": 3,   \"default\": 1,   \"unit\": \"\" },\n    \"hue\":        { \"type\": \"float\", \"min\": 0, \"max\": 360, \"default\": 0,   \"unit\": \"deg\" },\n    \"blur\":       { \"type\": \"float\", \"min\": 0, \"max\": 20,  \"default\": 0,   \"unit\": \"px\" },\n    \"grayscale\":  { \"type\": \"float\", \"min\": 0, \"max\": 1,   \"default\": 0,   \"unit\": \"\" },\n    \"invert\":     { \"type\": \"float\", \"min\": 0, \"max\": 1,   \"default\": 0,   \"unit\": \"\" },\n    \"sepia\":      { \"type\": \"float\", \"min\": 0, \"max\": 1,   \"default\": 0,   \"unit\": \"\" }\n  }\n}\n"
+}

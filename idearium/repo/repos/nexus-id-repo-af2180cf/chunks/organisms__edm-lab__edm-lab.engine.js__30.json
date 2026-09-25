@@ -1,0 +1,23 @@
+{
+  "id": "chunk-cd3b981b9b61dde0",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/edm-lab/edm-lab.engine.js",
+  "range": {
+    "start_line": 360,
+    "end_line": 406
+  },
+  "symbols": [
+    "_drop"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "6cb0338f1655089ca20c1e437cc30af21f668a81f667921df32306b9638270c6"
+  },
+  "status": "complete",
+  "content": "  function _drop() {\n    const t = AC.currentTime + 0.05;\n    /* Impact synthesis */\n    const subO = AC.createOscillator(); subO.type = 'sine';\n    const subG = AC.createGain();\n    subO.frequency.setValueAtTime(80, t); subO.frequency.exponentialRampToValueAtTime(30, t + .5);\n    subG.gain.setValueAtTime(1.4, t); subG.gain.exponentialRampToValueAtTime(.001, t + .65);\n    subO.connect(subG); subG.connect(masterGain); subO.start(t); subO.stop(t + .7);\n\n    const nb = AC.createBufferSource();\n    const buf = AC.createBuffer(1, Math.ceil(AC.sampleRate * .015), AC.sampleRate);\n    const d = buf.getChannelData(0); for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;\n    nb.buffer = buf;\n    const nf = AC.createBiquadFilter(); nf.type='highpass'; nf.frequency.value=8000;\n    const ng = AC.createGain(); ng.gain.setValueAtTime(1.1, t); ng.gain.exponentialRampToValueAtTime(.001, t+.015);\n    nb.connect(nf); nf.connect(ng); ng.connect(masterGain); nb.start(t); nb.stop(t+.02);\n\n    bass.impact(t);\n    tension.impact(t);\n\n    gBus.publish('edm:drop-fired', { timestamp: t });\n    sBus.publish('org:drop-fired', { timestamp: t });\n  }\n\n  /* ── UI subscriptions ── */\n  const _unsubs = [\n    /* Bass */\n    gBus.subscribe('ui:bass-toggle:' + instanceId, () => { bass.running ? bass.stop() : bass.start(); }),\n    gBus.subscribe('ui:bass-param:' + instanceId,  ({ key, val }) => bass.set(key, val)),\n\n    /* Rhythm */\n    gBus.subscribe('ui:rhythm-toggle:' + instanceId, () => { rhythm.running ? rhythm.stop() : rhythm.start(); }),\n    gBus.subscribe('ui:rhythm-paint:' + instanceId,  ({ track, step, radius, val }) => rhythm.paintBrush(track, step, radius, val)),\n    gBus.subscribe('ui:rhythm-clear:' + instanceId,  ({ track }) => { if (track !== undefined) { for(let s=0;s<rhythm.STEPS;s++) rhythm.setDensity(track,s,0); } }),\n    gBus.subscribe('ui:rhythm-preset:' + instanceId, ({ preset }) => _loadRhythmPreset(preset)),\n\n    /* Tension */\n    gBus.subscribe('ui:tension-toggle:' + instanceId, () => { tension.running ? tension.stop() : tension.start(); }),\n    gBus.subscribe('ui:tension-val:' + instanceId,    ({ val }) => tension.setTension(val)),\n    gBus.subscribe('ui:tension-level:' + instanceId,  ({ val }) => tension.setLevel(val)),\n    gBus.subscribe('ui:tension-freq:' + instanceId,   ({ val }) => tension.setBaseFreq(val)),\n\n    /* Drop + BPM */\n    gBus.subscribe('ui:drop:' + instanceId, _drop),\n    gBus.subscribe('ui:bpm:' + instanceId, ({ val }) => { _bpm = val; KERNEL.clock.BPM = val; rhythm.setBPM(val); }),\n  ];\n"
+}

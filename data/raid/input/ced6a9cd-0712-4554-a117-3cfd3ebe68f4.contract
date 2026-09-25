@@ -1,0 +1,47 @@
+envelope: 1
+uuid: nexus-export-contract-ced6a9cd-0712-4554-a117-3cfd3ebe68f4
+type: contract
+id: ced6a9cd-0712-4554-a117-3cfd3ebe68f4
+context: null
+intent: translate.utl
+summary: null
+system: null
+tags: []
+exported_at: 1790367978715
+source: architect
+occurrences: 1
+firstSeenAt: 1790367978715
+lastSeenAt: 1790367978715
+fingerprint: null
+payload:
+  uuid: ced6a9cd-0712-4554-a117-3cfd3ebe68f4
+  status: queued
+  intention: translate.utl
+  dir: null
+  language: null
+  stage: queued
+  system: null
+  source: architect
+  sourceDropId: null
+  boundary:
+    key: architect:translate.utl
+    primitive: architect/service.js POST /api/translate/utl
+    invariants: []
+    principles:
+      - §1.2
+      - §5.2
+  file: null
+  title: translate.utl
+  forAgent: null
+  contract:
+    content: 'translate.utl:baseline_deviation  '
+    title: translate.utl
+  dependsOn: []
+  onFail:
+    action: retry
+    maxRetries: 2
+  retryCount: 0
+  compartmentId: null
+  verdict: null
+  createdAt: 1790367978714
+  updatedAt: 1790367978714

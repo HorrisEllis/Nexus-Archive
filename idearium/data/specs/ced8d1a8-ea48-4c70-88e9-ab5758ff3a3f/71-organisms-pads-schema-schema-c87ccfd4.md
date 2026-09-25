@@ -1,0 +1,95 @@
+---
+chunk_uuid: c87ccfd4-9eff-4776-a3c8-df928fcd7bf7
+spec_uuid: ced8d1a8-ea48-4c70-88e9-ab5758ff3a3f
+section: organisms-pads-schema-schema
+title: organisms/pads/schema/schema.json
+comp_id: idearium.spec-engine
+seam_id: idearium.spec-engine:v1:chunk:ced8d1a8:organisms-pads-schema-schema
+contract_id: spec-contract:ced8d1a8:organisms-pads-schema-schema:c87ccfd4
+agent: ingest
+model: ingest:drop
+status: complete
+completed_at: 2026-09-25T20:17:11.377Z
+---
+
+{
+  "schema_version": "1.0.0",
+  "id": "eravos.pads",
+  "label": "Drum Machine",
+  "icon": "\ud83e\udd41",
+  "accent": "#00ff88",
+  "domain": [
+    "music",
+    "rhythm",
+    "percussion"
+  ],
+  "description": "16-pad velocity-sensitive drum machine. Three banks A/B/C. 19 synthesis voices. Keyboard mapped. MIDI receive.",
+  "permissions": [
+    "audio_out",
+    "midi_in",
+    "bus_publish",
+    "bus_subscribe"
+  ],
+  "provides": [
+    "capability.pad_trigger",
+    "capability.audio_out",
+    "capability.bank_select"
+  ],
+  "requires": [
+    "capability.audio_context"
+  ],
+  "hooks": [
+    {
+      "hook_id": "pads.hook.pad_trigger_out",
+      "direction": "out",
+      "event_type": "pad:trigger",
+      "contract_version": "1.0.0"
+    },
+    {
+      "hook_id": "pads.hook.bank_change_out",
+      "direction": "out",
+      "event_type": "pad:bank-change",
+      "contract_version": "1.0.0"
+    },
+    {
+      "hook_id": "pads.hook.midi_in",
+      "direction": "in",
+      "event_type": "midi:note",
+      "contract_version": "1.0.0"
+    }
+  ],
+  "params": {
+    "volume": {
+      "type": "float",
+      "min": 0,
+      "max": 1,
+      "default": 0.88,
+      "unit": ""
+    },
+    "pitch": {
+      "type": "float",
+      "min": -12,
+      "max": 12,
+      "default": 0,
+      "unit": "semitones"
+    },
+    "decay": {
+      "type": "float",
+      "min": 0.01,
+      "max": 2,
+      "default": 0.3,
+      "unit": "seconds"
+    }
+  },
+  "ui": {
+    "type": "pad_grid",
+    "cols": 4,
+    "rows": 4,
+    "banks": 3
+  },
+  "nexus_build_hints": {
+    "engine_pattern": "trigger_voice_bank",
+    "voices_required": true,
+    "keyboard_map": true
+  }
+}

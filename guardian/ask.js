@@ -113,7 +113,10 @@ async function askSync(prompt, opts = {}, deps = {}) {
   // The real production failure is upstream and specific: ProviderHost
   // needs GUARDIAN_DIR set (autopilot now sets it), and CookieVault must
   // restore a session or the tab lands on a login page and can never answer.
-  if (typeof isProviderConnected === 'function' && !isProviderConnected(resolved)) {
+  // §AGENT-TAB 0.39.244 — not for a job aimed at a repo's own tab (opts.agentId): the
+  // dispatcher opens that tab itself and waits for it (lib/dispatcher.js _awaitAgentTab),
+  // so the shared tab being down is no evidence the job can't complete.
+  if (!opts.agentId && typeof isProviderConnected === 'function' && !isProviderConnected(resolved)) {
     return { ok: false, error: `no provider connected on NCP channel '${resolved}' — check that Clear Glass booted with GUARDIAN_DIR set and that its '${resolved}' tab has a restored session (not a login page)`, provider: resolved };
   }
 

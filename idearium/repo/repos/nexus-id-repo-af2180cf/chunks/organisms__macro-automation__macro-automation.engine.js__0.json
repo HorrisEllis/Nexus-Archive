@@ -1,0 +1,21 @@
+{
+  "id": "chunk-d6c4f96686e7773a",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/macro-automation/macro-automation.engine.js",
+  "range": {
+    "start_line": 1,
+    "end_line": 15
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "38eed4b85b86525e7cb7f550a5a29f3efb2bab4ddbcb15deed7fd08a96fd07be"
+  },
+  "status": "complete",
+  "content": "/* ═══════════════════════════════════════════════════════════\n   ORGANISM: MACRO AUTOMATION  v1.0.0\n   id: eravos.macro-automation\n\n   In-app parameter automation. While armed, listens to\n   'ui:config_change:<targetInstanceId>' events destined for a\n   chosen organism and records { key, value, tMs }. On playback,\n   re-publishes those same events at the same relative offsets —\n   a real automation lane, not a demo: it genuinely drives the\n   target organism's knobs over time.\n   ═══════════════════════════════════════════════════════════ */\n\nwindow.MacroAutomationEngine = (() => {\n'use strict';\n"
+}

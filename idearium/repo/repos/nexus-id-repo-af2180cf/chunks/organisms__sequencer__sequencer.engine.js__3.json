@@ -1,0 +1,23 @@
+{
+  "id": "chunk-3cb2a6e0d9c9a910",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/sequencer/sequencer.engine.js",
+  "range": {
+    "start_line": 80,
+    "end_line": 89
+  },
+  "symbols": [
+    "_play"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "c399d1ee5087b4e82910bb4a92729786c9661603999e4529bf3bbf6ac10a661f"
+  },
+  "status": "complete",
+  "content": "  async function _play() {\n    if (!audio.AC) return;\n    if (!_pclock) await _initClock();\n    playing = true;\n    clock.BPM = bpm;\n    _pclock.start(bpm, stepCount, 4, swing);\n    gBus.publish('seq:play', { BPM: bpm });\n    sBus.publish('org:state_sync', { playing: true, bpm });\n  }\n"
+}

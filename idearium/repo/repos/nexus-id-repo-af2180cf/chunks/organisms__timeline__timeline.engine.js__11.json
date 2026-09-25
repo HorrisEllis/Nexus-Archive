@@ -1,0 +1,23 @@
+{
+  "id": "chunk-d910c79b87f3157d",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/timeline/timeline.engine.js",
+  "range": {
+    "start_line": 86,
+    "end_line": 144
+  },
+  "symbols": [
+    "_keyHandler"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "d46927560588c13384a467244b578c7067b41923dfa77e02c42c8bc3669a9b43"
+  },
+  "status": "complete",
+  "content": "  const _keyHandler = ev => {\n    if(ev.target.tagName==='SELECT'||ev.target.tagName==='INPUT') return;\n    if(ev.code==='Space'){ev.preventDefault();playing?_stop():_play();}\n  };\n  document.addEventListener('keydown', _keyHandler);\n\n  _syncUI();\n\n  KERNEL.registry.register({\n    instanceId, id:'eravos.timeline', label:'Timeline',\n    provides:['capability.timeline','capability.clip_store','capability.seek'],\n    requires:['capability.audio_context'],\n    permissions:['audio_out','audio_in','bus_publish','bus_subscribe','filesystem_read'],\n    hooks:[\n      {hook_id:'tl.hook.transport_in', direction:'in',  event_type:'seq:play',           contract_version:'1.0.0'},\n      {hook_id:'tl.hook.stop_in',      direction:'in',  event_type:'seq:stop',           contract_version:'1.0.0'},\n      {hook_id:'tl.hook.seek_out',     direction:'out', event_type:'timeline:seek',      contract_version:'1.0.0'},\n      {hook_id:'tl.hook.clip_play_out',direction:'out', event_type:'timeline:clip_play', contract_version:'1.0.0'},\n    ],\n  });\n\n  return {\n    unmount(){_stop();_unsubs.forEach(u=>u());document.removeEventListener('keydown',_keyHandler);KERNEL.registry.unregister(instanceId);},\n    play:_play, stop:_stop, addLane:_addLane, syncUI:_syncUI,\n  };\n}\nreturn { mount };\n})();\n\n/* ── RECORDING extension — appended to timeline engine ──────\n   Listens for transport:recorded and creates a new lane+clip\n   with the captured buffer. Also listens to transport:play/stop\n   to sync with master transport.                              */\n(function _patchTimelineRecording() {\n  const gBus = KERNEL.bus;\n\n  gBus.subscribe('transport:recorded', ({ arrayBuffer, duration, mimeType }) => {\n    /* Find any mounted timeline instance and give it the recording */\n    const timelines = KERNEL.registry.getById('eravos.timeline');\n    if (!timelines.length) return;\n    /* Route to the first timeline that's alive */\n    const tl = timelines[0];\n    gBus.publish('intake:file', {\n      id:          'audio:sample',\n      name:        `recording_${new Date().toISOString().slice(11,19)}.webm`,\n      arrayBuffer,\n      hash:        Math.random().toString(36).slice(2),\n      mimeType,\n      icon:        '⏺',\n      sizeBytes:   arrayBuffer.byteLength,\n      file:        null,\n    });\n  });\n\n  gBus.subscribe('transport:play', ({ BPM }) => {\n    KERNEL.clock.BPM = BPM;\n  });\n})();\n"
+}

@@ -1,0 +1,23 @@
+{
+  "id": "chunk-93154fd564556da1",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "kernel/kernel.js",
+  "range": {
+    "start_line": 147,
+    "end_line": 176
+  },
+  "symbols": [
+    "missing"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "2338f339761aa2825bbd03ae0fb38a4fdb72643c6495eb25e064ee8466cfe5ce"
+  },
+  "status": "complete",
+  "content": "    const missing = requires.filter(r => !provided.has(r));\n    return { ok: missing.length === 0, missing };\n  },\n};\n\n/* ──────────────────────────────────────────────────────────\n   WIRE REGISTRY  (K-4, K-5, K-7)\n   Wires connect hooks between organisms.\n   Validates contract versions before going live.\n   Owned here — never by organisms.\n────────────────────────────────────────────────────────── */\nconst _wires = new Map(); /* wireId → descriptor */\n\nconst wireRegistry = {\n  register(wire) {\n    const { sourceInstanceId, sourceHookId, targetInstanceId, targetHookId, wireType = 'event_bus' } = wire;\n\n    /* Validate both endpoints exist */\n    if (!registry.has(sourceInstanceId)) {\n      _fault('WIRE_002', sourceInstanceId, `source organism not found: ${sourceInstanceId}`);\n      return null;\n    }\n    if (!registry.has(targetInstanceId)) {\n      _fault('WIRE_002', targetInstanceId, `target organism not found: ${targetInstanceId}`);\n      return null;\n    }\n\n    /* Validate hook contract versions if both declare them */\n    const src = registry.get(sourceInstanceId);\n    const tgt = registry.get(targetInstanceId);"
+}

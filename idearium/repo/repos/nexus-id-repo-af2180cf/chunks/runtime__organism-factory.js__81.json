@@ -1,0 +1,23 @@
+{
+  "id": "chunk-231af56dee68aa8b",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "runtime/organism-factory.js",
+  "range": {
+    "start_line": 2632,
+    "end_line": 2654
+  },
+  "symbols": [
+    "i"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "780953a881fb854bc6a2c855bde8a81a137486a5562438eeadb612ada95a0e26"
+  },
+  "status": "complete",
+  "content": "        const i = STAGES.findIndex(s=>s.id===_activeStage);\n        if (i>=0) {\n          const x1=bounds[i]*W, x2=bounds[i+1]*W;\n          ctx.save();\n          ctx.shadowColor = STAGES[i].color; ctx.shadowBlur=16;\n          ctx.strokeStyle = STAGES[i].color; ctx.lineWidth=2;\n          ctx.strokeRect(x1+1,STAGE_Y,x2-x1-2,STAGE_H);\n          ctx.restore();\n        }\n      }\n\n      /* Total duration label */\n      ctx.fillStyle='rgba(100,136,168,.4)'; ctx.font='6.5px \"Share Tech Mono\",monospace'; ctx.textAlign='right';\n      ctx.fillText(`${total.toFixed(1)}s total`, W-6, H-5);\n    }\n    draw();\n\n    /* ── Pointer interaction ── */\n    const HANDLE_W = 10;\n    const LABEL_H  = 20;\n    const VOCAL_H  = 34;\n    const STAGE_Y  = LABEL_H + VOCAL_H;\n"
+}

@@ -1,0 +1,23 @@
+{
+  "id": "chunk-b26edfabb68f7dc8",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/bass-drop-builder/bass-drop-builder.engine.js",
+  "range": {
+    "start_line": 127,
+    "end_line": 178
+  },
+  "symbols": [
+    "_build"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "2a8e322e8d118a48cb44df4e65322930631718063e345b02fcbb294709108521"
+  },
+  "status": "complete",
+  "content": "function _build(AC, t, dur, params, masterGain) {\n  const { freq = 110, cutoff = 600, res = 8, rate = 6, depth = 800 } = params;\n  const nodes = [];\n\n  /* Neuro wobble growing */\n  const wO   = AC.createOscillator(); wO.type = 'sawtooth'; wO.frequency.value = freq;\n  const wO2  = AC.createOscillator(); wO2.type = 'sawtooth'; wO2.frequency.value = freq * 1.006;\n  const wLFO = AC.createOscillator(); wLFO.type = 'sine'; wLFO.frequency.value = rate;\n  const wLG  = AC.createGain(); wLG.gain.value = depth;\n  const wF   = AC.createBiquadFilter(); wF.type = 'lowpass'; wF.frequency.value = cutoff; wF.Q.value = res;\n  const wDist= _distort(AC, 0.5);\n  const wG   = AC.createGain();\n  wLFO.connect(wLG); wLG.connect(wF.frequency);\n  wO.connect(wDist); wO2.connect(wDist); wDist.connect(wF); wF.connect(wG); wG.connect(masterGain);\n  wG.gain.setValueAtTime(0, t);\n  wG.gain.linearRampToValueAtTime(0.4, t + dur * 0.4);\n  wG.gain.linearRampToValueAtTime(0.65, t + dur);\n  wO.start(t); wO2.start(t); wLFO.start(t);\n  wO.stop(t + dur + 0.1); wO2.stop(t + dur + 0.1); wLFO.stop(t + dur + 0.1);\n  nodes.push(wO, wO2, wLFO, wLG, wF, wDist, wG);\n\n  /* Sub roll growing under the wobble */\n  const sO  = AC.createOscillator(); sO.type = 'sine'; sO.frequency.value = freq * 0.5;\n  const sF  = AC.createBiquadFilter(); sF.type = 'lowpass'; sF.frequency.value = 180;\n  const sG  = AC.createGain();\n  sG.gain.setValueAtTime(0, t);\n  sG.gain.linearRampToValueAtTime(0.5, t + dur * 0.5);\n  sG.gain.linearRampToValueAtTime(0.8, t + dur);\n  sO.connect(sF); sF.connect(sG); sG.connect(masterGain);\n  sO.start(t); sO.stop(t + dur + 0.05);\n  nodes.push(sO, sF, sG);\n\n  /* White noise sweep */\n  const nBuf = AC.createBuffer(1, Math.ceil(AC.sampleRate * (dur + 0.1)), AC.sampleRate);\n  const nD   = nBuf.getChannelData(0);\n  for (let i = 0; i < nD.length; i++) nD[i] = Math.random() * 2 - 1;\n  const nSrc = AC.createBufferSource(); nSrc.buffer = nBuf;\n  const nF   = AC.createBiquadFilter(); nF.type = 'highpass';\n  const nG   = AC.createGain();\n  nF.frequency.setValueAtTime(8000, t);\n  nF.frequency.exponentialRampToValueAtTime(200, t + dur);\n  nG.gain.setValueAtTime(0, t);\n  nG.gain.linearRampToValueAtTime(0.18, t + dur * 0.7);\n  nG.gain.linearRampToValueAtTime(0.3, t + dur);\n  nSrc.connect(nF); nF.connect(nG); nG.connect(masterGain);\n  nSrc.start(t); nSrc.stop(t + dur + 0.15);\n  nodes.push(nSrc, nF, nG);\n\n  return nodes;\n}\n\n/* DROP — the moment */"
+}

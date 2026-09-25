@@ -68,6 +68,8 @@ function runWatch(src, { previous, reply = null, afterMs = 1700, noReplyMs = 600
       stopWatch: () => {},
       _streamToCortex: () => {},
       _onJobComplete: (jobId, text) => resolve({ sent, done: { jobId, text } }),
+      // 0.39.244 — the node-anchor helper and mutation counters the watch loop now reports
+      _nexusAnchor: () => null, _nexusMutations: 0, _nexusPulseAt: 0, _nexusPulseSeen: 0,
       NO_REPLY_MS: noReplyMs,
       MutationObserver: class { observe() {} disconnect() {} },
       document: { querySelector: () => null, body: {} },

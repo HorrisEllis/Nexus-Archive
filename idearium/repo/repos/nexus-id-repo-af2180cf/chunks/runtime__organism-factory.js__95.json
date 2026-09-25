@@ -1,0 +1,23 @@
+{
+  "id": "chunk-5881794634b1568c",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "runtime/organism-factory.js",
+  "range": {
+    "start_line": 3134,
+    "end_line": 3139
+  },
+  "symbols": [
+    "disconnectBtn"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "e2e1da69fe0043ccb307a15ca6f89cb56774600fb4887b9d083f9b81789a27a9"
+  },
+  "status": "complete",
+  "content": "    const disconnectBtn=mkBtn(btnRow,'DISCONNECT', ()=>_pub('ui:serial_disconnect',{}), {h:22,fs:7});\n    wrap.appendChild(btnRow);\n\n    const cmdRow=document.createElement('div'); cmdRow.style.cssText='display:flex;gap:4px;';\n    const cmdInput=document.createElement('input'); cmdInput.type='text'; cmdInput.placeholder='G1 X10 Y0 F1000';\n    cmdInput.style.cssText='flex:1;background:var(--bg3);border:1px solid var(--b2);border-radius:3px;color:var(--white);font-family:var(--mono);font-size:7.5px;padding:4px 6px;outline:none;';"
+}

@@ -85,6 +85,7 @@ async function api(path, opts={}, timeoutMs=6000) {
   if (!r.ok || data.ok === false) {
     const e = new Error(data.error || r.statusText || 'request failed');
     e.detail = data.detail; e.status = r.status; // §MCO-E — a caller can act on a stated code (e.g. DEPS_INCOMPLETE)
+    e.data = data;   // 0.39.244 — the whole refusal (a caller like the Agent tab needs its awaitLate/jobId, not just the text)
     throw e;
   }
   return data;
@@ -97,7 +98,13 @@ function openSSE() {
     SSE.onopen = () => { document.getElementById('sse-badge').textContent='live'; document.getElementById('sse-badge').classList.add('live'); };
     SSE.onerror = () => { document.getElementById('sse-badge').textContent='disconnected'; document.getElementById('sse-badge').classList.remove('live'); };
     SSE.onmessage = (e) => {
-      try { const ev = JSON.parse(e.data); appendEventLog(ev); refreshOnEvent(ev); }
+      try {
+        const ev = JSON.parse(e.data);
+        // §FEED 0.39.244 — a repo agent's live guardian feed: to the Agent tab only (several a second;
+        // it would bury the event log and trigger refreshes for nothing).
+        if (ev && ev.type === 'idearium.repo.agent.feed') { _agentFeedIn(ev.payload || {}); return; }
+        appendEventLog(ev); refreshOnEvent(ev);
+      }
       catch(_) {}
     };
   } catch(_) {}
@@ -2751,6 +2758,59 @@ async function repoDiagnoseReindex() {
 // ════════════════════════════════════════════════════
 const AGENT_TRANSCRIPT = new Map(); // repoUuid -> [{ role, text, meta }]
 
+// ── §FEED 0.39.244 — the Agent tab's live feed ───────────────────────────
+// James: "the cli in the agents tab needs to have a live feed of the dom mutation/node
+// anchor." Source: the provider tab's userscript (its MutationObserver, the node its
+// findResponseEl() reads) → guardian (/events, guardian.job.* with agentId) → idearium
+// (lib/guardian-stream.cjs → os.broadcast) → here. Kept per compartment, in memory;
+// painted into #agent-feed in place, never by re-rendering the whole tab.
+const AGENT_FEED = new Map();   // repoUuid -> { rows: [], anchor, mutations, generating, jobId, provider, text, textLen, updated }
+const AGENT_FEED_MAX = 120;
+function _agentFeedState(uuid) {
+  if (!AGENT_FEED.has(uuid)) AGENT_FEED.set(uuid, { rows: [], anchor: null, mutations: null, generating: null, jobId: null, provider: null, text: '', textLen: 0, updated: 0 });
+  return AGENT_FEED.get(uuid);
+}
+function _agentFeedIn(p) {
+  if (!p || !p.repoUuid) return;
+  const st = _agentFeedState(p.repoUuid);
+  if (p.jobId && p.jobId !== st.jobId) { st.jobId = p.jobId; st.text = ''; st.textLen = 0; st.anchor = null; st.mutations = null; }
+  if (p.provider) st.provider = p.provider;
+  if (p.anchor) st.anchor = p.anchor;
+  if (p.mutations != null) st.mutations = p.mutations;
+  if (p.generating != null) st.generating = p.generating;
+  if (p.event === 'chunk' && typeof p.text === 'string') { st.text += p.text; st.textLen = p.fullLen || st.text.length; }
+  st.updated = Date.now();
+  const ev = p.stage ? `${p.event}:${p.stage}` : p.event;
+  const detail = [p.how, p.reason, p.error, p.transport, p.event === 'chunk' ? `+${(p.text || '').length}ch → ${p.fullLen || st.text.length}ch` : null,
+    p.event === 'complete' && p.chars ? `${p.chars}ch` : null].filter(Boolean).join(' · ');
+  // A 'dom' pulse updates the live header; it is not worth a log row each second.
+  if (!(p.event === 'progress' && p.stage === 'dom')) {
+    st.rows.push({ ts: p.guardianTs || Date.now(), ev, detail, bad: p.event === 'error' || p.event === 'timeout' });
+    if (st.rows.length > AGENT_FEED_MAX) st.rows.splice(0, st.rows.length - AGENT_FEED_MAX);
+  }
+  if (CURRENT_API_REPO && CURRENT_API_REPO.uuid === p.repoUuid) _agentFeedPaint(p.repoUuid);
+}
+function _agentFeedHtml(uuid) {
+  const st = _agentFeedState(uuid);
+  const a = st.anchor;
+  const attrs = a && a.attrs ? Object.entries(a.attrs).map(([k, v]) => `${k}=${v}`).join(' ') : '';
+  const head = st.jobId
+    ? `<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center"><span style="color:${st.generating ? 'var(--accent,#7dd3fc)' : 'inherit'}">${st.generating ? '● generating' : '○ idle'}</span>` +
+      `<span>job ${escapeHtml(String(st.jobId).slice(0, 8))}</span>${st.provider ? `<span>${escapeHtml(st.provider)}</span>` : ''}` +
+      `<span>mutations ${st.mutations == null ? '—' : st.mutations}</span><span>reply ${st.textLen}ch</span></div>` +
+      `<div style="margin-top:3px"><span style="opacity:.55">anchor</span> ${a ? `<span title="${escapeHtml(attrs)}">${escapeHtml(a.path || a.tag)}</span> <span style="opacity:.55">${escapeHtml(attrs)} · ${a.children} children · ${a.textLen}ch</span>` : '<span style="opacity:.55">no reply node yet</span>'}</div>`
+    : '<div style="opacity:.5">no job for this agent since this page opened — send a message to watch its tab</div>';
+  const rows = st.rows.slice(-40).map(r => `<div style="${r.bad ? 'color:var(--bad,#f87171)' : ''}"><span style="opacity:.45">${new Date(r.ts).toLocaleTimeString('en-GB', { hour12: false })}</span> ${escapeHtml(r.ev)}${r.detail ? ` <span style="opacity:.6">${escapeHtml(r.detail)}</span>` : ''}</div>`).join('');
+  const live = st.text ? `<div style="margin-top:6px;white-space:pre-wrap;max-height:120px;overflow-y:auto;border-left:2px solid var(--accent,#7dd3fc);padding-left:8px;opacity:.85">${escapeHtml(st.text.slice(-4000))}</div>` : '';
+  return head + (rows ? `<div style="margin-top:6px;max-height:140px;overflow-y:auto" data-feed-rows>${rows}</div>` : '') + live;
+}
+function _agentFeedPaint(uuid) {
+  const el = document.getElementById('agent-feed');
+  if (!el || el.dataset.repo !== uuid) return;
+  el.innerHTML = _agentFeedHtml(uuid);
+  const rows = el.querySelector('[data-feed-rows]'); if (rows) rows.scrollTop = rows.scrollHeight;
+}
+
 function _agentTranscript(uuid) {
   if (!AGENT_TRANSCRIPT.has(uuid)) AGENT_TRANSCRIPT.set(uuid, []);
   return AGENT_TRANSCRIPT.get(uuid);
@@ -2802,6 +2862,9 @@ exchanges  ${st.exchanges || 0}</div>
   const injHtml = '';
 
   el.innerHTML = head + memHtml + injHtml + `
+    <div class="ds"><div class="ds-label">live · provider tab</div>
+      <div id="agent-feed" data-repo="${escapeHtml(repo.uuid)}" style="font-size:10px;font-family:var(--mono,monospace);padding:4px 0">${_agentFeedHtml(repo.uuid)}</div>
+    </div>
     <div class="ds"><div class="ds-label">cli</div>
       <div id="agent-transcript" style="font-size:10px;max-height:320px;overflow-y:auto;padding:4px 0">${transcript}</div>
       <textarea id="agent-input" class="field-textarea" rows="3" spellcheck="false" placeholder="ask this project's agent…   (/help for commands · ↑↓ history)"></textarea>
@@ -2872,7 +2935,12 @@ async function agentSend() {
   // api()'s 6s default — the same too-short-timeout bug already fixed once
   // in ui/lib/api.js (0.39.118), not repeated here.
   try { r = await api(`/api/repos/${uuid}/agent/prompt`, { method: 'POST', body: JSON.stringify({ message, noContext }) }, 320000); }
-  catch (e) { r = { ok: false, error: e.message, clientTimeout: e.name === 'AbortError' || /abort|timed? ?out/i.test(e.message) }; }
+  catch (e) {
+    // 0.39.244 — a refusal (ok:false) carries the server's body on e.data; before, only the text survived
+    // and awaitLate was lost, so a real failure never started the late-reply watch.
+    r = (e.data && typeof e.data === 'object') ? { ...e.data, ok: false, error: e.data.error || e.message }
+      : { ok: false, error: e.message, clientTimeout: e.name === 'AbortError' || /abort|timed? ?out/i.test(e.message) };
+  }
 
   if (r.ok) { watch.stop(); _agentSettle(line, r); return _agentRerender(uuid); }
 
@@ -2904,8 +2972,8 @@ function _agentSettle(line, r) {
 function _agentRerender(uuid) { if (CURRENT_API_REPO && CURRENT_API_REPO.uuid === uuid) renderRepoAgent(CURRENT_API_REPO); }
 
 function _agentLateWatch(uuid, message, started, line) {
-  let timer = null, stopped = false, found = null, failure = null, noContext = false, adopting = false;
-  const q = `/api/repos/${uuid}/agent/late?since=${started}&message=${encodeURIComponent(message.slice(0, 200))}`;
+  let timer = null, stopped = false, found = null, failure = null, noContext = false, adopting = false, jobQ = '';
+  const q = () => `/api/repos/${uuid}/agent/late?since=${started}&message=${encodeURIComponent(message.slice(0, 200))}${jobQ}`;
   const stop = () => { stopped = true; if (timer) clearTimeout(timer); timer = null; };
   const adopt = async () => {
     if (adopting) return; adopting = true; stop();
@@ -2928,7 +2996,7 @@ function _agentLateWatch(uuid, message, started, line) {
       return;
     }
     try {
-      const f = await api(q, {}, 8000);
+      const f = await api(q(), {}, 8000);
       if (f.found && !stopped) {
         found = f;
         if (failure) return adopt();
@@ -2946,6 +3014,7 @@ function _agentLateWatch(uuid, message, started, line) {
     stop,
     afterFailure(r, nc) {
       failure = r; noContext = nc;
+      if (r.awaitLate && r.awaitLate.jobId) jobQ = `&jobId=${encodeURIComponent(r.awaitLate.jobId)}`;
       if (found) return adopt();
       line.role = 'agent';
       line.text = 'thinking… (copilot stopped waiting — watching the Responses index for the reply)';

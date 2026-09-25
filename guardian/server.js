@@ -306,6 +306,27 @@ const _sisoLog = [];
 let _streamSeq = 0;
 const _LOG_MAX  = config.SISO_LOG_MAX;
 
+// §FEED 0.39.244 — /events carried only {seq,type,ts,claimed}: no payload at all. So
+// idearium/lib/guardian-stream.cjs's "live guardian.job.complete/.error subscription"
+// read ev.data.jobId, got undefined, and never resolved anything (only its boot sweep
+// ever did). And nothing downstream could tell whose job an event was. A guardian.job.*
+// frame now carries a compact payload, with the job's agentId looked up here once (most
+// emit sites know only the jobId). Compact on purpose: a chunk frame carries the delta and
+// the running length, never `full` — the whole reply again on every chunk.
+const _FEED_KEYS = ['jobId', 'provider', 'agentId', 'stage', 'how', 'reason', 'error', 'gate', 'status', 'chars',
+  'transport', 'chatUrl', 'anchor', 'mutations', 'generating', 'waitedMs', 'retry', 'needsUser'];
+function _feedFrame(frame, type, data) {
+  if (!type || !type.startsWith('guardian.job.') || !data || typeof data !== 'object') return frame;
+  try {
+    const d = {};
+    for (const k of _FEED_KEYS) if (data[k] !== undefined && data[k] !== null) d[k] = data[k];
+    if (typeof data.text === 'string' && type === 'guardian.job.chunk') d.text = data.text.slice(0, 2000);
+    if (typeof data.full === 'string') d.fullLen = data.full.length;
+    if (!d.agentId && d.jobId) { try { const j = jobs.get(d.jobId); if (j && j.agentId) d.agentId = j.agentId; } catch (_) { /* jobs not initialised yet during early boot */ } }
+    return { ...frame, data: d };
+  } catch (_) { return frame; }
+}
+
 class SISOStream {
   constructor() {
     this.gates     = new Map();
@@ -344,7 +365,7 @@ class SISOStream {
         }
       }
     }
-    cockpitBroadcast({ seq, type, ts, claimed });
+    cockpitBroadcast(_feedFrame({ seq, type, ts, claimed }, type, data));
     if (!type.startsWith('dom.') && !type.startsWith('guardian.heartbeat')) {
       _kernelEmit(type, data, ts);
     }

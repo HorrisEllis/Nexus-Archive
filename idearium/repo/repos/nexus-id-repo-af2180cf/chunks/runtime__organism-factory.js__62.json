@@ -1,0 +1,23 @@
+{
+  "id": "chunk-7bb472afdb289e35",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "runtime/organism-factory.js",
+  "range": {
+    "start_line": 1668,
+    "end_line": 1710
+  },
+  "symbols": [
+    "_updateDial"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "f40fc9e34eda58cb89a48ea3e91559d84766d238cdb0035aca4041b91d374d02"
+  },
+  "status": "complete",
+  "content": "    function _updateDial() {\n      const t = _tensionVal / 100;\n      /* Arc from 15,70 (left) to 105,70 (right) — semi-circle */\n      const angle  = -Math.PI + t * Math.PI; /* -π to 0 */\n      const cx = 60, cy = 70, r = 45;\n      const hx = cx + r * Math.cos(angle);\n      const hy = cy + r * Math.sin(angle);\n      const large = t > 0.5 ? 1 : 0;\n      const fillPath = `M 15 70 A 45 45 0 ${large} 1 ${hx.toFixed(1)} ${hy.toFixed(1)}`;\n      dialSVG.querySelector('#tArcFill').setAttribute('d', fillPath);\n      dialSVG.querySelector('#tHandle').setAttribute('cx', hx.toFixed(1));\n      dialSVG.querySelector('#tHandle').setAttribute('cy', hy.toFixed(1));\n      dialSVG.querySelector('#tValLabel').textContent = Math.round(_tensionVal);\n      const color = _tensionVal < 33 ? '#00ff88' : _tensionVal < 66 ? '#ffaa00' : '#ff2266';\n      dialSVG.querySelector('#tHandle').setAttribute('fill', color);\n      dialSVG.querySelector('#tValLabel').setAttribute('fill', color);\n      /* Label */\n      const labelEl = dialSVG.querySelector('text:first-of-type');\n      labelEl.textContent = _tensionVal < 20 ? 'CONSONANT' : _tensionVal < 50 ? 'TENSION' : _tensionVal < 80 ? 'DISSONANT' : 'CHAOS';\n    }\n\n    /* Level slider */\n    const levelRow = document.createElement('div');\n    levelRow.style.cssText = 'display:flex;align-items:center;gap:7px;width:100%;';\n    const levelLbl = document.createElement('div'); levelLbl.style.cssText='font-family:var(--mono);font-size:6.5px;color:var(--dim2);letter-spacing:.1em;min-width:32px;'; levelLbl.textContent='LEVEL';\n    const levelSlider = document.createElement('input'); levelSlider.type='range'; levelSlider.min=0; levelSlider.max=1; levelSlider.step=.01; levelSlider.value=.5;\n    levelSlider.style.cssText = 'flex:1;accent-color:#aa44ff;height:3px;cursor:pointer;';\n    levelSlider.addEventListener('input', () => _pub('ui:tension-level', { val: +levelSlider.value }));\n    levelRow.appendChild(levelLbl); levelRow.appendChild(levelSlider);\n\n    const freqRow = document.createElement('div');\n    freqRow.style.cssText = 'display:flex;align-items:center;gap:7px;width:100%;';\n    const freqLblT = document.createElement('div'); freqLblT.style.cssText='font-family:var(--mono);font-size:6.5px;color:var(--dim2);letter-spacing:.1em;min-width:32px;'; freqLblT.textContent='ROOT';\n    const freqSliderT = document.createElement('input'); freqSliderT.type='range'; freqSliderT.min=40; freqSliderT.max=220; freqSliderT.step=1; freqSliderT.value=110;\n    freqSliderT.style.cssText='flex:1;accent-color:#aa44ff;height:3px;cursor:pointer;';\n    freqSliderT.addEventListener('input', () => _pub('ui:tension-freq', { val: +freqSliderT.value }));\n    freqRow.appendChild(freqLblT); freqRow.appendChild(freqSliderT);\n\n    dialWrap.appendChild(dialSVG); dialWrap.appendChild(levelRow); dialWrap.appendChild(freqRow);\n    tensionWrap.appendChild(dialWrap);\n\n    /* Overtone canvas rendering */\n    let _overtones = [];"
+}

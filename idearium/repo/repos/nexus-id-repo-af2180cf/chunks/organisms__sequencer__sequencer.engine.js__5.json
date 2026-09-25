@@ -1,0 +1,23 @@
+{
+  "id": "chunk-8beff764081f19e6",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/sequencer/sequencer.engine.js",
+  "range": {
+    "start_line": 98,
+    "end_line": 161
+  },
+  "symbols": [
+    "_syncUI"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "d6f37a82702970d923c09ed108184b49025368a828aeb2fc01866abc9a7fbe01"
+  },
+  "status": "complete",
+  "content": "  function _syncUI() {\n    sBus.publish('org:grid_sync', {\n      tracks: tracks.map(t => ({\n        sound: t.sound, color: t.color,\n        steps: t.steps.slice(0, stepCount),\n      })),\n      steps: stepCount, playing, bpm: clock.BPM, swing,\n    });\n  }\n\n  const _unsubs = [\n    gBus.subscribe('ui:play_press:' + instanceId, () => playing ? _stop() : _play()),\n    gBus.subscribe('ui:step_toggle:' + instanceId, ({ track, step, value }) => {\n      if (tracks[track]) tracks[track].steps[step] = value ? 1 : 0;\n    }),\n    gBus.subscribe('ui:bpm_change:' + instanceId, ({ bpm: v }) => {\n      bpm = Math.max(40, Math.min(240, Math.round(v)));\n      clock.BPM = bpm;\n      if (_pclock) _pclock.setBPM(bpm);\n    }),\n    gBus.subscribe('ui:step_count_change:' + instanceId, ({ steps }) => {\n      stepCount = steps === 32 ? 32 : 16;\n      if (_pclock && playing) { _stop(); _play(); } /* restart with new count */\n      _syncUI();\n    }),\n    gBus.subscribe('ui:swing_toggle:' + instanceId, ({ value }) => {\n      swing = value ? 0.12 : 0; /* 12% swing — Tranki feel */\n      if (_pclock) _pclock.setSwing(swing);\n    }),\n    gBus.subscribe('ui:randomize:' + instanceId, () => {\n      tracks.forEach((t,ti) => {\n        t.steps = t.steps.map(() => Math.random() < .22 ? 1 : 0);\n        if (ti === 0) { t.steps[0]=1; if(stepCount>8) t.steps[8]=1; }\n      });\n      _syncUI();\n    }),\n    gBus.subscribe('ui:clear_pattern:' + instanceId, () => {\n      tracks.forEach(t => t.steps.fill(0));\n      _syncUI();\n    }),\n    gBus.subscribe('pad:bank-change', ({ pads }) => {\n      pads.forEach((p,i) => {\n        if (tracks[i]) { tracks[i].sound=p.sound; tracks[i].color=p.color; }\n      });\n      _syncUI();\n    }),\n    gBus.subscribe('pad:trigger', ({ index }) => {\n      if (recording && playing && tracks[index] && _pclock) {\n        const s = _pclock.stepIdx;\n        tracks[index].steps[s] = 1;\n        sBus.publish('org:step_set', { track: index, step: s, value: 1 });\n      }\n    }),\n    gBus.subscribe('seq:play', ({ BPM }) => {\n      if (!playing) { bpm = BPM || bpm; _play(); }\n    }),\n    gBus.subscribe('seq:stop', () => { if (playing) _stop(); }),\n    gBus.subscribe('kernel:bpm-change', ({ BPM }) => {\n      bpm = BPM;\n      if (_pclock) _pclock.setBPM(bpm);\n      if (playing) { _stop(); _play(); }\n    }),\n  ];\n"
+}

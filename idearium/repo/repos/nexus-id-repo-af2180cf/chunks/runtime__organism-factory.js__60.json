@@ -1,0 +1,23 @@
+{
+  "id": "chunk-c33a4b554fb3ae5c",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "runtime/organism-factory.js",
+  "range": {
+    "start_line": 1577,
+    "end_line": 1594
+  },
+  "symbols": [
+    "_canvasToCell"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "660a46f6b4f08ba088a7b2834b03d8034fceb43b36a321dbee80fd75cf908ce7"
+  },
+  "status": "complete",
+  "content": "    function _canvasToCell(e) {\n      const r = densityCanvas.getBoundingClientRect();\n      const x = e.clientX - r.left, y = e.clientY - r.top;\n      const step  = Math.floor(x / r.width  * STEPS);\n      const track = Math.floor(y / r.height * TRACKS);\n      return { step: Math.max(0,Math.min(STEPS-1,step)), track: Math.max(0,Math.min(TRACKS-1,track)) };\n    }\n\n    densityCanvas.addEventListener('pointerdown', e => {\n      _painting = true; densityCanvas.setPointerCapture(e.pointerId);\n      const { step, track } = _canvasToCell(e);\n      _paintVal = densityCache[track][step] > 0.5 ? 0 : 1; /* toggle erase/paint */\n      _lastPaintCell = null;\n      _doPaint(e);\n    });\n    densityCanvas.addEventListener('pointermove', e => { if (_painting) _doPaint(e); });\n    densityCanvas.addEventListener('pointerup',   () => { _painting = false; _lastPaintCell = null; });\n"
+}

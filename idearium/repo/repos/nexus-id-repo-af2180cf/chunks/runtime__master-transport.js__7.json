@@ -1,0 +1,23 @@
+{
+  "id": "chunk-5b633723201ecfcd",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "runtime/master-transport.js",
+  "range": {
+    "start_line": 89,
+    "end_line": 95
+  },
+  "symbols": [
+    "setBPM"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "4b4334c2965d61ac535473bcbcf125ff8aa7f0ac8cbffac51234b3acea2f0968"
+  },
+  "status": "complete",
+  "content": "function setBPM(bpm) {\n  _bpm = Math.max(40, Math.min(240, Math.round(bpm)));\n  KERNEL.clock.BPM = _bpm;\n  gBus().publish('kernel:bpm-change', { BPM: _bpm });\n}\n\n/* Listen for organisms that want to drive transport */"
+}

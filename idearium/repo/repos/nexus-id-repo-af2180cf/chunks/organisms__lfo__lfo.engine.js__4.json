@@ -1,0 +1,23 @@
+{
+  "id": "chunk-77e53a50ae0133eb",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/lfo/lfo.engine.js",
+  "range": {
+    "start_line": 85,
+    "end_line": 92
+  },
+  "symbols": [
+    "start"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "38ec41544146213bd257d5b50093affb507b00f681f8d7b61330f3f22fdcd75c"
+  },
+  "status": "complete",
+  "content": "  function start() {\n    if (_running) return;\n    _running  = true;\n    _lastTime = 0;\n    _rafId    = requestAnimationFrame(_tick);\n    sBus.publish('org:state_sync', { running: true, params: { ..._params } });\n  }\n"
+}

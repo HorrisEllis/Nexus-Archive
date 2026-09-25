@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Guardian — Claude v10.0
 // @namespace    nexus.guardian.claude
-// @version      10.4.0
+// @version      10.5.0
 // @description  Guardian v10: IndexedDB kernel, SHA-256 dedup, pre-prompt intelligence
 //               injection, full system widget, connection info, log/ledger, options,
 //               SEAM, queue, tags — fully system aware, no localStorage for state.
@@ -32,7 +32,7 @@ const CORTEX_URL  = 'http://127.0.0.1:3748';
 const INTELLIGENCE_URL = 'http://127.0.0.1:3753'; // intelligence is its own sovereign system (moved out of cortex 2026-09-19)
 const ORCH_URL    = 'http://127.0.0.1:9000';
 const PROVIDER    = 'claude';
-const VERSION    = '10.4.0';
+const VERSION    = '10.5.0';
 // §P113: exponential backoff 3s→30s — eliminates SSE flood on disconnect
 const RECONNECT_MIN_MS = 3000;
 const RECONNECT_MAX_MS = 30000;
@@ -539,6 +539,29 @@ async function scanArtifacts(jobId) {
 }
 
 // ── DOM observation ───────────────────────────────────────────────────────────
+// §ANCHOR 0.39.244 — James: "the cli in the agents tab needs to have a live feed of the
+// dom mutation/node anchor". The node this watch reads (findResponseEl) is described with
+// each chunk and in a once-a-second 'dom' pulse, so idearium's Agent tab shows WHERE in the
+// page the reply is anchored and that the page is changing, not just the text.
+let _nexusMutations = 0, _nexusPulseAt = 0, _nexusPulseSeen = 0;
+function _nexusAnchor(el) {
+  if (!el || !el.tagName) return null;
+  const attrs = {};
+  for (const a of ['data-message-id', 'data-message-author-role', 'data-testid', 'data-is-streaming', 'id']) {
+    const v = el.getAttribute && el.getAttribute(a); if (v) attrs[a] = String(v).slice(0, 80);
+  }
+  const path = []; let n = el;
+  while (n && n.nodeType === 1 && path.length < 5 && n !== document.body) {
+    let s = n.tagName.toLowerCase();
+    if (n.id) { path.unshift(s + '#' + n.id); break; }
+    const cls = (typeof n.className === 'string' ? n.className : '').trim().split(/\s+/).filter(Boolean).slice(0, 2);
+    if (cls.length) s += '.' + cls.join('.');
+    const p = n.parentElement;
+    if (p) { const same = Array.prototype.filter.call(p.children, c => c.tagName === n.tagName); if (same.length > 1) s += ':nth-of-type(' + (same.indexOf(n) + 1) + ')'; }
+    path.unshift(s); n = n.parentElement;
+  }
+  return { path: path.join(' > '), tag: el.tagName.toLowerCase(), attrs, textLen: (el.innerText || el.textContent || '').length, children: el.childElementCount };
+}
 function findResponseEl() {
   return document.querySelector(
     '[data-is-streaming="true"], .font-claude-message:last-child, ' +
@@ -642,7 +665,7 @@ const NO_REPLY_MS = parseInt((typeof GM_getValue === 'function' && GM_getValue('
 
 function startWatch(jobId, prompt, retryCount = 0) {
   stopWatch();
-  currentJobId = jobId; jobActive = true; _watchStart = Date.now();
+  currentJobId = jobId; jobActive = true; _watchStart = Date.now(); _nexusMutations = 0; _nexusPulseAt = 0; _nexusPulseSeen = 0;
   let _noElReported = false; // 0.39.238 — one no-reply-element report per watch
   // §STALE-REPLY FIX 2026-09-22 — James: "it used the first response from the
   // first job for the second attempt." findResponseEl() returns the LAST
@@ -692,7 +715,7 @@ function startWatch(jobId, prompt, retryCount = 0) {
     // all. One report, the first time it does.
     if (!_sawNew && !(el === _baseEl && text === _baseText) && text) {
       _sawNew = true;
-      send({ type:'GUARDIAN_PROGRESS', jobId, stage:'reply-started', how:`${text.length}ch`, chatUrl:location.href, ts:Date.now() });
+      send({ type:'GUARDIAN_PROGRESS', jobId, stage:'reply-started', how:`${text.length}ch`, chatUrl:location.href, anchor:_nexusAnchor(el), mutations:_nexusMutations, ts:Date.now() });
     }
     if (el === _baseEl && text === _baseText) {
       if (Date.now() - _watchStart > NO_REPLY_MS) {
@@ -717,7 +740,7 @@ function startWatch(jobId, prompt, retryCount = 0) {
       if (text.length > _lastChunkLen) {
         const delta = text.slice(_lastChunkLen); _lastChunkLen = text.length;
         if (delta.length > 10 || /[.!?\n]/.test(delta)) {
-          send({ type:'GUARDIAN_CHUNK', jobId, text:delta, full:text, provider:PROVIDER, chatUrl:location.href, ts:Date.now() });
+          send({ type:'GUARDIAN_CHUNK', jobId, text:delta, full:text, provider:PROVIDER, chatUrl:location.href, anchor:_nexusAnchor(el), mutations:_nexusMutations, ts:Date.now() });
           _streamToCortex(jobId, delta, text);
         }
       }
@@ -727,7 +750,13 @@ function startWatch(jobId, prompt, retryCount = 0) {
   }
 
   const target = document.querySelector('main') || document.body;
-  _watchObs = new MutationObserver(() => {
+  _watchObs = new MutationObserver((recs) => {
+    _nexusMutations += (recs && recs.length) || 1;
+    const _now = Date.now();
+    if (_now - _nexusPulseAt >= 1000 && _nexusMutations !== _nexusPulseSeen) {   // §ANCHOR — at most one pulse a second, only when the page changed
+      _nexusPulseAt = _now; _nexusPulseSeen = _nexusMutations;
+      try { send({ type:'GUARDIAN_PROGRESS', jobId, stage:'dom', how:`${_nexusMutations} mutations`, anchor:_nexusAnchor(findResponseEl()), mutations:_nexusMutations, generating:_isGenerating(), chatUrl:location.href, ts:_now }); } catch (_) {}
+    }
     stableCount = 0;
     if (_watchTimer) { clearTimeout(_watchTimer); _watchTimer = null; }
     _watchTimer = setTimeout(checkStable, 300);

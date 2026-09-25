@@ -93,7 +93,7 @@ function _latticeLink(a, b, w = 0.7, t = 'associated') {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-export const VERSION   = '4.3.0';   // §5.4 fix 2026-08-08 — was 3.0.0, drifted from canonical lib/version.js's services.idearium (3.2.0)
+export const VERSION   = '4.3.1';   // §5.4 fix 2026-08-08 — was 3.0.0, drifted from canonical lib/version.js's services.idearium (3.2.0)
                                      // §2026-09-22 — real bump: eravos mods in the New Spec picker + Brainstorm AI assistance. See idearium.spec's meta.version comment.
                                      // §5.4 fix 2026-09-13 — same drift recurred: idearium/package.json had moved
                                      // on to 4.1.0 through the 2026-09-03 "idearium 3.3.0" session and beyond,
@@ -331,6 +331,17 @@ export class IdeaOS {
   }
 
   // ─── SSE broadcast ──────────────────────────────────────────────────────────
+
+  /**
+   * broadcast(type, payload) — §FEED 0.39.244. SSE clients only: not ledgered, not on the
+   * SISO stream. For live observation (the Agent tab's guardian feed arrives several times
+   * a second); anything that is state goes through emit().
+   */
+  broadcast(type, payload = {}) {
+    const ev = { uuid: randomUUID(), type, payload, source: 'idearium.core', ephemeral: true, ts: Date.now() };
+    this._broadcast(ev);
+    return ev;
+  }
 
   addSSEClient(res) {
     this._sseClients.add(res);

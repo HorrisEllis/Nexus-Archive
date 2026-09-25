@@ -1,0 +1,23 @@
+{
+  "id": "chunk-8525db3bc429db1d",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/bass-drop-builder/bass-drop-builder.engine.js",
+  "range": {
+    "start_line": 179,
+    "end_line": 259
+  },
+  "symbols": [
+    "_drop"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "bd8bfe2195527ed8e5c6fbd4329fea0778fda6374f8f6d907295a1dbea29540c"
+  },
+  "status": "complete",
+  "content": "function _drop(AC, t, params, masterGain) {\n  const { freq = 55, drive = 0.6, bpm = 128 } = params;\n  const beatSec = 60 / bpm;\n  const nodes   = [];\n\n  /* Sub boom */\n  const subO = AC.createOscillator(); subO.type = 'sine';\n  const subG = AC.createGain();\n  subO.frequency.setValueAtTime(freq * 2, t);\n  subO.frequency.exponentialRampToValueAtTime(freq * 0.8, t + 0.5);\n  subG.gain.setValueAtTime(1.3, t);\n  subG.gain.exponentialRampToValueAtTime(0.001, t + 0.7);\n  subO.connect(subG); subG.connect(masterGain);\n  subO.start(t); subO.stop(t + 0.75);\n  nodes.push(subO, subG);\n\n  /* Distorted body thud */\n  const thudO = AC.createOscillator(); thudO.type = 'sine';\n  const thudD = _distort(AC, drive);\n  const thudF = AC.createBiquadFilter(); thudF.type = 'lowpass'; thudF.frequency.value = freq * 6;\n  const thudG = AC.createGain();\n  thudO.frequency.setValueAtTime(freq * 3, t);\n  thudO.frequency.exponentialRampToValueAtTime(freq, t + 0.18);\n  thudG.gain.setValueAtTime(1.0, t);\n  thudG.gain.exponentialRampToValueAtTime(0.001, t + 0.22);\n  thudO.connect(thudD); thudD.connect(thudF); thudF.connect(thudG); thudG.connect(masterGain);\n  thudO.start(t); thudO.stop(t + 0.25);\n  nodes.push(thudO, thudD, thudF, thudG);\n\n  /* Air crack */\n  const crBuf = AC.createBuffer(1, Math.ceil(AC.sampleRate * 0.018), AC.sampleRate);\n  const crD   = crBuf.getChannelData(0);\n  for (let i = 0; i < crD.length; i++) crD[i] = Math.random() * 2 - 1;\n  const crSrc = AC.createBufferSource(); crSrc.buffer = crBuf;\n  const crF   = AC.createBiquadFilter(); crF.type = 'highpass'; crF.frequency.value = 8000;\n  const crG   = AC.createGain();\n  crG.gain.setValueAtTime(0.9, t);\n  crG.gain.exponentialRampToValueAtTime(0.001, t + 0.018);\n  crSrc.connect(crF); crF.connect(crG); crG.connect(masterGain);\n  crSrc.start(t); crSrc.stop(t + 0.02);\n  nodes.push(crSrc, crF, crG);\n\n  /* Reese bass drop — two detuned saws sweep in */\n  const rO1 = AC.createOscillator(); rO1.type = 'sawtooth'; rO1.frequency.value = freq * 1.006;\n  const rO2 = AC.createOscillator(); rO2.type = 'sawtooth'; rO2.frequency.value = freq * 0.994;\n  const rF  = AC.createBiquadFilter(); rF.type = 'lowpass';\n  const rG  = AC.createGain();\n  const rDur = beatSec * 2;\n  rF.frequency.setValueAtTime(freq * 0.8, t);\n  rF.frequency.exponentialRampToValueAtTime(freq * 6, t + 0.05);\n  rF.frequency.exponentialRampToValueAtTime(freq * 2.5, t + rDur);\n  rF.Q.value = 2;\n  rG.gain.setValueAtTime(0, t);\n  rG.gain.linearRampToValueAtTime(0.85, t + 0.02);\n  rG.gain.exponentialRampToValueAtTime(0.001, t + rDur);\n  rO1.connect(rF); rO2.connect(rF); rF.connect(rG); rG.connect(masterGain);\n  rO1.start(t); rO2.start(t);\n  rO1.stop(t + rDur + 0.05); rO2.stop(t + rDur + 0.05);\n  nodes.push(rO1, rO2, rF, rG);\n\n  /* Neuro wobble burst after the impact */\n  const wDelay = 0.03;\n  const wO  = AC.createOscillator(); wO.type = 'sawtooth'; wO.frequency.value = freq;\n  const wLFO= AC.createOscillator(); wLFO.type = 'sine'; wLFO.frequency.value = 8;\n  const wLG = AC.createGain(); wLG.gain.value = 900;\n  const wF  = AC.createBiquadFilter(); wF.type = 'lowpass'; wF.frequency.value = 800; wF.Q.value = 10;\n  const wDst= _distort(AC, 0.55);\n  const wG  = AC.createGain();\n  wLFO.connect(wLG); wLG.connect(wF.frequency);\n  wO.connect(wDst); wDst.connect(wF); wF.connect(wG); wG.connect(masterGain);\n  wG.gain.setValueAtTime(0, t + wDelay);\n  wG.gain.linearRampToValueAtTime(0.7, t + wDelay + 0.02);\n  wG.gain.exponentialRampToValueAtTime(0.001, t + wDelay + beatSec * 4);\n  wO.start(t + wDelay); wLFO.start(t + wDelay);\n  wO.stop(t + wDelay + beatSec * 4 + 0.1); wLFO.stop(t + wDelay + beatSec * 4 + 0.1);\n  nodes.push(wO, wLFO, wLG, wF, wDst, wG);\n\n  return nodes;\n}\n\n/* VOCAL TRIGGER — plays loaded buffer at specified time */"
+}

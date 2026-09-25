@@ -1,0 +1,23 @@
+{
+  "id": "chunk-0e0bf163a468a81c",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "kernel/intake.js",
+  "range": {
+    "start_line": 101,
+    "end_line": 105
+  },
+  "symbols": [
+    "types"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "72b1fdff3a26dd4dde02568f91328db6d6cbc185d4b714bb25ca0d10ac2e0372"
+  },
+  "status": "complete",
+  "content": "function types() { return TYPES.map(t => ({ id:t.id, label:t.label, icon:t.icon })); }\n\nreturn { ingestAll, ingestOne, types };\n})();\n"
+}

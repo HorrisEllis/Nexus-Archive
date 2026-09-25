@@ -1,0 +1,23 @@
+{
+  "id": "chunk-8dc82399e47eb962",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/edm-lab/edm-lab.engine.js",
+  "range": {
+    "start_line": 407,
+    "end_line": 447
+  },
+  "symbols": [
+    "_loadRhythmPreset"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "7c13e56479851c66e2dfad7569fed5b242cad2be204efa2034aa0954615d73a6"
+  },
+  "status": "complete",
+  "content": "  function _loadRhythmPreset(preset) {\n    const map = {\n      'tranki': [[0,8,16,24],[4,12,20,28],[0,2,3,6,8,10,11,14],[1,5,9,13],[],[4,12],[],[],],\n      'drop':   [[0,4,8,10,12],[4,12,28],[0,1,2,3,4,5,6,7],[8,16,24],[2,6,10,14],[4,12],[0,16],[],],\n      'build':  [[0,8,16],[4,20],[0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30],[2,10,18,26],[],[],[0,8,16,24],[7,15,23,31],],\n    };\n    const pat = map[preset];\n    if (!pat) return;\n    for (let ti = 0; ti < rhythm.TRACKS; ti++) {\n      for (let si = 0; si < rhythm.STEPS; si++) rhythm.setDensity(ti, si, 0);\n      (pat[ti] || []).forEach(s => rhythm.setDensity(ti, s, 0.85));\n    }\n    sBus.publish('org:density-reset', { densityMap: rhythm.getDensityMap() });\n  }\n\n  KERNEL.registry.register({\n    instanceId, id: 'eravos.edm-lab', label: 'EDM Lab',\n    provides: ['capability.audio_out'],\n    requires: ['capability.audio_context'],\n    permissions: ['audio_out', 'bus_publish', 'bus_subscribe'],\n    hooks: [\n      { hook_id: 'edm.hook.audio_out',   direction: 'out', event_type: 'audio:signal',    contract_version: '1.0.0' },\n      { hook_id: 'edm.hook.drop-out',    direction: 'out', event_type: 'edm:drop-fired',  contract_version: '1.0.0' },\n      { hook_id: 'edm.hook.step-out',    direction: 'out', event_type: 'edm:rhythm-step', contract_version: '1.0.0' },\n    ],\n  });\n\n  return {\n    unmount() {\n      clearInterval(_syncTimer);\n      bass.stop(); rhythm.stop(); tension.stop();\n      _unsubs.forEach(u => u());\n      KERNEL.registry.unregister(instanceId);\n    },\n    bass, rhythm, tension, drop: _drop,\n  };\n}\n\nreturn { mount };\n})();\n"
+}

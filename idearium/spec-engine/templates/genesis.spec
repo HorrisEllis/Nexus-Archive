@@ -162,6 +162,62 @@ gate        = execution_control_point_that_authorizes_a_cross_call
 // two doors into one room, never two different rooms.
 
 // ══════════════════════════════════════════════════════════════════════════════
+// Domain 2b — Manifest (manifest-first: the wiring is generated, never hand-declared)
+// ══════════════════════════════════════════════════════════════════════════════
+// Source: spec-engine-manifest-first-phasemap v0.1.0 (James: "components made
+// separately so the llm needs as little context as possible... the file
+// structure and list of files, components, and dependencies needs to be
+// generated first, creates the registry and manifest first, for the wiring.
+// then chunked into each js file/component... using the component registry
+// as an event bus and interaction contract with hooks, wires and data
+// directories. also works as a map for the project.")
+//
+// Why this domain exists: 0.39.244's three bugs were all seams between
+// individually-correct components (guardian /events carried no payload; the
+// Agent tab's api() dropped the refusal body; copilot refused before guardian
+// could open the right tab) — a unit test stubbing the boundary passed while
+// the system failed. A manifest generated BEFORE any component is chunked,
+// with payload schemas (not just names), is what lets a static check catch
+// that class of bug before a single line of component code is written.
+domain "manifest"
+manifest        = the_one_source_of_truth_for_every_components_wiring
+manifest_entry  = typed_declaration_of_one_component_before_it_is_chunked
+wire_check      = static_no_llm_pass_that_gates_chunking_on_the_manifest_alone
+neighbour       = a_component_named_in_this_entrys_own_depends_list_nothing_further
+residue         = an_emitted_event_with_no_declared_consumer_recorded_as_such_not_silently_dropped
+// The manifest is not documentation of the wiring — code never re-declares
+// wiring by hand (I1). registry/component-registry.js and
+// compartments/<name>/interaction-contract.json (Domain 2, above) are BOTH
+// derived from the manifest at generation time; a hand-edited registry entry
+// with no matching manifest entry is itself a wire-check violation.
+axiom MANIFEST_BEFORE_CHUNK    // I1 — the manifest generates the wiring; no component is chunked before its manifest entry exists and passes wire-check
+axiom ONE_PRODUCER_PER_SIGNAL  // I3 (SISO law 1) — every signature has exactly one producer; a second producer is a hard error at wire-check, not a merge conflict discovered later
+axiom NO_UNDECLARED_RESIDUE    // I4 — every emitted event has a consumer or is declared residue; an event with neither fails wire-check
+axiom CONTEXT_IS_NEIGHBOURS_ONLY // I5 — a chunk's build context is its own manifest entry plus its neighbours' schemas (consumes/emits shape only) — never another component's full source, never the whole prior build
+axiom KERNEL_NEVER_CHUNKED     // I6 — kernel/spine/registry/gates (phase 0) are hand-built and tested before any component chunk dispatches, same freeze FOUNDATION_IMMUTABLE already states for kernel/engine/runtime
+
+// manifest_entry — one per component, the unit chunk-dispatch is scoped to:
+//   id       : string            — stable component_id, matches registry/component-registry.js's own key
+//   intent   : string             — one sentence (SMALLEST_UNIT's "one intent," made literal here)
+//   file     : string              — path in compartments/<name>/component/
+//   consumes : [ { signature, schema } ]  — events/commands this component handles, full payload shape
+//   emits    : [ { event, schema, residue } ]  — events/commands this component produces, full payload shape
+//   data     : { reads: [dir], writes: [dir] }  — the only directories this component may touch
+//   cli      : "verb noun [flags]" | null        — routed through registry/component-router.js, never a direct import
+//   depends  : [component_id]                     — by id only, resolved through the registry; no import statements
+//   tests    : [ { given, expect } ]                — contract tests, generated FROM consumes/emits schemas, not hand-written after the fact
+//
+// Pipeline (gated states, ledgered per transition — mirrors CHUNK_STATES):
+//   P0 SPEC       spec text in
+//   P1 MANIFEST   one whole-spec-context job generates every manifest_entry + the file tree + the registry — this is the ONLY step that sees the whole spec at once
+//   P2 WIRE-CHECK static: ONE_PRODUCER_PER_SIGNAL, NO_UNDECLARED_RESIDUE, producer<->consumer schema compatibility, depends acyclic — FAIL returns the violation list to P1, not to a human
+//   P3 KERNEL     phase 0 built and tested first (KERNEL_NEVER_CHUNKED)
+//   P4 CHUNKS     one chunk per manifest_entry, parallel — each chunk's context is CONTEXT_IS_NEIGHBOURS_ONLY: its own entry + the consumes/emits schemas of the ids in its own depends[], nothing else
+//   P5 ASSEMBLE   registry/component-registry.js loads components by id; registry/component-router.js wires cli+signatures; no imports anywhere in this step
+//   P6 INTEGRATE  real events driven across the real assembled registry, from every manifest emits/consumes pair — no stubbed seams
+// states: QUEUED -> MANIFESTED -> WIRED -> KERNEL_OK -> CHUNKED -> ASSEMBLED -> INTEGRATED | FAILED -> RETRYING
+
+// ══════════════════════════════════════════════════════════════════════════════
 // Domain 3 — Seam (structural boundary only — deliberately dumb)
 // ══════════════════════════════════════════════════════════════════════════════
 // Hierarchy, corrected: a seam does not carry ports, direction, or method.
@@ -413,8 +469,29 @@ catalog GENESIS_FILE_TREE {
     file "registry/component-registry.js" {
       uuid    = ge5001-creg0-4000-8000-000000000051
       intent  = living_index_of_every_component_and_its_uuid
-      summary = "One entry per component file; used by the lattice to seed level.software nodes automatically."
+      summary = "One entry per component file; used by the lattice to seed level.software nodes automatically. Generated from registry/manifest-registry.js at P5 ASSEMBLE — never hand-edited (MANIFEST_BEFORE_CHUNK)."
       ref     = [ "ge5000" ]
+    }
+
+    file "registry/manifest-registry.js" {
+      uuid    = ge5002-mreg0-4000-8000-000000000052
+      intent  = one_source_of_truth_manifest_entry_per_component_written_before_any_chunk_dispatches
+      summary = "P1 MANIFEST's real output: { id, intent, file, consumes[], emits[], data:{reads,writes}, cli, depends[], tests[] } per component, generated in a single whole-spec-context job — the only step in the pipeline allowed that much context. component-registry.js and interaction-contract.json are both derived from this at P5, never hand-declared (I1)."
+      ref     = [ "ge0000" ]
+    }
+
+    file "registry/wire-check.js" {
+      uuid    = ge5003-wchk0-4000-8000-000000000053
+      intent  = static_no_llm_gate_that_a_manifest_must_clear_before_any_component_is_chunked
+      summary = "P2 WIRE-CHECK: ONE_PRODUCER_PER_SIGNAL (a signature with 2+ producers is a hard error, not a merge conflict found later), NO_UNDECLARED_RESIDUE (every emit has a consumer or is marked residue:true), producer<->consumer schema compatibility, depends[] acyclic. FAIL returns the violation list to registry/manifest-registry.js's own generation job for retry — never surfaces as a runtime bug the way 0.39.244's three seam bugs did."
+      ref     = [ "ge5002" ]
+    }
+
+    file "registry/component-router.js" {
+      uuid    = ge5004-crtr0-4000-8000-000000000054
+      intent  = route_every_cli_verb_and_every_cross_component_signal_by_id_never_by_import
+      summary = "Reads manifest-registry.js's cli field per entry; a CLI call is `verb noun [flags]` resolved to a component_id and dispatched through here, non-linearly — no compartment or component ever imports another to reach it. Doubles as the event bus registry/wire-registry.js's hooks route through, so 'CLI door' and 'event door' are the same underlying map (Domain 2's i_contract rule), not two mechanisms."
+      ref     = [ "ge5002", "ge5000" ]
     }
   }
 
@@ -438,11 +515,18 @@ catalog GENESIS_FILE_TREE {
       ref     = []
     }
 
+    file "compartments/<name>/manifest.json" {
+      uuid    = ge6900-mnfNN-4000-8000-000000000069
+      intent  = this_compartments_slice_of_registry_manifest_registry_js_one_entry_per_component_it_owns
+      summary = "Written at P1 MANIFEST, before component/<file>.js below exists. interaction-contract.json and component-registry.js entries for this compartment are both generated FROM this file at P5 ASSEMBLE (MANIFEST_BEFORE_CHUNK) — editing either by hand without updating this file first is a wire-check violation, not a style issue."
+      ref     = [ "ge5002" ]
+    }
+
     file "compartments/<name>/interaction-contract.json" {
       uuid    = ge7000-icNNN-4000-8000-000000000070
       intent  = declare_this_compartments_full_surface
-      summary = "Must validate against contracts/interaction-contract.schema.json. This is the map referenced by both api.js and cli.js below."
-      ref     = [ "ge4000" ]
+      summary = "Must validate against contracts/interaction-contract.schema.json. This is the map referenced by both api.js and cli.js below. Generated from manifest.json's consumes/emits/cli fields, not authored independently."
+      ref     = [ "ge4000", "ge6900" ]
     }
 
     file "compartments/<name>/api.js" {
@@ -483,8 +567,8 @@ catalog GENESIS_FILE_TREE {
     file "compartments/<name>/component/<file>.js" {
       uuid    = ge7100-cmpNN-4000-8000-000000000080
       intent  = smallest_measurable_unit_of_behavior
-      summary = "One component, one file, one intent. Registered in component-registry.js on load. Hot-swappable independently of its siblings."
-      ref     = [ "ge5001" ]
+      summary = "One component, one file, one intent — the file this compartment's manifest.json already declared at P1, not a new decision made while chunking. Registered in component-registry.js on load. Hot-swappable independently of its siblings. Built at P4 CHUNKS with CONTEXT_IS_NEIGHBOURS_ONLY: the agent sees this component's own manifest_entry plus the consumes/emits SCHEMAS (not source) of the ids in its own depends[] — never another component's file, never the rest of the compartment."
+      ref     = [ "ge5001", "ge6900" ]
     }
   }
 
@@ -601,11 +685,22 @@ catalog GENESIS_FILE_TREE {
 //   MANIFEST → kernel(boot,axioms,runtime-enum) → spine/warp-bridge →
 //   spine/axiom-baseline (SCHEMA_BASELINE → live Axioms) →
 //   spine/scorer-fidelity → ledger/event-ledger →
-//   contracts(schema,hook-schema) → registry(wire,component) → gates →
+//   contracts(schema,hook-schema) → registry(wire,component,manifest,wire-check,router) → gates →
 //   compartments/* (each gated by GEN-S1/GEN-S2 at mount) →
 //   nerve → ui/tv-shell → lattice → pulse → config
 //
 // Nothing after "spine/axiom-baseline" can mount without clearing whichever
 // GEN-S* axiom applies to it — the baseline is live before the first
 // compartment exists, not bolted on after the system is already running.
+//
+// BUILD order for a new project scaffolded from this spec is a distinct
+// sequence from the above (Domain "manifest"'s P0-P6): registry/
+// manifest-registry.js and every compartment's manifest.json exist and
+// clear registry/wire-check.js BEFORE kernel/engine/runtime are even
+// generated, let alone before any compartments/<name>/component/<file>.js
+// chunk is dispatched. Boot order is what a FINISHED system does at
+// startup; build order is how genesis gets a system to that finished state
+// with I5-minimal context per chunk. Conflating the two is exactly the
+// silent-orphan failure class registry/wire-check.js exists to catch loudly
+// instead of leaving a chunk PENDING forever with nothing surfaced.
 // ══════════════════════════════════════════════════════════════════════════════

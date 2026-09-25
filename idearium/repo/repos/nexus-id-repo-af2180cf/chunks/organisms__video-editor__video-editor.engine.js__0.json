@@ -1,0 +1,21 @@
+{
+  "id": "chunk-77f217b8137d7580",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/video-editor/video-editor.engine.js",
+  "range": {
+    "start_line": 1,
+    "end_line": 14
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "81792136e51592738c4dbd13822f54aebd46b12ee2353d58ddc37ca59c54d14e"
+  },
+  "status": "complete",
+  "content": "/* ═══════════════════════════════════════════════════════════\n   ORGANISM: VIDEO EDITOR  v1.0.0\n   id: eravos.video-editor\n\n   Loads a local video into a hidden <video> element, draws each\n   frame through a Canvas2D filter pipeline, trims to [in,out],\n   and re-encodes the filtered range (with original audio) to\n   WebM via canvas.captureStream() + MediaRecorder. No server,\n   no external transcoder.\n   ═══════════════════════════════════════════════════════════ */\n\nwindow.VideoEditorEngine = (() => {\n'use strict';\n"
+}

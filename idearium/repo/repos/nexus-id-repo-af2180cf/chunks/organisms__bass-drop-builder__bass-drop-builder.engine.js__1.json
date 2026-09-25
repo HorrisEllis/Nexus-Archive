@@ -1,0 +1,23 @@
+{
+  "id": "chunk-8071fe1fb7ac8ff4",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/bass-drop-builder/bass-drop-builder.engine.js",
+  "range": {
+    "start_line": 20,
+    "end_line": 29
+  },
+  "symbols": [
+    "_distort"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "8f7c2091e6a99e78a577eefbcf0cc87202f1976d1bfad64a6a277577bb4a6fd0"
+  },
+  "status": "complete",
+  "content": "function _distort(AC, amount = 0.5) {\n  const s = AC.createWaveShaper();\n  const n = 256, c = new Float32Array(n), k = amount * 100;\n  for (let i = 0; i < n; i++) { const x = (i*2)/n-1; c[i] = ((Math.PI+k)*x)/(Math.PI+k*Math.abs(x)); }\n  s.curve = c; s.oversample = '4x'; return s;\n}\n\n/* ── Stage engines ──────────────────────────────────────── */\n\n/* TENSION — rising dissonant pad + filter squeeze */"
+}

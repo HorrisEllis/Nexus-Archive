@@ -1,0 +1,23 @@
+{
+  "id": "chunk-bd422d5667dbc7e4",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "runtime/organism-factory.js",
+  "range": {
+    "start_line": 3133,
+    "end_line": 3133
+  },
+  "symbols": [
+    "connectBtn"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "b32877acb50d9bef2b483bbd98e7cb17af4c0443701ca34a76ed0adea66bd994"
+  },
+  "status": "complete",
+  "content": "    const connectBtn=mkBtn(btnRow,'CONNECT', ()=>_pub('ui:serial_connect',{}), {h:22,fs:7});"
+}

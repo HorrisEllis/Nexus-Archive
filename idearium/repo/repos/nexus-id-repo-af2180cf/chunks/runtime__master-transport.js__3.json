@@ -1,0 +1,23 @@
+{
+  "id": "chunk-422baead7d8a2270",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "runtime/master-transport.js",
+  "range": {
+    "start_line": 34,
+    "end_line": 41
+  },
+  "symbols": [
+    "stop"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "f6d3a9bb7cfa3e05ec1bd75f02c289b2a1f6a538939bb718389e9fd4998b24b7"
+  },
+  "status": "complete",
+  "content": "function stop() {\n  if (!_playing && !_recording) return;\n  _playing = false;\n  gBus().publish('seq:stop', {});\n  gBus().publish('transport:stop', { timestamp: Date.now() });\n  if (_recording) _stopRecord();\n}\n"
+}

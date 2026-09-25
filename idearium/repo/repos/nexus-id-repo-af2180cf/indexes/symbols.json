@@ -1,0 +1,1782 @@
+[
+  {
+    "name": "mkKnob",
+    "file": "runtime/organism-factory.js",
+    "line": 21
+  },
+  {
+    "name": "mkToggle",
+    "file": "runtime/organism-factory.js",
+    "line": 56
+  },
+  {
+    "name": "mkSelect",
+    "file": "runtime/organism-factory.js",
+    "line": 80
+  },
+  {
+    "name": "mkDiv",
+    "file": "runtime/organism-factory.js",
+    "line": 99
+  },
+  {
+    "name": "mkScope",
+    "file": "runtime/organism-factory.js",
+    "line": 103
+  },
+  {
+    "name": "draw",
+    "file": "runtime/organism-factory.js",
+    "line": 109
+  },
+  {
+    "name": "mkWave",
+    "file": "runtime/organism-factory.js",
+    "line": 114
+  },
+  {
+    "name": "_fmt",
+    "file": "runtime/organism-factory.js",
+    "line": 132
+  },
+  {
+    "name": "mkBtn",
+    "file": "runtime/organism-factory.js",
+    "line": 137
+  },
+  {
+    "name": "reg",
+    "file": "runtime/organism-factory.js",
+    "line": 152
+  },
+  {
+    "name": "renderPads",
+    "file": "runtime/organism-factory.js",
+    "line": 184
+  },
+  {
+    "name": "litPad",
+    "file": "runtime/organism-factory.js",
+    "line": 202
+  },
+  {
+    "name": "renderQA",
+    "file": "runtime/organism-factory.js",
+    "line": 210
+  },
+  {
+    "name": "btnPlay",
+    "file": "runtime/organism-factory.js",
+    "line": 258
+  },
+  {
+    "name": "btnRand",
+    "file": "runtime/organism-factory.js",
+    "line": 259
+  },
+  {
+    "name": "btnClr",
+    "file": "runtime/organism-factory.js",
+    "line": 260
+  },
+  {
+    "name": "sep",
+    "file": "runtime/organism-factory.js",
+    "line": 271
+  },
+  {
+    "name": "renderGrid",
+    "file": "runtime/organism-factory.js",
+    "line": 281
+  },
+  {
+    "name": "btnPlay",
+    "file": "runtime/organism-factory.js",
+    "line": 333
+  },
+  {
+    "name": "btnStop",
+    "file": "runtime/organism-factory.js",
+    "line": 334
+  },
+  {
+    "name": "btnRec",
+    "file": "runtime/organism-factory.js",
+    "line": 335
+  },
+  {
+    "name": "addLaneBtn",
+    "file": "runtime/organism-factory.js",
+    "line": 345
+  },
+  {
+    "name": "sep",
+    "file": "runtime/organism-factory.js",
+    "line": 346
+  },
+  {
+    "name": "drawRuler",
+    "file": "runtime/organism-factory.js",
+    "line": 377
+  },
+  {
+    "name": "addLaneEl",
+    "file": "runtime/organism-factory.js",
+    "line": 408
+  },
+  {
+    "name": "addClipEl",
+    "file": "runtime/organism-factory.js",
+    "line": 443
+  },
+  {
+    "name": "posClip",
+    "file": "runtime/organism-factory.js",
+    "line": 463
+  },
+  {
+    "name": "reposAll",
+    "file": "runtime/organism-factory.js",
+    "line": 469
+  },
+  {
+    "name": "mkPill",
+    "file": "runtime/organism-factory.js",
+    "line": 529
+  },
+  {
+    "name": "loopPill",
+    "file": "runtime/organism-factory.js",
+    "line": 543
+  },
+  {
+    "name": "reversePill",
+    "file": "runtime/organism-factory.js",
+    "line": 544
+  },
+  {
+    "name": "mkHandle",
+    "file": "runtime/organism-factory.js",
+    "line": 559
+  },
+  {
+    "name": "audio",
+    "file": "runtime/organism-factory.js",
+    "line": 631
+  },
+  {
+    "name": "draw",
+    "file": "runtime/organism-factory.js",
+    "line": 646
+  },
+  {
+    "name": "_pxToNorm",
+    "file": "runtime/organism-factory.js",
+    "line": 755
+  },
+  {
+    "name": "rateK",
+    "file": "runtime/organism-factory.js",
+    "line": 836
+  },
+  {
+    "name": "depthK",
+    "file": "runtime/organism-factory.js",
+    "line": 837
+  },
+  {
+    "name": "draw",
+    "file": "runtime/organism-factory.js",
+    "line": 848
+  },
+  {
+    "name": "activeBtn",
+    "file": "runtime/organism-factory.js",
+    "line": 876
+  },
+  {
+    "name": "sustainBtn",
+    "file": "runtime/organism-factory.js",
+    "line": 936
+  },
+  {
+    "name": "_m",
+    "file": "runtime/organism-factory.js",
+    "line": 997
+  },
+  {
+    "name": "_nexusCardUI",
+    "file": "runtime/organism-factory.js",
+    "line": 1016
+  },
+  {
+    "name": "diagBtn",
+    "file": "runtime/organism-factory.js",
+    "line": 1035
+  },
+  {
+    "name": "snapBtn",
+    "file": "runtime/organism-factory.js",
+    "line": 1036
+  },
+  {
+    "name": "ideaBtn",
+    "file": "runtime/organism-factory.js",
+    "line": 1037
+  },
+  {
+    "name": "_scopedBus",
+    "file": "runtime/organism-factory.js",
+    "line": 1173
+  },
+  {
+    "name": "spawn",
+    "file": "runtime/organism-factory.js",
+    "line": 1189
+  },
+  {
+    "name": "_scopedPub",
+    "file": "runtime/organism-factory.js",
+    "line": 1220
+  },
+  {
+    "name": "defs",
+    "file": "runtime/organism-factory.js",
+    "line": 1230
+  },
+  {
+    "name": "mkSection",
+    "file": "runtime/organism-factory.js",
+    "line": 1266
+  },
+  {
+    "name": "mkParamRow",
+    "file": "runtime/organism-factory.js",
+    "line": 1318
+  },
+  {
+    "name": "freqSlider",
+    "file": "runtime/organism-factory.js",
+    "line": 1339
+  },
+  {
+    "name": "cutSlider",
+    "file": "runtime/organism-factory.js",
+    "line": 1340
+  },
+  {
+    "name": "resSlider",
+    "file": "runtime/organism-factory.js",
+    "line": 1341
+  },
+  {
+    "name": "rateSlider",
+    "file": "runtime/organism-factory.js",
+    "line": 1342
+  },
+  {
+    "name": "depthSlider",
+    "file": "runtime/organism-factory.js",
+    "line": 1343
+  },
+  {
+    "name": "driveSlider",
+    "file": "runtime/organism-factory.js",
+    "line": 1344
+  },
+  {
+    "name": "drawFilterCurve",
+    "file": "runtime/organism-factory.js",
+    "line": 1368
+  },
+  {
+    "name": "drawDensity",
+    "file": "runtime/organism-factory.js",
+    "line": 1521
+  },
+  {
+    "name": "_canvasToCell",
+    "file": "runtime/organism-factory.js",
+    "line": 1577
+  },
+  {
+    "name": "_doPaint",
+    "file": "runtime/organism-factory.js",
+    "line": 1595
+  },
+  {
+    "name": "_updateDial",
+    "file": "runtime/organism-factory.js",
+    "line": 1668
+  },
+  {
+    "name": "drawOvertones",
+    "file": "runtime/organism-factory.js",
+    "line": 1711
+  },
+  {
+    "name": "logMax",
+    "file": "runtime/organism-factory.js",
+    "line": 1727
+  },
+  {
+    "name": "mkPill",
+    "file": "runtime/organism-factory.js",
+    "line": 1777
+  },
+  {
+    "name": "renderAll",
+    "file": "runtime/organism-factory.js",
+    "line": 1839
+  },
+  {
+    "name": "mkSlotZone",
+    "file": "runtime/organism-factory.js",
+    "line": 1873
+  },
+  {
+    "name": "audio",
+    "file": "runtime/organism-factory.js",
+    "line": 1889
+  },
+  {
+    "name": "draw",
+    "file": "runtime/organism-factory.js",
+    "line": 2000
+  },
+  {
+    "name": "_drawFreq",
+    "file": "runtime/organism-factory.js",
+    "line": 2018
+  },
+  {
+    "name": "drawBars",
+    "file": "runtime/organism-factory.js",
+    "line": 2051
+  },
+  {
+    "name": "_drawDyn",
+    "file": "runtime/organism-factory.js",
+    "line": 2105
+  },
+  {
+    "name": "drawWaveform",
+    "file": "runtime/organism-factory.js",
+    "line": 2127
+  },
+  {
+    "name": "rms",
+    "file": "runtime/organism-factory.js",
+    "line": 2157
+  },
+  {
+    "name": "_drawRhythmic",
+    "file": "runtime/organism-factory.js",
+    "line": 2199
+  },
+  {
+    "name": "tsep",
+    "file": "runtime/organism-factory.js",
+    "line": 2424
+  },
+  {
+    "name": "audio",
+    "file": "runtime/organism-factory.js",
+    "line": 2469
+  },
+  {
+    "name": "totalDur",
+    "file": "runtime/organism-factory.js",
+    "line": 2504
+  },
+  {
+    "name": "boundaries",
+    "file": "runtime/organism-factory.js",
+    "line": 2507
+  },
+  {
+    "name": "draw",
+    "file": "runtime/organism-factory.js",
+    "line": 2513
+  },
+  {
+    "name": "i",
+    "file": "runtime/organism-factory.js",
+    "line": 2632
+  },
+  {
+    "name": "_getInteraction",
+    "file": "runtime/organism-factory.js",
+    "line": 2655
+  },
+  {
+    "name": "idx",
+    "file": "runtime/organism-factory.js",
+    "line": 2680
+  },
+  {
+    "name": "_selectStage",
+    "file": "runtime/organism-factory.js",
+    "line": 2744
+  },
+  {
+    "name": "mkMiniParam",
+    "file": "runtime/organism-factory.js",
+    "line": 2763
+  },
+  {
+    "name": "idx",
+    "file": "runtime/organism-factory.js",
+    "line": 2814
+  },
+  {
+    "name": "tick",
+    "file": "runtime/organism-factory.js",
+    "line": 2823
+  },
+  {
+    "name": "sustainBtn",
+    "file": "runtime/organism-factory.js",
+    "line": 2857
+  },
+  {
+    "name": "redraw",
+    "file": "runtime/organism-factory.js",
+    "line": 2959
+  },
+  {
+    "name": "handleFile",
+    "file": "runtime/organism-factory.js",
+    "line": 2961
+  },
+  {
+    "name": "loop",
+    "file": "runtime/organism-factory.js",
+    "line": 3056
+  },
+  {
+    "name": "handleFile",
+    "file": "runtime/organism-factory.js",
+    "line": 3058
+  },
+  {
+    "name": "exportBtn",
+    "file": "runtime/organism-factory.js",
+    "line": 3093
+  },
+  {
+    "name": "connectBtn",
+    "file": "runtime/organism-factory.js",
+    "line": 3133
+  },
+  {
+    "name": "disconnectBtn",
+    "file": "runtime/organism-factory.js",
+    "line": 3134
+  },
+  {
+    "name": "sendBtn",
+    "file": "runtime/organism-factory.js",
+    "line": 3140
+  },
+  {
+    "name": "appendLog",
+    "file": "runtime/organism-factory.js",
+    "line": 3149
+  },
+  {
+    "name": "refreshTargets",
+    "file": "runtime/organism-factory.js",
+    "line": 3177
+  },
+  {
+    "name": "armBtn",
+    "file": "runtime/organism-factory.js",
+    "line": 3202
+  },
+  {
+    "name": "PrecisionClockProcessor",
+    "file": "runtime/precision-clock.worklet.js",
+    "line": 15
+  },
+  {
+    "name": "init",
+    "file": "runtime/canvas-wm.js",
+    "line": 14
+  },
+  {
+    "name": "snap",
+    "file": "runtime/canvas-wm.js",
+    "line": 18
+  },
+  {
+    "name": "create",
+    "file": "runtime/canvas-wm.js",
+    "line": 20
+  },
+  {
+    "name": "_raise",
+    "file": "runtime/canvas-wm.js",
+    "line": 192
+  },
+  {
+    "name": "_toggleCollapse",
+    "file": "runtime/canvas-wm.js",
+    "line": 196
+  },
+  {
+    "name": "_barBtn",
+    "file": "runtime/canvas-wm.js",
+    "line": 216
+  },
+  {
+    "name": "_pxToWorld",
+    "file": "runtime/canvas-cfr.js",
+    "line": 42
+  },
+  {
+    "name": "boot",
+    "file": "runtime/canvas-cfr.js",
+    "line": 50
+  },
+  {
+    "name": "_loop",
+    "file": "runtime/canvas-cfr.js",
+    "line": 90
+  },
+  {
+    "name": "connectAnalyser",
+    "file": "runtime/canvas-cfr.js",
+    "line": 125
+  },
+  {
+    "name": "onSpawn",
+    "file": "runtime/canvas-cfr.js",
+    "line": 131
+  },
+  {
+    "name": "onMove",
+    "file": "runtime/canvas-cfr.js",
+    "line": 142
+  },
+  {
+    "name": "onClose",
+    "file": "runtime/canvas-cfr.js",
+    "line": 150
+  },
+  {
+    "name": "onFault",
+    "file": "runtime/canvas-cfr.js",
+    "line": 161
+  },
+  {
+    "name": "setFieldPreset",
+    "file": "runtime/canvas-cfr.js",
+    "line": 172
+  },
+  {
+    "name": "stop",
+    "file": "runtime/canvas-cfr.js",
+    "line": 185
+  },
+  {
+    "name": "init",
+    "file": "runtime/wire-system.js",
+    "line": 27
+  },
+  {
+    "name": "_attachContextMenu",
+    "file": "runtime/wire-system.js",
+    "line": 40
+  },
+  {
+    "name": "_showHookMenu",
+    "file": "runtime/wire-system.js",
+    "line": 48
+  },
+  {
+    "name": "_startDrag",
+    "file": "runtime/wire-system.js",
+    "line": 111
+  },
+  {
+    "name": "_onDragMove",
+    "file": "runtime/wire-system.js",
+    "line": 131
+  },
+  {
+    "name": "_onDragEnd",
+    "file": "runtime/wire-system.js",
+    "line": 141
+  },
+  {
+    "name": "_highlightCompatible",
+    "file": "runtime/wire-system.js",
+    "line": 163
+  },
+  {
+    "name": "_clearHighlights",
+    "file": "runtime/wire-system.js",
+    "line": 173
+  },
+  {
+    "name": "_drawWire",
+    "file": "runtime/wire-system.js",
+    "line": 181
+  },
+  {
+    "name": "sub",
+    "file": "runtime/wire-system.js",
+    "line": 194
+  },
+  {
+    "name": "observer",
+    "file": "runtime/wire-system.js",
+    "line": 223
+  },
+  {
+    "name": "_updateWirePath",
+    "file": "runtime/wire-system.js",
+    "line": 231
+  },
+  {
+    "name": "_removeWire",
+    "file": "runtime/wire-system.js",
+    "line": 247
+  },
+  {
+    "name": "onSpawn",
+    "file": "runtime/wire-system.js",
+    "line": 258
+  },
+  {
+    "name": "onClose",
+    "file": "runtime/wire-system.js",
+    "line": 267
+  },
+  {
+    "name": "redrawAll",
+    "file": "runtime/wire-system.js",
+    "line": 277
+  },
+  {
+    "name": "buildCompFrag",
+    "file": "runtime/alk-gl.js",
+    "line": 56
+  },
+  {
+    "name": "ALKGL",
+    "file": "runtime/alk-gl.js",
+    "line": 350
+  },
+  {
+    "name": "mk",
+    "file": "runtime/alk-gl.js",
+    "line": 429
+  },
+  {
+    "name": "au",
+    "file": "runtime/alk-gl.js",
+    "line": 470
+  },
+  {
+    "name": "gauss",
+    "file": "runtime/alk-gl.js",
+    "line": 529
+  },
+  {
+    "name": "u",
+    "file": "runtime/alk-gl.js",
+    "line": 564
+  },
+  {
+    "name": "boot",
+    "file": "runtime/precision-clock.js",
+    "line": 223
+  },
+  {
+    "name": "getReduction",
+    "file": "runtime/precision-clock.js",
+    "line": 292
+  },
+  {
+    "name": "gBus",
+    "file": "runtime/master-transport.js",
+    "line": 23
+  },
+  {
+    "name": "play",
+    "file": "runtime/master-transport.js",
+    "line": 25
+  },
+  {
+    "name": "stop",
+    "file": "runtime/master-transport.js",
+    "line": 34
+  },
+  {
+    "name": "togglePlay",
+    "file": "runtime/master-transport.js",
+    "line": 42
+  },
+  {
+    "name": "record",
+    "file": "runtime/master-transport.js",
+    "line": 44
+  },
+  {
+    "name": "_stopRecord",
+    "file": "runtime/master-transport.js",
+    "line": 82
+  },
+  {
+    "name": "setBPM",
+    "file": "runtime/master-transport.js",
+    "line": 89
+  },
+  {
+    "name": "_wire",
+    "file": "runtime/master-transport.js",
+    "line": 96
+  },
+  {
+    "name": "mount",
+    "file": "organisms/sample-player/sample-player.engine.js",
+    "line": 7
+  },
+  {
+    "name": "_load",
+    "file": "organisms/sample-player/sample-player.engine.js",
+    "line": 14
+  },
+  {
+    "name": "_play",
+    "file": "organisms/sample-player/sample-player.engine.js",
+    "line": 25
+  },
+  {
+    "name": "_stop",
+    "file": "organisms/sample-player/sample-player.engine.js",
+    "line": 50
+  },
+  {
+    "name": "_buildPeaks",
+    "file": "organisms/sample-player/sample-player.engine.js",
+    "line": 56
+  },
+  {
+    "name": "mount",
+    "file": "organisms/nexus-bridge/nexus-bridge.engine.js",
+    "line": 14
+  },
+  {
+    "name": "mount",
+    "file": "organisms/master-fx/master-fx.engine.js",
+    "line": 14
+  },
+  {
+    "name": "_apply",
+    "file": "organisms/master-fx/master-fx.engine.js",
+    "line": 28
+  },
+  {
+    "name": "_applyAll",
+    "file": "organisms/master-fx/master-fx.engine.js",
+    "line": 43
+  },
+  {
+    "name": "_syncUI",
+    "file": "organisms/master-fx/master-fx.engine.js",
+    "line": 50
+  },
+  {
+    "name": "mount",
+    "file": "organisms/channel/channel.engine.js",
+    "line": 13
+  },
+  {
+    "name": "_ensureGraph",
+    "file": "organisms/channel/channel.engine.js",
+    "line": 34
+  },
+  {
+    "name": "_meterInterval",
+    "file": "organisms/channel/channel.engine.js",
+    "line": 47
+  },
+  {
+    "name": "_updateGain",
+    "file": "organisms/channel/channel.engine.js",
+    "line": 57
+  },
+  {
+    "name": "_syncUI",
+    "file": "organisms/channel/channel.engine.js",
+    "line": 63
+  },
+  {
+    "name": "mount",
+    "file": "organisms/sequencer/sequencer.engine.js",
+    "line": 12
+  },
+  {
+    "name": "_initClock",
+    "file": "organisms/sequencer/sequencer.engine.js",
+    "line": 44
+  },
+  {
+    "name": "_play",
+    "file": "organisms/sequencer/sequencer.engine.js",
+    "line": 80
+  },
+  {
+    "name": "_stop",
+    "file": "organisms/sequencer/sequencer.engine.js",
+    "line": 90
+  },
+  {
+    "name": "_syncUI",
+    "file": "organisms/sequencer/sequencer.engine.js",
+    "line": 98
+  },
+  {
+    "name": "_keyHandler",
+    "file": "organisms/sequencer/sequencer.engine.js",
+    "line": 162
+  },
+  {
+    "name": "mount",
+    "file": "organisms/serial-bridge/serial-bridge.engine.js",
+    "line": 21
+  },
+  {
+    "name": "supported",
+    "file": "organisms/serial-bridge/serial-bridge.engine.js",
+    "line": 37
+  },
+  {
+    "name": "connect",
+    "file": "organisms/serial-bridge/serial-bridge.engine.js",
+    "line": 41
+  },
+  {
+    "name": "_readLoop",
+    "file": "organisms/serial-bridge/serial-bridge.engine.js",
+    "line": 61
+  },
+  {
+    "name": "send",
+    "file": "organisms/serial-bridge/serial-bridge.engine.js",
+    "line": 87
+  },
+  {
+    "name": "disconnect",
+    "file": "organisms/serial-bridge/serial-bridge.engine.js",
+    "line": 97
+  },
+  {
+    "name": "_xyToGcode",
+    "file": "organisms/serial-bridge/serial-bridge.engine.js",
+    "line": 109
+  },
+  {
+    "name": "_updateParam",
+    "file": "organisms/serial-bridge/serial-bridge.engine.js",
+    "line": 116
+  },
+  {
+    "name": "_syncUI",
+    "file": "organisms/serial-bridge/serial-bridge.engine.js",
+    "line": 118
+  },
+  {
+    "name": "mount",
+    "file": "organisms/xy-pad/xy-pad.engine.js",
+    "line": 15
+  },
+  {
+    "name": "_move",
+    "file": "organisms/xy-pad/xy-pad.engine.js",
+    "line": 30
+  },
+  {
+    "name": "_release",
+    "file": "organisms/xy-pad/xy-pad.engine.js",
+    "line": 53
+  },
+  {
+    "name": "_syncUI",
+    "file": "organisms/xy-pad/xy-pad.engine.js",
+    "line": 58
+  },
+  {
+    "name": "mount",
+    "file": "organisms/nexus-cortex/nexus-cortex.engine.js",
+    "line": 14
+  },
+  {
+    "name": "_distort",
+    "file": "organisms/bass-drop-builder/bass-drop-builder.engine.js",
+    "line": 20
+  },
+  {
+    "name": "_tension",
+    "file": "organisms/bass-drop-builder/bass-drop-builder.engine.js",
+    "line": 30
+  },
+  {
+    "name": "_slope",
+    "file": "organisms/bass-drop-builder/bass-drop-builder.engine.js",
+    "line": 79
+  },
+  {
+    "name": "_build",
+    "file": "organisms/bass-drop-builder/bass-drop-builder.engine.js",
+    "line": 127
+  },
+  {
+    "name": "_drop",
+    "file": "organisms/bass-drop-builder/bass-drop-builder.engine.js",
+    "line": 179
+  },
+  {
+    "name": "_triggerVocal",
+    "file": "organisms/bass-drop-builder/bass-drop-builder.engine.js",
+    "line": 260
+  },
+  {
+    "name": "mount",
+    "file": "organisms/bass-drop-builder/bass-drop-builder.engine.js",
+    "line": 273
+  },
+  {
+    "name": "_getMasterGain",
+    "file": "organisms/bass-drop-builder/bass-drop-builder.engine.js",
+    "line": 308
+  },
+  {
+    "name": "_stopAll",
+    "file": "organisms/bass-drop-builder/bass-drop-builder.engine.js",
+    "line": 318
+  },
+  {
+    "name": "_fire",
+    "file": "organisms/bass-drop-builder/bass-drop-builder.engine.js",
+    "line": 325
+  },
+  {
+    "name": "mount",
+    "file": "organisms/macro-automation/macro-automation.engine.js",
+    "line": 16
+  },
+  {
+    "name": "_clearTargetSub",
+    "file": "organisms/macro-automation/macro-automation.engine.js",
+    "line": 32
+  },
+  {
+    "name": "setTarget",
+    "file": "organisms/macro-automation/macro-automation.engine.js",
+    "line": 34
+  },
+  {
+    "name": "arm",
+    "file": "organisms/macro-automation/macro-automation.engine.js",
+    "line": 44
+  },
+  {
+    "name": "stopRecording",
+    "file": "organisms/macro-automation/macro-automation.engine.js",
+    "line": 52
+  },
+  {
+    "name": "_clearPlayTimers",
+    "file": "organisms/macro-automation/macro-automation.engine.js",
+    "line": 57
+  },
+  {
+    "name": "play",
+    "file": "organisms/macro-automation/macro-automation.engine.js",
+    "line": 59
+  },
+  {
+    "name": "stopPlayback",
+    "file": "organisms/macro-automation/macro-automation.engine.js",
+    "line": 81
+  },
+  {
+    "name": "clearMacro",
+    "file": "organisms/macro-automation/macro-automation.engine.js",
+    "line": 87
+  },
+  {
+    "name": "_updateParam",
+    "file": "organisms/macro-automation/macro-automation.engine.js",
+    "line": 92
+  },
+  {
+    "name": "mount",
+    "file": "organisms/reese-bass/reese-bass.engine.js",
+    "line": 14
+  },
+  {
+    "name": "_start",
+    "file": "organisms/reese-bass/reese-bass.engine.js",
+    "line": 29
+  },
+  {
+    "name": "_stop",
+    "file": "organisms/reese-bass/reese-bass.engine.js",
+    "line": 61
+  },
+  {
+    "name": "_trigger",
+    "file": "organisms/reese-bass/reese-bass.engine.js",
+    "line": 69
+  },
+  {
+    "name": "_updateParam",
+    "file": "organisms/reese-bass/reese-bass.engine.js",
+    "line": 102
+  },
+  {
+    "name": "_syncUI",
+    "file": "organisms/reese-bass/reese-bass.engine.js",
+    "line": 114
+  },
+  {
+    "name": "mount",
+    "file": "organisms/photo-editor/photo-editor.engine.js",
+    "line": 14
+  },
+  {
+    "name": "filterString",
+    "file": "organisms/photo-editor/photo-editor.engine.js",
+    "line": 24
+  },
+  {
+    "name": "loadFile",
+    "file": "organisms/photo-editor/photo-editor.engine.js",
+    "line": 37
+  },
+  {
+    "name": "draw",
+    "file": "organisms/photo-editor/photo-editor.engine.js",
+    "line": 47
+  },
+  {
+    "name": "applyCrop",
+    "file": "organisms/photo-editor/photo-editor.engine.js",
+    "line": 58
+  },
+  {
+    "name": "exportPNG",
+    "file": "organisms/photo-editor/photo-editor.engine.js",
+    "line": 76
+  },
+  {
+    "name": "_updateParam",
+    "file": "organisms/photo-editor/photo-editor.engine.js",
+    "line": 92
+  },
+  {
+    "name": "_syncUI",
+    "file": "organisms/photo-editor/photo-editor.engine.js",
+    "line": 96
+  },
+  {
+    "name": "mount",
+    "file": "organisms/nexus-shared/nexus-node-core.js",
+    "line": 46
+  },
+  {
+    "name": "_withTimeout",
+    "file": "organisms/nexus-shared/nexus-node-core.js",
+    "line": 72
+  },
+  {
+    "name": "_sync",
+    "file": "organisms/nexus-shared/nexus-node-core.js",
+    "line": 76
+  },
+  {
+    "name": "_pollOnce",
+    "file": "organisms/nexus-shared/nexus-node-core.js",
+    "line": 78
+  },
+  {
+    "name": "_diagnose",
+    "file": "organisms/nexus-shared/nexus-node-core.js",
+    "line": 100
+  },
+  {
+    "name": "_openSnapshots",
+    "file": "organisms/nexus-shared/nexus-node-core.js",
+    "line": 125
+  },
+  {
+    "name": "_openIdearium",
+    "file": "organisms/nexus-shared/nexus-node-core.js",
+    "line": 129
+  },
+  {
+    "name": "_startPolling",
+    "file": "organisms/nexus-shared/nexus-node-core.js",
+    "line": 133
+  },
+  {
+    "name": "_stopPolling",
+    "file": "organisms/nexus-shared/nexus-node-core.js",
+    "line": 140
+  },
+  {
+    "name": "_dist",
+    "file": "organisms/wobble-bass/wobble-bass.engine.js",
+    "line": 14
+  },
+  {
+    "name": "mount",
+    "file": "organisms/wobble-bass/wobble-bass.engine.js",
+    "line": 21
+  },
+  {
+    "name": "_start",
+    "file": "organisms/wobble-bass/wobble-bass.engine.js",
+    "line": 37
+  },
+  {
+    "name": "_stop",
+    "file": "organisms/wobble-bass/wobble-bass.engine.js",
+    "line": 60
+  },
+  {
+    "name": "_trigger",
+    "file": "organisms/wobble-bass/wobble-bass.engine.js",
+    "line": 68
+  },
+  {
+    "name": "_updateParam",
+    "file": "organisms/wobble-bass/wobble-bass.engine.js",
+    "line": 86
+  },
+  {
+    "name": "_syncUI",
+    "file": "organisms/wobble-bass/wobble-bass.engine.js",
+    "line": 97
+  },
+  {
+    "name": "mount",
+    "file": "organisms/supersaw/supersaw.engine.js",
+    "line": 14
+  },
+  {
+    "name": "_midiToHz",
+    "file": "organisms/supersaw/supersaw.engine.js",
+    "line": 30
+  },
+  {
+    "name": "_buildStack",
+    "file": "organisms/supersaw/supersaw.engine.js",
+    "line": 32
+  },
+  {
+    "name": "_trigger",
+    "file": "organisms/supersaw/supersaw.engine.js",
+    "line": 58
+  },
+  {
+    "name": "_start",
+    "file": "organisms/supersaw/supersaw.engine.js",
+    "line": 77
+  },
+  {
+    "name": "_stop",
+    "file": "organisms/supersaw/supersaw.engine.js",
+    "line": 95
+  },
+  {
+    "name": "_updateParam",
+    "file": "organisms/supersaw/supersaw.engine.js",
+    "line": 106
+  },
+  {
+    "name": "_syncUI",
+    "file": "organisms/supersaw/supersaw.engine.js",
+    "line": 111
+  },
+  {
+    "name": "mount",
+    "file": "organisms/timeline/timeline.engine.js",
+    "line": 7
+  },
+  {
+    "name": "_uid",
+    "file": "organisms/timeline/timeline.engine.js",
+    "line": 12
+  },
+  {
+    "name": "_addLane",
+    "file": "organisms/timeline/timeline.engine.js",
+    "line": 14
+  },
+  {
+    "name": "_addClip",
+    "file": "organisms/timeline/timeline.engine.js",
+    "line": 21
+  },
+  {
+    "name": "lane",
+    "file": "organisms/timeline/timeline.engine.js",
+    "line": 22
+  },
+  {
+    "name": "_play",
+    "file": "organisms/timeline/timeline.engine.js",
+    "line": 31
+  },
+  {
+    "name": "_stop",
+    "file": "organisms/timeline/timeline.engine.js",
+    "line": 39
+  },
+  {
+    "name": "_tick",
+    "file": "organisms/timeline/timeline.engine.js",
+    "line": 46
+  },
+  {
+    "name": "_emitPH",
+    "file": "organisms/timeline/timeline.engine.js",
+    "line": 53
+  },
+  {
+    "name": "_syncUI",
+    "file": "organisms/timeline/timeline.engine.js",
+    "line": 58
+  },
+  {
+    "name": "_keyHandler",
+    "file": "organisms/timeline/timeline.engine.js",
+    "line": 86
+  },
+  {
+    "name": "mount",
+    "file": "organisms/nexus-guardian/nexus-guardian.engine.js",
+    "line": 14
+  },
+  {
+    "name": "mount",
+    "file": "organisms/nexus-orchestrator/nexus-orchestrator.engine.js",
+    "line": 14
+  },
+  {
+    "name": "_dist",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "line": 18
+  },
+  {
+    "name": "BassEngine",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "line": 32
+  },
+  {
+    "name": "start",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "line": 39
+  },
+  {
+    "name": "trackFilter",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "line": 62
+  },
+  {
+    "name": "stop",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "line": 76
+  },
+  {
+    "name": "set",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "line": 84
+  },
+  {
+    "name": "impact",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "line": 96
+  },
+  {
+    "name": "RhythmEngine",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "line": 118
+  },
+  {
+    "name": "density",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "line": 127
+  },
+  {
+    "name": "_fireKit",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "line": 137
+  },
+  {
+    "name": "_bootClock",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "line": 160
+  },
+  {
+    "name": "_fireKitAt",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "line": 181
+  },
+  {
+    "name": "start",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "line": 193
+  },
+  {
+    "name": "stop",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "line": 199
+  },
+  {
+    "name": "setDensity",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "line": 205
+  },
+  {
+    "name": "getDensityMap",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "line": 209
+  },
+  {
+    "name": "paintBrush",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "line": 213
+  },
+  {
+    "name": "setBPM",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "line": 224
+  },
+  {
+    "name": "TensionEngine",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "line": 237
+  },
+  {
+    "name": "_intervals",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "line": 245
+  },
+  {
+    "name": "start",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "line": 252
+  },
+  {
+    "name": "_rebuild",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "line": 260
+  },
+  {
+    "name": "setTension",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "line": 280
+  },
+  {
+    "name": "setLevel",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "line": 285
+  },
+  {
+    "name": "setBaseFreq",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "line": 289
+  },
+  {
+    "name": "stop",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "line": 291
+  },
+  {
+    "name": "impact",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "line": 298
+  },
+  {
+    "name": "getOvertones",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "line": 306
+  },
+  {
+    "name": "mount",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "line": 321
+  },
+  {
+    "name": "_drop",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "line": 360
+  },
+  {
+    "name": "_loadRhythmPreset",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "line": 407
+  },
+  {
+    "name": "mount",
+    "file": "organisms/nexus-architect/nexus-architect.engine.js",
+    "line": 14
+  },
+  {
+    "name": "detectTransients",
+    "file": "organisms/contrast-analyser/contrast-analyser.engine.js",
+    "line": 19
+  },
+  {
+    "name": "detectBPM",
+    "file": "organisms/contrast-analyser/contrast-analyser.engine.js",
+    "line": 58
+  },
+  {
+    "name": "times",
+    "file": "organisms/contrast-analyser/contrast-analyser.engine.js",
+    "line": 60
+  },
+  {
+    "name": "buildRMSPeaks",
+    "file": "organisms/contrast-analyser/contrast-analyser.engine.js",
+    "line": 84
+  },
+  {
+    "name": "peakDb",
+    "file": "organisms/contrast-analyser/contrast-analyser.engine.js",
+    "line": 100
+  },
+  {
+    "name": "avgRMS",
+    "file": "organisms/contrast-analyser/contrast-analyser.engine.js",
+    "line": 111
+  },
+  {
+    "name": "sum",
+    "file": "organisms/contrast-analyser/contrast-analyser.engine.js",
+    "line": 112
+  },
+  {
+    "name": "clashScore",
+    "file": "organisms/contrast-analyser/contrast-analyser.engine.js",
+    "line": 119
+  },
+  {
+    "name": "displacementScore",
+    "file": "organisms/contrast-analyser/contrast-analyser.engine.js",
+    "line": 137
+  },
+  {
+    "name": "dynamicContrastScore",
+    "file": "organisms/contrast-analyser/contrast-analyser.engine.js",
+    "line": 159
+  },
+  {
+    "name": "analysisText",
+    "file": "organisms/contrast-analyser/contrast-analyser.engine.js",
+    "line": 167
+  },
+  {
+    "name": "mount",
+    "file": "organisms/contrast-analyser/contrast-analyser.engine.js",
+    "line": 190
+  },
+  {
+    "name": "_bootAnalysers",
+    "file": "organisms/contrast-analyser/contrast-analyser.engine.js",
+    "line": 207
+  },
+  {
+    "name": "_loadSlot",
+    "file": "organisms/contrast-analyser/contrast-analyser.engine.js",
+    "line": 215
+  },
+  {
+    "name": "_runAnalysis",
+    "file": "organisms/contrast-analyser/contrast-analyser.engine.js",
+    "line": 248
+  },
+  {
+    "name": "bpmResult",
+    "file": "organisms/contrast-analyser/contrast-analyser.engine.js",
+    "line": 274
+  },
+  {
+    "name": "_bufferFFT",
+    "file": "organisms/contrast-analyser/contrast-analyser.engine.js",
+    "line": 293
+  },
+  {
+    "name": "_tapBPM",
+    "file": "organisms/contrast-analyser/contrast-analyser.engine.js",
+    "line": 339
+  },
+  {
+    "name": "avg",
+    "file": "organisms/contrast-analyser/contrast-analyser.engine.js",
+    "line": 346
+  },
+  {
+    "name": "mount",
+    "file": "organisms/lfo/lfo.engine.js",
+    "line": 16
+  },
+  {
+    "name": "_compute",
+    "file": "organisms/lfo/lfo.engine.js",
+    "line": 36
+  },
+  {
+    "name": "_tick",
+    "file": "organisms/lfo/lfo.engine.js",
+    "line": 64
+  },
+  {
+    "name": "start",
+    "file": "organisms/lfo/lfo.engine.js",
+    "line": 85
+  },
+  {
+    "name": "stop",
+    "file": "organisms/lfo/lfo.engine.js",
+    "line": 93
+  },
+  {
+    "name": "_syncUI",
+    "file": "organisms/lfo/lfo.engine.js",
+    "line": 99
+  },
+  {
+    "name": "mount",
+    "file": "organisms/video-editor/video-editor.engine.js",
+    "line": 15
+  },
+  {
+    "name": "filterString",
+    "file": "organisms/video-editor/video-editor.engine.js",
+    "line": 28
+  },
+  {
+    "name": "loadFile",
+    "file": "organisms/video-editor/video-editor.engine.js",
+    "line": 39
+  },
+  {
+    "name": "drawFrame",
+    "file": "organisms/video-editor/video-editor.engine.js",
+    "line": 57
+  },
+  {
+    "name": "_pickMime",
+    "file": "organisms/video-editor/video-editor.engine.js",
+    "line": 68
+  },
+  {
+    "name": "exportClip",
+    "file": "organisms/video-editor/video-editor.engine.js",
+    "line": 76
+  },
+  {
+    "name": "pump",
+    "file": "organisms/video-editor/video-editor.engine.js",
+    "line": 100
+  },
+  {
+    "name": "_updateParam",
+    "file": "organisms/video-editor/video-editor.engine.js",
+    "line": 115
+  },
+  {
+    "name": "_syncUI",
+    "file": "organisms/video-editor/video-editor.engine.js",
+    "line": 119
+  },
+  {
+    "name": "mount",
+    "file": "organisms/nexus-diagnostic/nexus-diagnostic.engine.js",
+    "line": 14
+  },
+  {
+    "name": "mount",
+    "file": "organisms/nexus-idearium/nexus-idearium.engine.js",
+    "line": 14
+  },
+  {
+    "name": "mount",
+    "file": "organisms/webhook-automation/webhook-automation.engine.js",
+    "line": 17
+  },
+  {
+    "name": "_fire",
+    "file": "organisms/webhook-automation/webhook-automation.engine.js",
+    "line": 33
+  },
+  {
+    "name": "_resubscribe",
+    "file": "organisms/webhook-automation/webhook-automation.engine.js",
+    "line": 59
+  },
+  {
+    "name": "testFire",
+    "file": "organisms/webhook-automation/webhook-automation.engine.js",
+    "line": 67
+  },
+  {
+    "name": "_updateParam",
+    "file": "organisms/webhook-automation/webhook-automation.engine.js",
+    "line": 69
+  },
+  {
+    "name": "_syncUI",
+    "file": "organisms/webhook-automation/webhook-automation.engine.js",
+    "line": 75
+  },
+  {
+    "name": "mount",
+    "file": "organisms/acid-synth/acid-synth.engine.js",
+    "line": 13
+  },
+  {
+    "name": "_midiToHz",
+    "file": "organisms/acid-synth/acid-synth.engine.js",
+    "line": 29
+  },
+  {
+    "name": "_trigger",
+    "file": "organisms/acid-synth/acid-synth.engine.js",
+    "line": 33
+  },
+  {
+    "name": "_syncUI",
+    "file": "organisms/acid-synth/acid-synth.engine.js",
+    "line": 69
+  },
+  {
+    "name": "mount",
+    "file": "organisms/sidechain-compressor/sidechain-compressor.engine.js",
+    "line": 14
+  },
+  {
+    "name": "_duck",
+    "file": "organisms/sidechain-compressor/sidechain-compressor.engine.js",
+    "line": 27
+  },
+  {
+    "name": "_updateParam",
+    "file": "organisms/sidechain-compressor/sidechain-compressor.engine.js",
+    "line": 45
+  },
+  {
+    "name": "_syncUI",
+    "file": "organisms/sidechain-compressor/sidechain-compressor.engine.js",
+    "line": 49
+  },
+  {
+    "name": "mount",
+    "file": "organisms/pads/pads.engine.js",
+    "line": 65
+  },
+  {
+    "name": "banks",
+    "file": "organisms/pads/pads.engine.js",
+    "line": 74
+  },
+  {
+    "name": "_fire",
+    "file": "organisms/pads/pads.engine.js",
+    "line": 76
+  },
+  {
+    "name": "_setBank",
+    "file": "organisms/pads/pads.engine.js",
+    "line": 89
+  },
+  {
+    "name": "_syncUI",
+    "file": "organisms/pads/pads.engine.js",
+    "line": 95
+  },
+  {
+    "name": "_keyHandler",
+    "file": "organisms/pads/pads.engine.js",
+    "line": 130
+  },
+  {
+    "name": "unsub",
+    "file": "kernel/kernel.js",
+    "line": 44
+  },
+  {
+    "name": "_fault",
+    "file": "kernel/kernel.js",
+    "line": 52
+  },
+  {
+    "name": "missing",
+    "file": "kernel/kernel.js",
+    "line": 147
+  },
+  {
+    "name": "srcHook",
+    "file": "kernel/kernel.js",
+    "line": 177
+  },
+  {
+    "name": "tgtHook",
+    "file": "kernel/kernel.js",
+    "line": 178
+  },
+  {
+    "name": "_buildImpulse",
+    "file": "kernel/kernel.js",
+    "line": 246
+  },
+  {
+    "name": "missing",
+    "file": "kernel/kernel.js",
+    "line": 383
+  },
+  {
+    "name": "_uuid",
+    "file": "kernel/kernel.js",
+    "line": 504
+  },
+  {
+    "name": "_fnv32",
+    "file": "kernel/intake.js",
+    "line": 34
+  },
+  {
+    "name": "_matchMagic",
+    "file": "kernel/intake.js",
+    "line": 42
+  },
+  {
+    "name": "_identify",
+    "file": "kernel/intake.js",
+    "line": 48
+  },
+  {
+    "name": "ingestAll",
+    "file": "kernel/intake.js",
+    "line": 85
+  },
+  {
+    "name": "ingestOne",
+    "file": "kernel/intake.js",
+    "line": 95
+  },
+  {
+    "name": "types",
+    "file": "kernel/intake.js",
+    "line": 101
+  }
+]

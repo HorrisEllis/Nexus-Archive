@@ -1,0 +1,23 @@
+{
+  "id": "chunk-dd96a745d66de376",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/webhook-automation/webhook-automation.engine.js",
+  "range": {
+    "start_line": 17,
+    "end_line": 32
+  },
+  "symbols": [
+    "mount"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "9f06d079550a94d59eca049d1ebb6fbd555646697e966284cb7e956f6b3b63e8"
+  },
+  "status": "complete",
+  "content": "function mount(instanceId, sBus, config = {}) {\n  const gBus = KERNEL.bus;\n\n  let _params = {\n    url:          config.url          || '',\n    method:       config.method       || 'POST',\n    triggerTopic: config.triggerTopic || 'pad:trigger',\n    soundFilter:  config.soundFilter  || '',\n    noCors:       !!config.noCors,\n    rateLimitMs:  config.rateLimitMs != null ? config.rateLimitMs : 250,\n  };\n\n  let _topicSub   = null;\n  let _lastFireAt = 0;\n  let _fireCount  = 0;\n"
+}

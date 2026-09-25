@@ -1,0 +1,23 @@
+{
+  "id": "chunk-c2b4e4481b6d922a",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "kernel/kernel.js",
+  "range": {
+    "start_line": 177,
+    "end_line": 177
+  },
+  "symbols": [
+    "srcHook"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "54ffd6d9521e5a7248d40f6718f5644d8f7ae9cbca1136c0703082d93a244292"
+  },
+  "status": "complete",
+  "content": "    const srcHook = (src.hooks || []).find(h => h.hook_id === sourceHookId);"
+}

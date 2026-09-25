@@ -1,0 +1,23 @@
+{
+  "id": "chunk-3f6b1b2cf10e7a1c",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "runtime/wire-system.js",
+  "range": {
+    "start_line": 48,
+    "end_line": 110
+  },
+  "symbols": [
+    "_showHookMenu"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "91ef32d427c206230852ab27d144b556d9f228fb9304088749d4725a2e409e07"
+  },
+  "status": "complete",
+  "content": "function _showHookMenu(instanceId, cx, cy) {\n  /* Remove any existing hook menu */\n  document.querySelectorAll('.wire-hook-menu').forEach(m => m.remove());\n\n  const org = KERNEL.registry.get(instanceId);\n  if (!org || !org.hooks?.length) return;\n\n  const menu = document.createElement('div');\n  menu.className = 'wire-hook-menu';\n  menu.style.cssText = `\n    position:fixed;left:${cx}px;top:${cy}px;\n    background:var(--bg1);border:1px solid var(--b2);border-top:2px solid var(--accent2);\n    border-radius:0 0 5px 5px;z-index:9200;min-width:200px;\n    box-shadow:0 8px 32px rgba(0,0,0,.6);overflow:hidden;font-family:var(--mono);\n  `;\n\n  const title = document.createElement('div');\n  title.style.cssText = 'padding:6px 12px;font-size:7px;letter-spacing:.16em;color:var(--accent2);background:var(--bg2);border-bottom:1px solid var(--b1);';\n  title.textContent = `HOOKS — ${org.label}`;\n  menu.appendChild(title);\n\n  org.hooks.forEach(hook => {\n    const row = document.createElement('div');\n    row.style.cssText = `display:flex;align-items:center;gap:8px;padding:7px 12px;cursor:pointer;border-bottom:1px solid var(--b1);transition:background .1s;`;\n    const dirCol = hook.direction === 'out' ? '#00ff88' : '#00d4ff';\n    row.innerHTML = `\n      <span style=\"width:8px;height:8px;border-radius:50%;background:${dirCol};flex-shrink:0;box-shadow:0 0 4px ${dirCol};\"></span>\n      <span style=\"font-size:7.5px;color:var(--dim2);flex:1;\">${hook.hook_id.split('.').pop()}</span>\n      <span style=\"font-size:6.5px;color:${dirCol};letter-spacing:.1em;\">${hook.direction.toUpperCase()}</span>\n      <span style=\"font-size:6px;color:var(--dim);letter-spacing:.06em;\">${hook.event_type}</span>\n    `;\n    row.addEventListener('mouseenter', () => row.style.background = 'rgba(0,212,255,.08)');\n    row.addEventListener('mouseleave', () => row.style.background = '');\n\n    if (hook.direction === 'out') {\n      row.title = 'Drag to connect to an input';\n      row.style.cursor = 'crosshair';\n      row.addEventListener('mousedown', e => {\n        e.preventDefault();\n        menu.remove();\n        _startDrag(instanceId, hook, e.clientX, e.clientY);\n      });\n    } else {\n      row.title = `Listening on: ${hook.event_type}`;\n    }\n    menu.appendChild(row);\n  });\n\n  /* Close */\n  const close = document.createElement('div');\n  close.style.cssText = 'padding:6px 12px;font-size:7px;color:var(--accent3);cursor:pointer;text-align:center;';\n  close.textContent = '× CLOSE';\n  close.addEventListener('click', () => menu.remove());\n  menu.appendChild(close);\n\n  document.body.appendChild(menu);\n  /* Close on outside click */\n  setTimeout(() => {\n    document.addEventListener('click', () => menu.remove(), { once:true });\n  }, 10);\n}\n\n/* ── Drag to connect ── */"
+}

@@ -1,0 +1,23 @@
+{
+  "id": "chunk-cdcb0e8b8d3cb620",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/timeline/timeline.engine.js",
+  "range": {
+    "start_line": 53,
+    "end_line": 57
+  },
+  "symbols": [
+    "_emitPH"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "dba343f789212d9a177fb6b733207b7d25a000b82331e6a99d3c85944fec7da5"
+  },
+  "status": "complete",
+  "content": "  function _emitPH() {\n    const t=cursor, beatSec=60/clock.BPM, bar=Math.floor(t/(beatSec*4))+1, beat=Math.floor((t%(beatSec*4))/beatSec)+1;\n    sBus.publish('org:playhead_update',{position_sec:t,bar,beat,pxPerSec,offset});\n  }\n"
+}

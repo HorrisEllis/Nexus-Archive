@@ -1,0 +1,23 @@
+{
+  "id": "chunk-87ca8d46f7ba085e",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/channel/channel.engine.js",
+  "range": {
+    "start_line": 13,
+    "end_line": 33
+  },
+  "symbols": [
+    "mount"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "1bf6bca6f384739d7961a8819e236e6ed5ee0acfaa1e6395fbf079ca0a1abc9a"
+  },
+  "status": "complete",
+  "content": "function mount(instanceId, sBus, audio, config = {}) {\n  const gBus = KERNEL.bus;\n\n  let _params = {\n    gain:    config.gain    || 1.0,\n    pan:     config.pan     || 0,\n    sendRev: config.sendRev || 0.2,\n    sendDel: config.sendDel || 0.0,\n    mute:    config.mute    || false,\n    solo:    config.solo    || false,\n    name:    config.name    || 'CHANNEL',\n  };\n\n  let _level    = 0;\n  let _peakHold = 0;\n  let _peakTimer= null;\n\n  /* Build audio graph when AC is ready */\n  let _gainNode = null;\n  let _panNode  = null;\n"
+}

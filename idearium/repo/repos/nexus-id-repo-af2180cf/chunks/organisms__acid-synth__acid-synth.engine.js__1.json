@@ -1,0 +1,23 @@
+{
+  "id": "chunk-20af1762afce30ab",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/acid-synth/acid-synth.engine.js",
+  "range": {
+    "start_line": 13,
+    "end_line": 28
+  },
+  "symbols": [
+    "mount"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "1400d3e5cf7a214eeca0a8f081b0ffb2eb0a9d357dbdcecb2266b6361cf0fb66"
+  },
+  "status": "complete",
+  "content": "function mount(instanceId, sBus, audio, config = {}) {\n  const gBus = KERNEL.bus;\n\n  let _params = {\n    pitch:    config.pitch    || 45,   /* MIDI note */\n    cutoff:   config.cutoff   || 300,\n    res:      config.res      || 6,\n    env:      config.env      || 0.4,  /* env amount */\n    decay:    config.decay    || 0.3,\n    accent:   config.accent   || false,\n    glide:    config.glide    || false,\n    wave:     config.wave     || 'sawtooth',\n  };\n\n  let _lastFreq = null;\n"
+}

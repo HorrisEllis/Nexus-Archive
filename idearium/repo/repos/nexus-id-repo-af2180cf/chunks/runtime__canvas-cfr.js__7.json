@@ -1,0 +1,23 @@
+{
+  "id": "chunk-94ecb6ffae169708",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "runtime/canvas-cfr.js",
+  "range": {
+    "start_line": 150,
+    "end_line": 160
+  },
+  "symbols": [
+    "onClose"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "622dfd2a9d1bb517a6cbc6ed4a1d06be5d1af3650241c04ad474fa850e5d0f88"
+  },
+  "status": "complete",
+  "content": "function onClose(instanceId) {\n  if (!_engine) return;\n  _engine.removeAttractor(instanceId);\n  /* Inject turbulence where the organism was */\n  _engine.injectStress(\n    (Math.random() - 0.5) * BOUND,\n    (Math.random() - 0.5) * BOUND,\n    0, 200, 3\n  );\n}\n"
+}
