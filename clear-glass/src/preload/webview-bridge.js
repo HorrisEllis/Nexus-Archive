@@ -32,7 +32,19 @@ contextBridge.exposeInMainWorld('__cg', {
     // round-trip (request in via this channel, response delivered back
     // into the page via the same executeJavaScript pattern injectAnswer()
     // already uses for wake-word answers).
-    if (channel !== 'dom:pick-result' && channel !== 'dom:event' && channel !== 'nexus:cookie-request') return;
+    // §ADDED 2026-09-25 — James: "the three lines menu... its not here.
+    // at all... fix it." Real gap: ui/tv-shell/index.html (the real
+    // default homepage since 0.39.229) and ui/home/index.html both have
+    // a real menu overlay (#sys-bar/#menu-overlay), but neither one has
+    // any way to reach Settings — every settings.html section built this
+    // session (Downloads, Plugins, and everything before them) was
+    // reachable only through Clear Glass's OWN browser.html chrome
+    // (☰ → options panel → "API Settings…"), invisible from the page
+    // James actually considers the app. This channel is the missing
+    // link: the guest page (tv-shell/home, running inside Clear Glass's
+    // <webview>) asks its host to open the real Settings window, same
+    // relay pattern as dom:event/nexus:cookie-request above.
+    if (channel !== 'dom:pick-result' && channel !== 'dom:event' && channel !== 'nexus:cookie-request' && channel !== 'nexus:open-settings') return;
     ipcRenderer.sendToHost(channel, data);
   },
 });

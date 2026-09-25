@@ -595,6 +595,18 @@
         <div class="spill"><span class="spill-dot" id="sd-em"></span>EM</div>
       </div>
       <button id="rewind-btn" onclick="openRewind()">⟲ REWIND</button>
+      <!-- §ADDED 2026-09-25 — James: "the three lines menu... its not
+           here. at all." Real gap: this menu had no way to reach
+           Settings at all. Sends 'nexus:open-settings' to the real
+           window.__cg bridge (webview-bridge.js) → browser.js's host
+           listener → cg.window.openSettings() — the real Settings
+           window every section this session (Downloads, Plugins, ...)
+           already lives in, just never reachable from here. window.__cg
+           only exists when this page is running inside Clear Glass's own
+           <webview> (Electron); outside that (a plain browser tab) there
+           is no Electron Settings window to open, so the button says so
+           instead of silently doing nothing. -->
+      <button id="settings-btn" onclick="openNexusSettings()" title="Open Clear Glass settings">⚙ SETTINGS</button>
     </div>
 
     <!-- Assistant -->
@@ -902,6 +914,17 @@ const CH_INSPECT=[
   {dotId:'sd-br', srcMatch:'bridge',   reload:()=>{const f=document.getElementById('br-full-iframe');if(f&&f.src)f.src=f.src}},
   {dotId:null,    srcMatch:'chatgpt',  reload:()=>{const f=document.getElementById('chatgpt-agent-iframe');if(f&&f.src)f.src=f.src}},
 ];
+
+// §ADDED 2026-09-25 — see the #settings-btn comment above for the full
+// gap this closes. window.__cg (webview-bridge.js's contextBridge
+// global) only exists inside Clear Glass's own <webview> — checked
+// directly rather than assumed, since this same index.html is also
+// served as a plain page by the orchestrator and can be opened in an
+// ordinary browser tab with no Electron behind it at all.
+function openNexusSettings(){
+  if(window.__cg&&typeof window.__cg.send==='function'){window.__cg.send('nexus:open-settings',{});}
+  else{console.warn('openNexusSettings: window.__cg not present — this page is not running inside Clear Glass\'s Electron webview, so there is no Settings window to open.');}
+}
 
 function openInspect(){
   const meta=CH_META[curCh],info=CH_INSPECT[curCh];

@@ -1,1 +1,0 @@
-{"uuid":"56c382fc-5fbf-4814-83e8-6ec12e990037","system":"guardian","component":"guardian.gaps.list","action":"registered","status":"ok","tags":["guardian"],"detail":"Open gaps detected by guardian","causedBy":"guardian","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:323","ts":1789824798409}

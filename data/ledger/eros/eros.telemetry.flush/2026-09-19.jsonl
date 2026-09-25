@@ -1,1 +1,0 @@
-{"uuid":"946cc9ba-b755-4a42-a423-f1954e6cb615","system":"eros","component":"eros.telemetry.flush","action":"registered","status":"ok","tags":["eros","telemetry"],"detail":"Force flush telemetry to disk","causedBy":"erosmancer-os","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:323","ts":1789824798721}

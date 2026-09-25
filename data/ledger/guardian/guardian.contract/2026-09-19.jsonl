@@ -1,1 +1,0 @@
-{"uuid":"3dad6fdb-659a-4543-8570-ebc637631e85","system":"guardian","component":"guardian.contract","action":"registered","status":"ok","tags":["guardian"],"detail":"Guardian interaction contract","causedBy":"guardian","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:323","ts":1789824798379}

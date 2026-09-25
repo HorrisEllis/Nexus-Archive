@@ -520,6 +520,18 @@ select option{background:#111}
 }
 #inspect-btn:hover{background:rgba(204,68,255,.16);border-color:rgba(204,68,255,.4);color:#cc44ff}
 
+/* §ADDED 2026-09-25 — settings button, opposite end of sys-bar from
+   INSPECT/REWIND, same real button shape as both. */
+#settings-btn{
+  pointer-events:auto;
+  padding:5px 12px;
+  background:rgba(160,170,190,.08);border:1px solid rgba(160,170,190,.22);
+  border-radius:20px;color:rgba(200,208,224,.8);
+  font-family:'Space Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.1em;
+  cursor:pointer;transition:all .2s;flex-shrink:0;
+}
+#settings-btn:hover{background:rgba(160,170,190,.16);border-color:rgba(200,208,224,.4);color:#e4e9f2}
+
 /* ── Inspect overlay — contextual diagnostics for the active channel ── */
 #inspect-overlay{
   position:fixed;inset:0;z-index:200;

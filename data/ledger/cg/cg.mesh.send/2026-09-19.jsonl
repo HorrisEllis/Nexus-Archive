@@ -1,1 +1,0 @@
-{"uuid":"d18f0c2b-93b6-404a-8f25-0beb16012d9c","system":"cg","component":"cg.mesh.send","action":"registered","status":"ok","tags":["cg","mesh"],"detail":"Send prompt to specific mesh agent","causedBy":"clear-glass","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:323","ts":1789824798648}

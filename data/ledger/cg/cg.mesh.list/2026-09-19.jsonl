@@ -1,1 +1,0 @@
-{"uuid":"8bdae11d-e131-4715-a05b-b9d7a0df697b","system":"cg","component":"cg.mesh.list","action":"registered","status":"ok","tags":["cg","mesh"],"detail":"List mesh agents with health + status","causedBy":"clear-glass","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:323","ts":1789824798652}

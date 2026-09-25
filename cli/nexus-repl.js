@@ -1124,6 +1124,38 @@ function startGuardianStream() {
             const label = msg.type.replace('guardian.job.','');
             process.stdout.write('\r' + $(C.dim, '[job] ') + $(C.yellow, label) + ' ' +
               $(C.dim, (msg.jobId||'').slice(0,8) + ' ' + (msg.provider||'')) + '\n');
+            // §FIXED 2026-09-25 — James: "it needs to give the agents
+            // response in the cli." Real gap, not assumed: this line has
+            // always printed the guardian.job.* EVENT LABEL only
+            // ('complete', the jobId prefix, the provider) — never the
+            // agent's actual reply. A job dispatched from anywhere (repo-
+            // agent chat, forge, ask) that completes async has no surface
+            // in this terminal showing what the agent said; the only
+            // place it ever appeared was the browser tab guardian dispatched
+            // into. Not an idearium concern (idearium is for coding
+            // artifacts, not chat transcripts — corrected after first
+            // proposing that route) — this is a CLI-surface gap, fixed at
+            // the CLI. Real fix: on guardian.job.complete specifically,
+            // one real lookup against guardian's own GET /response/:jobId
+            // (registry-components.js's job.response route — same durable
+            // .job-file-backed record idearium/lib/guardian-stream.cjs
+            // already reads for its own resolution, reused here rather
+            // than a second job-store reader) and print the actual text.
+            // Fire-and-forget async IIFE: the outer SSE data handler is
+            // synchronous per chunk and must not block on this fetch.
+            if (label === 'complete' && msg.jobId) {
+              (async () => {
+                try {
+                  const r = await fetch(`http://127.0.0.1:${PORTS.guardian}/response/${msg.jobId}`, { signal: AbortSignal.timeout(5000) });
+                  if (!r.ok) return; // no recorded response — real, ordinary state (e.g. a job this jobId doesn't belong to), not an error to surface
+                  const d = await r.json();
+                  const text = (d && d.response || '').trim();
+                  if (!text) return;
+                  const shown = text.length > 800 ? text.slice(0, 800) + $(C.dim, `… (+${text.length - 800} chars, GET /response/${msg.jobId} for full)`) : text;
+                  process.stdout.write($(C.dim, '  └─ ') + shown.split('\n').join('\n' + $(C.dim, '     ')) + '\n');
+                } catch (_) {} // guardian unreachable or the fetch raced a restart — never break the SSE mirror over this
+              })();
+            }
           } else if (msg.type && msg.type.startsWith('guardian.seam.')) {
             const label = msg.type.replace('guardian.seam.','');
             process.stdout.write('\r' + $(C.dim, '[seam] ') + $(C.purple||C.blue, label) + '\n');

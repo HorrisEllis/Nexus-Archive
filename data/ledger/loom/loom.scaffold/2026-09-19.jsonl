@@ -1,1 +1,0 @@
-{"uuid":"805fc81c-0029-4e21-93df-597e5cdd2918","system":"loom","component":"loom.scaffold","action":"registered","status":"ok","tags":["loom","write","build"],"detail":"Scaffold a new system from a spec","causedBy":"loom","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:323","ts":1789824798573}

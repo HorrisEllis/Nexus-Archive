@@ -1,1 +1,0 @@
-{"uuid":"2e673fff-68f2-429e-bfc2-44df07d2b386","system":"guardian","component":"guardian.baseline","action":"registered","status":"ok","tags":["guardian"],"detail":"Friction + sigma baseline","causedBy":"guardian","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:323","ts":1789824798383}

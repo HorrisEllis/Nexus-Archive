@@ -10,7 +10,9 @@
 <link rel="stylesheet" href="/ui/home/home.css">
 <link rel="stylesheet" href="/ui/home/areas/void.css">
 <link rel="stylesheet" href="/ui/home/areas/shell.css">
+
 <link rel="stylesheet" href="/ui/home/areas/rail.css">
+<link rel="stylesheet" href="/ui/home/areas/settings-btn.css">
 <link rel="stylesheet" href="/ui/home/areas/console.css">
 <link rel="stylesheet" href="/ui/home/areas/assistant.css">
 <link rel="stylesheet" href="/ui/home/areas/rewind.css">
@@ -588,6 +590,8 @@
         <div class="spill"><span class="spill-dot" id="sd-em"></span>EM</div>
       </div>
       <button id="rewind-btn" onclick="openRewind()">⟲ REWIND</button>
+      <!-- §ADDED 2026-09-25 — see areas/settings-btn.js for the full gap this closes. -->
+      <button id="settings-btn" onclick="openNexusSettings()" title="Open Clear Glass settings">⚙ SETTINGS</button>
     </div>
 
     <!-- Assistant -->
@@ -717,6 +721,7 @@
 <script src="/ui/home/areas/mode-selector.js"></script>
 <script src="/ui/home/areas/agent-suite.js"></script>
 <script src="/ui/home/areas/forge-tile.js"></script>
+<script src="/ui/home/areas/settings-btn.js"></script>
 <script src="/ui/home/core/boot.js"></script>
 <!-- ══ SPEC WIZARD MODAL ══════════════════════════════════════════════════ -->
 <div id="spec-wizard-overlay" onclick="if(event.target===this)closeSpecWizard()">

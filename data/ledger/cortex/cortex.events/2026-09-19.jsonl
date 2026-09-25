@@ -1,1 +1,0 @@
-{"uuid":"d4870b96-06be-4d9b-a6d8-3ab918824d67","system":"cortex","component":"cortex.events","action":"registered","status":"ok","tags":["cortex","stream"],"detail":"SSE — all cortex events","causedBy":"cortex","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:323","ts":1789824798540}

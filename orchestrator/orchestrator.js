@@ -1179,6 +1179,57 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
     return serveFile(res, path.join(UI_ROOT,'ports.js'));
   }
 
+  // §BUGFIX 2026-09-25 — James: "doesn't look any different" (a black
+  // screen at the real root URL, after 0.39.229 finally pointed Clear
+  // Glass's default window here). Root cause, confirmed with a live
+  // server, not guessed: the root '/' route above serves ui/tv-shell/
+  // index.html's CONTENT directly at the URL '/', but that file's own
+  // asset tags are authored relative — <script src="./warp-ui/...">,
+  // src="../lib/api.js", href="./spotlight/spotlight.css", href="../
+  // themes/nexus-dark.css" — and a browser resolves '.'/'..' against the
+  // DOCUMENT's URL, not the file's real location on disk. Served at '/',
+  // every one of those resolves to a bare top-level path
+  // (/warp-ui/warp-browser.js, /lib/api.js, /spotlight/spotlight.css,
+  // /themes/nexus-dark.css) that hit the blanket `if (top !== 'api')` gate
+  // right below this comment and 404'd silently, every time, for every
+  // person who has ever loaded this page directly at '/'. Only the page's
+  // inline <script> blocks ran (the dark background + faint canvas dots
+  // in James's screenshot); warp-browser.js/nexus-shell.js/spotlight.js/
+  // nerve.js — the scripts that build the actual visible UI — never
+  // loaded. Same bug class already named and fixed for idearium elsewhere
+  // in this file (§TRAILING-SLASH FIX 2026-07-15), but idearium's fix
+  // (redirect into a directory URL) doesn't apply here — tv-shell is
+  // deliberately served AT '/', by explicit prior decision (see the root-
+  // route comment above), not at a nested path it could redirect into.
+  // FIRST FIX ATTEMPT, WRONG PLACEMENT: initially added a static fallback
+  // right before this file's OWN final 404 (near EOF) — verified dead on
+  // a live server: this exact `top !== 'api'` gate, being earlier in the
+  // same function, always fires first and returns before that code could
+  // ever run. Moved here, above the gate, and re-verified live.
+  //
+  // Fix: a real, guarded static fallback — tried only for a GET that
+  // nothing above already matched, right before the /api/*-only gate
+  // would otherwise kill it. tv-shell's '../x' refs land one level above
+  // UI_ROOT/tv-shell (i.e. at UI_ROOT itself — lib/, themes/); its './x'
+  // refs land inside UI_ROOT/tv-shell itself (warp-ui/, spotlight/,
+  // nerve/, tv-shell.css) — both checked, in that order, against real
+  // files on disk via the same _safePath traversal guard every other
+  // static route in this file already uses. Nothing invented: every path
+  // this can serve is a real, existing file found directly, never a
+  // naming guess — a genuinely bogus path still falls through to the
+  // ordinary 404 below, unchanged.
+  if (M === 'GET') {
+    const relPath = u.pathname.slice(1);
+    const uiRootCandidate = _safePath(UI_ROOT, relPath);
+    if (uiRootCandidate && fs.existsSync(uiRootCandidate) && fs.statSync(uiRootCandidate).isFile()) {
+      return serveFile(res, uiRootCandidate);
+    }
+    const tvShellCandidate = _safePath(path.join(UI_ROOT, 'tv-shell'), relPath);
+    if (tvShellCandidate && fs.existsSync(tvShellCandidate) && fs.statSync(tvShellCandidate).isFile()) {
+      return serveFile(res, tvShellCandidate);
+    }
+  }
+
   // ────────────────────────────────────────────────────────────────────────
   // All orchestrated routes under /api/*
   // ────────────────────────────────────────────────────────────────────────

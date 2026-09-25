@@ -1,1 +1,0 @@
-{"uuid":"a6411e5f-c187-4eb2-ba61-8c1062fa24c7","system":"guardian","component":"guardian.settings.reset","action":"registered","status":"ok","tags":["guardian"],"detail":"Reset settings to defaults","causedBy":"guardian","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:323","ts":1789824798413}

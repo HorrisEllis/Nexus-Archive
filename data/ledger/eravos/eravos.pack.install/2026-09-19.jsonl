@@ -1,1 +1,0 @@
-{"uuid":"07b1464b-b2d2-486e-b3b0-003b71cde9b4","system":"eravos","component":"eravos.pack.install","action":"registered","status":"ok","tags":["eravos"],"detail":"Install a .zip organism pack","causedBy":"eravos","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:323","ts":1789824798482}

@@ -10,6 +10,23 @@ dispatch/verification design. v3.0 consolidated v1.0 + v2.0 and added
 Group 5C, Group 15, Group 16, §3.4. v1.0-v3.0 are superseded — kept as
 historical record, not edited further.*
 
+> **§ADDENDUM 2026-09-25** — James: "patch it." Found via direct diff of
+> every §-numbered law in Part I's body against Part IV's quick reference
+> (not assumed): §8.3's quick-reference line had read "SISO and Jaa are
+> load-order prerequisites" since this file's introduction (confirmed
+> across every commit that has ever touched it), while the actual law
+> body has always said "WARP and Jaa" — this file's own §5.4 (versions
+> persist; drift between files is a bug, not an oversight) violated
+> about itself. SISO is a real, separate, still-current concept (Group
+> 14's SISO Coding Model — the event pipeline law) and was correctly
+> left alone; only §8.3's load-order-prerequisite naming was stale.
+> Also found and fixed in the same pass: §8.4 and §8.5 existed in the
+> law body with no quick-reference line at all — silently unreachable
+> from Part IV's index. §8.5's own title had a typo ("achitecture").
+> Quick reference now has exactly one line per body law and one body law
+> per quick-reference line, verified by script (100/100 matched both
+> directions), not by eye.
+
 ---
 
 ## Preamble
@@ -239,7 +256,7 @@ If WARP and Jaa are not present at session start, await upload before proceeding
 **§8.4 Don't go in blind.**
 Always scan the file and the dependancies and consumers before changing and editing any file or code. Always check within nexus first, try to always account redundancy.
 
-**§8.5 Always use the Component achitecture.**
+**§8.5 Always use the Component Architecture.**
 Always use a component based architecture. The core components that are immutable are what make up the code/foundation. The kernal, engine and/or runtime that the entire project relies on. Do not build anything, without creating a spec file first. The rest is additive to the foundation. Modules/components are isolated and connected via an event bus. The backend code first, foundation first, config files, components with component id/parent/child id for each module and how it connects to the foundation, using the hook and wire registry with consumers and context to map the system completely, then the event bus, then each module one at a time, js first, config, manifest, registry and readme, then the js, then the next module/component. then once each component is complete, then the event driven interaction contract with handshake verification. ui last using the interaction contract and toasts for errors. event ledgers with each type, time of event, relation, and context. each interaction uses a gated event listener with a toast for errors, and event logging to the ledger.
 
 **§8.6 Reuse Before Build. Check the Codebase First.** *(new, 2026-07-30)*
@@ -551,7 +568,9 @@ A "faster," "cheaper," or "better" claim is only as good as the measurement behi
 §7.7   Bottleneck detection via ledger flow.
 §8.1   Begin every session with context.
 §8.2   Nothing passes the idea gate without surviving hostile review.
-§8.3   SISO and Jaa are load-order prerequisites.
+§8.3   WARP and Jaa are load-order prerequisites.
+§8.4   Don't go in blind. Scan dependencies and consumers before changing any file; check for redundancy first.
+§8.5   Always use component-based architecture — foundation/kernel first, then components (with id/parent/child) wired through the hook and event-bus registry, one module at a time, UI last via the interaction contract.
 §8.6   Reuse before build. Read the codebase recursively; build outward from what exists.
 §8.7   Full context before any change: loom map, spec, phasemap history, tool index — named, not vague. Enables real revert, not just diagnosis.
 §9.1   RAID is the only write authority for requests.

@@ -461,6 +461,15 @@
   <button class="nav-btn" id="mesh-picker-btn" data-tool-id="mesh-picker" data-tool-label="Agent Mesh" data-tool-icon="◈" title="Agent Mesh">◈</button>
   <button class="nav-btn" id="btn-mesh" data-tool-id="mesh" data-tool-label="Agent Mesh" data-tool-icon="⬡" title="Agent Mesh">⬡</button>
   <button class="nav-btn" id="btn-diag" data-tool-id="diag" data-tool-label="Diagnostics" data-tool-icon="⚕" title="Diagnostics">⚕</button>
+  <!-- §ADDED 2026-09-25 — real backing element for src/toolbar/commands.js's
+       btn-settings entry. James: "WHERE IS IT?" — Settings used to be a
+       palette-only action with no button anywhere to pin or see in the
+       Customize Toolbar dialog's real zones. Same real convention as
+       btn-mesh/btn-diag above: pin/unpin relocates this exact node between
+       #toolbar-pinned-tools and #toolbar-overflow-slot (applyToolbarPins,
+       browser.js); its click handler calls the same cg.window.openSettings()
+       every other Settings entry point already uses. -->
+  <button class="nav-btn" id="btn-settings" data-tool-id="settings" data-tool-label="Settings" data-tool-icon="⚙" title="Settings">⚙</button>
 </div>
 
 <!-- §BUILD 2026-08-30 — real toolbar editor, James: "need a toolbar

@@ -1,1 +1,0 @@
-{"uuid":"172d1f86-8a46-408f-a5aa-6c55ccc89b43","system":"loom","component":"loom.hooks.unwire","action":"registered","status":"ok","tags":["loom","write","wire"],"detail":"Remove a hook binding","causedBy":"loom","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:323","ts":1789824798567}

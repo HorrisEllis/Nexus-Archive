@@ -1,1 +1,0 @@
-{"uuid":"e9574911-eb6a-4058-ba8c-a179dd92a167","system":"copilot","component":"copilot.sessions","action":"registered","status":"ok","tags":["copilot"],"detail":"Active co-pilot sessions","causedBy":"copilot","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:323","ts":1789824798507}

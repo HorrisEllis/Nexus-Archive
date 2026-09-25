@@ -1,1 +1,0 @@
-{"uuid":"97754f1f-6cb9-42a5-a8d0-4d12d082790e","system":"idearium","component":"idearium.spec.export","action":"registered","status":"ok","tags":["idearium"],"detail":"Export a spec as a portable document","causedBy":"idearium","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:323","ts":1789824798450}

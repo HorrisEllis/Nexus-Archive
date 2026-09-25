@@ -1,1 +1,0 @@
-{"uuid":"eba0a402-02b8-4e65-986d-c72099eef285","system":"architect","component":"architect.hooks.list","action":"registered","status":"ok","tags":["architect"],"detail":"Hook registry — all declared hooks","causedBy":"architect","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:323","ts":1789824798590}

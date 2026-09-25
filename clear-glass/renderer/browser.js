@@ -680,6 +680,14 @@
       // relay) can be matched to the right caller — this channel can
       // legitimately fire more than once concurrently.
       window.ClearGlass?._sendCookieRequest?.({ ...e.args[0], agentId });
+    } else if (e.channel === 'nexus:open-settings') {
+      // §ADDED 2026-09-25 — the guest page's own menu (tv-shell/home's
+      // #sys-bar "⚙ Settings" button) has no way to reach the real
+      // Settings window on its own (contextIsolation, no Node, no
+      // access to window.ClearGlass — that global only exists on THIS
+      // outer document). Same real cg.window.openSettings() the tray
+      // menu item and btn-settings's own click handler already call.
+      cg.window.openSettings();
     }
   });
 
@@ -1269,6 +1277,16 @@
     }
   });
 
+  // ── Settings button ───────────────────────────────────────────────────
+  // §ADDED 2026-09-25 — real backing button for src/toolbar/commands.js's
+  // btn-settings (see that file's header comment for the full root-cause).
+  // Same cg.window.openSettings() every other Settings entry point in this
+  // file already calls (tray menu, opt-link-api-settings, the webview
+  // bridge's nexus:open-settings relay) — one real function, not a new one.
+  document.getElementById('btn-settings')?.addEventListener('click', () => {
+    cg.window.openSettings();
+  });
+
   connectSSE();
 
   // ── Bookmarks ──────────────────────────────────────────────────────────
@@ -1549,7 +1567,18 @@
       <div class="menu-item" data-action="site-settings">🛡 Site Settings</div>
       <div class="menu-item" data-action="history">🕐 History</div>
       <div class="menu-item" data-action="bgtabs">⬡ Background Tabs</div>
-      <div class="menu-item" data-action="settings">☰ Settings</div>
+      <!-- §REMOVED 2026-09-25 — this used to be a hardcoded "☰ Settings"
+           row that actually opened the Nexus Options panel (openOptionsPanel,
+           same destination as the btn-options toolbar button), not the real
+           Settings window. It duplicated btn-options's own row below
+           (_renderToolMenuRows renders "☰ Nexus Options" once that button
+           is unpinned) under a DIFFERENT, colliding label — the real cause
+           of James finding two different things both called "Settings"
+           doing two different things. Deleted rather than relabeled: the
+           real Nexus Options access already exists via the toolbar button
+           and its Tools row here; a real, single, unambiguous "Settings"
+           entry (→ cg.window.openSettings(), the actual Settings window)
+           now lives at btn-settings, in this same Tools row list. -->
       ${_renderToolMenuRows()}
       <div class="menu-sep"></div>
       <div class="menu-item" data-action="customize-toolbar">🧰 Customize Toolbar…</div>
@@ -1585,11 +1614,6 @@
       panel.style.display = 'none';
       _openPanelFromMenu('bgtabs-panel', _renderBgTabsPanel);
     });
-    panel.querySelector('[data-action="settings"]').addEventListener('click', () => {
-      panel.style.display = 'none';
-      openOptionsPanel();
-    });
-
     const listEl = document.getElementById('menu-bookmarks-list');
     try {
       const list = await cg.bookmarks.list({ agentId });
@@ -2480,7 +2504,11 @@
       }
       case 'maximize': cg.window.maximize(agentId); break;
       case 'queue': openQueuePanel(); break;
-      case 'settings': cg.window.openSettings(); break;
+      // §REMOVED 2026-09-25 — 'settings' used to be a palette-only action
+      // here (cg.window.openSettings()). Now a real pinnable command
+      // (btn-settings, src/toolbar/commands.js) with its own backing
+      // button and click handler, so `cmd.id` above already returns
+      // before this switch is ever reached for it — this case was dead.
       // §NEW 2026-08-24 — the permanent fix for "toolbar accumulated too
       // many pins over time": restore pinnedToolbarButtons to exactly the
       // backend registry's defaultPinned set, in one action, instead of

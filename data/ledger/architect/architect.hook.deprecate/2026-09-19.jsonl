@@ -1,1 +1,0 @@
-{"uuid":"6b3f34d6-31fb-4a8a-a1b7-5a7d83b4c390","system":"architect","component":"architect.hook.deprecate","action":"registered","status":"ok","tags":["architect"],"detail":"Deprecate or remove hook","causedBy":"architect","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:323","ts":1789824798597}

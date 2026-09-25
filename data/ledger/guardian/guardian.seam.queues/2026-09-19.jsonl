@@ -1,1 +1,0 @@
-{"uuid":"b323e2ce-6d24-4930-8ab5-fa8a90724755","system":"guardian","component":"guardian.seam.queues","action":"registered","status":"ok","tags":["guardian"],"detail":"Active SEAM queues","causedBy":"guardian","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:323","ts":1789824798399}

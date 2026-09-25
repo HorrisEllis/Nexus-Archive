@@ -1,1 +1,0 @@
-{"uuid":"7fb00812-8c53-4c92-833f-0a120d486085","system":"guardian","component":"guardian.queue.status","action":"registered","status":"ok","tags":["guardian"],"detail":"Physical queue status","causedBy":"guardian","contractUuid":null,"session":null,"hook":null,"wire":null,"faultId":null,"intent":null,"sourceRef":"lib\\component-registry.js:323","ts":1789824798405}

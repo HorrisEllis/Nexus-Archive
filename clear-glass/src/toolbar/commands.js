@@ -65,11 +65,33 @@ const TOOLBAR_COMMANDS = [
   { id: 'btn-providers',   icon: '⟳', label: 'NCP Providers',          group: 'Session', pinnable: true, defaultPinned: false },
   { id: 'btn-userscripts', icon: '✎', label: 'Userscripts',            group: 'Session', pinnable: true, defaultPinned: false },
   { id: 'btn-options',     icon: '☰', label: 'Nexus Options',          group: 'Session', pinnable: true, defaultPinned: false },
+  // §FIXED 2026-09-25 — James, pointing at the real "Customize Toolbar"
+  // dialog (screenshot): "WHERE IS IT? anything outside of this, is
+  // wrong." Root cause, found by reading this file plus browser.js's
+  // dialog renderer, not assumed: `settings` used to be `action`-only
+  // (no `id`), which per this file's own rule above means "no button to
+  // pin" — structurally excluded from BOTH real discovery surfaces the
+  // dialog offers: the draggable Toolbar/⋯-Menu zones (browser.js line
+  // ~1483, `filter(c => c.id && c.pinnable)`) AND the ⋯ menu's own
+  // auto-populated "Tools" section for unpinned commands (line ~1440,
+  // same filter). It only ever showed up in the dialog's small,
+  // scrollable "Actions" list at the bottom, mislabeled "API Settings…"
+  // and grouped under "Window" next to New Agent Window / Mesh Queue —
+  // exactly what a user scanning for "Settings" (his own reference:
+  // Firefox's ☰ menu) would miss. Real fix, not a relabel: gave it a
+  // real id + a real backing <button id="btn-settings"> in the chrome
+  // bar's overflow slot (browser.html, same convention as btn-mesh /
+  // btn-diag), pinnable like every other real tool here. That makes it
+  // (a) draggable directly onto the toolbar or into the ⋯ Menu drop
+  // zone in this exact dialog, and (b) automatically listed in the live
+  // ⋯ menu's "Tools" section the moment it's unpinned — the actual gap
+  // James is describing, closed at its structural cause instead of
+  // papered over with a new label on the same invisible action.
+  { id: 'btn-settings',    icon: '⚙', label: 'Settings',               group: 'Session', pinnable: true, defaultPinned: false },
   { action: 'new-agent',   icon: '⊞', label: 'New Agent Window',       group: 'Window' },
   { action: 'bg-tab',      icon: '▣', label: 'Move to Background Tab', group: 'Window' },
   { action: 'maximize',    icon: '⛶', label: 'Maximize / Restore',     group: 'Window' },
   { action: 'queue',       icon: '☰', label: 'Mesh Queue',             group: 'Window' },
-  { action: 'settings',    icon: '⚙', label: 'API Settings…',          group: 'Window' },
   // §NEW 2026-08-24 — the actual, permanent fix for "too much got pinned
   // over time, unpin it": a real palette action that restores
   // pinnedToolbarButtons to exactly this file's defaultPinned set, instead
