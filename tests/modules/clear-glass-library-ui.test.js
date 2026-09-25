@@ -93,6 +93,20 @@ function main() {
   // ── library-app.css: the modal it now depends on actually has styles ──
   check('library-app.css defines the modal host styles library-app.js relies on', /\.modal-overlay/.test(CSS) && /\.modal-box/.test(CSS));
 
+  // ── 0.39.240: the Library is in Clear Glass's own ☰ menu, not only the tray ──
+  // James: "also needs to be clearglass library... added to the 3 lines menu".
+  // Driven for real in headless Chromium by tests/probe/clearglass-menu-library.py.
+  const BROWSER = fs.readFileSync(path.join(ROOT, 'clear-glass', 'renderer', 'browser.js'), 'utf8');
+  check('the ☰ menu has a Library row', /<div class="menu-item" data-action="library">📚 Library<\/div>/.test(BROWSER));
+  check('…and it opens through cg.window.open (window:open -> openAgentWindow), not a second mechanism',
+    /data-action="library"\]'\)\.addEventListener\('click'[\s\S]{0,200}cg\.window\.open\(\{ agentId: LIBRARY_AGENT_ID, url: LIBRARY_URL \}\)/.test(BROWSER));
+  const menuId = (BROWSER.match(/const LIBRARY_AGENT_ID = '([^']+)'/) || [])[1];
+  const menuUrl = (BROWSER.match(/const LIBRARY_URL = '([^']+)'/) || [])[1];
+  const tray = MAIN.match(/label: '⬡ Library',\s*click: \(\) => openAgentWindow\(\{ agentId: '([^']+)', url: '([^']+)' \}\)/) || [];
+  check('…the same window the tray opens (same agentId and URL), so the two cannot drift',
+    menuId && menuUrl && menuId === tray[1] && menuUrl === tray[2], `menu ${menuId} ${menuUrl} vs tray ${tray[1]} ${tray[2]}`);
+  check('…and a failure to open is shown, not swallowed', /Could not open the Library: \$\{err\.message\}/.test(BROWSER));
+
   console.log(`\n  ${passed} passed, ${failed} failed\n`);
   process.exitCode = failed === 0 ? 0 : 1;
 }

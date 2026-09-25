@@ -253,3 +253,5 @@ Guardian writes each completed agent reply into the downloads index (`src/downlo
 `GET /cli/downloads/responses` (filters `agentId`, `jobId`, `provider`, `kind`) and `GET /cli/downloads/responses/:id` read it. The Library window's **Responses** tab (`ui/library/areas/responses.js` + `.css`) shows them by agent.
 
 `download-capture` attaches once per provider session — every window of a provider shares one session, and it used to add a listener per window — and resolves which agent tab a download came from.
+
+**☰ → 📚 Library (3.12.1, v0.39.240).** The Library window is also in Clear Glass's own ☰ menu (`renderer/browser.js`, `#bookmark-mgr-btn`), after History — the same window the tray opens (agentId `nexus-library`, `/ui/library/`).

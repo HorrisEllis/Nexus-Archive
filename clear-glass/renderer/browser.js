@@ -1549,6 +1549,9 @@
       .catch(err => addMsg('assistant', `Failed to reset toolbar: ${err.message}`));
   });
 
+  // The Library window — must match the tray's entry in src/main/index.js.
+  const LIBRARY_AGENT_ID = 'nexus-library';
+  const LIBRARY_URL = 'http://127.0.0.1:9000/ui/library/';
   document.getElementById('bookmark-mgr-btn').addEventListener('click', async (e) => {
     const panel = document.getElementById('bookmark-mgr-panel');
     if (panel.style.display !== 'none') { panel.style.display = 'none'; return; }
@@ -1566,6 +1569,7 @@
       <div class="menu-item" data-action="downloads">⬇ Downloads</div>
       <div class="menu-item" data-action="site-settings">🛡 Site Settings</div>
       <div class="menu-item" data-action="history">🕐 History</div>
+      <div class="menu-item" data-action="library">📚 Library</div>
       <div class="menu-item" data-action="bgtabs">⬡ Background Tabs</div>
       <!-- §REMOVED 2026-09-25 — this used to be a hardcoded "☰ Settings"
            row that actually opened the Nexus Options panel (openOptionsPanel,
@@ -1609,6 +1613,16 @@
     panel.querySelector('[data-action="history"]').addEventListener('click', () => {
       panel.style.display = 'none';
       _openPanelFromMenu('history-panel', () => _renderHistoryPanel(''));
+    });
+    // §LIBRARY 0.39.240 — James: "also needs to be clearglass library... added to
+    // the 3 lines menu". The Library window (ui/library/: bookmarks, history,
+    // downloads, agent RESPONSES, accounts, macros, autofill, passwords) was
+    // reachable only from the tray. Same window the tray opens: same agentId,
+    // same URL, through the real window:open -> openAgentWindow path.
+    panel.querySelector('[data-action="library"]').addEventListener('click', async () => {
+      panel.style.display = 'none';
+      try { await cg.window.open({ agentId: LIBRARY_AGENT_ID, url: LIBRARY_URL }); }
+      catch (err) { console.error(`[menu] could not open the Library (${LIBRARY_URL}): ${err.message}`); toast(`Could not open the Library: ${err.message}`, 'error', 6000); }
     });
     panel.querySelector('[data-action="bgtabs"]').addEventListener('click', () => {
       panel.style.display = 'none';

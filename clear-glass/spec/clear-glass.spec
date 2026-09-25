@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        clear-glass
-    version:     3.12.0
+    version:     3.12.1
     foundation:  nexus-system-foundation@1.1.0
     port:        7702
     uuid:        nexus-clear-glass-v1-0000-2026-0901-jamesbrooks-001
@@ -281,6 +281,18 @@ spec:
         opened: 2026-09-25
 
   version_history:
+    - version: 3.12.1
+      date: 2026-09-25
+      summary: >-
+        PATCH (v0.39.240) — James: "also needs to be clearglass library... added to the 3 lines menu". The Library
+        window (ui/library/: bookmarks, history, downloads, agent responses, accounts, macros, autofill, passwords)
+        was reachable only from the tray. renderer/browser.js's ☰ menu (#bookmark-mgr-btn) gains a fixed
+        "📚 Library" row after History; it opens the SAME window the tray opens (agentId nexus-library, the
+        /ui/library/ URL) through cg.window.open -> window:open -> openAgentWindow, and a failure is toasted. No
+        new route. Proven by clicking it in headless Chromium on the real browser.html (tests/probe/
+        clearglass-menu-library.py); tests/modules/clear-glass-library-ui.test.js 24 -> 28 pins the row and that
+        its agentId/URL equal the tray's. All sync points moved together.
+      versioniumCommitId: null
     - version: 3.12.0
       date: 2026-09-25
       summary: >-
