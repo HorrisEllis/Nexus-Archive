@@ -370,8 +370,7 @@ function recordAgentResponse({ job, text, blocks } = {}) {
         capturedBy: MODULE_ID,
       },
     });
-    // indexSkipped: better-sqlite3 is absent — the index module says so once itself (0.39.241).
-    if (stored && stored.indexed === false && !stored.indexSkipped) {
+    if (stored && stored.indexed === false) {
       console.warn(`[guardian] .response written (${stored.responsePath}) but not indexed: ${stored.indexError}`);
     }
     return stored;

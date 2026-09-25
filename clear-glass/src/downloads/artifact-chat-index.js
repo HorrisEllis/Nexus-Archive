@@ -18,10 +18,15 @@
  *
  *   responses/<id>.response   — RAW, self-contained, one per captured
  *                               item. Source of truth.
- *   index.db                  — SQLite (better-sqlite3). Fast queryable
- *                               index OVER the .response files.
- *                               Disposable and regenerable — never the
- *                               only copy of anything.
+ *   index-jaa/items.json      — JAA (guardian/jaa-store.js, pure JS, the
+ *                               store every NEXUS system runs on). Queryable
+ *                               index OVER the .response files. Disposable
+ *                               and regenerable — never the only copy of
+ *                               anything. (Was index.db / better-sqlite3
+ *                               until 0.39.241 — James: "use jaa for the
+ *                               database". better-sqlite3 needs a C++
+ *                               toolchain his machine doesn't have, so the
+ *                               index never existed there at all.)
  *
  * Same reasoning as this mission's very first design note (capture-as-
  * primitive): a parser or an index will eventually be wrong somewhere;
@@ -47,34 +52,27 @@ const MODULE_ID = 'clear-glass/downloads/artifact-chat-index';
 const COMPARTMENT_NAME = 'clearglass-downloads-index';
 const DATABASE_ARCHETYPE = 'database'; // cos/archetype/registry.js — real, existing, loopback-only, better-sqlite3 in its own detectionHints
 
-let _Database = null;
-// §ONCE 0.39.241 — better-sqlite3 is optional (0.39.153) and absent on James's
-// machine. Each query used to try it, fail, try a rebuild (which also needs it),
-// fail again, then read responses/ — printing two stack traces per call. The
-// Library's Responses tab and the idearium Agent tab's late-reply poll call
-// this every few seconds, so the log filled with them (log of 2026-09-25,
-// 19:12:20 onward). A missing module does not come back mid-process: the
-// require is tried once, the reason kept, and said once.
-let _sqliteError = null;
-let _toldNoSqlite = false;
-function _sqlite() {
-  if (_sqliteError) throw _sqliteError;
-  if (!_Database) {
-    try { _Database = require('better-sqlite3'); }
-    catch (e) {
-      _sqliteError = new Error(`better-sqlite3 is not installed (${String(e.message).split('\n')[0]})`);
-      _sqliteError.code = 'NO_SQLITE';
-      throw _sqliteError;
-    }
+// §JAA 0.39.241 — James: "use jaa for the database". The index is a JaaStore
+// table (guardian/jaa-store.js: zero native dependencies, better-sqlite3's call
+// shapes, cross-process flush locking). One store per root per process.
+const INDEX_TABLE = 'items';
+const _stores = new Map();   // indexDir -> JaaStore
+function _store(p) {
+  let st = _stores.get(p.indexDir);
+  if (!st) {
+    const { JaaStore } = require('../../../guardian/jaa-store.js');
+    st = new JaaStore(p.indexDir, { tables: [INDEX_TABLE], settings: false });
+    _stores.set(p.indexDir, st);
   }
-  return _Database;
+  return st;
 }
-/** sqliteAvailable() — whether index.db can be used in this process at all. */
-function sqliteAvailable() { try { _sqlite(); return true; } catch (_) { return false; } }
-function _sayNoSqliteOnce() {
-  if (_toldNoSqlite) return;
-  _toldNoSqlite = true;
-  console.warn(`[${MODULE_ID}] ${_sqliteError ? _sqliteError.message : 'better-sqlite3 unavailable'} — index.db is skipped for this process; responses/ (the source of truth) is read and written directly. Said once.`);
+function _row(e) {
+  return {
+    id: e.id, kind: e.kind, provider: e.provider || null, chat_id: e.chat_id || null,
+    agent_id: e.agent_id || null, job_id: e.job_id || null, captured_at: e.captured_at || 0,
+    content_hash: e.content_hash, response_path: e.response_path, artifact_path: e.artifact_path || null,
+    status: e.status || 'ok',
+  };
 }
 
 // ── Compartment lifecycle — real create + assign, same event-driven
@@ -123,7 +121,7 @@ function defaultRoot() {
 function _paths(root) {
   return {
     root,
-    dbPath: path.join(root, 'index.db'),
+    indexDir: path.join(root, 'index-jaa'),   // 0.39.241 — JAA; an old index.db beside it is left untouched
     responsesDir: path.join(root, 'responses'),
     artifactsDir: path.join(root, 'artifacts'),
   };
@@ -132,42 +130,6 @@ function _paths(root) {
 function _ensureDirs(p) {
   fs.mkdirSync(p.responsesDir, { recursive: true });
   fs.mkdirSync(p.artifactsDir, { recursive: true });
-}
-
-const SCHEMA = `
-CREATE TABLE IF NOT EXISTS items (
-  id           TEXT PRIMARY KEY,
-  kind         TEXT NOT NULL,        -- 'chat' | 'artifact'
-  provider     TEXT,
-  chat_id      TEXT,
-  agent_id     TEXT,                 -- 0.39.239: whose response this is (e.g. repo-<uuid>), first-class, not buried in raw
-  job_id       TEXT,                 -- 0.39.239: the guardian job it answered
-  captured_at  INTEGER NOT NULL,
-  content_hash TEXT NOT NULL,
-  response_path TEXT NOT NULL,
-  artifact_path TEXT,
-  status       TEXT NOT NULL DEFAULT 'ok'   -- 'ok' | 'unreadable' (set by rebuild when a .response fails to parse)
-);
-CREATE INDEX IF NOT EXISTS idx_items_kind     ON items(kind);
-CREATE INDEX IF NOT EXISTS idx_items_chat_id  ON items(chat_id);
-CREATE INDEX IF NOT EXISTS idx_items_provider ON items(provider);
-`;
-const SCHEMA_INDEXES_0_39_239 = `
-CREATE INDEX IF NOT EXISTS idx_items_agent_id ON items(agent_id);
-CREATE INDEX IF NOT EXISTS idx_items_job_id   ON items(job_id);
-`;
-
-function _openDb(p) {
-  const Database = _sqlite();
-  const db = new Database(p.dbPath);
-  db.pragma('journal_mode = WAL'); // real crash-safety for the index layer itself — matches this module's own "the index must never be the single point of failure" reasoning
-  db.exec(SCHEMA);
-  // 0.39.239 — an index.db written before agent_id/job_id existed gains them here.
-  const cols = new Set(db.prepare('PRAGMA table_info(items)').all().map(c => c.name));
-  if (!cols.has('agent_id')) db.exec('ALTER TABLE items ADD COLUMN agent_id TEXT');
-  if (!cols.has('job_id'))   db.exec('ALTER TABLE items ADD COLUMN job_id TEXT');
-  db.exec(SCHEMA_INDEXES_0_39_239);
-  return db;
 }
 
 function sha256(s) { return crypto.createHash('sha256').update(s).digest('hex'); }
@@ -238,28 +200,24 @@ function recordResponse(root, { kind, provider, chatId, agentId, jobId, raw, art
   // Now: the source of truth is written and kept; the index is attempted
   // and its failure is REPORTED, never swallowed and never fatal.
   // `indexed` is the honest flag — a caller that needs to know can ask.
+  // The source of truth is written and kept; the index is attempted and its
+  // failure REPORTED, never fatal (§FIXED 2026-09-20). Flushed at once, not on
+  // JaaStore's 1.5 s debounce: the readers (Clear Glass, idearium) are other
+  // processes, and the Agent tab polls for exactly this row.
   let indexed = false;
   let indexError = null;
-  let indexSkipped = false;
-  if (!sqliteAvailable()) {
-    // Not a failure of this write — the index cannot exist in this process.
-    indexError = _sqliteError.message; indexSkipped = true; _sayNoSqliteOnce();
-  } else try {
-    const db = _openDb(p);
-    try {
-      db.prepare(`INSERT INTO items (id, kind, provider, chat_id, agent_id, job_id, captured_at, content_hash, response_path, artifact_path, status)
-                  VALUES (@id, @kind, @provider, @chat_id, @agent_id, @job_id, @captured_at, @content_hash, @response_path, @artifact_path, 'ok')`)
-        .run({ id, kind, provider: provider || null, chat_id: chatId || null, agent_id: agent, job_id: job, captured_at: capturedAt, content_hash: contentHash, response_path: responseRelPath, artifact_path: artifactPath });
-      indexed = true;
-    } finally {
-      db.close();
-    }
+  try {
+    const st = _store(p);
+    st.insert(INDEX_TABLE, _row({ id, kind, provider, chat_id: chatId, agent_id: agent, job_id: job, captured_at: capturedAt,
+      content_hash: contentHash, response_path: responseRelPath, artifact_path: artifactPath }));
+    st.flushAll();
+    indexed = true;
   } catch (e) {
     indexError = e.message;
     console.warn(`[${MODULE_ID}] recordResponse: the .response file is written and durable at ${responseRelPath}, but indexing it failed (${e.message}) — rebuildIndexFromResponses() recovers this`);
   }
 
-  return { id, kind, agentId: agent, jobId: job, capturedAt, contentHash, responsePath: responseRelPath, artifactPath, indexed, indexError, indexSkipped };
+  return { id, kind, agentId: agent, jobId: job, capturedAt, contentHash, responsePath: responseRelPath, artifactPath, indexed, indexError };
 }
 
 /**
@@ -275,19 +233,10 @@ function rebuildIndexFromResponses(root) {
   const p = _paths(root);
   _ensureDirs(p);
 
-  if (fs.existsSync(p.dbPath)) {
-    for (const ext of ['', '-wal', '-shm']) {
-      try { fs.rmSync(p.dbPath + ext, { force: true }); } catch { /* best-effort cleanup of a corrupt/stale index */ }
-    }
-  }
-
-  const db = _openDb(p);
+  const st = _store(p);
   let recovered = 0, unreadable = 0;
-  try {
-    const insert = db.prepare(`INSERT OR REPLACE INTO items (id, kind, provider, chat_id, agent_id, job_id, captured_at, content_hash, response_path, artifact_path, status)
-                                VALUES (@id, @kind, @provider, @chat_id, @agent_id, @job_id, @captured_at, @content_hash, @response_path, @artifact_path, @status)`);
+  {
     const files = fs.existsSync(p.responsesDir) ? fs.readdirSync(p.responsesDir).filter(f => f.endsWith('.response')) : [];
-    const rebuildTx = db.transaction((entries) => { for (const e of entries) insert.run(e); });
     const entries = [];
     for (const file of files) {
       const id = file.replace(/\.response$/, '');
@@ -317,60 +266,43 @@ function rebuildIndexFromResponses(root) {
         console.warn(`[${MODULE_ID}] rebuild: ${file} failed to parse (${e.message}) — indexed as unreadable, bytes untouched on disk`);
       }
     }
-    rebuildTx(entries);
-  } finally {
-    db.close();
+    // Replace, not merge: the index is exactly what responses/ holds, nothing more.
+    st.delete(INDEX_TABLE, () => true);
+    for (const e of entries) st.insert(INDEX_TABLE, _row(e));
+    st.flushAll();
   }
   return { recovered, unreadable, total: recovered + unreadable };
 }
 
 /**
- * queryItems(root, { kind, provider, chatId, limit }) — the fallback
- * chain is enforced HERE, not just documented: any failure opening or
- * querying index.db triggers one rebuild and one retry. If the retry
- * also fails, the error is real and gets thrown — there's no third
- * layer beyond the .response files themselves, and at that point the
- * caller should look at disk directly, not trust another silent retry.
+ * queryItems(root, { kind, provider, chatId, agentId, jobId, limit }) — newest first.
+ * The fallback chain is enforced HERE:
+ *   1. the JAA index, reloaded from disk first (the writer is guardian, another process);
+ *   2. if it doesn't hold exactly what responses/ holds (never built, a write lost,
+ *      files copied in by hand), it is rebuilt from responses/ and read again;
+ *   3. if JAA itself fails, responses/ is read directly — slower, and correct.
  */
 function queryItems(root, { kind, provider, chatId, agentId, jobId, limit = 100 } = {}) {
   const p = _paths(root);
-  if (!sqliteAvailable()) { _sayNoSqliteOnce(); return _scanResponses(p, { kind, provider, chatId, agentId, jobId, limit }); }
-  const run = () => {
-    const db = _openDb(p);
-    try {
-      const clauses = []; const params = {};
-      if (kind)     { clauses.push('kind = @kind');         params.kind = kind; }
-      if (provider) { clauses.push('provider = @provider'); params.provider = provider; }
-      if (chatId)   { clauses.push('chat_id = @chatId');    params.chatId = chatId; }
-      if (agentId)  { clauses.push('agent_id = @agentId');  params.agentId = agentId; }
-      if (jobId)    { clauses.push('job_id = @jobId');      params.jobId = jobId; }
-      const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
-      return db.prepare(`SELECT * FROM items ${where} ORDER BY captured_at DESC LIMIT @limit`).all({ ...params, limit });
-    } finally {
-      db.close();
-    }
-  };
-
+  const where = {};
+  if (kind)     where.kind = kind;
+  if (provider) where.provider = provider;
+  if (chatId)   where.chat_id = chatId;
+  if (agentId)  where.agent_id = agentId;
+  if (jobId)    where.job_id = jobId;
   try {
-    return run();
-  } catch (e) {
-    console.warn(`[${MODULE_ID}] queryItems: index.db read failed (${e.message}) — rebuilding from responses/ and retrying once`);
-    try {
-      rebuildIndexFromResponses(root);
-      return run(); // real retry
-    } catch (e2) {
-      // §FIXED 2026-09-20 — the fallback chain stopped one link short.
-      // A rebuild cannot help when SQLite itself is unavailable (an
-      // optional dependency since 0.39.153, genuinely absent on the real
-      // target machine), so this used to throw and the caller got
-      // nothing — even though every .response file, the actual source of
-      // truth, was sitting right there readable. The last link is
-      // reading them directly: slower, unordered by index, and entirely
-      // correct. This is what "redundant backups, and fallback chains"
-      // has to mean to be real rather than decorative.
-      console.warn(`[${MODULE_ID}] queryItems: index unavailable (${e2.message}) — reading responses/ directly`);
-      return _scanResponses(p, { kind, provider, chatId, agentId, jobId, limit });
+    const st = _store(p);
+    st.reloadTable(INDEX_TABLE);
+    let onDisk = 0;
+    try { onDisk = fs.readdirSync(p.responsesDir).filter(n => n.endsWith('.response')).length; } catch (_) { /* no responses/ yet */ }
+    if (st.count(INDEX_TABLE) !== onDisk) {
+      const r = rebuildIndexFromResponses(root);
+      console.log(`[${MODULE_ID}] index rebuilt from responses/ — ${r.recovered} indexed${r.unreadable ? `, ${r.unreadable} unreadable` : ''}`);
     }
+    return st.all(INDEX_TABLE, where, { orderBy: 'captured_at', order: 'DESC', limit });
+  } catch (e) {
+    console.warn(`[${MODULE_ID}] queryItems: JAA index unavailable (${e.message}) — reading responses/ directly`);
+    return _scanResponses(p, { kind, provider, chatId, agentId, jobId, limit });
   }
 }
 
@@ -388,6 +320,9 @@ function _scanResponses(p, { kind, provider, chatId, agentId, jobId, limit = 100
     let r;
     try { r = JSON.parse(fs.readFileSync(abs, 'utf8')); }
     catch (e) {
+      // 0.39.241 — an unreadable file can't be attributed to an agent, job or provider,
+      // so it answers only an unfiltered listing (as the JAA index does: its fields are null).
+      if (kind || provider || chatId || agentId || jobId) continue;
       out.push({ id: name.replace(/\.response$/, ''), kind: null, provider: null, chat_id: null, agent_id: null, job_id: null,
         captured_at: 0, content_hash: null, response_path: path.join('responses', name),
         artifact_path: null, status: 'unreadable', error: e.message });
@@ -467,5 +402,5 @@ function backupSnapshot(host) {
 module.exports = {
   MODULE_ID, COMPARTMENT_NAME,
   ensureCompartment, recordResponse, queryItems, rebuildIndexFromResponses, backupSnapshot,
-  findResponseByJobId, readItem, defaultRoot, sqliteAvailable,
+  findResponseByJobId, readItem, defaultRoot,
 };

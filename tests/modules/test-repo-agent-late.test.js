@@ -81,7 +81,7 @@ const guardianFiles = (text, { agentId = AGENT, prompt, jobId = `job-${Math.rand
     // noise the finder must step over
     const before = guardianFiles('an OLD reply from before this exchange');
     // make it look older than `started` by rewriting captured_at in its .response (source of truth)
-    { const p = path.join(root, before.responsePath); const j = JSON.parse(fs.readFileSync(p, 'utf8')); j.captured_at = started - 60000; fs.writeFileSync(p, JSON.stringify(j)); }
+    { const p = path.join(root, before.responsePath); const j = JSON.parse(fs.readFileSync(p, 'utf8')); j.captured_at = started - 60000; fs.writeFileSync(p, JSON.stringify(j));  IDX.rebuildIndexFromResponses(root); }   // the source of truth changed under the (JAA) index — rebuild it, as the module's own contract says
     guardianFiles('a reply for a DIFFERENT compartment', { agentId: 'repo-someone-else' });
     guardianFiles('a reply to a different question', { prompt: 'You are the project agent…\n───\nwhat is the wire system?' });
     guardianFiles('```tool\n{"name":"read_file","args":{"path":"x"}}\n```');

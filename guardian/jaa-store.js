@@ -120,7 +120,9 @@ class JaaStore {
 
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     this._loadAll();
-    this._bootstrapSettings();
+    // §0.39.241 — opts.settings === false: a store that is not guardian's own
+    // (clear-glass's Responses index) skips guardian's DEFAULT_SETTINGS rows.
+    if (opts.settings !== false) this._bootstrapSettings();
     console.log('[jaa] Store ready —', dir, this.tablePrefix ? `(prefix: ${this.tablePrefix})` : '');
 
     // §FIX 2026-09-17 — close() (flush + stop timers, above) has existed since

@@ -1,6 +1,6 @@
 {
   "name": "nexus",
-  "version": "0.39.241",
+  "version": "0.39.243",
   "description": "NEXUS \u2014 sovereign AI orchestration platform",
   "author": "James Brooks (Erosmancer)",
   "license": "MIT",
@@ -41,8 +41,5 @@
     "multer": "^2.2.0",
     "uuid": "^14.0.2",
     "vectra": "^0.15.0"
-  },
-  "optionalDependencies": {
-    "better-sqlite3": "^13.0.3"
   }
 }
