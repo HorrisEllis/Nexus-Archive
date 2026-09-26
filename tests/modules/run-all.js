@@ -291,6 +291,8 @@ const SUITES = [
   'test-manifest-phase1.test.mjs',
   'test-three-graphs.test.mjs',      // 0.39.246 — code · execution · spec graphs hooked into repo import
   'test-response-downloads.test.js', // 0.39.246 — responses land in the Clear Glass downloads manager
+  'test-selector-map.test.js',        // 0.39.249 — one selector map per provider, pushed to the userscripts
+  'test-cg-selector-assign.test.js',   // 0.39.251 — the element picker assigns selectors (Chromium parts SKIPPED without python playwright)
   'test-one-tab-e2e.test.js',        // 0.39.247 — real guardian, one tab: job → reply → .response   // 0.39.245 — spec-engine/manifest phase 1: file list → wire-check → manifest + registry
   'idearium-phase-compartment-integration.test.js',
   'idearium-agent-routing.test.mjs',

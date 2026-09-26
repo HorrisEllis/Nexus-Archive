@@ -589,6 +589,10 @@
   });
 
   // ── Element picker ─────────────────────────────────────────────────
+  // §SELECTOR-ASSIGN 0.39.251 — a pick on a provider page is offered as that
+  // provider's reply / input / send selector (renderer/selector-assign/).
+  window.CGSelectorAssign?.mount({ cg, wv, notify: (m) => addMsg('assistant', m) });
+
   pickerBtn.addEventListener('click', async () => {
     pickerActive = !pickerActive;
     pickerBtn.classList.toggle('active', pickerActive);
@@ -666,10 +670,13 @@
         routeTo: pickerRoute?.value || 'sse',
         apiUrl:  pickerRoute?.value === 'api' ? (pickerApiUrl?.value || '') : undefined,
       });
+      window.CGSelectorAssign?.offer({ xpath: pick.xpath, url: pick.url || wv.getURL() });
     } else if (e.channel === 'dom:event') {
       // Live MutationObserver stream — forward straight through, no local
       // UI cost (this can fire many times a second on a busy page).
       window.ClearGlass?._sendDomEvent?.({ ...e.args[0], agentId });
+      // §SELECTOR-ASSIGN 0.39.251 — guardian-picker.js reports each pick.
+      if (e.args[0]?.type === 'guardian.picker.picked') window.CGSelectorAssign?.offer({ xpath: e.args[0].xpath, url: e.args[0].url || wv.getURL() });
     } else if (e.channel === 'nexus:cookie-request') {
       // §ADDED 2026-09-02 — James: "check clear-glass for an ipc" (for
       // cookie-vault reachability from a page-level userscript). The
@@ -745,7 +752,11 @@
     overlay.style.pointerEvents = 'all';
     if (!el) return;
     const r = el.getBoundingClientRect();
+    // 0.39.251 — xpath in guardian-picker.js getXPath()'s format, so the
+    // selector-assign check resolves a fallback pick the same way.
+    const xp = (n) => { if (n.id) return '//*[@id="' + n.id + '"]'; const parts = []; while (n && n.nodeType === 1) { let i = 1, s = n.previousSibling; while (s) { if (s.nodeType === 1 && s.tagName === n.tagName) i++; s = s.previousSibling; } parts.unshift(n.tagName.toLowerCase() + (i > 1 ? '[' + i + ']' : '')); n = n.parentNode; } return '/' + parts.join('/'); };
     const data = {
+      xpath: xp(el), url: location.href,
       tag: el.tagName.toLowerCase(),
       id_attr: el.id,
       classes: el.className,

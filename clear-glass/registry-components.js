@@ -2,7 +2,7 @@
 /**
  * clear-glass/registry-components.js — Clear Glass System Contract
  * UUID: cg-registry-v1-0000-0000-000000000001
- * Version: 3.13.2
+ * Version: 3.14.0
  *
  * Served at GET /contract from the IPC server (:7702).
  * Verified by orchestrator contract-handshake on boot.
@@ -17,7 +17,7 @@ const NS = 'cg';
 // drift lib/version.js's services['clear-glass'], main/index.js's
 // CG_VERSION, and clear-glass.spec's meta.version all had — found while
 // updating those three, checked here too rather than assumed synced.
-const V  = '3.13.2';
+const V  = '3.14.0';
 
 function _c(id, method, path, desc, opts = {}) {
   return {
@@ -217,6 +217,9 @@ const components = [
   _c('window.openLibrary',  'IPC', 'window:openLibrary',  'Open (or focus) the Library window at an area — downloads, responses, bookmarks, history, accounts, passwords, autofill, macros', { tags: ['window', 'library'] }),
   _c('window.closeLibrary', 'IPC', 'window:closeLibrary', 'Close the Library window', { tags: ['window', 'library'] }),
   _c('downloads.openFile',  'IPC', 'downloads:openFile',  'Open a completed download with the OS default app (Library → Downloads, click the name)', { tags: ['downloads', 'library'] }),
+  // v0.39.251 — the element picker assigns provider selectors (src/providers/selector-assign.js; handoff 2026-09-25 step 1)
+  _c('selectors.providerFor', 'IPC', 'selectors:provider-for-url', 'Which NCP provider a page belongs to (src/providers/registry.js hosts) — decides whether a pick is offered as a provider selector', { tags: ['selectors', 'picker', 'providers'] }),
+  _c('selectors.assign',      'IPC', 'selectors:assign',           'Record a picked, live-checked input/send/reply selector in guardian\'s selector map (POST :7820/api/agents/:id/selectors, source picker); refused without evidence or with evidence from another provider\'s page', { tags: ['selectors', 'picker', 'guardian'] }),
 ];
 
 module.exports = {
@@ -240,6 +243,8 @@ module.exports = {
       'eros.behavior.plan',
       'lifecycle.ready',
       'nexus.status',
+      'selectors.assigned',        // v0.39.251 — SSE, a picked selector recorded by guardian
+      'selectors.assign.failed',   // v0.39.251 — SSE, refused here or by guardian (the reason travels with it)
     ],
     handles: [
       'orchestrator.shutdown',

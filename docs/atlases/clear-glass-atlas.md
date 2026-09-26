@@ -229,8 +229,10 @@ Full real chain traced and patched this pass, five files, not one:
 | 3.1.0 | 2026-09-01 | First real `.spec` authored, matching live code@3.1.0 exactly (no version bump required) |
 | 3.1.0 | 2026-09-19 | 13 new real gates added (`mesh.workflow.*`, `mesh.list.*`) — closes a real gap: AgentMesh's own 10-method automation engine had zero gate coverage despite already backing BrainOS's UI. No version bump — same real object, same real methods, just now also reachable |
 | 3.9.0 | 2026-09-22 (registry-components.js AND clear-glass.spec, confirmed) | **Correction to this atlas's own earlier claim:** an earlier pass of this atlas, built from an older snapshot, said `clear-glass.spec` was stale at v3.1.0/67 against a v3.9.0/79 `registry-components.js`. Re-checked directly against the current source: `clear-glass.spec` was already fixed the same day, its own `version_history` entry documenting the exact drift (plus `package.json` independently disagreeing too, reaching 3.8.0) and correcting all sources to 3.9.0. The lesson worth keeping, not the stale claim: this system had FOUR independent version fields disagreeing at once (`lib/version.js`, `main/index.js`'s `CG_VERSION`, `clear-glass.spec`, `package.json`) — a real, repeated pattern worth a structural fix, not just a one-time correction. |
+| 3.10.0 – 3.13.2 | 2026-09-23 – 2026-09-25 | **Not rowed here** — this table was not kept up through those releases. They are recorded in `clear-glass.spec`'s `version_history` and in the sections above/below (accounts, job intake, agent tabs, downloads/Library). |
+| 3.14.0 | 2026-09-25 (v0.39.251) | The element picker assigns provider selectors — see "The element picker assigns provider selectors" below. Versionium: see the spec entry's `versioniumCommitId`. |
 
-**Whether clear-glass reports to Versionium separately** — not confirmed this session.
+**Whether clear-glass reports to Versionium separately** — not confirmed this session. Releases are recorded in Versionium from outside (`versionium/lib/engine.js` `commit`), and the id goes in the spec entry.
 
 ---
 
@@ -255,3 +257,18 @@ Guardian writes each completed agent reply into the downloads index (`src/downlo
 `download-capture` attaches once per provider session — every window of a provider shares one session, and it used to add a listener per window — and resolves which agent tab a download came from.
 
 **☰ → 📚 Library (3.12.1, v0.39.240).** The Library window is also in Clear Glass's own ☰ menu (`renderer/browser.js`, `#bookmark-mgr-btn`), after History — the same window the tray opens (agentId `nexus-library`, `/ui/library/`).
+
+## The element picker assigns provider selectors (3.14.0, v0.39.251)
+
+Handoff 2026-09-25, step 1. Picking an element on a provider's page (◎ Element Picker, or the fallback picker) now offers it as that provider's **reply**, **input box** or **send button** in guardian's selector map (`guardian/lib/selector-map.js`, 0.39.249) — the map every userscript job reads, so the next job uses it without a release.
+
+| piece | where | what it does |
+|---|---|---|
+| pick report | `renderer/guardian-picker.js` (one added line) | on click, `dom:event` `guardian.picker.picked` with the picker's own xpath and the page URL. Nothing about the picker's look changed (test SA-06 diffs it against git HEAD). |
+| offer + UI | `renderer/selector-assign/selector-assign.{js,css}` | one area, one JS + one CSS, every rule under `#cg-selector-assign`. Only provider pages get an offer (`selectors:provider-for-url` → `src/providers/registry.js` hosts). Shows the selector, its matches and what it reads — outlined on the page — before anything is recorded; a failure shows why and every candidate tried, and cannot be assigned. |
+| live check | `renderer/selector-check.js` (injected into the page) | generates a stable selector and checks it the way the consumer uses it. **resp**: the userscript takes the LAST `querySelectorAll` match's `innerText`, so the last match must be the pick, matches must not nest, it must hold text, and a selector matching every reply beats a one-off; a pick on an older answer is refused. **input / send**: exactly one match, an editable box / a button (walks up from the inner `<p>` or the icon's `<path>`). Never builds on uuids, long digit runs, React ids, hashed classes (`css-9x8k2m`) or per-turn counters (`conversation-turn-6`); no `#id` for resp (an id names one reply). One reply on the page → `single` plus every passing candidate: no check can tell a per-reply selector from an every-reply one with one reply, so the person chooses. |
+| record | `src/providers/selector-assign.js`, IPC `selectors:assign` | refuses anything without evidence, with `matched < 1`, or with evidence taken on another provider's page; POSTs guardian `/api/agents/:id/selectors` with `source: 'picker'`; returns guardian's answer verbatim. SSE `selectors.assigned` / `selectors.assign.failed`. |
+
+**Found and fixed on the way.** guardian-picker's `getXPath()` writes a positional path such as `…/button/svg/path`; XPath in an HTML document does not match SVG elements by bare name, so a pick on a send button's icon could never resolve through `document.evaluate`. `selector-check.js` walks the positional form by `localName`. Separately, `src/dom/archaeology.js` `handlePick` called `Object.keys()` on a `Map`, so every unnamed pick was named `pick-1` and replaced the last one.
+
+**Proven.** Real Chromium 141 via Playwright: `tests/probe/selector-check-chromium.py` 10/10 on `tests/fixtures/chatgpt-like.html`, using guardian-picker's own `getXPath` and the userscript's own `_lastMatch` extracted from their files (includes: a reply appended after assignment is read by the same selector); `tests/probe/selector-assign-ui-chromium.py` 9/9, the area's whole flow against guardian's real selector map (served under `https://chatgpt.com/` by request routing, because the evidence URL must be a provider page). `tests/modules/test-cg-selector-assign.test.js` 10/10 runs both. **Not yet proven:** live on James's machine — a ChatGPT job's reply detected → `.response` → Library → Responses.

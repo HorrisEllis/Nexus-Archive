@@ -114,10 +114,16 @@ function createDispatcher(deps) {
   function _armCompletionWatch(job) {
     _clearCompletionWatch(job.id);
     _watchedJobs.set(job.id, job);
-    _completionWatch.set(job.id, setTimeout(() => {
+    const t = setTimeout(() => {
       _completionWatch.delete(job.id);
       _requeueOrFail(job, `no completion within ${_COMPLETION_TIMEOUT_MS}ms — real absence, not a guess`, _COMPLETION_TIMEOUT_MS);
-    }, _COMPLETION_TIMEOUT_MS));
+    }, _COMPLETION_TIMEOUT_MS);
+    // 0.39.248 — unref'd: the watchdog still fires in guardian (its HTTP server keeps
+    // the process up), but it no longer keeps a process alive on its own. It did:
+    // tests/dispatcher-stale-socket.test.js passed and then never exited, so the boot
+    // vitals check timed it out and reported it as a regression (same on 0.39.236).
+    if (t.unref) t.unref();
+    _completionWatch.set(job.id, t);
   }
 
   function _clearCompletionWatch(jobId) {

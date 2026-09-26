@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Guardian — ChatGPT v10.0
 // @namespace    nexus.guardian.chatgpt
-// @version      10.4.0
+// @version      10.5.0
 // @description  Guardian v10 — ChatGPT: full feature parity with Claude v10. IndexedDB
 //               kernel, SHA-256 dedup, intelligence injection, SEAM, NEXUS module,
 //               memory/RAID/self-heal hooks, structured output detection, tool intercept.
@@ -27,7 +27,7 @@ const CORTEX_URL  = 'http://127.0.0.1:3748';
 const INTELLIGENCE_URL = 'http://127.0.0.1:3753'; // intelligence is its own sovereign system (moved out of cortex 2026-09-19)
 const ORCH_URL    = 'http://127.0.0.1:9000';
 const PROVIDER    = 'chatgpt';
-const VERSION    = '10.4.0';
+const VERSION    = '10.5.0';
 // §P113: exponential backoff 3s→30s — eliminates SSE flood on disconnect
 const RECONNECT_MIN_MS = 3000;
 const RECONNECT_MAX_MS = 30000;
@@ -515,7 +515,24 @@ function _nexusAnchor(el) {
   }
   return { path: path.join(' > '), tag: el.tagName.toLowerCase(), attrs, textLen: (el.innerText || el.textContent || '').length, children: el.childElementCount };
 }
+// §SELECTOR-MAP 0.39.249 — guardian pushes GUARDIAN_SELECTORS on connect and on
+// every change (guardian/lib/selector-map.js). A key marked verified was checked
+// against a live page (the element picker, archaeology) and wins; the built-in
+// lookup below comes next; an unverified (seed) value is the last resort.
+let _nexusMap = null;
+function _lastMatch(sel) {
+  if (!sel) return null;
+  try { const all = document.querySelectorAll(sel); return all.length ? all[all.length - 1] : null; }
+  catch (_) { return null; }   // a bad selector from the map must not break the watch
+}
 function findResponseEl() {
+  const m = _nexusMap;
+  if (m && m.verified && m.verified.resp) { const el = _lastMatch(m.selectors.resp); if (el) return el; }
+  const builtIn = _builtInResponseEl();
+  if (builtIn) return builtIn;
+  return m ? _lastMatch(m.selectors && m.selectors.resp) : null;
+}
+function _builtInResponseEl() {
   // §LAST-ASSISTANT 0.39.238 — was one querySelector over
   // '[data-is-streaming="true"], [data-message-author-role="assistant"]:last-child, .text-streaming'.
   // querySelector returns the FIRST match in document order, and :last-child only
@@ -1229,6 +1246,9 @@ function _handleServerMessage(msg) {
     // before letting a real job's content go out.
     case 'GUARDIAN_PING':
       ncpPost(NCP_RESULT, { type:'GUARDIAN_PING_ACK', pingId:msg.pingId, tabId:MY_TAB, provider:PROVIDER });
+      break;
+    case 'GUARDIAN_SELECTORS':   // 0.39.249 — the provider's selector map (guardian/lib/selector-map.js)
+      if (msg.provider === PROVIDER && msg.selectors) { _nexusMap = { selectors: msg.selectors, verified: msg.verified || {}, source: msg.source || {} }; _log('info', 'Selector map', `resp ${msg.verified && msg.verified.resp ? 'verified' : 'unverified'} (${(msg.source||{}).resp || 'seed'})`); }
       break;
     case 'GUARDIAN_RELEASE': releaseTab(); break;
     case 'GUARDIAN_JOB':     // §ONE-TAB 0.39.247 — never overwrite a job mid-reply: that killed the

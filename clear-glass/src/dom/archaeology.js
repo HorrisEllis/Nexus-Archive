@@ -438,7 +438,7 @@ class DomArchaeology {
       pickId:    uuidv4(),
       agentId,
       nodeId,
-      name:      name || `pick-${Object.keys(this.picks).length + 1}`,
+      name:      name || `pick-${this.picks.size + 1}`,   // 0.39.251 — was Object.keys(Map) → always 0, every unnamed pick overwrote 'pick-1'
       meta,
       pickedAt:  Date.now(),
     };

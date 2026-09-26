@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        guardian
-    version:     3.9.5   # 0.39.244 PATCH — agentId jobs pass the shared-tab fail-fast; /events job frames carry payload+agentId; userscripts report the node anchor. Previous 3.9.4: 0.39.242 PATCH — jaa-store.js opts.settings:false. Previous 3.9.3: 0.39.241 PATCH — code-artifact.js: ARTIFACT_DIR honours the test sandbox / NEXUS_DATA_ROOT; no "not indexed" warning per reply when better-sqlite3 is simply absent
+    version:     3.11.0   # 0.39.249 MINOR — selector map: GET/POST /api/agents/:id/selectors, GUARDIAN_SELECTORS pushed on every NCP connect and change (lib/selector-map.js). Previous 3.10.0: 0.39.247 MINOR — one tab, one job at a time (userscript busy guard), every reply back (see CHANGELOG-0.39.247.md); this line was left at 3.9.5 while lib/version.js and registry-components.js moved, synced in 0.39.248. Previous 3.9.5: 0.39.244 PATCH — agentId jobs pass the shared-tab fail-fast; /events job frames carry payload+agentId; userscripts report the node anchor. Previous 3.9.4: 0.39.242 PATCH — jaa-store.js opts.settings:false. Previous 3.9.3: 0.39.241 PATCH — code-artifact.js: ARTIFACT_DIR honours the test sandbox / NEXUS_DATA_ROOT; no "not indexed" warning per reply when better-sqlite3 is simply absent
     foundation:  nexus-system-foundation@1.0.0
     port:        7820
     uuid:        nexus-guardian-v3-0000-2026-0615-jamesbrooks-001
@@ -348,3 +348,24 @@ spec:
       root from clear-glass/src/downloads/artifact-chat-index.js defaultRoot() instead of each resolving the COS
       compartment themselves; Clear Glass's readers use the same call. The reply record is unchanged: raw.agentId and
       raw.jobId, now also lifted into first-class agent_id/job_id by the index. No route or event change.
+  built_2026_09_25_selector_map:
+    shipped: "0.39.249"
+    versionium: { "0.39.248": "vtm-eebbc621", "0.39.249": "vtm-a91834dc" }
+    asked_by: James — "i want to have the element picker, aware of the cleardriver and userscripts, usermesh … could copilot potentially be tasked to fixing it with the element picker?" / "lets do it."
+    found: >-
+      lib/agent-registry.js already held one selector map per provider (input/send/resp, history with
+      source and evidence) and the mesh's archaeology repair wrote to it; the mesh path is off by default and
+      the userscripts hard-coded their own selectors, so no repair reached the path jobs take.
+    rule: >-
+      lib/selector-map.js. A key is VERIFIED only if its last change came from a source that checked it on a
+      live page (picker, archaeology); a claimed live check without evidence { url, matched>=1 } is refused;
+      copilot may propose but is never verified. GUARDIAN_SELECTORS is pushed to a tab on every NCP connect
+      (before queued jobs flush) and to every open tab of the provider on every change.
+      GET/POST /api/agents/:id/selectors. Userscript precedence: verified map > built-in > seed.
+    also_0_39_248: >-
+      lib/dispatcher.js _armCompletionWatch's per-job watchdog timer is unref'd — it kept
+      tests/dispatcher-stale-socket.test.js alive, which the boot vitals check reported as a regression.
+    open: >-
+      registry-components / interaction-contract entries for the two routes; the other userscripts
+      (claude, gemini, perplexity, deepseek) do not read the map yet.
+    tests: tests/modules/test-selector-map.test.js 15/15 (mutation-checked).

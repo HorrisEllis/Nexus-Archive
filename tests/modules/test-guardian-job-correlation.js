@@ -134,10 +134,10 @@ async function main() {
         : (/:last-child/.test(sel) ? first : null),       // one wrapper per turn: EVERY message is :last-child, the first wins
       querySelectorAll: (sel) => /data-message-author-role="assistant"/.test(sel) ? [first, second] : [],
     });
-    const run = (streaming) => new Function('document', `${extractFn(src, 'findResponseEl')}; return findResponseEl();`)(doc(streaming));
+    const run = (streaming) => new Function('document', `let _nexusMap = null; ${extractFn(src, '_lastMatch')}\n${extractFn(src, '_builtInResponseEl')}\n${extractFn(src, 'findResponseEl')}; return findResponseEl();`)(doc(streaming));
     check('chatgpt: findResponseEl returns the LAST assistant message, not the first', run(false) === second, run(false) && run(false).id);
     check('chatgpt: …and the streaming element while a reply is still being written', run(true) === streamingEl);
-    const none = new Function('document', `${extractFn(src, 'findResponseEl')}; return findResponseEl();`)({ querySelector: () => null, querySelectorAll: () => [] });
+    const none = new Function('document', `let _nexusMap = null; ${extractFn(src, '_lastMatch')}\n${extractFn(src, '_builtInResponseEl')}\n${extractFn(src, 'findResponseEl')}; return findResponseEl();`)({ querySelector: () => null, querySelectorAll: () => [] });
     check('chatgpt: …and null (not a throw) on a page with no messages', none === null);
   }
 

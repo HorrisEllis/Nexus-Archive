@@ -646,6 +646,7 @@
         return;
       }
       stopPicker(true);
+      try { window.__cg?.send('dom:event', { type: 'guardian.picker.picked', xpath: _currentFp.xpath, selector: _currentFp.selector, url: window.location.href }); } catch (_) {}  // 0.39.251 — Clear Glass selector-assign offer; no visual change
       openPopup(_currentFp, e.clientX, e.clientY);
     }, { signal: sig, capture: true });
 

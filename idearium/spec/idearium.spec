@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        idearium
-    version:     4.3.1   # §0.39.244 (PATCH) — the Agent tab's live feed of the provider tab
+    version:     4.5.0   # §0.39.248 (MINOR, new route) — sync only: 0.39.245 (spec-engine manifest, 4.4.0) and 0.39.246 (responses to the downloads manager, repo-import graphs, 4.5.0) bumped idearium/package.json alone; this, index.js and lib/version.js stayed at 4.3.1.
                          # (DOM mutations, the reply's node anchor, stages, streaming text) via
                          # guardian-stream onFeed → os.broadcast (SSE only); late-reply lookup
                          # takes the guardian jobId. Previous — 4.3.0 §0.39.241 (MINOR, two new routes) — GET/POST /api/repos/:uuid/agent/late:

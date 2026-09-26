@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        clear-glass
-    version:     3.13.2
+    version:     3.14.0
     foundation:  nexus-system-foundation@1.1.0
     port:        7702
     uuid:        nexus-clear-glass-v1-0000-2026-0901-jamesbrooks-001
@@ -45,6 +45,8 @@ spec:
       - 'eros.behavior.plan'
       - 'lifecycle.ready'
       - 'nexus.status'
+      - 'selectors.assigned'        # 0.39.251 — SSE: a picked selector guardian recorded
+      - 'selectors.assign.failed'   # 0.39.251 — SSE: refused here or by guardian, reason included
     handles:
       - 'orchestrator.shutdown'
       - 'cortex.raid.decide'
@@ -56,7 +58,7 @@ spec:
       returns: "Full clear-glass component registry — 79 real components as of 2026-09-22 (was 67 at 2026-09-01)"
 
   handshake:
-    components_count: 102   # §2026-09-22 — was 67 (stale since 2026-09-01); autofill's 7 real
+    components_count: 104   # 0.39.251 — +2 (selectors.providerFor, selectors.assign). §2026-09-22 — was 67 (stale since 2026-09-01); autofill's 7 real
                             # IPC methods (shipped 2026-09-19, never registered) and screen-qa's
                             # 5 (this session) both landed in registry-components.js with zero
                             # entries here — checked directly against the live registry export,
@@ -75,6 +77,7 @@ spec:
       - background-tabs
       - autofill    # §2026-09-22 — real since 2026-09-19, only registered this session
       - screen-qa   # §2026-09-22 — new this session
+      - selectors   # 0.39.251 — element picker assigns provider selectors
     note: >
       Every component is transport IPC, not HTTP — clear-glass is an
       Electron shell, and its real "routes" are ipcMain.handle() channels
@@ -83,6 +86,28 @@ spec:
       HTTP method/path pairs for these would misrepresent the transport.
 
   modules:
+    - id: selector-assign
+      path: clear-glass/src/providers/selector-assign.js · renderer/selector-check.js · renderer/selector-assign/
+      description: >
+        NEW 0.39.251 (handoff 2026-09-25 step 1) — the element picker assigns a
+        provider's input / send / reply selector. guardian-picker.js reports each
+        pick (dom:event guardian.picker.picked, one added line, look untouched);
+        on a provider page (src/providers/registry.js hosts) the selector-assign
+        area offers "This is <provider>'s reply · input · send". renderer/
+        selector-check.js, injected into the page, generates a stable selector
+        (data-* > hand-written id > role/aria/name/placeholder > classes; uuids,
+        digit runs, React ids, hashed classes, per-turn counters never used; no
+        #id for resp) and checks it the way the userscript reads it — resp: the
+        LAST querySelectorAll match is the pick, matches don't nest, it holds
+        text, and a selector matching every reply beats a one-off; an older answer
+        is refused; one reply on the page returns single + every passing
+        candidate for the person to choose. input/send: exactly one match,
+        editable / a button. Shown and outlined before anything is recorded.
+        src/providers/selector-assign.js refuses anything without evidence or
+        with evidence taken on another provider's page, then POSTs guardian
+        /api/agents/:id/selectors (source picker) and returns guardian's answer
+        verbatim. IPC selectors:provider-for-url, selectors:assign.
+
     - id: registry-components
       path: clear-glass/registry-components.js
       description: >
@@ -281,6 +306,30 @@ spec:
         opened: 2026-09-25
 
   version_history:
+    - version: 3.14.0
+      date: 2026-09-25
+      summary: >-
+        MINOR (v0.39.251) — handoff 2026-09-25 step 1: the element picker assigns
+        selectors (see modules: selector-assign). NEW renderer/selector-check.js,
+        renderer/selector-assign/{selector-assign.js,.css} (one JS + one CSS,
+        every rule under #cg-selector-assign), src/providers/selector-assign.js,
+        IPC selectors:provider-for-url + selectors:assign, SSE selectors.assigned /
+        selectors.assign.failed; browser.html loads the area; browser.js mounts it
+        and offers on guardian.picker.picked and on the fallback picker's
+        dom:pick-result (which now carries xpath + url in getXPath's format).
+        guardian-picker.js: one line added (the pick report), nothing else changed.
+        FIXED on the way: (1) guardian-picker's xpath through an svg (the send
+        icon — the usual way a send button is clicked) never resolves through
+        document.evaluate in an HTML document; selector-check walks the positional
+        form by localName. (2) src/dom/archaeology.js handlePick named every
+        unnamed pick 'pick-1' (Object.keys on a Map). PROVEN in real Chromium 141:
+        tests/probe/selector-check-chromium.py 10/10 on tests/fixtures/chatgpt-like.html
+        (guardian-picker's own getXPath, the userscript's own _lastMatch — a new
+        reply is read by the assigned selector); tests/probe/selector-assign-ui-chromium.py
+        9/9 (the area's whole flow against guardian's real selector map);
+        tests/modules/test-cg-selector-assign 10/10. NOT YET PROVEN: live on James's
+        machine (a ChatGPT job's reply detected → .response → Library → Responses).
+      versioniumCommitId: vtm-f0839dcd
     - version: 3.13.2
       date: 2026-09-25
       summary: >-

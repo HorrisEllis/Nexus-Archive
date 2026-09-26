@@ -238,3 +238,7 @@ The shared tab still serves a repo job when there's evidence the repo tab isn't 
 ## A reply watcher is never silent (3.9.1, v0.39.238)
 
 When a userscript's `findResponseEl()` finds no reply element, the watch now reports a `no-reply-element` progress stage after 15 s and fails the job loudly at the no-reply deadline, naming selector drift. It used to poll forever with nothing in the log — the "submitted, then silence" of the 2026-09-25 run. ChatGPT's `findResponseEl()` returns the streaming element, else the last assistant message; it used to return the first `:last-child` match or nothing.
+
+## One selector map per provider (3.11.0, v0.39.249)
+
+Where a provider's input box, send button and reply live is one map, held by `lib/agent-registry.js` and served by `lib/selector-map.js`. Every NCP connect pushes `GUARDIAN_SELECTORS` to that tab; every change (`POST /api/agents/:id/selectors`) is pushed to all of that provider's open tabs, so the next job uses it. A key counts as **verified** only when its last change came from a live-checked source (the Clear Glass element picker, archaeology) with evidence; copilot may propose, never verify. `userscript-chatgpt.js` 10.5.0 uses a verified value first, then its own built-in lookup, then the unverified seed. Versionium: 0.39.248 `vtm-eebbc621`, 0.39.249 `vtm-a91834dc`.

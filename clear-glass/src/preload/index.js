@@ -310,6 +310,12 @@ contextBridge.exposeInMainWorld('ClearGlass', {
     deploy:(providerId)        => ipcRenderer.invoke('providers:deploy',{ providerId }),
   },
 
+  // §SELECTOR-ASSIGN 0.39.251 — element picker → guardian's selector map.
+  selectors: {
+    providerFor: (url)     => ipcRenderer.invoke('selectors:provider-for-url', { url }),
+    assign:      (payload) => ipcRenderer.invoke('selectors:assign', payload),
+  },
+
   // ── Userscripts ──────────────────────────────────────────────────────
   userscripts: {
     list:    (filter)           => ipcRenderer.invoke('userscripts:list',   filter || {}),

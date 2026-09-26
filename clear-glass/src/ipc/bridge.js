@@ -815,6 +815,22 @@ class IpcBridge {
     // Providers
     ipcMain.handle('providers:list',  async ()    => this.providerHost?.list());
 
+    // §SELECTOR-ASSIGN 0.39.251 — the element picker assigns a provider's
+    // input/send/reply selector (handoff 2026-09-25 step 1). The renderer has
+    // already checked the selector on the live page; src/providers/selector-assign.js
+    // validates that evidence and records it through guardian's own route.
+    // Both outcomes go on the bus, so a refusal is as visible as a success.
+    ipcMain.handle('selectors:provider-for-url', async (e, d) => require('../providers/selector-assign').providerForUrl(d && d.url));
+    ipcMain.handle('selectors:assign', async (e, d) => {
+      const r = await require('../providers/selector-assign').assign(d || {});
+      this.sse?.emit(r.ok ? 'selectors.assigned' : 'selectors.assign.failed', {
+        provider: d && d.provider, key: d && d.key, selector: d && d.selector,
+        url: d && d.evidence && d.evidence.url, error: r.error || null,
+        changed: r.guardian ? r.guardian.changed : null, pushedToTabs: r.guardian ? r.guardian.pushedToTabs : null, ts: Date.now(),
+      });
+      return r;
+    });
+
     // Userscripts
     ipcMain.handle('userscripts:list',   async (e, d) => this.userscripts?.list(d));
     ipcMain.handle('userscripts:inject', async (e, d) => this.userscripts?.inject(d.agentId, d.scriptId));

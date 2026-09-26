@@ -611,6 +611,8 @@ const ncp = createNCPServer({
       global._ncpLastLog[_key] = _now;
     }
     bus.emit('guardian.provider.connected', { provider, tabId });
+    // 0.39.249 — the tab learns the current selector map before any job arrives.
+    try { require('./lib/selector-map').pushToTab(ncp, _agentRegistry, provider, tabId); } catch (e) { console.warn(`[guardian] selector map not pushed to ${provider}/${tabId}: ${e.message}`); }
     flushQueuedJobs(provider);
   },
   onDisconnect: ({ provider, tabId }) => {
@@ -1709,6 +1711,27 @@ function handleExtendedRoutes(req, res, url, method) {
   }
 
   // ── POST /queue/enqueue — add item to physical queue ────────────────────────
+  // §SELECTOR-MAP 0.39.249 — one map per provider of where input/send/reply live.
+  // GET reads it (each key marked verified or not); POST assigns — from the Clear
+  // Glass element picker or archaeology (both must carry live-check evidence) —
+  // and pushes it to every open tab of that provider at once.
+  {
+    const m = url.pathname.match(/^\/api\/agents\/([a-z0-9-]+)\/selectors$/);
+    if (m && method === 'GET') {
+      const map = require('./lib/selector-map').mapFor(_agentRegistry, m[1]);
+      pRes(res, map ? 200 : 404, map ? { ok: true, ...map } : { ok: false, error: `unknown provider: ${m[1]}` });
+      return true;
+    }
+    if (m && method === 'POST') {
+      bodyJ(req).then(body => {
+        const r = require('./lib/selector-map').assign(_agentRegistry, ncp, m[1], body.selectors, { source: body.source, evidence: body.evidence });
+        if (r.ok) { bus.emit('guardian.selectors.assigned', { provider: m[1], source: body.source, keys: Object.keys(body.selectors || {}), pushedToTabs: r.pushedToTabs }); console.log(`[guardian] selector map for ${m[1]} ${r.changed ? 'updated' : 'unchanged'} by ${body.source} — pushed to ${r.pushedToTabs} tab(s)`); }
+        pRes(res, r.ok ? 200 : 400, r);
+      }).catch(e => pRes(res, 400, { ok: false, error: e.message }));
+      return true;
+    }
+  }
+
   if (method==='POST' && url.pathname==='/queue/enqueue') {
     bodyJ(req).then(body => {
       const { content, ext, provider, priority, tags, source } = body;

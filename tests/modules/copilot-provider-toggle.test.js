@@ -174,8 +174,14 @@ test('T-017', 'the real bypass calls dispatchToNcpAgent/dispatchToOllama directl
 
 test('T-018', 'a failed direct dispatch fails honestly (502, real error) — never silently falls through to the lifeline-routed path, which would recreate the exact "toggle does something else" bug', () => {
   const idx = SRC.indexOf("body.backend === 'guardian' || body.backend === 'ollama'");
-  const block = SRC.slice(idx, idx + 900);
+  // 0.39.248 — was SRC.slice(idx, idx + 900): the block's comments grew past 900
+  // characters, so this failed on correct code (a boot "VITALS CHECK FAILED" item
+  // since at least 0.39.236). Read to the block's own end instead.
+  const end = SRC.indexOf('\n      return;\n    }', idx);
+  assert.ok(idx > 0 && end > idx, 'direct-dispatch block not found');
+  const block = SRC.slice(idx, end);
   assert.ok(/json\(res, 502,/.test(block));
+  assert.ok(!/_lifeline\.route\(/.test(block), 'the direct block must never fall through to lifeline.route()');
 });
 
 test('T-019', 'menu.js sends backend and agent explicitly on every _copilotPrompt call, activating the real bypass when toggled away from copilot', () => {
