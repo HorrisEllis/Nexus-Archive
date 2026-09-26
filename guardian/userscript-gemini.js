@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Guardian — Gemini v10.0
 // @namespace    nexus.guardian.gemini
-// @version      10.4.0
+// @version      10.7.0
 // @description  Guardian v10 — Gemini: protocol parity with Claude/ChatGPT v10 (NCP
 //               handshake, IndexedDB kernel, SHA-256 dedup, tab-claim, SEAM jobs,
 //               intelligence injection, usage detection) built around Gemini's actual
@@ -29,7 +29,7 @@ const CORTEX_URL  = 'http://127.0.0.1:3748';
 const INTELLIGENCE_URL = 'http://127.0.0.1:3753'; // intelligence is its own sovereign system (moved out of cortex 2026-09-19)
 const ORCH_URL    = 'http://127.0.0.1:9000';
 const PROVIDER    = 'gemini';
-const VERSION     = '10.4.0';
+const VERSION     = '10.7.0';
 // §P113: exponential backoff 3s→30s — eliminates SSE flood on disconnect
 const RECONNECT_MIN_MS = 3000;
 const RECONNECT_MAX_MS = 30000;
@@ -253,7 +253,118 @@ function handleSyncRequest(msg) {
   let chat, error = null;
   try { chat = _nexusGetFullChat(); }
   catch (e) { chat = null; error = e.message; }
-  ncpPost(NCP_RESULT, { type: 'GUARDIAN_SYNC_RESULT', syncId: msg.syncId, provider: PROVIDER, tabId: MY_TAB, chat, error });
+  ncpPost(NCP_RESULT, { type: 'GUARDIAN_SYNC_RESULT', syncId: msg.syncId, provider: PROVIDER, tabId: MY_TAB, agentId: NEXUS_AGENT_ID, chat, error });
+}
+
+// §TRANSCRIPT 0.39.254 — James: "the download manager logging agent chats" …
+// "persistent memory for ai agents". When this chat settles (no change in <main>
+// for _TX_SETTLE_MS) the whole transcript — the same _nexusGetFullChat() a
+// GUARDIAN_SYNC_REQUEST reads — is sent to guardian as GUARDIAN_TRANSCRIPT, which
+// files it in Clear Glass's downloads index as one versioned record per chat
+// (guardian/lib/chat-transcripts.js). Sent only when it changed, and marked sent
+// only once guardian answered, so a closed guardian means "sent later", not lost.
+// Watches <main>, not <body>: this script's own panel lives in <body> and would
+// otherwise keep the chat from ever settling. A page that never goes quiet is
+// still sent every _TX_MAX_WAIT_MS. Read-only: never touches the composer.
+const _TX_SETTLE_MS = 5000, _TX_MAX_WAIT_MS = 60000;
+let _txTimer = null, _txFirstPending = 0, _txSentSig = null, _txObs = null, _txTarget = null;
+// 0.39.255 — each push says whether it came from a real quiet period (settled) and
+// whether the page says it is still generating: guardian completes a job from the
+// transcript only when settled and not generating. Both are part of the signature,
+// so a reply that stops generating without changing text is still sent once more.
+function _txSig(chat) {
+  const s = JSON.stringify(chat.messages || []);
+  let h = 0;
+  for (let i = 0; i < s.length; i++) { h = ((h << 5) - h + s.charCodeAt(i)) | 0; }
+  return `${chat.chatId}:${s.length}:${h}:${chat.settled ? 1 : 0}${chat.generating ? 1 : 0}`;
+}
+function _nexusPushTranscript(forced) {
+  _txTimer = null; _txFirstPending = 0;
+  let chat;
+  try { chat = _nexusGetFullChat(); } catch (_) { return; }
+  if (!chat || !chat.chatId || chat.chatId === 'home' || !Array.isArray(chat.messages) || !chat.messages.length) return;
+  chat.settled = !forced;
+  try { chat.generating = !!_isGenerating(); } catch (_) { chat.generating = null; }
+  const sig = _txSig(chat);
+  if (sig === _txSentSig) return;
+  ncpPost(NCP_RESULT, { type: 'GUARDIAN_TRANSCRIPT', provider: PROVIDER, tabId: MY_TAB, agentId: NEXUS_AGENT_ID, chat })
+    .then((r) => { if (r) _txSentSig = sig; })
+    .catch(() => {});
+}
+function _txSchedule() {
+  const now = Date.now();
+  if (!_txFirstPending) _txFirstPending = now;
+  if (_txTimer) clearTimeout(_txTimer);
+  const wait = Math.max(0, Math.min(_TX_SETTLE_MS, _txFirstPending + _TX_MAX_WAIT_MS - now));
+  const forced = wait < _TX_SETTLE_MS;   // the max wait ran out: the page never went quiet
+  _txTimer = setTimeout(() => _nexusPushTranscript(forced), wait);
+}
+function _nexusTranscriptAttach() {
+  const target = document.querySelector('main') || document.body;
+  if (!target || target === _txTarget) return;
+  if (_txObs) _txObs.disconnect();
+  _txTarget = target;
+  _txObs = new MutationObserver(_txSchedule);
+  _txObs.observe(target, { childList: true, subtree: true, characterData: true });
+  _txSchedule();
+}
+function _nexusTranscriptStart() {
+  if (typeof MutationObserver === 'undefined' || typeof document === 'undefined') return;
+  _nexusTranscriptAttach();
+  // SPA navigation can replace <main>; re-attach to the live one.
+  setInterval(() => { if (!_txTarget || !_txTarget.isConnected || _txTarget === document.body) _nexusTranscriptAttach(); }, 5000);
+}
+if (typeof document !== 'undefined' && typeof window !== 'undefined') {
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(_nexusTranscriptStart, 1500));
+  else setTimeout(_nexusTranscriptStart, 1500);
+}
+
+// §STREAM 0.39.256 — James: "supposed to stream it live as it happens." The reply
+// watch streams GUARDIAN_CHUNKs only when it finds the reply node, and on ChatGPT it
+// anchors on the composer (reply 0ch), so nothing ever streamed. The transcript
+// reader above reads the reply correctly, so while this tab holds a job it is read
+// every _TX_STREAM_MS and sent as GUARDIAN_CHUNKs for that job — the same message the
+// watch sends, so guardian, the /events feed and idearium's Agent tab need nothing new.
+// The reply is the assistant turn right after the job's own user turn (the first user
+// turn past those on the page when the job arrived that contains the prompt's head),
+// so an earlier answer is never streamed as this one. A rewrite that is not a
+// continuation (markdown re-rendered) is sent whole with reset: true. When the watch
+// streams for a job itself, this yields: one stream per job.
+const _TX_STREAM_MS = 500;
+let _txJob = null, _txWatchStreamed = null, _txStreamTimer = null;
+function _txJobStart(msg) {
+  let users = 0;
+  try { users = (_nexusGetFullChat().messages || []).filter(m => m.role === 'user').length; } catch (_) {}
+  const head = String((msg && (msg.prompt || msg.content)) || '').replace(/\s+/g, ' ').trim().slice(0, 80);
+  _txJob = { jobId: msg && msg.jobId, users, head, sent: '' };
+  if (!_txStreamTimer) _txStreamTimer = setInterval(_txStreamTick, _TX_STREAM_MS);
+}
+function _txReplyFor(job, messages) {
+  let seen = 0;
+  for (let i = 0; i < messages.length; i++) {
+    const m = messages[i];
+    if (!m || m.role !== 'user') continue;
+    if (seen++ < job.users) continue;
+    if (job.head && !String(m.text).replace(/\s+/g, ' ').includes(job.head)) continue;
+    const next = messages[i + 1];
+    return next && next.role === 'assistant' ? String(next.text) : '';
+  }
+  return null;   // this job's turn is not on the page yet
+}
+function _txStreamTick() {
+  const job = _txJob;
+  if (!job || currentJobId !== job.jobId) { clearInterval(_txStreamTimer); _txStreamTimer = null; _txJob = null; return; }
+  if (_txWatchStreamed === job.jobId) return;
+  let chat;
+  try { chat = _nexusGetFullChat(); } catch (_) { return; }
+  const text = _txReplyFor(job, (chat && chat.messages) || []);
+  if (!text || text === job.sent) return;
+  const grows = text.startsWith(job.sent);
+  const delta = grows ? text.slice(job.sent.length) : text;
+  job.sent = text;
+  let generating = null;
+  try { generating = !!_isGenerating(); } catch (_) {}
+  send({ type:'GUARDIAN_CHUNK', jobId: job.jobId, text: delta, full: text, reset: !grows, source: 'transcript', generating, provider: PROVIDER, chatUrl: location.href, ts: Date.now() });
 }
 
 // §ANCHOR 0.39.244 — James: "the cli in the agents tab needs to have a live feed of the
@@ -567,7 +678,7 @@ function startWatch(jobId, prompt, retryCount = 0) {
       if (text.length > _lastChunkLen) {
         const delta = text.slice(_lastChunkLen); _lastChunkLen = text.length;
         if (delta.length > 10 || /[.!?\n]/.test(delta)) {
-          send({ type:'GUARDIAN_CHUNK', jobId, text:delta, full:text, provider:PROVIDER, chatUrl:location.href, anchor:_nexusAnchor(el), mutations:_nexusMutations, ts:Date.now() });
+          _txWatchStreamed = jobId; send({ type:'GUARDIAN_CHUNK', jobId, text:delta, full:text, provider:PROVIDER, chatUrl:location.href, anchor:_nexusAnchor(el), mutations:_nexusMutations, ts:Date.now() });
           _streamToCortex(jobId, delta, text);
         }
       }
@@ -994,9 +1105,14 @@ function _handleServerMessage(msg) {
           error:`this ${PROVIDER} tab is still answering job ${currentJobId} — refused job ${msg.jobId} rather than overwrite it` });
         break;
       }
-      currentJobId = msg.jobId; handleJob(msg); break;
+      currentJobId = msg.jobId; _txJobStart(msg); handleJob(msg); break;
     case 'NEXUS_CONTEXT_RESPONSE': if (msg.context) _intelligenceCtx = msg.context; break;
     case 'GUARDIAN_SYNC_REQUEST': handleSyncRequest(msg); break;
+    // 0.39.255 — guardian read this job's reply from the chat transcript and completed it
+    // (guardian/lib/chat-transcripts.js). Stop watching so the tab can take the next job.
+    case 'GUARDIAN_JOB_DONE':
+      if (currentJobId && currentJobId === msg.jobId) { stopWatch(); _log('ok', 'Reply taken from the transcript', String(msg.jobId).slice(0, 8)); }
+      break;
     default: _log('debug', `NCP: ${msg.type}`);
   }
 }

@@ -2780,19 +2780,25 @@ function _agentFeedState(uuid) {
 function _agentFeedIn(p) {
   if (!p || !p.repoUuid) return;
   const st = _agentFeedState(p.repoUuid);
-  if (p.jobId && p.jobId !== st.jobId) { st.jobId = p.jobId; st.text = ''; st.textLen = 0; st.anchor = null; st.mutations = null; }
+  if (p.jobId && p.jobId !== st.jobId) { st.jobId = p.jobId; st.text = ''; st.textLen = 0; st.anchor = null; st.mutations = null; st.gate = null; }
   if (p.provider) st.provider = p.provider;
   if (p.anchor) st.anchor = p.anchor;
   if (p.mutations != null) st.mutations = p.mutations;
   if (p.generating != null) st.generating = p.generating;
-  if (p.event === 'chunk' && typeof p.text === 'string') { st.text += p.text; st.textLen = p.fullLen || st.text.length; }
+  // 0.39.256 — reset: the tab re-read the reply and it is not a continuation of what was shown; replace it
+  if (p.event === 'chunk' && typeof p.text === 'string') { st.text = p.reset ? p.text : st.text + p.text; st.textLen = p.fullLen || st.text.length; }
   st.updated = Date.now();
-  const ev = p.stage ? `${p.event}:${p.stage}` : p.event;
-  const detail = [p.how, p.reason, p.error, p.transport, p.event === 'chunk' ? `+${(p.text || '').length}ch → ${p.fullLen || st.text.length}ch` : null,
-    p.event === 'complete' && p.chars ? `${p.chars}ch` : null].filter(Boolean).join(' · ');
-  // A 'dom' pulse updates the live header; it is not worth a log row each second.
-  if (!(p.event === 'progress' && p.stage === 'dom')) {
-    st.rows.push({ ts: p.guardianTs || Date.now(), ev, detail, bad: p.event === 'error' || p.event === 'timeout' });
+  // 0.39.256 — guardian.job.gate (guardian/lib/gate-trail.js): the gate this job is at, and why it stopped there.
+  if (p.event === 'gate') st.gate = { label: p.label, state: p.state, detail: p.detail, fix: p.fix };
+  const ev = p.event === 'gate' ? `gate ${p.label || p.gate} · ${p.state}` : p.stage ? `${p.event}:${p.stage}` : p.event;
+  const detail = p.event === 'gate'
+    ? [p.detail, p.state !== 'passed' && p.fix ? `→ ${p.fix}` : null].filter(Boolean).join(' ')
+    : [p.gate ? `gate ${p.gate}` : null, p.how, p.reason, p.error, p.transport, p.event === 'chunk' ? `+${(p.text || '').length}ch → ${p.fullLen || st.text.length}ch${p.source === 'transcript' ? ' (transcript)' : ''}` : null,
+      p.event === 'complete' && p.chars ? `${p.chars}ch` : null].filter(Boolean).join(' · ');
+  // A 'dom' pulse updates the live header; it is not worth a log row each second. Streamed chunks every 500 ms
+  // show in the live text below, not as a row each.
+  if (!(p.event === 'progress' && p.stage === 'dom') && !(p.event === 'chunk' && p.source === 'transcript')) {
+    st.rows.push({ ts: p.guardianTs || Date.now(), ev, detail, bad: p.event === 'error' || p.event === 'timeout' || (p.event === 'gate' && p.state === 'failed') });
     if (st.rows.length > AGENT_FEED_MAX) st.rows.splice(0, st.rows.length - AGENT_FEED_MAX);
   }
   if (CURRENT_API_REPO && CURRENT_API_REPO.uuid === p.repoUuid) _agentFeedPaint(p.repoUuid);
@@ -2804,7 +2810,8 @@ function _agentFeedHtml(uuid) {
   const head = st.jobId
     ? `<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center"><span style="color:${st.generating ? 'var(--accent,#7dd3fc)' : 'inherit'}">${st.generating ? '● generating' : '○ idle'}</span>` +
       `<span>job ${escapeHtml(String(st.jobId).slice(0, 8))}</span>${st.provider ? `<span>${escapeHtml(st.provider)}</span>` : ''}` +
-      `<span>mutations ${st.mutations == null ? '—' : st.mutations}</span><span>reply ${st.textLen}ch</span></div>` +
+      `<span>mutations ${st.mutations == null ? '—' : st.mutations}</span><span>reply ${st.textLen}ch</span>` +
+      (st.gate ? `<span style="color:${st.gate.state === 'failed' ? 'var(--bad,#f87171)' : st.gate.state === 'passed' ? 'var(--ok,#4ade80)' : 'inherit'}">gate ${escapeHtml(st.gate.label || '')} · ${escapeHtml(st.gate.state || '')}</span>` : '') + `</div>` +
       `<div style="margin-top:3px"><span style="opacity:.55">anchor</span> ${a ? `<span title="${escapeHtml(attrs)}">${escapeHtml(a.path || a.tag)}</span> <span style="opacity:.55">${escapeHtml(attrs)} · ${a.children} children · ${a.textLen}ch</span>` : '<span style="opacity:.55">no reply node yet</span>'}</div>`
     : '<div style="opacity:.5">no job for this agent since this page opened — send a message to watch its tab</div>';
   const rows = st.rows.slice(-40).map(r => `<div style="${r.bad ? 'color:var(--bad,#f87171)' : ''}"><span style="opacity:.45">${new Date(r.ts).toLocaleTimeString('en-GB', { hour12: false })}</span> ${escapeHtml(r.ev)}${r.detail ? ` <span style="opacity:.6">${escapeHtml(r.detail)}</span>` : ''}</div>`).join('');
@@ -2881,7 +2888,7 @@ exchanges  ${st.exchanges || 0}</div>
       <textarea id="agent-input" class="field-textarea" rows="3" spellcheck="false" placeholder="ask this project's agent…   (/help for commands · ↑↓ history)"></textarea>
       <div style="margin-top:6px">
         <button class="tb-btn" onclick="agentSend()">send</button>
-        <span style="margin-left:10px;opacity:.5;font-size:9px">toolScope is not enforced on this path — the persona constrains behaviour, not capability</span>
+        <span style="margin-left:10px;opacity:.5;font-size:9px">/help for commands · /tools for what it can do · /debug when something is wrong</span>
       </div>
     </div>`;
 
@@ -2918,20 +2925,22 @@ async function agentForgeHat() {
   } catch (e) { toast(`forge failed: ${e.message}`, 'err'); }
 }
 
-async function agentSend() {
+// 0.39.257 — override { message, shown }: send `message` to the agent while the transcript shows `shown`
+// (/debug <question> sends an investigation directive; you see what you typed).
+async function agentSend(override = null) {
   if (!CURRENT_API_REPO) return;
   const ta = document.getElementById('agent-input');
-  const message = (ta?.value || '').trim();
+  const message = (override && override.message ? override.message : (ta?.value || '')).trim();
   if (!message) return;
   const uuid = CURRENT_API_REPO.uuid;
   const lines = _agentTranscript(uuid);
-  _agentInputHistory(uuid).push(message); AGENT_HIST_POS.delete(uuid);
-  if (message.startsWith('/')) { ta.value = ''; return agentCommand(message); }
+  if (!override) { _agentInputHistory(uuid).push(message); AGENT_HIST_POS.delete(uuid); }
+  if (!override && message.startsWith('/')) { ta.value = ''; return agentCommand(message); }
 
-  lines.push({ role: 'you', text: message });
+  if (!override) lines.push({ role: 'you', text: message });
   const line = { role: 'agent', text: 'thinking…', meta: null };
   lines.push(line);
-  ta.value = '';
+  if (!override && ta) ta.value = '';
   renderRepoAgent(CURRENT_API_REPO);
 
   // §LATE 0.39.241 — the reply can land in Clear Glass's Responses index
@@ -3049,13 +3058,23 @@ function _agentDetail(r) {
   if (c) {
     const files = Array.isArray(c.files) ? c.files : [];
     const ids = Array.isArray(c.chunkIds) ? c.chunkIds : [];
+    // 0.39.257 — the graph: connections for matched files, or the project map when nothing matched
+    const g = c.graph || null;
     const head = ids.length
-      ? `context: ${ids.length} chunk${ids.length === 1 ? '' : 's'} · ${files.length} file${files.length === 1 ? '' : 's'} · ${c.chars || 0} chars${c.dropped ? ` · ${c.dropped} dropped for budget` : ''}`
+      ? `context: ${ids.length} chunk${ids.length === 1 ? '' : 's'} · ${files.length} file${files.length === 1 ? '' : 's'} · ${c.chars || 0} chars${c.dropped ? ` · ${c.dropped} dropped for budget` : ''}${g && g.connections ? ` · graph: ${g.connections} connection${g.connections === 1 ? '' : 's'}` : ''}`
+      : g && g.overview ? `context: project map from the graph (${g.files} files) — the question named no code`
       : `context: none${c.reason ? ` — ${c.reason}` : ''}`;
     parts.push(`<details style="margin-top:4px;font-size:9px;opacity:.75"><summary style="cursor:pointer">${escapeHtml(head)}</summary>` +
       (files.length ? files.map(f => `<div style="padding-left:12px">· ${escapeHtml(f)}</div>`).join('') : '') +
       (ids.length ? `<div style="padding-left:12px;opacity:.6">${ids.map(escapeHtml).join(', ')}</div>` : '') +
       `</details>`);
+  }
+  // 0.39.257 — the tools the agent used this turn (copilot's tool loop), each ✓ or ✗ with its error
+  const T = Array.isArray(r.toolCalls) ? r.toolCalls : [];
+  if (T.length) {
+    const head = `tools used: ${T.length} call${T.length === 1 ? '' : 's'} — ${[...new Set(T.map(t => t.name))].join(', ')}${T.some(t => !t.ok) ? ` · ${T.filter(t => !t.ok).length} failed` : ''}`;
+    parts.push(`<details style="margin-top:4px;font-size:9px;opacity:.75"><summary style="cursor:pointer">${escapeHtml(head)}</summary>` +
+      T.map(t => `<div style="padding-left:12px;${t.ok ? '' : 'color:var(--bad,#f87171)'}">${t.ok ? '✓' : '✗'} ${escapeHtml(t.name)} <span style="opacity:.6">${escapeHtml(JSON.stringify(t.arguments || {}).slice(0, 160))}</span>${t.error ? ` — ${escapeHtml(t.error)}` : ''}${t.scopeRejected ? ' (outside the tool scope)' : ''}</div>`).join('') + `</details>`);
   }
   const I = r.injects;
   if (I) {
@@ -3178,26 +3197,65 @@ const AGENT_INPUT_HIST = new Map();    // repoUuid -> [inputs]
 const AGENT_HIST_POS = new Map();
 function _agentInputHistory(uuid) { if (!AGENT_INPUT_HIST.has(uuid)) AGENT_INPUT_HIST.set(uuid, []); return AGENT_INPUT_HIST.get(uuid); }
 
+// 0.39.257 — James: "need the commands as user friendly as possible", "/help and tool awareness to help".
+// Grouped by what you want to do, each with what it does in plain words; aliases and a closest-match suggestion
+// for a typo (agentCommand below). Plain text is always a question for the agent.
 const AGENT_CLI_HELP = [
-  '/help                         this list',
-  '/status                       hat, compartment, index, mode, learned, exchanges',
-  '/hat                          the full persona this agent is sent',
-  '/forge                        forge this repo\'s agent (hat) if it has none',
-  '/memory [kind]                what the agent has learned',
-  '/learn <kind>: <text> [evidence: x]   teach it (kind default: correction)',
-  '/forget <id-prefix>           remove one observation',
-  '/provider [name]              which model wears the hat (auto = copilot, ollama, chatgpt, claude, gemini, deepseek, perplexity)',
-  '/model [name|default]         which installed Ollama model answers when ollama wears the hat (no name: list them)',
-  '/mode review|auto             where agent code goes: waits for you, or written on arrival',
-  '/injects [status]             list .inject nodes',
-  '/inject <path>                open the editor on a new write to <path>',
-  '/open <id-prefix>             open an inject in the editor',
-  '/apply <id> [--force]   /reject <id>   /revert <id> [--force]',
-  '/context on|off               retrieval of repo chunks for your prompts',
-  '/history [n]                  this compartment\'s logged exchanges',
-  '/export   /import <path>      the agent as .agent + .hat node files',
-  '/clear                        clear this transcript',
+  'Type anything to ask this project\'s agent. It reads this project\'s code and graph (context is on) and can use',
+  'every NEXUS tool — /tools lists them. Commands start with /.',
+  '',
+  'ASK & INVESTIGATE',
+  '  /debug                        what is wrong? syntax, broken imports, recent failures, and the intelligence system',
+  '  /debug <question>             the agent investigates, using the intelligence system and this project\'s files',
+  '  /tools [words]                what the agent can do, grouped — e.g. /tools cos   /tools debug',
+  '  /scope all|project            which tools it may use: all (default) or this project\'s own set',
+  '  /graph [file]                 how the project connects; with a file, what it imports and what imports it',
+  '  /context on|off               include this project\'s code and graph with your questions (on by default)',
+  '',
+  'RUN & CHECK',
+  '  /run   /test                  run this project in a COS branch (same as the Run button)',
+  '  /diagnose                     verification + scan (same as the Diagnose button)',
+  '',
+  'THE AGENT',
+  '  /status                       hat, compartment, index, provider, tools, learned, exchanges',
+  '  /provider [name]              who answers: ollama, copilot (auto), or a browser agent (chatgpt, claude, …)',
+  '  /model [name|default]         which Ollama model answers when ollama does (no name: list them)',
+  '  /hat   /forge                 see its persona · create its hat if it has none',
+  '  /memory [kind]                what it has learned',
+  '  /learn <kind>: <text> [evidence: x]   teach it (kinds: fact, convention, pitfall, correction)',
+  '  /forget <id>                  remove one thing it learned',
+  '  /history [n]   /export   /import <path>   /clear',
+  '',
+  'CODE IT WRITES',
+  '  /mode review|auto             its code waits for you (review) or is written on arrival (auto)',
+  '  /injects [status]   /inject <path>   /open <id>',
+  '  /apply <id> [--force]   /reject <id>   /revert <id> [--force]',
+  '',
+  '/help shows this · ↑↓ recalls what you typed · short forms: /? /h /st /t /dbg /hist · a mistyped command suggests the closest',
 ].join('\n');
+const AGENT_CLI_ALIASES = { '?': 'help', h: 'help', st: 'status', t: 'tools', tool: 'tools', dbg: 'debug', hist: 'history', ctx: 'context', diag: 'diagnose' };
+const AGENT_CLI_COMMANDS = ['help', 'debug', 'tools', 'scope', 'graph', 'context', 'run', 'test', 'diagnose', 'status', 'provider', 'model', 'hat', 'forge',
+  'memory', 'learn', 'forget', 'history', 'export', 'import', 'clear', 'mode', 'injects', 'inject', 'open', 'apply', 'reject', 'revert'];
+/** The closest known command to a typo (edit distance ≤ 2), or null. */
+function _agentClosest(cmd) {
+  const d = (a, b) => { const m = [...Array(b.length + 1).keys()]; for (let i = 1; i <= a.length; i++) { let prev = m[0]; m[0] = i;
+    for (let j = 1; j <= b.length; j++) { const t = m[j]; m[j] = Math.min(m[j] + 1, m[j - 1] + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1)); prev = t; } } return m[b.length]; };
+  let best = null, bd = 3;
+  for (const c of AGENT_CLI_COMMANDS) { const x = d(cmd, c); if (x < bd) { bd = x; best = c; } }
+  return best;
+}
+const AGENT_DEBUG_DIRECTIVE = (q) => `Debug this: ${q}\n\nInvestigate before answering. Use the intelligence system (intelligence_query, nexus_intelligence, diagnose, fault_log) and this project's own files (read_file, search_files, file_tree). Say what you checked, what you found, the evidence (file:line or the tool result), and the fix.`;
+function _agentToolsText(r) {
+  const byGroup = new Map();
+  for (const t of r.tools || []) { if (!byGroup.has(t.groupTitle)) byGroup.set(t.groupTitle, []); byGroup.get(t.groupTitle).push(t); }
+  const out = [];
+  for (const [title, list] of byGroup) {
+    out.push(title.toUpperCase());
+    for (const t of list) out.push(`  ${t.inScope ? ' ' : '✗'} ${t.name.padEnd(30)} ${t.summary}${t.use ? `\n      when: ${t.use}` : ''}`);
+    out.push('');
+  }
+  return out.join('\n').trim();
+}
 
 function _cli(uuid, text, meta = null) { _agentTranscript(uuid).push({ role: 'cli', text, meta }); }
 
@@ -3214,13 +3272,39 @@ async function agentCommand(line) {
   const repo = CURRENT_API_REPO; if (!repo) return;
   const uuid = repo.uuid;
   _agentTranscript(uuid).push({ role: 'you', text: line });
-  const [cmd, ...rest] = line.slice(1).split(/\s+/);
-  const arg = line.slice(1 + cmd.length).trim();
+  const [cmd0, ...rest] = line.slice(1).split(/\s+/);
+  const arg = line.slice(1 + cmd0.length).trim();
+  const cmd = AGENT_CLI_ALIASES[(cmd0 || '').toLowerCase()] || cmd0;
   const force = /(^|\s)--force(\s|$)/.test(arg);
   const first = rest.filter(x => x !== '--force')[0];
   try {
     switch ((cmd || '').toLowerCase()) {
       case 'help': case '?': _cli(uuid, AGENT_CLI_HELP); break;
+      // 0.39.257 — tools, scope, debug, graph, run/test/diagnose
+      case 'tools': {
+        const r = await api(`/api/repos/${uuid}/agent/tools${arg ? `?q=${encodeURIComponent(arg)}` : ''}`, {}, 15000);
+        const head = `${r.count} of ${r.total} tools${arg ? ` matching "${arg}"` : ''} · scope ${r.scope}${r.scope === 'project' ? ' (✗ = outside it)' : ''} · ${r.enforced ? 'enforced' : `not enforced while ${r.provider} (copilot's own routing) answers — pick ollama or a browser agent with /provider`}`;
+        _cli(uuid, r.count ? _agentToolsText(r) : `no tool matches "${arg}" — try fewer words, or /tools for all`, head); break;
+      }
+      case 'scope': {
+        if (!['all', 'project'].includes(first)) { const st = await api(`/api/repos/${uuid}/agent/settings`); _cli(uuid, `tool scope: ${st.toolScope} — /scope all (every tool) or /scope project (this project's own set)`); break; }
+        await api(`/api/repos/${uuid}/agent/settings`, { method: 'POST', body: JSON.stringify({ toolScope: first }) });
+        _cli(uuid, first === 'all' ? 'the agent may use every NEXUS tool' : 'the agent may use this project\'s own tool set only (/tools shows which)'); break;
+      }
+      case 'debug': {
+        if (arg) { renderRepoAgent(repo); return agentSend({ message: AGENT_DEBUG_DIRECTIVE(arg), shown: line }); }
+        _cli(uuid, 'checking syntax, imports, recent failures and the intelligence system…'); renderRepoAgent(repo);
+        const r = await api(`/api/repos/${uuid}/agent/debug`, { method: 'POST', body: '{}' }, 90000);
+        _agentTranscript(uuid).pop();
+        _cli(uuid, r.sections.map(x => `${x.ok === true ? '✓' : x.ok === false ? '✗' : '·'} ${x.title}  (${x.source})\n${x.lines.map(l => `  ${l}`).join('\n')}`).join('\n\n'),
+          'debug report — /debug <question> to have the agent investigate'); break;
+      }
+      case 'graph': {
+        const r = await api(`/api/repos/${uuid}/agent/graph${arg ? `?file=${encodeURIComponent(arg)}` : ''}`);
+        _cli(uuid, r.text, arg ? `connections of ${r.file}` : `project map · ${r.files} files`); break;
+      }
+      case 'run': case 'test': { renderRepoAgent(repo); return repoRun(cmd); }
+      case 'diagnose': { renderRepoAgent(repo); return repoDiagnose(); }
       case 'status': {
         const st = await api(`/api/repos/${uuid}/agent`);
         const mode = (await api(`/api/repos/${uuid}/agent/settings`)).injectMode;
@@ -3233,7 +3317,7 @@ async function agentCommand(line) {
           `context     ${AGENT_NO_CONTEXT.has(uuid) ? 'off (this session)' : 'on'}`,
           `learned     ${st.memory?.total ?? 0}`,
           `exchanges   ${st.exchanges ?? 0}`,
-          `toolScope   ${st.toolScopeEnforced ? 'enforced' : 'NOT enforced on this path'}`,
+          `tools       ${st.toolScope === 'project' ? 'this project\'s own set' : 'every NEXUS tool'} · ${st.toolScopeEnforced ? 'enforced' : 'not enforced while copilot (auto) answers'} · /tools`,
         ].join('\n'));
         break;
       }
@@ -3315,7 +3399,7 @@ async function agentCommand(line) {
         _cli(uuid, `imported — ${r.restored} new, ${r.merged} merged${r.rejected ? `, ${r.rejected} rejected` : ''}`); break;
       }
       case 'clear': AGENT_TRANSCRIPT.set(uuid, []); break;
-      default: throw new Error(`unknown command /${cmd} — /help`);
+      default: { const near = _agentClosest(String(cmd).toLowerCase()); throw new Error(`unknown command /${cmd}${near ? ` — did you mean /${near}?` : ''} · /help lists them all`); }
     }
   } catch (e) { _agentTranscript(uuid).push({ role: 'cli — error', text: e.message }); }
   renderRepoAgent(repo);

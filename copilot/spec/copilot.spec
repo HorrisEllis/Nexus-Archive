@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        copilot
-    version:     3.5.2   # 0.39.253 PATCH — /api/prompt passes body.model to Ollama (was dropped). Previous 3.5.1: 0.39.244 PATCH — _tryGuardian says why it failed (error, jobId) instead of null; no shared-tab pre-check for a repo (agentId) job
+    version:     3.6.0   # 0.39.257 MINOR — /api/prompt body.tools runs the real tool loop (scope enforced, identity, repoDir) for ollama and browser agents; GET /api/tools/list, POST /api/tools/run; a failed round ends a tool loop as a failure with its jobId. Previous 3.5.2: 0.39.253 PATCH — /api/prompt passes body.model to Ollama (was dropped). Previous 3.5.1: 0.39.244 PATCH — _tryGuardian says why it failed (error, jobId) instead of null; no shared-tab pre-check for a repo (agentId) job
     foundation:  nexus-system-foundation@1.0.0
     port:        3750
     uuid:        nexus-copilot-v2-0000-2026-0627-jamesbrooks-001
@@ -304,3 +304,28 @@ spec:
       One link in the original injection-pipeline trace was never fully closed: how tool-runtime.js's own
       tool-guide text and analysis.js's contextText actually join for a live NCP session — both build real
       text, no direct call from one into the other was found. Named open, not guessed at.
+
+  built_2026_09_26_tools_for_callers:
+    shipped: "0.39.257"
+    versionium: "vtm-fc71e0ef"
+    asked_by: >-
+      James: "the toolscope for the agents tab. need the full capabilities … tool awareness" — "i want everything, at least for now."
+    change: >-
+      /api/prompt with backend guardian|ollama and body.tools { scope: 'all' | [names], identity, repoDir, maxIterations }
+      runs the real tool loop for that backend — tool-runtime runViaAgent (a browser agent; each round a guardian job) or
+      run (Ollama) — with allowedTools enforced by runToolLoop, the tool guide in the system prompt, the caller's identity
+      in place of "the NEXUS co-pilot", and context.repoDir, which the file tools use as their root
+      (lib/agent-tools/tool-root.js). Replies carry toolCallLog and tools {scope, iterations, calls}. Without body.tools
+      the route is unchanged. GET /api/tools/list (lib/agent-tools/tool-catalog.js: every registered tool in a named
+      group, plain summary, the guide's "when to use", ?q search, ?scope marks). POST /api/tools/run: one tool through
+      executeTool, refused outside the caller's scope.
+    fixed: >-
+      A round whose dispatch failed (e.g. its guardian job stopped at a gate) was returned by makeNcpCallModel as the text
+      "[NCP dispatch failed — no response — gap …]" and the loop ended with it as the ANSWER. Now the round is marked
+      failed with guardian's reason (ask.js's gate sentence) and jobId; runToolLoop ends the run as a failure; /api/prompt
+      answers 502 with the jobId (the caller's late watch needs it); lifeline's explicit-agent path returns the failure
+      instead of re-sending the same prompt as a new job. .injection nodes honour lib/test-sandbox.js
+      (COPILOT_INJECTION_DIR): lifeline-fluid-routing wrote them into the real tree on every run.
+    tests: >-
+      test-agent-tools-and-graph AT-03/04/05/13; test-copilot-tool-runtime 12, test-copilot-tools-guardian-ncp-mesh 9,
+      copilot-handshake-dispatch 12, test-lifeline-guardian-timeout 5 unchanged and passing.

@@ -76,6 +76,16 @@ function preloadShape() {
     text: 'The organism factory spawns organisms from genomes.\n```js\nexport function spawn(g) { return new Organism(g); }\n```', blocks: [{ index: 0, syntax: 'js', code: 'export function spawn(g) { return new Organism(g); }' }] });
   recordAgentResponse({ job: { id: 'a1b2c3d4-0000', provider: 'claude', agentId: 'repo-nexus-id-repo-eb5a5d56', prompt: 'summarise' }, text: 'Summary: three systems.', blocks: [] });
 
+  // 0.39.254 — chat transcripts, through guardian's real writer: one agent chat in two
+  // versions (must list as ONE row) and one of James's own chats (no agent).
+  const tx = require(path.join(ROOT, 'guardian/lib/chat-transcripts.js')).createChatTranscripts({ log: { log() {}, warn() {} } });
+  const chat1 = { provider: 'chatgpt', chatId: 'WEB:b4b1d92a-9efa', url: 'https://chatgpt.com/c/WEB:b4b1d92a-9efa',
+    messages: [{ role: 'user', text: 'what is the organism factory?' }, { role: 'assistant', text: 'It spawns organisms from genomes.' }] };
+  const t1 = tx.record({ provider: 'chatgpt', tabId: 't', agentId: 'repo-nexus-id-repo-0473b4ed', chat: chat1 });
+  const t2 = tx.record({ provider: 'chatgpt', tabId: 't', chat: { ...chat1, messages: [...chat1.messages, { role: 'user', text: 'and the kernel?' }, { role: 'assistant', text: 'The kernel owns the bus.' }] } });
+  const t3 = tx.record({ provider: 'claude', tabId: 'u', chat: { provider: 'claude', chatId: 'c0ffee', url: 'https://claude.ai/chat/c0ffee', messages: [{ role: 'user', text: 'remember my port map' }, { role: 'assistant', text: 'Noted: guardian 7820.' }] } });
+  if (!t1.recorded || !t2.recorded || t2.version !== 2 || !t3.recorded) throw new Error(`transcript seed refused: ${JSON.stringify([t1, t2, t3].map(t => t.reason || t.version))}`);
+
   const options = { listAccounts: () => [{ id: 'acc1', label: 'Work', agentKeys: ['claude', 'chatgpt'] }, { id: 'acc2', label: 'Personal', agentKeys: [] }] };
   const macroTool = { execute: async ({ action }) => action === 'list' ? { ok: true, macros: [{ name: 'login-chatgpt', urlPattern: 'chatgpt.com', steps: 4, runCount: 7, lastRunAt: now - 2 * H, params: ['email'] }] } : { ok: true } };
 
@@ -154,7 +164,7 @@ function preloadShape() {
   ok('download listeners moved here from the old dropdown, and add one', (await pg.evaluate(() => window.__calls.filter(c => c[0] === 'cg.downloads.registerListener').length)) === 1 && (await pg.$$('.dl-lrow')).length === 1);
   await pg.screenshot({ path: path.join(OUT, '01b-downloads-listeners.png'), fullPage: true });
 
-  for (const [id, sel, n] of [['responses', '.resp-row', 2], ['bookmarks', '.bm-row', 3], ['history', '.hi-row', 4], ['accounts', '.row', 2], ['passwords', '.empty', 1], ['autofill', '.row', 1], ['macros', '.row', 1]]) {
+  for (const [id, sel, n] of [['responses', '.resp-row', 4], ['bookmarks', '.bm-row', 3], ['history', '.hi-row', 4], ['accounts', '.row', 2], ['passwords', '.empty', 1], ['autofill', '.row', 1], ['macros', '.row', 1]]) {
     await pg.click(`.rail-item[data-id="${id}"]`);
     await pg.waitForSelector(`body[data-area="${id}"] ${sel}`, { timeout: 5000 }).catch(() => {});
     await pg.waitForTimeout(250);
@@ -165,10 +175,26 @@ function preloadShape() {
 
   await pg.click('.rail-item[data-id="responses"]');
   await pg.waitForSelector('.resp-row');
-  await pg.click('.resp-row:has-text("0473b4ed") button:has-text("View")');
+  await pg.click('.resp-row.resp-chat:has-text("0473b4ed") button:has-text("View")');
   await pg.waitForSelector('.modal');
   ok('Responses → View shows the reply and its code block in a Settings modal', /organism factory/.test(await pg.$eval('.modal', m => m.textContent)) && /js/.test(await pg.$eval('.modal', m => m.textContent)));
   await pg.screenshot({ path: path.join(OUT, '10-response-view.png') });
+  await pg.keyboard.press('Escape');
+
+  // 0.39.254 — chats: one row per chat, the conversation, and its versions
+  await pg.waitForTimeout(150);
+  const chatRows = await pg.$$eval('.resp-row.resp-transcript', rs => rs.map(r => r.textContent));
+  ok('Responses lists each chat once, at its newest version (2 chats, not 3 versions)', chatRows.length === 2 && chatRows.some(t => /v2 \(2 versions\)/.test(t) && /4 messages/.test(t)), JSON.stringify(chatRows));
+  ok('a chat keeps the agent it was first filed under; your own chat has none', chatRows.some(t => /0473b4ed/.test(t) && /v2/.test(t)) && chatRows.some(t => /\(no agent\)/.test(t) && /c0ffee/.test(t)), JSON.stringify(chatRows));
+  await pg.click('.resp-row.resp-transcript:has-text("v2") button:has-text("View")');
+  await pg.waitForSelector('.modal .resp-msg');
+  const msgs = await pg.$$eval('.modal .resp-msg', ms => ms.map(m => m.className.includes('resp-user') ? 'U' : 'A').join(''));
+  ok('View shows the conversation in order, prompts and replies', msgs === 'UAUA' && /The kernel owns the bus/.test(await pg.$eval('.modal', m => m.textContent)), msgs);
+  await pg.screenshot({ path: path.join(OUT, '12-chat-view.png') });
+  await pg.selectOption('.modal .resp-ver', { index: 1 });
+  await pg.waitForFunction(() => document.querySelectorAll('.modal .resp-msg').length === 2, null, { timeout: 5000 }).catch(() => {});
+  ok('picking v1 opens that version (2 messages), in one modal', (await pg.$$('.modal .resp-msg')).length === 2 && (await pg.$$('.modal')).length === 1, `${(await pg.$$('.modal .resp-msg')).length} msgs, ${(await pg.$$('.modal')).length} modals`);
+  await pg.screenshot({ path: path.join(OUT, '13-chat-v1.png') });
   await pg.keyboard.press('Escape');
 
   await pg.click('#close');

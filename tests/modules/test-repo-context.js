@@ -75,7 +75,9 @@ async function t(name, fn) {
   });
   await t('a question that names nothing in the code gets NO context and a reason, never invented chunks', () => {
     const r = RC.retrieve({ repoDir: A.dir, message: 'what is the weather like in Portland' });
-    assert.deepStrictEqual(r.chunks, []); assert.strictEqual(r.block, ''); assert.ok(/no chunk matches/.test(r.reason));
+    // 0.39.257 — with a graph.json the project map is given instead of nothing; still no chunk and no code is invented.
+    assert.deepStrictEqual(r.chunks, []); assert.ok(r.block === '' || (/^## This project, from its graph/.test(r.block) && !/```/.test(r.block)), r.block);
+    assert.ok(/no chunk matches/.test(r.reason));
     assert.ok(/names nothing searchable/.test(RC.retrieve({ repoDir: A.dir, message: 'is it ok?' }).reason));
   });
   await t('the character budget is HARD: chunk text never exceeds maxChars, and dropped chunks are counted', () => {

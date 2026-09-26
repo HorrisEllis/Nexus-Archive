@@ -97,7 +97,8 @@ const until = async (fn, ms = 3000) => { const t = Date.now() + ms; while (!fn()
   await test('AF-09', 'ncp-handler passes the page’s anchor/mutations/generating through progress and chunk', () => {
     const src = fs.readFileSync(path.join(ROOT, 'guardian/lib/ncp-handler.js'), 'utf8');
     assert.ok(/bus\.emit\('guardian\.job\.progress', \{ jobId: msg\.jobId, stage: msg\.stage, how: msg\.how, chatUrl: msg\.chatUrl, anchor: msg\.anchor \|\| null, mutations: msg\.mutations \?\? null, generating: msg\.generating \?\? null \}\)/.test(src));
-    assert.ok(/bus\.emit\('guardian\.job\.chunk', \{ jobId, text, full, provider, anchor: msg\.anchor \|\| null, mutations: msg\.mutations \?\? null \}\)/.test(src));
+    // 0.39.256 — the chunk also carries generating, reset and source (the 500 ms transcript streamer)
+    assert.ok(/bus\.emit\('guardian\.job\.chunk', \{ jobId, text, full, provider, anchor: msg\.anchor \|\| null, mutations: msg\.mutations \?\? null, generating: msg\.generating \?\? null, reset: !!msg\.reset, source: msg\.source \|\| null \}\)/.test(src));
   });
 
   // idearium: guardian-stream against a stub guardian /events.

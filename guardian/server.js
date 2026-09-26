@@ -314,13 +314,15 @@ const _LOG_MAX  = config.SISO_LOG_MAX;
 // emit sites know only the jobId). Compact on purpose: a chunk frame carries the delta and
 // the running length, never `full` — the whole reply again on every chunk.
 const _FEED_KEYS = ['jobId', 'provider', 'agentId', 'stage', 'how', 'reason', 'error', 'gate', 'status', 'chars',
-  'transport', 'chatUrl', 'anchor', 'mutations', 'generating', 'waitedMs', 'retry', 'needsUser'];
+  'transport', 'chatUrl', 'anchor', 'mutations', 'generating', 'waitedMs', 'retry', 'needsUser',
+  'reset', 'source', 'state', 'label', 'detail', 'fix'];   // 0.39.256 — chunk reset/source; guardian.job.gate frames (lib/gate-trail.js)
 function _feedFrame(frame, type, data) {
   if (!type || !type.startsWith('guardian.job.') || !data || typeof data !== 'object') return frame;
   try {
     const d = {};
     for (const k of _FEED_KEYS) if (data[k] !== undefined && data[k] !== null) d[k] = data[k];
-    if (typeof data.text === 'string' && type === 'guardian.job.chunk') d.text = data.text.slice(0, 2000);
+    // A reset chunk is the whole reply so far (0.39.256): keep its live end, which is what the Agent tab shows.
+    if (typeof data.text === 'string' && type === 'guardian.job.chunk') d.text = data.reset ? data.text.slice(-8000) : data.text.slice(0, 2000);
     if (typeof data.full === 'string') d.fullLen = data.full.length;
     if (!d.agentId && d.jobId) { try { const j = jobs.get(d.jobId); if (j && j.agentId) d.agentId = j.agentId; } catch (_) { /* jobs not initialised yet during early boot */ } }
     return { ...frame, data: d };
@@ -682,6 +684,19 @@ const _wakeLoop = _wakeLoopMod.createWakeLoop({
   log: (m) => console.log(`[guardian/wake] ${m}`),
 });
 bus.on('guardian.job.complete', (d) => { _wakeLoop.handleComplete({ jobId: d && (d.data ? d.data.jobId : d.jobId) }) /* 0.39.247 — SISOStream passes {type,data} */.catch((e) => console.warn(`[guardian/wake] ${e.message}`)); });
+
+// §BUILT 0.39.254 — every provider chat, logged into Clear Glass's downloads index as
+// one versioned transcript per chat (guardian/lib/chat-transcripts.js). Userscripts
+// push GUARDIAN_TRANSCRIPT when a chat settles; every /sync result is recorded too.
+// Read side: GET /api/chats[?agentId&provider&q], /api/chats/versions?key=, /api/chats/item/:id.
+// 0.39.255 — a job whose prompt is in a settled transcript, answered by the next turn, completes through the
+// same handler a userscript's GUARDIAN_COMPLETE takes (lazy, like _completeFromMesh above).
+// §BUILT 0.39.256 — every job's gate trail (lib/gate-trail.js): job.gates / job.gate from the bus, served on
+// GET /status/:jobId, said in ask.js's failures, emitted as guardian.job.gate for the Agent tab's feed.
+require('./lib/gate-trail.js').attach({ bus, jobs });
+const _chatTranscripts = require('./lib/chat-transcripts.js').createChatTranscripts({ bus, jobs, ncp,
+  complete: (job, text, chatUrl) => _handleNCPMessage({ type: 'GUARDIAN_COMPLETE', jobId: job.id, provider: job.provider, text, chatUrl, source: 'transcript' }) });
+_chatTranscripts.attach();
 
 // §BUILT 2026-09-11 — James: "persistent and doesn't leave until it's
 // delivered." createJobStore() (guardian/lib/jobs.js, this same pass)
@@ -2048,6 +2063,9 @@ function handleExtendedRoutes(req, res, url, method) {
       complete: job.status === 'complete' || job.status === 'done',
       provider: job.provider, command: job.command,
       ts: job.ts,
+      // 0.39.256 — where the job is: the gate it is at or stopped at, and the whole trail (lib/gate-trail.js)
+      gate: job.gate || null, gates: Array.isArray(job.gates) ? job.gates : [],
+      error: job.error || job.failReason || null,
     });
     return true;
   }
@@ -2225,6 +2243,7 @@ function handleExtendedRoutes(req, res, url, method) {
   // requestSync() (guardian/lib/chat-sync.js) does the real push/wait/
   // timeout round trip; this route is just the HTTP surface over it,
   // same shape as every other POST route here (bodyJ -> pRes).
+  if (_chatTranscripts.route(method, url, res, pRes)) return true;
   if (method==='POST' && url.pathname==='/sync') {
     bodyJ(req).then(async body => {
       const provider = body.provider;

@@ -460,6 +460,11 @@ async function _routeInner(prompt, opts = {}) {
       const { runViaAgent } = require('./tool-runtime');
       const dispatchToAgent = (fullPrompt, dispatchOpts) => _tryGuardian(fullPrompt, { ...opts, ...dispatchOpts, provider: explicitAgent, requestId });
       const loopResult = await runViaAgent(explicitAgent, dispatchToAgent, prompt, opts);
+      // 0.39.257 — a round that failed (its job stopped at a gate) is a failure with guardian's reason and the
+      // jobId, not an answer. Not re-sent below: the job exists and may still complete.
+      if (loopResult && loopResult.failed) {
+        return { ok: false, error: loopResult.error, jobId: loopResult.jobId || null, provider_used: explicitAgent, toolCallLog: loopResult.toolCallLog, requestId };
+      }
       const result = {
         ok: true, text: loopResult.text, confidence: 1,
         provider_used: explicitAgent, escalated: true,

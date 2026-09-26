@@ -269,3 +269,83 @@ A wake is the **agent** asking NEXUS something: the agent hint (`lib/wake-hint.j
 **Depends on reply detection.** A wake is answered when its job completes; on ChatGPT that needs the reply detected (the open break — 0.39.251's element picker is how it is fixed). A wake in a chat that was not a guardian job has no completion and is not answered here.
 
 Tests: `test-guardian-wake` 16/16 (WK-012, WK-017, WK-018 new/rewritten), `test-nexus-wake` NW-027 / NW-030 rewritten; each fix mutation-checked.
+
+## Every provider chat, logged as one versioned transcript (3.12.0, v0.39.254)
+
+James: *"we were working on getting the download manager logging agent chats"*, then *"… and the userscripts for my browser. i want nexus to help remember. persistent memory for ai agents."*
+
+**Before.** A chat was recorded only when a job **completed** (ncp-handler → response-sink / code-artifact). ChatGPT jobs do not complete while its reply goes undetected, and a chat James opens by hand is never a job. The page's full-chat reader (`_nexusGetFullChat`, used by `GUARDIAN_SYNC_REQUEST`) never depended on reply detection, but its answer went only to the `/sync` caller. `userscript-chatgpt`'s `chatId()` also stopped at the colon of `/c/WEB:<uuid>`, so every ChatGPT chat read as `WEB`.
+
+**Now.** `lib/chat-transcripts.js` is the one writer.
+
+| step | what happens |
+|---|---|
+| page | each provider userscript watches `<main>` (not `<body>`: its own panel lives there). When the chat has been quiet 5 s (or after 60 s at most) and the transcript changed, it sends `GUARDIAN_TRANSCRIPT` to `/result`. It is marked sent only once guardian answers, so a closed guardian means "sent later", not lost. |
+| also | every `GUARDIAN_SYNC_RESULT` (any `/sync` pull) is recorded; sync results now carry `agentId`. |
+| handler | ncp-handler only puts them on the bus: `guardian.ncp.transcript` / `guardian.ncp.sync_result`. |
+| whose | the tab's agent stamp → else the job that ran in that chat (`guardian.job.progress` carries its `chatUrl`; the job carries `agentId`) → else what the chat was already filed under → none = James's own chat. |
+| write | Clear Glass `artifact-chat-index.recordChat()`: one versioned record per chat; unchanged / contained-in-latest refused by name (Clear Glass atlas 3.15.0). Emits `guardian.chat.transcript.recorded`. |
+| recall | `GET /api/chats` (`?agentId ?provider ?q=` text recall `?limit`), `/api/chats/versions?key=provider:chatId`, `/api/chats/item/:id`. What an agent, co-pilot or idearium reads to remember. |
+
+Userscripts: chatgpt / claude 10.6.0, gemini / perplexity / deepseek 10.5.0 (`userscripts.yaml` synced; it had drifted to 10.1–10.2 and 1.0.0).
+
+**Limits, as they stand.** gemini / perplexity / deepseek's readers return the last reply only (`partial: true`), so each of their versions is one reply. userscript-claude's reader uses `human-turn-content` / `assistant-turn-content` / `.font-claude-message`, which has not been checked against today's claude.ai.
+
+Tests: `test-chat-transcripts` 20/20 (the real ncp-handler → bus → writer → index, the routes, the server wiring, every userscript, chatgpt `chatId`). TX-20 runs `tests/probe/transcript-push-chromium.py` 9/9 in real Chromium. 11 mutations, each caught by its own test.
+
+
+## A job completes from its chat transcript; repo jobs wear their repo hat (3.13.0, v0.39.255)
+
+James, after 0.39.254 worked live: *"the hat should be repo specific not builder. the agent tab, in idearium is looking for the hash"*
+
+**What the live run showed.**
+- **The reply was captured but the job never completed.** The ERAVOS agent's reply was in its chat transcript 12 s after dispatch, but job `cccaafb0` never completed (ChatGPT reply detection is still the open break). The Agent tab waits for a `.response` with that `job_id`, which is written only on completion, so it sat at "thinking…".
+- **The next job never went out.** `test` (`0c005d0b`) waited behind the stuck job in the one-job-per-tab pool.
+- **The chat was filed "(your chat)".** The job reported chat `/c/WEB:c5f7a5cc…`, but the transcript came from `/c/6ab7275b…`. `WEB:` is ChatGPT's temporary id, so matching by URL cannot work.
+- **The job wore `[hat: the_builder]`,** guessed from the prompt's words. It was typed above the repo hat that idearium had already put in the prompt.
+
+**Now.**
+
+| step | what happens |
+|---|---|
+| match | `chat-transcripts.matchJobs`: a user turn belongs to a job when it contains the job's whole prompt, whitespace-normalized; for prompts over 450 characters, its first 300 and last 150. The prompt is typed verbatim between the tools preamble / hat line and the agent hint. Prompts under 8 characters are ignored. Only same-provider jobs from the last 6 h count. |
+| file | the chat goes under the matched job's `agentId`, after the tab's own stamp |
+| gate | only a **settled** push (a real quiet period, not the 60 s max-wait) from a page that says it is **not generating**. Otherwise the completion is logged as withheld, with the reason. |
+| release | `GUARDIAN_JOB_DONE` goes to the tab first; it stops that job's watch, so the pool's next job is not refused |
+| complete | `_handleNCPMessage({ type: 'GUARDIAN_COMPLETE', source: 'transcript' })`: the one completion path. It writes the `.response` with `job_id` + `agentId` (which the Agent tab's `findLate` adopts), fires `guardian.job.complete` (idearium, pool, wake loop), then emits `guardian.job.completed_from_transcript`. |
+| guard | a late `GUARDIAN_ERROR` for a completed job is ignored, not turned into an error |
+| hat | `jobs.js _repoJobHat`: agentId `repo-<uuid>` gets the repo hat (`repo_<slug>`, from `lib/repo-hat.js`), with an **empty** persona because the persona is already in the prompt. No `[the_builder]` line. Other jobs keep the suggested hat. |
+
+Userscripts: chatgpt / claude 10.7.0, gemini / perplexity / deepseek 10.6.0. Each push carries `settled` and `generating`, and `GUARDIAN_JOB_DONE` stops only its own job.
+
+**Depends on** each userscript's `_isGenerating()`. ChatGPT's includes `[class*="loading"]`. If that reads true on an idle page, completion is withheld (logged `generating`), which is the old behaviour rather than a wrong reply.
+
+Tests: `test-chat-transcripts` 31/31, including an end-to-end run through the real handler to `lib/repo-agent findLate` and the Chromium probe 10/10. 12 mutations, each caught by its own test.
+
+## Errors name their gate; replies stream live (3.14.0, v0.39.256)
+
+James: *"supposed to stream it live as it happens. do you think a delay between gates would help? like even just 500 ms?"* / *"can we make the error specific to the gate? not just a generic error?"*
+
+**A delay between gates would not help.** The gates are sequential checks, and none of them races another. Nothing streamed because the reply watch only sends chunks once it finds the reply node, and on ChatGPT it was watching the composer (`… composer-parent.flex … 0ch`). The relay behind it (`guardian.job.chunk` → `/events` → idearium → Agent tab) already worked.
+
+**Streaming.** Every provider userscript now reads the reply from the chat transcript every **500 ms** while it holds a job, and sends `GUARDIAN_CHUNK { text: delta, full, reset, source: 'transcript' }`.
+- It is the assistant turn right after the job's own user turn, found by the prompt's head, so an earlier answer is never streamed as this job's.
+- A re-render that is not a continuation is sent whole with `reset`.
+- If the reply watch streams the job itself, the streamer stays quiet: one stream per job.
+
+**Gates** (`lib/gate-trail.js`):
+
+| # | gate | fails when | what the error says to do |
+|---|---|---|---|
+| 1 | create | the `.job` file cannot be written | check `guardian/data/jobs` |
+| 2 | tab | no provider tab is free (`queued`) | open the provider in Clear Glass or your browser |
+| 3 | ping | the tab does not answer (`ping_gate_failed`) | reload the tab |
+| 4 | deliver | the socket is stale (`stale_socket`) | reload the tab |
+| 5 | accept | the tab is mid-reply (`tab_busy`) | wait, or reload |
+| 6 | submit | no composer or send button (`submit`) | pick them with ◎ |
+| 7 | reply | no reply text read (`watch`, timeout) | pick the reply with ◎, or wait for the transcript |
+| 8 | complete | — | — |
+
+Each job carries `gates` (the trail) and `gate` (`describe()`: "stopped at gate 7/8 "reply appears" (chatgpt): … — …"). `GET /status/:jobId` serves both. `ask.js` failures and timeouts say the gate. A job the dispatcher marks `failed` now returns at once instead of after the caller's whole timeout. `guardian.job.gate` feeds the Agent tab.
+
+Tests: `test-live-stream-and-gates` 13/13, plus Chromium 8/8. 13 mutations, each caught.

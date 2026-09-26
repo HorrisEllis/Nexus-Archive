@@ -21,6 +21,7 @@
  */
 const assert = require('assert'), fs = require('fs'), os = require('os'), path = require('path'), http = require('http');
 const { execFileSync, spawnSync } = require('child_process');
+require('../../lib/test-sandbox.js').ensure();   // 0.39.255 — the sandbox rule (test-test-sandbox); this suite spawns only python probes and git
 const ROOT = path.resolve(__dirname, '..', '..');
 let passed = 0, failed = 0, skipped = 0;
 async function test(id, d, fn) {

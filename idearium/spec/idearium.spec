@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        idearium
-    version:     4.6.0   # §0.39.253 (MINOR, new route) — three-way agent backend switch (ollama/copilot/guardian, no checkbox), per-compartment Ollama model, GET /api/ollama/models. Previous 4.5.0: §0.39.248 (MINOR, new route) — sync only: 0.39.245 (spec-engine manifest, 4.4.0) and 0.39.246 (responses to the downloads manager, repo-import graphs, 4.5.0) bumped idearium/package.json alone; this, index.js and lib/version.js stayed at 4.3.1.
+    version:     4.7.0   # §0.39.257 (MINOR, new routes) — Agent tab: every tool (enforced), /tools /scope /debug /graph /run /test /diagnose, plain-language /help with aliases and closest-match; GET/POST /api/repos/:uuid/agent/tools|debug|graph. Previous 4.6.1: §0.39.256 (PATCH) — Agent tab live feed: streamed chunks build the reply live (reset replaces it), guardian.job.gate rows + the gate in the header. Previous 4.6.0: §0.39.253 (MINOR, new route) — three-way agent backend switch (ollama/copilot/guardian, no checkbox), per-compartment Ollama model, GET /api/ollama/models. Previous 4.5.0: §0.39.248 (MINOR, new route) — sync only: 0.39.245 (spec-engine manifest, 4.4.0) and 0.39.246 (responses to the downloads manager, repo-import graphs, 4.5.0) bumped idearium/package.json alone; this, index.js and lib/version.js stayed at 4.3.1.
                          # (DOM mutations, the reply's node anchor, stages, streaming text) via
                          # guardian-stream onFeed → os.broadcast (SSE only); late-reply lookup
                          # takes the guardian jobId. Previous — 4.3.0 §0.39.241 (MINOR, two new routes) — GET/POST /api/repos/:uuid/agent/late:
@@ -220,3 +220,49 @@ spec:
     open: Chromium click-through of the switch not run; copilot.spec is still not valid YAML (pre-existing).
     tests: tests/modules/test-repo-agent-provider.js 60/60 (18 new or rewritten).
     versionium: vtm-8b55aba2
+
+  built_2026_09_26_live_feed_gates:
+    shipped: "0.39.256"
+    versionium: "vtm-d2b95239"
+    asked_by: >-
+      James: "supposed to stream it live as it happens." / "can we make the error specific to the gate? not just a generic error?"
+    change: >-
+      The Agent tab's live feed (_agentFeedIn / _agentFeedHtml): a chunk with reset replaces the live reply instead of
+      appending (the 500 ms transcript streamer re-sends a re-rendered reply whole); streamed chunks (source transcript)
+      update the live text without a log row each; guardian.job.gate frames (guardian/lib/gate-trail.js) are rows —
+      "gate <label> · <state> <detail> → <fix>", failed in red — and the header shows the gate the job is at. No route or
+      contract change: the frames arrive through the existing idearium.repo.agent.feed relay.
+    tests: >-
+      tests/modules/test-live-stream-and-gates.test.js GS-10 runs the feed functions extracted from ui/js/app.js;
+      test-agent-feed AF-09 updated for the chunk's added fields.
+
+  built_2026_09_26_agent_tools_help_graph:
+    shipped: "0.39.257"
+    versionium: "vtm-fc71e0ef"
+    asked_by: >-
+      James: "the toolscope for the agents tab. need the full capabilities, with the /help and tool awareness to help. need
+      the commands as user friendly as possible. including debugging, using the intelligence system … also context on by
+      default and wire in the graph". Asked which tools: "i want everything, at least for now."
+    found: >-
+      The repo agent's dispatch (lib/repo-agent.js) sent copilot a plain prompt — no tool loop — so the agent had no tools
+      at all; its hat's 21-tool scope was listed but never used or enforced (the Agent tab said so). Context was already
+      on by default (retrieval each prompt), but a question naming no code ("hello") got nothing, and graph.json — built
+      by the import pipeline — was never read.
+    change: >-
+      lib/repo-agent.js: per-compartment toolScope 'all' (default) | 'project' (the hat's own list); every ollama or
+      browser-agent dispatch sends body.tools { scope, identity (the hat), repoDir, maxIterations 6 } so copilot runs the
+      real tool loop with the scope enforced; 'auto' (copilot's own cascade) is said to be unenforced. The reply carries
+      toolCalls (shown under the answer). listTools (copilot's catalog, scope-marked), debugReport (syntax via node
+      --check, unresolved imports from graph.json, this agent's failed exchanges with their gate sentence, and the
+      intelligence system: intelligence_query failures, fault_log for this agent, diagnose gaps — each section names its
+      source). lib/repo-context.js: matched chunks get "how these files connect"; nothing matched → the project map from
+      the graph (size, top folders, entry points, most depended-on). Routes GET agent/tools, POST agent/debug, GET
+      agent/graph; POST agent/settings toolScope. The Agent tab: /help regrouped in plain words (ask & investigate · run &
+      check · the agent · code it writes) with aliases (/? /h /st /t /dbg /hist) and a closest-match suggestion for a
+      typo; /tools [words], /scope all|project, /debug, /debug <question> (the agent investigates using the intelligence
+      system), /graph [file], /run /test /diagnose; tool calls under each answer; the context line says when the graph
+      was used.
+    tests: >-
+      tests/modules/test-agent-tools-and-graph.test.js 13/13 (C/D parts: a real repo through the repo layer and a stub
+      copilot on :3750; the CLI helpers run from app.js); test-repo-agent, test-repo-agent-provider, test-repo-context
+      updated for the intended changes. 13 mutations, each caught.

@@ -29,6 +29,8 @@
     { "method": "POST", "path": "/api/prompt/fulfill" },
     { "method": "POST", "path": "/api/prompt/stream" },
     { "method": "POST", "path": "/api/prompt/tools" },
+    { "method": "GET", "path": "/api/tools/list", "description": "0.39.257 — the tool catalog (lib/agent-tools/tool-catalog.js)" },
+    { "method": "POST", "path": "/api/tools/run", "description": "0.39.257 — one tool through executeTool; refused outside the caller's scope" },
     { "method": "POST", "path": "/bridge/deliver", "description": "REAL, LIVE REMNANT of the retired Bridge system — comment confirms 'Bridge :9999 routes requests here... tv-shell and Clear Glass both go through Bridge'. Bridge itself was retired; this receiving endpoint was not, and this reconciliation is not the place to remove it — flagging honestly rather than silently relabeling it as unrelated, which my first draft of this file incorrectly did before checking." },
     { "method": "ANY", "path": "/api/context/*" }
   ]

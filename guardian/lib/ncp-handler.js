@@ -159,7 +159,8 @@ function createNCPMessageHandler(deps) {
           // complete). Checked first: zero real strict-equality readers
           // of the old string anywhere in the codebase, safe rename.
           updateJob(jobId, { status: 'responding', lastChunk: Date.now() });
-          bus.emit('guardian.job.chunk', { jobId, text, full, provider, anchor: msg.anchor || null, mutations: msg.mutations ?? null });
+          // 0.39.256 — reset: this chunk replaces the reply so far (a re-render, not a continuation); source: 'transcript' when the userscript's 500 ms transcript streamer sent it
+          bus.emit('guardian.job.chunk', { jobId, text, full, provider, anchor: msg.anchor || null, mutations: msg.mutations ?? null, generating: msg.generating ?? null, reset: !!msg.reset, source: msg.source || null });
           cockpitBroadcast({ type: 'job.chunk', jobId, text, full, provider, ts: Date.now() });
 
           // ── Stream to cortex: batch before writing ────────────────────────
@@ -581,6 +582,14 @@ function createNCPMessageHandler(deps) {
 
       case 'GUARDIAN_ERROR':
       case 'NCP_ERROR': {
+        // 0.39.255 — a job that already completed (e.g. from its chat transcript,
+        // guardian/lib/chat-transcripts.js) keeps its answer: a late watch timeout
+        // or no-reply report from the tab is stale, and turning 'complete' into
+        // 'error' would emit a second, contradictory terminal event.
+        if (jobId && jobs.get(jobId) && jobs.get(jobId).status === 'complete') {
+          console.log(`[guardian] ${jobId}: ignored a late error (${gate || 'no gate'}) — the job already completed`);
+          break;
+        }
         if (jobId) {
           // ── SEAM queue routing ────────────────────────────────────────────
           // A provider-side error on a SEAM chunk isn't a content failure (no
@@ -684,7 +693,15 @@ function createNCPMessageHandler(deps) {
       // bus-event round trip as GUARDIAN_PING_ACK's 'guardian.ncp.pong'
       // above — requestSync() listens for this exact event.
       case 'GUARDIAN_SYNC_RESULT': {
-        bus.emit('guardian.ncp.sync_result', { provider, tabId, syncId: msg.syncId, chat: msg.chat, error: msg.error });
+        bus.emit('guardian.ncp.sync_result', { provider, tabId, agentId: msg.agentId || null, syncId: msg.syncId, chat: msg.chat, error: msg.error });
+        break;
+      }
+
+      // §BUILT 0.39.254 — a userscript's chat settled and its transcript changed.
+      // Recorded by guardian/lib/chat-transcripts.js (one versioned record per chat
+      // in Clear Glass's downloads index); this handler only puts it on the bus.
+      case 'GUARDIAN_TRANSCRIPT': {
+        bus.emit('guardian.ncp.transcript', { provider, tabId, agentId: msg.agentId || null, chat: msg.chat });
         break;
       }
 

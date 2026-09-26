@@ -208,6 +208,14 @@ No single NEXUS-wide boot command confirmed this session — each system boots i
 | Commit | Message |
 |---|---|
 | — | First NEXUS-level atlas authored, hooked into idearium's real atlas.json shape, aggregator built and tested against one real + one synthetic system |
+| 0.39.255 | `lib/chat-logger.js` honours the test sandbox: `require('./test-sandbox.js').ensure()`, then `NEXUS_DATA_ROOT/chat-logs`, as `lib/ledger-writer.js` and guardian's `code-artifact.js` already do. Before this, every suite that reached guardian's completion path left `data/chat-logs/<date>-<id>.jsonl` in the real tree. A production process still writes `data/chat-logs/`. |
+
+
+### 0.39.257 — shared libraries
+- `lib/agent-tools/tool-root.js`: a run's `context.repoDir` makes the repo the default root for `read_file`, `file_tree` and `search_files`. `where: "nexus"` reads NEXUS itself. The containment check is unchanged. `runToolLoop` passes `context` to `executeTool`, which passes it to `tool.execute(args, opts)`, and a failed model call ends a run as a failure.
+- `lib/agent-tools/tool-catalog.js`: every registered tool in a named group, with none left over, for `/tools`, `/help` and copilot's `/api/tools/list`.
+- `lib/repo-context.js`: reads `graph.json` for file connections, and gives the project map when nothing matches.
+- `lib/test-sandbox.js`: covers `COPILOT_INJECTION_DIR`.
 
 ---
 

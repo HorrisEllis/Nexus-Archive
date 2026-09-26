@@ -2202,6 +2202,41 @@ const server = http.createServer(async (req, res) => {
   // them for real, feeding results back. Additive: the existing /api/prompt path
   // is untouched. P2 (memory) and P3 (stream) enrich the run via opts without
   // changing this contract.
+  // §TOOLS 0.39.257 — the tool catalog in plain language (lib/agent-tools/tool-catalog.js): idearium's Agent tab
+  // /tools and /help read it here, where the registry is already loaded (loading it elsewhere re-indexes cortex's
+  // tool_index). ?q= narrows it; ?scope=a,b,c marks which are in a caller's scope.
+  if (method === 'GET' && p === '/api/tools/list') {
+    try {
+      const agentTools = require('../lib/agent-tools/index.js');
+      const C = require('../lib/agent-tools/tool-catalog.js');
+      const u = new URL(req.url, 'http://x');
+      const scope = u.searchParams.get('scope') ? u.searchParams.get('scope').split(',').map(x => x.trim()).filter(Boolean) : null;
+      let noteFor = null; try { noteFor = require('../lib/agent-tools/tool-guide.js').noteFor; } catch (_) {}
+      const all = C.catalog({ tools: [...agentTools.TOOLS.values()], noteFor, scope });
+      const tools = C.search(all, u.searchParams.get('q') || '');
+      json(res, 200, { ok: true, total: all.length, count: tools.length, groups: C.GROUPS.map(g => ({ id: g.id, title: g.title })), tools });
+    } catch (e) { json(res, 500, { ok: false, error: e.message }); }
+    return;
+  }
+  // §TOOLS 0.39.257 — run ONE tool directly, through the same gate every tool call takes (executeTool: tool-config,
+  // fault history, event log). For commands that need an answer from a system, not a model: idearium's /debug report.
+  // body: { name, args, context: { repoDir }, scope: [names] | undefined } — a name outside scope is refused, not run.
+  if (method === 'POST' && p === '/api/tools/run') {
+    let body = ''; req.on('data', c => body += c);
+    req.on('end', async () => {
+      try {
+        const { name, args, context, scope } = JSON.parse(body || '{}');
+        if (!name) { json(res, 400, { ok: false, error: 'name required' }); return; }
+        if (Array.isArray(scope) && scope.length && !scope.includes(name)) { json(res, 403, { ok: false, error: `"${name}" is outside this caller's tool scope — not run` }); return; }
+        const agentTools = require('../lib/agent-tools/index.js');
+        if (!agentTools.TOOLS.has(name)) { json(res, 404, { ok: false, error: `no tool "${name}"` }); return; }
+        const result = await agentTools.executeTool(name, args || {}, { context: context || null, agent: 'idearium' });
+        json(res, 200, { ok: !(result && result.error), name, result });
+      } catch (e) { json(res, 500, { ok: false, error: e.message }); }
+    });
+    return;
+  }
+
   if (method === 'POST' && p === '/api/prompt/tools') {
     let body = ''; req.on('data', c => body += c);
     req.on('end', async () => {
@@ -2359,6 +2394,38 @@ const server = http.createServer(async (req, res) => {
         // handler dropped it, so a caller's chosen model — idearium's per-compartment Ollama model — never arrived).
         // Unset = nothing sent, the bridge's own default applies, as before. guardian ignores it.
         const olModel = body.backend === 'ollama' && typeof body.model === 'string' && body.model.trim() ? body.model.trim() : undefined;
+        // §TOOLS 0.39.257 — James: "the toolscope for the agents tab. need the full capabilities, with the /help and
+        // tool awareness". body.tools = { scope: 'all' | [names], identity, repoDir, maxIterations }: the same chosen
+        // backend, but through the real tool loop (copilot/tool-runtime.js — runViaAgent for a browser agent, run for
+        // Ollama), with the scope ENFORCED by runToolLoop's allowedTools, the tool guide in the system prompt, the
+        // caller's identity instead of "the NEXUS co-pilot", and context.repoDir so file tools work in that repo.
+        // Without body.tools this branch is exactly what it was.
+        if (body.tools && typeof body.tools === 'object') {
+          const toolRuntime = require('./tool-runtime');
+          const T = body.tools;
+          const scope = Array.isArray(T.scope) && T.scope.length ? T.scope : undefined;   // undefined = every registered tool
+          const context = T.repoDir ? { repoDir: String(T.repoDir), agentId: body.agentId || null } : null;
+          const identity = typeof T.identity === 'string' && T.identity.trim() ? T.identity.trim() : null;
+          const maxIterations = Math.min(Math.max(parseInt(T.maxIterations, 10) || 6, 1), 12);
+          let loop;
+          if (body.backend === 'guardian') {
+            const agent = body.agent || 'guardian';
+            const dispatchToAgent = (fullPrompt, o = {}) => _lifeline.dispatchToNcpAgent(fullPrompt, { ...o, provider: body.agent || undefined,
+              agentId: body.agentId || undefined, timeoutMs: body.timeoutMs || undefined, requestId, sessionId });
+            loop = await toolRuntime.runViaAgent(agent, dispatchToAgent, prompt, { toolScope: scope, identity, context, maxIterations });
+          } else {
+            loop = await toolRuntime.run({ userPrompt: prompt, identity, context, toolScope: scope, maxIterations,
+              dispatch: (convo, sysContext, o) => _dispatchToOllama(convo, sysContext, { ...o, intent: 'tool-loop', requestId, sessionId, model: olModel }),
+              pollJob: _pollOllamaJobHeadless });
+          }
+          const toolCallLog = (loop.toolCallLog || []).map(t => ({ name: t.name, arguments: t.arguments, iteration: t.iteration, scopeRejected: !!t.scopeRejected,
+            ok: !(t.result && t.result.error), error: t.result && t.result.error ? String(t.result.error).slice(0, 300) : null }));
+          const toolsInfo = { scope: scope ? scope.length : 'all', iterations: loop.iterations, calls: toolCallLog.length };
+          if (loop.failed) { json(res, 502, { ok: false, error: loop.error, jobId: loop.jobId || null, toolCallLog, tools: toolsInfo, requestId }); return; }
+          json(res, 200, { ok: true, text: loop.text, provider_used: body.backend === 'guardian' ? (body.agent || 'guardian') : 'ollama',
+            model_used: body.backend === 'ollama' ? (olModel || null) : undefined, toolCallLog, tools: toolsInfo, requestId });
+          return;
+        }
         const result = await dispatchFn(prompt, { provider: body.agent || undefined, agentId: body.backend === 'guardian' ? (body.agentId || undefined) : undefined, timeoutMs: body.backend === 'guardian' ? (body.timeoutMs || undefined) : undefined, model: olModel, requestId, sessionId });
         if (result?.ok || result?.text) {
           json(res, 200, { ok: true, text: result.text, provider_used: body.backend === 'guardian' ? (result.provider || body.agent) : 'ollama', model_used: body.backend === 'ollama' ? (result.model || olModel || null) : undefined, requestId });

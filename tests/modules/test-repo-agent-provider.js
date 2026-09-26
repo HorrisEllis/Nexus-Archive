@@ -156,7 +156,7 @@ async function main() {
   check('the Agent tab CLI and Settings → Agents both render the same control', (APP.match(/_agentBackendHtml\(/g) || []).length >= 3);
   check('guardian shows its agents; ollama shows the installed models; copilot shows no dropdown',
     APP.includes('onchange="agentSetGuardianAgent(this.value)"') && APP.includes('onchange="agentSetOllamaModel(this.value)"') && APP.includes("copilot's own default answers"));
-  check('the CLI has /model, documented in /help', APP.includes("case 'model':") && APP.includes("'/model [name|default]"));
+  check('the CLI has /model, documented in /help', APP.includes("case 'model':") && /'\s*\/model \[name\|default\]/.test(APP));   // 0.39.257 — /help regrouped (indented lines)
   const COP = fs.readFileSync(path.join(ROOT, 'copilot', 'server.js'), 'utf8');
   check('copilot /api/prompt passes body.model to Ollama (it dropped it)', /const olModel = body\.backend === 'ollama'[^\n]*body\.model/.test(COP) && /dispatchFn\(prompt, \{[^}]*model: olModel/.test(COP));
   { // idearium's model list, against a stub ollama bridge on :3749 — and without one
@@ -171,7 +171,7 @@ async function main() {
       check('with no bridge the list is unavailable, with the reason — never a guessed list', okDown, JSON.stringify(down));
     }
   }
-  check('the CLI has /provider, documented in /help', APP.includes("case 'provider':") && APP.includes("'/provider [name]"));
+  check('the CLI has /provider, documented in /help', APP.includes("case 'provider':") && /'\s*\/provider \[name\]/.test(APP));   // 0.39.257 — /help regrouped
 
   fs.rmSync(process.env.NEXUS_INJECT_DIR, { recursive: true, force: true });
   console.log(`\n  ${pass} passed, ${fail} failed\n`);

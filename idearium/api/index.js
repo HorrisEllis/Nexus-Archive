@@ -1019,6 +1019,10 @@ function matchRoute(method, url) {
     ['POST',   ['api','repos',    ':uuid','agent','late'],    'repo.agent.late.adopt'],
     ['GET',    ['api','repos',    ':uuid','agent','history'], 'repo.agent.history'],
     ['DELETE', ['api','repos',    ':uuid','agent','history'], 'repo.agent.history.clear'],
+    // 0.39.257 — /tools (the catalog, marked with this compartment's scope) and /debug (what is wrong, from the systems)
+    ['GET',    ['api','repos',    ':uuid','agent','tools'],   'repo.agent.tools'],
+    ['POST',   ['api','repos',    ':uuid','agent','debug'],   'repo.agent.debug'],
+    ['GET',    ['api','repos',    ':uuid','agent','graph'],   'repo.agent.graph'],
     ['GET',    ['api','repos',    ':uuid','agent','memory'],  'repo.agent.memory.list'],
     ['POST',   ['api','repos',    ':uuid','agent','memory'],  'repo.agent.memory.record'],
     ['DELETE', ['api','repos',    ':uuid','agent','memory',':obs'], 'repo.agent.memory.forget'],
@@ -2716,12 +2720,14 @@ async function handle(req, res, route, query, body) {
           // guardianAgent (name, only meaningful when useGuardian is true).
           // §DEFAULT-GUARDIAN 2026-09-21. If both provider and the pair are
           // sent, provider wins — it is the more specific, explicit request.
-          if (body.injectMode === undefined && body.provider === undefined
+          if (body.injectMode === undefined && body.provider === undefined && body.toolScope === undefined
               && body.useGuardian === undefined && body.guardianAgent === undefined && body.ollamaModel === undefined) {
-            return err(res, 400, 'injectMode, provider, ollamaModel, and/or useGuardian/guardianAgent required');
+            return err(res, 400, 'injectMode, provider, ollamaModel, toolScope, and/or useGuardian/guardianAgent required');
           }
           const RA = _require('../../lib/repo-agent.js');
           let out = { ok: true, repoUuid: params.uuid };
+          // 0.39.257 — 'all' (default) or 'project' (the repo hat's own tools); enforced on ollama/guardian dispatches
+          if (body.toolScope !== undefined) { const r = RA.setToolScope(params.uuid, body.toolScope); if (!r.ok) return done(r); out.toolScope = r.toolScope; }
           if (body.injectMode !== undefined) { const r = RI.setMode(params.uuid, body.injectMode); if (!r.ok) return done(r); out.injectMode = r.injectMode; }
           if (body.provider !== undefined) {
             const r = RA.setProvider(params.uuid, body.provider); if (!r.ok) return done(r); out.provider = r.provider;
@@ -2811,6 +2817,38 @@ async function handle(req, res, route, query, body) {
       const RA = _require('../../lib/repo-agent.js');
       const limit = Math.min(parseInt(query.limit || '50', 10) || 50, 500);
       return ok(res, { repoUuid: params.uuid, exchanges: RA.history(params.uuid, limit) });
+    }
+
+    // §TOOLS 0.39.257 — lib/repo-agent.js listTools / debugReport.
+    case 'repo.agent.tools': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const r = await _require('../../lib/repo-agent.js').listTools({ repo, q: query.q || '' });
+      return r.ok ? ok(res, r) : err(res, 502, r.error);
+    }
+    // 0.39.257 — /graph [file]: the project map, or one file's connections — the same text the agent's context gets.
+    case 'repo.agent.graph': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const dir = _repoDiskDir(params.uuid);
+      const RC = _require('../../lib/repo-context.js');
+      const g = dir ? RC.readGraph(dir) : null;
+      if (!g) return err(res, 404, 'no graph yet — the repo has not been through the import pipeline (Diagnose → reindex)');
+      if (query.file) {
+        const f = String(query.file).replace(/^\.?\//, '');
+        if (!g.files.includes(f)) {
+          const near = g.files.filter(x => x.toLowerCase().includes(f.toLowerCase())).slice(0, 8);
+          return err(res, 404, `no file "${f}" in the graph${near.length ? ` — did you mean: ${near.join(', ')}` : ''}`);
+        }
+        return ok(res, { file: f, text: RC.connections(g, [f], 4000) || `${f} has no import links (nothing it imports resolves, nothing imports it)` });
+      }
+      return ok(res, { files: g.files.length, text: RC.overview(g, 4000).replace(/^\(Your question[^\n]*\n/m, '') });
+    }
+    case 'repo.agent.debug': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const r = await _require('../../lib/repo-agent.js').debugReport({ repo, repoDir: _repoDiskDir(params.uuid) });
+      return r.ok ? ok(res, r) : err(res, 400, r.error);
     }
 
     case 'repo.agent.history.clear': {

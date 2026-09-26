@@ -157,11 +157,38 @@ function createJobStore() {
     }
   }
 
+  // 0.39.255 — James: "the hat should be repo specific not builder." A repo agent's
+  // job (agentId repo-<uuid>) already carries its repo's own hat: idearium's
+  // lib/repo-agent.js compose() puts that hat's persona in the prompt. Guessing a
+  // generic hat from the prompt's words (_suggestJobHat → the_builder) prepended a
+  // SECOND persona above it. So a repo job wears its repo hat — looked up by role
+  // (lib/repo-hat.js getRepoHat, the same hat-forge record), or named by the same
+  // rule (hatNameFor) if this process has not seen it yet — with an EMPTY
+  // personaPrompt, because the persona is already in the prompt once. Never generic.
+  function _repoJobHat(agentId) {
+    if (typeof agentId !== 'string' || !agentId.startsWith('repo-')) return undefined;
+    const repoUuid = agentId.slice('repo-'.length);
+    try {
+      const RH = require('../../lib/repo-hat.js');
+      const live = RH.getRepoHat(repoUuid);
+      return {
+        name: (live && live.name) || RH.hatNameFor(repoUuid),
+        personaPrompt: '',
+        toolScope: live && Array.isArray(live.toolScope) ? live.toolScope : [],
+        source: 'repo', personaInPrompt: true,
+      };
+    } catch (e) {
+      console.warn(`[guardian] repo hat lookup failed for ${agentId} (non-fatal, no hat): ${e.message}`);
+      return null;
+    }
+  }
+
   function createJob({ command, provider, prompt, content, source, tools, accountId, agentId, transport, wakeDepth, fileName, syntax }) {
     const id = randomUUID();
     // §ACK-INJECTION-FIX — computed once at creation, not per-dispatch-
     // retry, so a job's persona stays stable across any real redelivery.
-    const hat = _suggestJobHat(prompt);
+    const repoHat = _repoJobHat(agentId);
+    const hat = repoHat !== undefined ? repoHat : _suggestJobHat(prompt);
     const job = {
       id, command, provider, prompt, content: content || null, source: source || null,
       tools: Array.isArray(tools) ? tools : null,
@@ -234,7 +261,7 @@ function createJobStore() {
     return best ? best.id : null;
   }
 
-  return { jobs, createJob, updateJob, _suggestJobHat, _findActiveJobForProvider };
+  return { jobs, createJob, updateJob, _suggestJobHat, _repoJobHat, _findActiveJobForProvider };
 }
 
 module.exports = { createJobStore, JOBS_DIR };

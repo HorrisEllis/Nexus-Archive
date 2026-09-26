@@ -36,6 +36,9 @@ const { uid } = require('../cortex/memory/jaa-db');
 // describing.
 // Overridable for tests, same convention as test-node-index.js's JAA_DATA_DIR
 // redirect — real writes must never land in the real data dir during a test run.
+// 0.39.257 — a test process gets a temp dir first (lib/test-sandbox.js); the override alone was opt-in, and
+// tests/modules/lifeline-fluid-routing.test.js left .injection files in the real tree on every run.
+require('../lib/test-sandbox.js').ensure();
 const INJECTION_NODES_DIR = process.env.COPILOT_INJECTION_DIR || path.join(__dirname, 'data', 'nodes', 'injection');
 function _recordInjection(payload) {
   try {
@@ -367,10 +370,15 @@ function makeNcpCallModel(dispatchToAgent, opts = {}) {
       } catch (e) {
         console.warn(`[copilot/tool-runtime] gap report for NCP no-response failed (non-fatal): ${e.message}`);
       }
+      // 0.39.257 — marked as a failure, with guardian's own reason (ask.js says which gate it stopped at) and
+      // the jobId (its reply may still come), so runToolLoop ends the run as a failure instead of returning this
+      // text as the answer, and the caller can watch for the late reply.
+      const why = (result && result.error) || 'no response';
       return {
-        text: (result && result.text) || `[NCP dispatch failed — no response${gapUuid ? ` — gap ${gapUuid}` : ''}]`,
+        text: (result && result.text) || `[NCP dispatch failed — ${why}${gapUuid ? ` — gap ${gapUuid}` : ''}]`,
         toolCalls: null,
         gapUuid,
+        failed: !(result && result.text), error: why, jobId: jobId || null,
       };
     }
 
@@ -400,8 +408,11 @@ async function runViaAgent(agent, dispatchToAgent, userPrompt, opts = {}) {
   // tab" check above could never fire, since opts.provider was always
   // undefined regardless of which real agent this dispatch targets.
   const callModel = makeNcpCallModel(dispatchToAgent, { ...(opts.modelOpts || {}), toolScope: opts.toolScope, provider: agent });
+  // 0.39.257 — opts.identity: who this run is (a repo's project agent says so, instead of "the NEXUS co-pilot");
+  // opts.context: what its tools work in (context.repoDir → file tools default to that repo, lib/agent-tools/tool-root.js).
   const systemPrompt = [
-    `You are the NEXUS co-pilot, currently running as ${agent}. You have tools; use them to read files, run diagnostics, query memory, and act on the system.`,
+    opts.identity ? `${opts.identity}\nYou are running as ${agent}. You have tools; use them to read files, run diagnostics, query memory, and act on the system.`
+      : `You are the NEXUS co-pilot, currently running as ${agent}. You have tools; use them to read files, run diagnostics, query memory, and act on the system.`,
     'ALWAYS look for a tool that can fulfill the request before answering from memory or escalating. Prefer a tool over a guess.',
     (() => { try { return 'YOUR TOOLS (how and when to use them):\n' + require('../lib/agent-tools/tool-guide').toolGuide(); } catch { return ''; } })(),
     opts.personaPrompt ? `\nYOUR CURRENT PERSONA (this hat):\n${opts.personaPrompt}` : '',
@@ -412,6 +423,7 @@ async function runViaAgent(agent, dispatchToAgent, userPrompt, opts = {}) {
   return agentTools.runToolLoop(callModel, systemPrompt, userPrompt, {
     maxIterations: opts.maxIterations || 6,
     allowedTools: opts.toolScope || undefined,
+    context: opts.context || null,
   });
 }
 
@@ -429,13 +441,14 @@ async function runViaAgent(agent, dispatchToAgent, userPrompt, opts = {}) {
  */
 async function run(o = {}) {
   if (!o.dispatch || !o.pollJob) throw new Error('[tool-runtime] dispatch and pollJob are required');
-  const callModel = makeOllamaCallModel(o.dispatch, o.pollJob, o.modelOpts || {});
+  const callModel = makeOllamaCallModel(o.dispatch, o.pollJob, { ...(o.modelOpts || {}), toolScope: o.toolScope || undefined });
 
   // The system prompt carries co-pilot's identity + persistent memory (P2) +
   // the live continuous stream (P3). Both are optional and injected, so P1
   // works alone and P2/P3 enrich it without changing this contract.
   const systemPrompt = [
-    'You are the NEXUS co-pilot. You have tools; use them to read files, run diagnostics, query memory, and act on the system.',
+    o.identity ? `${o.identity}\nYou have tools; use them to read files, run diagnostics, query memory, and act on the system.`   // 0.39.257
+      : 'You are the NEXUS co-pilot. You have tools; use them to read files, run diagnostics, query memory, and act on the system.',
     'ALWAYS look for a tool that can fulfill the request before answering from memory or escalating. Prefer a tool over a guess.',
     (() => { try { return 'YOUR TOOLS (how and when to use them):\n' + require('../lib/agent-tools/tool-guide').toolGuide(); } catch { return ''; } })(),
     o.memory ? `\nWHAT YOU REMEMBER ABOUT THIS USER AND SYSTEM:\n${o.memory}` : '',
@@ -444,6 +457,8 @@ async function run(o = {}) {
 
   return agentTools.runToolLoop(callModel, systemPrompt, o.userPrompt, {
     maxIterations: o.maxIterations || 6,
+    allowedTools: o.toolScope || undefined,   // 0.39.257 — enforced, as runViaAgent already was
+    context: o.context || null,
   });
 }
 

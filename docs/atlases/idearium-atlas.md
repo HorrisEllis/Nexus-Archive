@@ -182,3 +182,49 @@ The Agent tab's CLI, and Settings → Agents, show one control: **ollama · copi
 **CLI.** `/model [name|default]`.
 
 **Tests.** `test-repo-agent-provider` 60/60. **Open:** a Chromium click-through of the switch.
+
+## The Agent tab streams the reply and shows the gate (4.6.1, v0.39.256)
+
+The live feed (`_agentFeedIn` / `_agentFeedHtml` in `ui/js/app.js`) changes in three ways:
+- **Live reply:** the userscripts' 500 ms transcript chunks build it as it is written. A `reset` chunk replaces it, and these chunks add no log row each.
+- **Gate rows:** `guardian.job.gate` frames from guardian's `lib/gate-trail.js` appear as rows ("gate reply appears · failed — no completion after 900s → pick the reply with ◎"), in red when failed.
+- **Header:** shows the gate the job is at.
+
+A failure in the chat line now carries guardian's gate sentence (`guardian/ask.js`) instead of "timed out … may still complete". No route or contract change.
+
+## The Agent tab: every tool, plain commands, the graph in context (4.7.0, v0.39.257)
+
+James: *"the toolscope for the agents tab. need the full capabilities, with the /help and tool awareness to help. need the commands as user friendly as possible. including debugging, using the intelligence system … also context on by default and wire in the graph"*. Asked which tools: *"i want everything, at least for now."*
+
+**Tools.** Before this, the repo agent had no tools at all: the dispatch sent copilot a plain prompt, and the hat's 21-tool list was never used. Now every Ollama or browser-agent dispatch runs copilot's real tool loop, as follows:
+- **Scope:** every tool (102) by default, or the hat's own set with `/scope project`. Either way it is **enforced**.
+- **Identity:** the hat is the agent's identity.
+- **Files:** file tools work in this repo's own files, or in NEXUS with `where: "nexus"`.
+- **Visible:** each tool call is shown under the answer.
+- **Exception:** `auto` (copilot's own routing) is not enforced, and `/status` and `/tools` say so.
+
+**Commands** (`/help`, regrouped by what you want to do):
+
+| group | commands |
+|---|---|
+| ask & investigate | `/debug`, `/debug <question>`, `/tools [words]`, `/scope all\|project`, `/graph [file]`, `/context on\|off` |
+| run & check | `/run`, `/test`, `/diagnose` |
+| the agent | `/status`, `/provider`, `/model`, `/hat`, `/forge`, `/memory`, `/learn`, `/forget`, `/history`, `/export`, `/import`, `/clear` |
+| code it writes | `/mode`, `/injects`, `/inject`, `/open`, `/apply`, `/reject`, `/revert` |
+
+Aliases: `/?` `/h` `/st` `/t` `/dbg` `/hist`. A typo gets "did you mean /…?".
+
+**`/debug`** reports straight from the systems, with no model involved:
+- syntax (`node --check`);
+- unresolved imports from `graph.json`;
+- this agent's recent failures, each with the gate it stopped at;
+- the intelligence system: failure patterns, recorded faults for this agent, and idearium's open gaps.
+
+`/debug <question>` hands the agent the question with instructions to investigate using the intelligence system and the repo's files.
+
+**Context and the graph.** Context was already on by default. Now:
+- A question that names no code ("hello") gets the project map from `graph.json`: size, top folders, entry points and the most depended-on files.
+- Matched chunks come with how their files connect.
+- The context line under an answer says which of the two happened.
+
+Routes: `GET /api/repos/:uuid/agent/tools`, `POST …/agent/debug`, `GET …/agent/graph`; `POST …/agent/settings` takes `toolScope`.

@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        guardian
-    version:     3.11.1   # 0.39.252 PATCH — agent "hey nexus" answered ONCE, by lib/wake-loop.js, from the COMPLETED reply of any job (was mesh only), as a wake-reply job sent into the same tab; the page and Clear Glass's relay no longer answer it. Previous 3.11.0: 0.39.249 MINOR — selector map: GET/POST /api/agents/:id/selectors, GUARDIAN_SELECTORS pushed on every NCP connect and change (lib/selector-map.js). Previous 3.10.0: 0.39.247 MINOR — one tab, one job at a time (userscript busy guard), every reply back (see CHANGELOG-0.39.247.md); this line was left at 3.9.5 while lib/version.js and registry-components.js moved, synced in 0.39.248. Previous 3.9.5: 0.39.244 PATCH — agentId jobs pass the shared-tab fail-fast; /events job frames carry payload+agentId; userscripts report the node anchor. Previous 3.9.4: 0.39.242 PATCH — jaa-store.js opts.settings:false. Previous 3.9.3: 0.39.241 PATCH — code-artifact.js: ARTIFACT_DIR honours the test sandbox / NEXUS_DATA_ROOT; no "not indexed" warning per reply when better-sqlite3 is simply absent
+    version:     3.14.0   # 0.39.256 MINOR — lib/gate-trail.js: every failure names its gate (/status gate + gates, ask.js errors, guardian.job.gate); userscripts stream the reply from the transcript every 500 ms. Previous 3.13.0: 0.39.255 MINOR — a job completes from its chat transcript (settled, not generating; GUARDIAN_JOB_DONE first; one GUARDIAN_COMPLETE path); a chat is filed under the job whose prompt it holds; repo jobs wear their repo hat, never the_builder; a late tab error cannot undo a completion. Previous 3.12.0: 0.39.254 MINOR — every provider chat logged into Clear Glass's downloads index as one versioned transcript per chat (lib/chat-transcripts.js, GUARDIAN_TRANSCRIPT + every /sync result), GET /api/chats[/versions|/item/:id]; userscripts push settled transcripts. Previous 3.11.1: 0.39.252 PATCH — agent "hey nexus" answered ONCE, by lib/wake-loop.js, from the COMPLETED reply of any job (was mesh only), as a wake-reply job sent into the same tab; the page and Clear Glass's relay no longer answer it. Previous 3.11.0: 0.39.249 MINOR — selector map: GET/POST /api/agents/:id/selectors, GUARDIAN_SELECTORS pushed on every NCP connect and change (lib/selector-map.js). Previous 3.10.0: 0.39.247 MINOR — one tab, one job at a time (userscript busy guard), every reply back (see CHANGELOG-0.39.247.md); this line was left at 3.9.5 while lib/version.js and registry-components.js moved, synced in 0.39.248. Previous 3.9.5: 0.39.244 PATCH — agentId jobs pass the shared-tab fail-fast; /events job frames carry payload+agentId; userscripts report the node anchor. Previous 3.9.4: 0.39.242 PATCH — jaa-store.js opts.settings:false. Previous 3.9.3: 0.39.241 PATCH — code-artifact.js: ARTIFACT_DIR honours the test sandbox / NEXUS_DATA_ROOT; no "not indexed" warning per reply when better-sqlite3 is simply absent
     foundation:  nexus-system-foundation@1.0.0
     port:        7820
     uuid:        nexus-guardian-v3-0000-2026-0615-jamesbrooks-001
@@ -399,3 +399,124 @@ spec:
       tests/modules/test-guardian-wake.js 16/16 (WK-012 ncp jobs answered + pinned, WK-017 full request + framing,
       WK-018 the real relay stays silent for an assistant wake); test-nexus-wake.js NW-027/NW-030 (checkMessage has
       no side effects). Each fix mutation-checked.
+
+  built_2026_09_26_chat_transcripts:
+    shipped: "0.39.254"
+    versionium: "vtm-99a6abef"
+    asked_by: >-
+      James — "we were working on getting the download manager logging agent chats." Asked what triggers a log, what one
+      record is, and which chats: a full-transcript sync; one record per chat, versioned; every provider chat and "the
+      userscripts for my browser. i want nexus to help remember. persistent memory for ai agents."
+    found: >-
+      A chat reached the downloads index only through a job COMPLETING (ncp-handler → response-sink / code-artifact
+      recordAgentResponse). The 0.39.253 live log shows four ChatGPT jobs, none completed (reply detection, the open
+      break), and guardian/data/nodes/response held zero .response nodes. A chat a person opens by hand never completes
+      a job. The page's own full-chat reader (_nexusGetFullChat, used by GUARDIAN_SYNC_REQUEST) did not depend on reply
+      detection, but its result went only to the /sync caller — nothing recorded it. And userscript-chatgpt's chatId()
+      stopped at the colon of ChatGPT's current /c/WEB:<uuid> paths, so every ChatGPT chat read as "WEB".
+    rule: >-
+      lib/chat-transcripts.js is the one writer of chat transcripts. In: GUARDIAN_TRANSCRIPT (a userscript's chat settled
+      — no change in <main> for 5 s, or 60 s max — and its transcript changed; marked sent only when guardian answered)
+      and every GUARDIAN_SYNC_RESULT. ncp-handler only puts them on the bus (guardian.ncp.transcript /
+      guardian.ncp.sync_result). Written through clear-glass artifact-chat-index recordChat(): one versioned record per
+      chat, unchanged or contained-in-latest reads refused by name. Whose chat: the tab's agent stamp, else the job that
+      ran in that chat (learned from guardian.job.progress chatUrl + the job's agentId), else what the chat was already
+      filed under; none = the person's own chat. Emits guardian.chat.transcript.recorded. Read side, for agents to
+      remember: GET /api/chats (?agentId ?provider ?q text recall ?limit), /api/chats/versions?key=, /api/chats/item/:id.
+      Userscripts chatgpt/claude 10.6.0, gemini/perplexity/deepseek 10.5.0; sync results carry agentId.
+    depends_on: >-
+      each userscript's _nexusGetFullChat() selectors. claude/chatgpt return the whole chat; gemini/perplexity/deepseek
+      return the last reply only (partial: true), so their records are one reply per version until those readers get a
+      verified human-turn selector. userscript-claude's reader uses human-turn-content / assistant-turn-content /
+      .font-claude-message — not verified against today's claude.ai here.
+    tests: >-
+      tests/modules/test-chat-transcripts.test.js 20/20 — the real ncp-handler → bus ({type,data}, SISOStream's shape) →
+      chat-transcripts → index in a temp root; routes; server wiring; every userscript; chatgpt chatId; TX-20 runs
+      tests/probe/transcript-push-chromium.py 9/9 in real Chromium (the userscript's own block and _nexusGetFullChat on a
+      chatgpt.com/c/WEB:… page: settle, streaming, a ticking panel outside <main>, unchanged, guardian down, max wait,
+      'home'). 11 mutations, each caught by its own test.
+
+  built_2026_09_26_transcript_completes_the_job:
+    shipped: "0.39.255"
+    versionium: "vtm-5d53363c"
+    asked_by: >-
+      James, after 0.39.254 worked live (screenshots: the ERAVOS agent's chat in Library → Responses as "(your chat)";
+      the Agent tab at "thinking… (copilot stopped waiting — watching the Responses index for the reply)"; a "test" at
+      "thinking…") — "it worked. though the hat should be repo specific not builder. the agent tab, in idearium is
+      looking for the hash"
+    found: >-
+      (1) The reply was in the chat's transcript 12 s after dispatch (02:01:11, job cccaafb0 dispatched 02:00:57), but
+      the job never completed — reply detection is the open ChatGPT break — so the Agent tab's late watch (lib/repo-agent
+      findLate: a kind 'chat' .response with this job_id, written only on completion) had nothing to find. (2) The next
+      job ("test", 0c005d0b) was created and never dispatched: the one-job-per-tab pool waits for cccaafb0, and the tab
+      would refuse it as tab_busy while its watch runs. (3) The chat was filed with no agent: the job's progress said
+      chat /c/WEB:c5f7a5cc-…, the transcript came from /c/6ab7275b-… — WEB: is ChatGPT's temporary id before the chat
+      gets its real one, so a URL match can never hold. (4) The job wore [hat: the_builder]: createJob's _suggestJobHat
+      guessed a generic hat from the prompt's words, and the userscript prepended "[the_builder] You build…" above the
+      repo hat idearium had already composed into the prompt.
+    rule: >-
+      lib/chat-transcripts.js 1.1.0 matchJobs(): a user turn is a job's when it contains the job's whole prompt
+      (whitespace-normalized; for prompts over 450 chars, its first 300 and last 150) — the userscript types the prompt
+      verbatim between the tools preamble/hat line and the agent hint. Prompts under 8 chars are not evidence; jobs of
+      the same provider from the last 6 h only; newest job claims the last unclaimed matching turn. The chat is filed
+      under that job's agentId (after the tab stamp). When the transcript is settled (a real quiet period, not the 60 s
+      max-wait push) and the page says it is not generating, a matched job that is not complete, answered by the next
+      turn, is completed: GUARDIAN_JOB_DONE pushed to the tab first (its watch stops; the pool's next job is not
+      refused), then _handleNCPMessage({ type: 'GUARDIAN_COMPLETE', source: 'transcript' }) — the one completion path:
+      response-sink, code-artifact's .response with job_id + agentId (what the Agent tab's findLate reads),
+      guardian.job.complete (idearium, pool, wake loop). Emits guardian.job.completed_from_transcript. A withheld
+      completion is logged with its reason (unsettled / generating). ncp-handler ignores GUARDIAN_ERROR for a job
+      already complete. jobs.js _repoJobHat(): agentId repo-<uuid> → the repo hat (lib/repo-hat.js getRepoHat, else
+      hatNameFor) with an EMPTY personaPrompt — the persona is in the prompt once, _buildHatHeader adds no line; never a
+      suggested hat. Other jobs unchanged. Userscripts chatgpt/claude 10.7.0, gemini/perplexity/deepseek 10.6.0: pushes
+      carry settled + generating (both in the signature, so a reply that stops generating is sent once more);
+      GUARDIAN_JOB_DONE stops only that job's watch.
+    depends_on: >-
+      each userscript's _isGenerating(). ChatGPT's is [data-is-streaming="true"], .text-streaming, [class*="loading"]; if
+      it reads true on an idle page, completion is withheld (logged "generating") — today's behaviour, not a wrong reply.
+    tests: >-
+      tests/modules/test-chat-transcripts.test.js 31/31: TX-21 matchJobs; TX-22 the live case (WEB: tmp URL ≠ real URL,
+      still filed under the job's agent); TX-23 order JOB_DONE → complete, never twice; TX-24 withheld unsettled /
+      generating, taken on the next settled read; TX-25 no reply / other provider / outside the window; TX-26 the real
+      ncp-handler keeps a completed job's answer through a late error; TX-27 server wiring; TX-28 every userscript;
+      TX-29/31 the repo hat through the real createJob (jobs in a temp dir); TX-30 end to end through the REAL handler to
+      lib/repo-agent findLate. Chromium probe 10/10 (settled:false on max-wait, generating reported and re-sent). 12
+      mutations, each caught by its own test.
+
+  built_2026_09_26_gate_trail_and_stream:
+    shipped: "0.39.256"
+    versionium: "vtm-d2b95239"
+    asked_by: >-
+      James — "supposed to stream it live as it happens. do you think a delay between gates wouold help? like even just
+      500 ms?" / "can we make the error specific to the gate? not just a generic error?"
+    found: >-
+      (1) A delay between the dispatch gates would only add latency to every job: the gates are sequential checks, none
+      races another. Nothing streamed because the userscript's reply watch sends GUARDIAN_CHUNKs only once it finds the
+      reply node, and on ChatGPT it anchored on the composer (the Agent tab showed "anchor div#thread >
+      div.composer-parent.flex … 0ch"). The whole relay behind it (guardian.job.chunk → /events → idearium feed → Agent tab
+      live text) already existed. (2) The Agent tab said "copilot: timed out after 90000ms — job … may still complete"
+      (guardian/ask.js), though guardian knew the job had been typed and sent and no reply text was read; that knowledge
+      was spread over events (queued with reasons, dispatched, progress, chunk, timeout, error with the userscript's gate)
+      that nothing joined. ask.js also never recognised the dispatcher's own terminal 'failed' status, so a caller waited
+      out its whole timeout for a job guardian had already given up on.
+    rule: >-
+      (1) §STREAM in every provider userscript: while the tab holds a job, every 500 ms the transcript reader
+      (_nexusGetFullChat) finds this job's reply — the assistant turn right after the first user turn past those on the
+      page when the job arrived that contains the head of the job's prompt — and sends GUARDIAN_CHUNK { text: delta, full,
+      reset, source: 'transcript', generating }. A rewrite that is not a continuation is sent whole with reset: true. When
+      the reply watch streams the job itself (_txWatchStreamed), the streamer yields: one stream per job. ncp-handler
+      passes reset/source/generating on guardian.job.chunk; the feed keeps a reset chunk's live end (last 8000 chars).
+      (2) lib/gate-trail.js: eight gates in order — create, tab, ping, deliver, accept, submit, reply, complete. A pure
+      reducer (apply) over guardian.job.queued/dispatched/progress/chunk/complete/timeout/error; a later gate passing
+      implies the earlier ones; the latest news names where the job is (a requeue puts it back). describe() → one
+      sentence: "stopped at gate 7/8 "reply appears" (chatgpt): <detail> — <what to do>". attach() keeps job.gates /
+      job.gate and emits guardian.job.gate on each change. GET /status/:jobId carries gate, gates and error. ask.js:
+      'failed' returns at once; failures and timeouts carry gate and say it (timeouts still start "timed out", which
+      repo-agent's awaitLate keys on).
+    tests: >-
+      tests/modules/test-live-stream-and-gates.test.js 13/13 (the reducer on the live cccaafb0 case, every gate name, a
+      requeue, attach on a SISOStream-shaped bus, ask.js through injected deps, the real ncp-handler's chunk fields, the
+      Agent tab feed run from app.js) + GS-20 tests/probe/live-stream-chromium.py 8/8 in real Chromium (an earlier answer
+      or a turn James typed is never streamed as the job's; 16 changes → 4 chunks whose deltas add up to the reply; reset;
+      yields to the watch; stops with the job; the next job streams its own). 13 mutations, each caught.
+

@@ -282,10 +282,14 @@ class IpcBridge {
         const index = require('../downloads/artifact-chat-index.js');
         const q = req.query || {};
         const limit = Math.min(Math.max(parseInt(q.limit, 10) || 200, 1), 1000);
-        const items = index.queryItems(_responsesRoot(), { kind: q.kind || undefined, provider: q.provider || undefined, agentId: q.agentId || undefined, jobId: q.jobId || undefined, limit });
+        // 0.39.254 — a chat transcript is one row per chat (its newest version, with
+        // `versions`), not one row per version. ?versions=all lists every version.
+        const all = q.versions === 'all';
+        const rows = index.queryItems(_responsesRoot(), { kind: q.kind || undefined, provider: q.provider || undefined, agentId: q.agentId || undefined, jobId: q.jobId || undefined, chatKey: q.chatKey || undefined, limit: all ? limit : 100000 });
+        const items = all ? rows : index.collapseVersions(rows).slice(0, limit);
         // Every agent that has at least one item, so a view can filter without a second call.
         const agents = {};
-        for (const it of index.queryItems(_responsesRoot(), { limit: 1000 })) { const a = it.agent_id || '(no agent)'; agents[a] = (agents[a] || 0) + 1; }
+        for (const it of index.collapseVersions(index.queryItems(_responsesRoot(), { limit: 100000 }))) { const a = it.agent_id || '(no agent)'; agents[a] = (agents[a] || 0) + 1; }
         res.json({ ok: true, items, agents });
       } catch (e) { res.status(503).json({ ok: false, error: `downloads index unavailable: ${e.message}` }); }
     });

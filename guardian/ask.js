@@ -207,15 +207,23 @@ async function askSync(prompt, opts = {}, deps = {}) {
       }
       return await _maybeRunToolCall({ text, job, current, opts });
     }
-    if (current.status === 'error') {
-      return { ok: false, jobId: job.id, provider: current.provider, error: current.error || 'job failed' };
+    // 0.39.256 — a failure says which gate it stopped at (lib/gate-trail.js), not just "job failed".
+    // 'failed' is the dispatcher's own terminal state (retries exhausted); it was never recognised
+    // here, so the caller waited out its whole timeout for a job guardian had already given up on.
+    if (current.status === 'error' || current.status === 'failed') {
+      const g = current.gate || null;
+      const why = current.error || current.failReason || 'job failed';
+      return { ok: false, jobId: job.id, provider: current.provider, gate: g, error: g && g.state !== 'passed' ? `${g.sentence}` : why };
     }
     // still queued/dispatching/streaming — keep polling
   }
 
   // Timed out. The job is still alive and may complete later — name it so
   // the caller can retrieve it via GET /jobs rather than assume it's lost.
-  return { ok: false, jobId: job.id, provider: resolved, error: `timed out after ${timeoutMs}ms — job ${job.id} may still complete; poll GET /jobs` };
+  // 0.39.256 — said with the gate it is waiting at (lib/gate-trail.js), so the caller knows WHERE it is stuck.
+  const _g = (getJob(job.id) || {}).gate || null;
+  return { ok: false, jobId: job.id, provider: resolved, gate: _g,
+    error: `timed out after ${timeoutMs}ms — ${_g ? _g.sentence : 'no gate reported yet'} · job ${job.id} may still complete (GET /status/${job.id})` };
 }
 
 /**

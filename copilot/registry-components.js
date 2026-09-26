@@ -16,6 +16,9 @@ const components=[
            {id:'copilot.prompt.reply',wires_to:['ui.copilot.receive'],tags:['response']}]
     }
   }),
+  // 0.39.257 — the tool catalog in plain language, and one tool run through the same gate as the loop (idearium /tools, /debug)
+  _c('tools.list','GET','/api/tools/list','Every registered tool, grouped, in plain language (?q= search, ?scope= marks a caller\'s scope)',{grammar:['tools','list tools']}),
+  _c('tools.run','POST','/api/tools/run','Run one tool through executeTool (config gate, fault history, event log); refused outside the caller\'s scope',{grammar:['run tool']}),
   _c('stream.query','GET','/api/stream','Query the continuous event stream',{grammar:['stream','cs']}),
   _c('stream.ingest','POST','/api/stream/ingest','Push events into co-pilot stream'),
   _c('sessions','GET','/api/sessions','Active co-pilot sessions'),

@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        clear-glass
-    version:     3.14.1
+    version:     3.15.0
     foundation:  nexus-system-foundation@1.1.0
     port:        7702
     uuid:        nexus-clear-glass-v1-0000-2026-0901-jamesbrooks-001
@@ -86,6 +86,27 @@ spec:
       HTTP method/path pairs for these would misrepresent the transport.
 
   modules:
+    - id: chat-transcripts-index
+      path: clear-glass/src/downloads/artifact-chat-index.js · src/ipc/bridge.js /cli/downloads/responses · renderer/library/sections/responses.{js,css}
+      description: >
+        NEW 0.39.254 — James: "getting the download manager logging agent chats" …
+        "i want nexus to help remember. persistent memory for ai agents." Every
+        provider chat is ONE versioned record in the downloads index: kind
+        'transcript', keyed chat_key = provider:chatId, fields version,
+        transcript_hash (sha256 of the normalized messages only), message_count.
+        recordChat() writes a new .response only when the messages changed; it
+        refuses, by name, no-provider / no-chat-id ('home') / empty / unchanged /
+        contained-in-latest (every message already in the newest version, in
+        order — a partial or lazily-loaded read never replaces a fuller one).
+        Every version is kept; the newest is the highest version (not the newest
+        captured_at: two versions can share a millisecond). A chat keeps the agent
+        it was first filed under. listChats() (one row per chat, q = recall by the
+        chat's own text), chatVersions(), collapseVersions(). The writer is
+        guardian (lib/chat-transcripts.js); Clear Glass reads. The Library's
+        Responses view lists a chat once at its newest version, shows it as a
+        conversation, and opens any earlier version. /cli/downloads/responses
+        collapses transcripts (?versions=all lists every version, ?chatKey= one chat).
+
     - id: selector-assign
       path: clear-glass/src/providers/selector-assign.js · renderer/selector-check.js · renderer/selector-assign/
       description: >
@@ -306,6 +327,18 @@ spec:
         opened: 2026-09-25
 
   version_history:
+    - version: 3.15.0
+      date: 2026-09-26
+      summary: >-
+        MINOR (v0.39.254) — James: "we were working on getting the download manager logging agent chats"; asked, he
+        chose a full-transcript sync, one record per chat (versioned), every provider chat including the userscripts in
+        his own browser: "i want nexus to help remember. persistent memory for ai agents." The downloads index gains
+        kind 'transcript' (module chat-transcripts-index above); recordResponse and recordChat share one write path
+        (_write: .response fsync'd first, index row after, index failure reported not fatal). /cli/downloads/responses
+        collapses a chat to its newest version; the Library shows chats as conversations with their versions. Proven:
+        test-chat-transcripts 20/20 (TX-01..10 the index, each guard mutation-checked); tests/probe/
+        clearglass-library-window.js 29/29 in real Chromium (4 new chat checks).
+      versioniumCommitId: vtm-99a6abef
     - version: 3.14.1
       date: 2026-09-25
       summary: >-

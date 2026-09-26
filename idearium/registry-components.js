@@ -134,6 +134,10 @@ const COMPONENTS = [
   _comp('repo.agent.settings.get', 'GET',   '/api/repos/:uuid/agent/settings',        "This compartment agent's settings (inject mode, guardian switch + agent)", { tags: ['agent'] }),
   _comp('repo.agent.settings.set', 'POST',  '/api/repos/:uuid/agent/settings',        'Set inject mode, provider, ollamaModel (validated against Ollama\'s installed list), or useGuardian/guardianAgent', { tags: ['agent'] }),
   _comp('ollama.models',           'GET',   '/api/ollama/models',                     "Ollama's installed models via the ollama bridge (502 with the reason when unreachable) — the Agent tab's model dropdown", { tags: ['agent', 'ollama'] }),
+  // 0.39.257 — the Agent tab's /tools, /debug, /graph (lib/repo-agent.js listTools / debugReport, lib/repo-context.js)
+  _comp('repo.agent.tools',        'GET',   '/api/repos/:uuid/agent/tools',           "Copilot's tool catalog marked with this compartment's scope (all by default, or project); ?q= search", { tags: ['agent', 'tools'] }),
+  _comp('repo.agent.debug',        'POST',  '/api/repos/:uuid/agent/debug',           'What is wrong, from the systems: syntax, unresolved imports, recent failures, the intelligence system', { tags: ['agent', 'debug'] }),
+  _comp('repo.agent.graph',        'GET',   '/api/repos/:uuid/agent/graph',           'The project map from graph.json, or one file\'s connections (?file=)', { tags: ['agent', 'graph'] }),
   _comp('repo.agent.export',        'POST',  '/api/repos/:uuid/agent/export',       'Materialise this compartment agent as portable .hat + .repo_agent node files', { tags: ['agent'] }),
   _comp('repo.agent.import',        'POST',  '/api/repos/:uuid/agent/import',       'Restore a compartment agent from an .agent (or a legacy .repo_agent) node file, merging its observations', { tags: ['agent'] }),
   _comp('repo.ci.keys.list',    'GET',   '/api/repos/:uuid/ci/keys',          "List SSH key aliases registered to this compartment (never key material)", { tags: ['ci','keys'] }),

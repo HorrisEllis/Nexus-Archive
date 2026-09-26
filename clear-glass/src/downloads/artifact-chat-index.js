@@ -72,6 +72,10 @@ function _row(e) {
     agent_id: e.agent_id || null, job_id: e.job_id || null, captured_at: e.captured_at || 0,
     content_hash: e.content_hash, response_path: e.response_path, artifact_path: e.artifact_path || null,
     status: e.status || 'ok',
+    // 0.39.254 — transcript rows only (null on chat/artifact rows): which chat,
+    // which version of it, and the hash of its messages alone.
+    chat_key: e.chat_key || null, version: e.version || null,
+    transcript_hash: e.transcript_hash || null, message_count: e.message_count ?? null,
   };
 }
 
@@ -147,14 +151,25 @@ const _jobOf   = (r) => (r && (r.job_id   || (r.raw && r.raw.jobId)))   || null;
  */
 function recordResponse(root, { kind, provider, chatId, agentId, jobId, raw, artifactBuffer, artifactFileName }) {
   if (kind !== 'chat' && kind !== 'artifact') throw new Error(`recordResponse: kind must be 'chat' or 'artifact', got ${kind}`);
+  // 0.39.239 — who the response belongs to is a field, not something to dig out of raw.
+  const agent = agentId || (raw && raw.agentId) || null;
+  const job   = jobId   || (raw && raw.jobId)   || null;
+  return _write(root, { kind, provider, chatId, agentId: agent, jobId: job, raw, artifactBuffer, artifactFileName });
+}
+
+/**
+ * _write(root, { kind, provider, chatId, agentId, jobId, raw, extra, artifactBuffer, artifactFileName })
+ * — the one real write path, shared by recordResponse and recordChat (0.39.254).
+ * `extra` are top-level fields carried by both the .response file and its index row.
+ */
+function _write(root, { kind, provider, chatId, agentId, jobId, raw, extra = {}, artifactBuffer, artifactFileName }) {
   const p = _paths(root);
   _ensureDirs(p);
 
   const id = crypto.randomUUID();
   const capturedAt = Date.now();
-  // 0.39.239 — who the response belongs to is a field, not something to dig out of raw.
-  const agent = agentId || (raw && raw.agentId) || null;
-  const job   = jobId   || (raw && raw.jobId)   || null;
+  const agent = agentId || null;
+  const job   = jobId   || null;
   const rawJson = JSON.stringify(raw ?? {});
   const contentHash = `sha256:${sha256(rawJson)}`;
 
@@ -171,7 +186,7 @@ function recordResponse(root, { kind, provider, chatId, agentId, jobId, raw, art
     id, kind, provider: provider || null, chat_id: chatId || null,
     agent_id: agent, job_id: job,
     captured_at: capturedAt, content_hash: contentHash,
-    artifact_path: artifactPath, raw,
+    artifact_path: artifactPath, ...extra, raw,
   };
   const responseRelPath = path.join('responses', `${id}.response`);
   const responseAbsPath = path.join(root, responseRelPath);
@@ -180,36 +195,18 @@ function recordResponse(root, { kind, provider, chatId, agentId, jobId, raw, art
   fs.fsyncSync(fd); // real durability — this file is the source of truth, not a best-effort write
   fs.closeSync(fd);
 
-  // §FIXED 2026-09-20 — this block used to throw on any index failure,
-  // AFTER the .response file above had already been written and fsync'd.
-  // That contradicted this module's own stated design in two ways: the
-  // header says the .response file is the SOURCE OF TRUTH and index.db
-  // is "disposable and regenerable — never the only copy of anything,"
-  // and rebuildIndexFromResponses() exists precisely to recreate it.
-  // Losing a successful capture because a disposable accelerator was
-  // unavailable is the accelerator deciding the outcome.
-  //
-  // Not hypothetical: better-sqlite3 has been an OPTIONAL dependency
-  // since 0.39.153 (its node-gyp build needs a C++ toolchain James's
-  // Windows box does not have — that entry's own root-cause fix), and it
-  // is genuinely absent in this checkout. So on the real target machine
-  // every single recordResponse() call threw, and the whole index was
-  // unusable, while the .response files it wrote were sitting on disk
-  // perfectly intact.
-  //
-  // Now: the source of truth is written and kept; the index is attempted
-  // and its failure is REPORTED, never swallowed and never fatal.
-  // `indexed` is the honest flag — a caller that needs to know can ask.
-  // The source of truth is written and kept; the index is attempted and its
-  // failure REPORTED, never fatal (§FIXED 2026-09-20). Flushed at once, not on
-  // JaaStore's 1.5 s debounce: the readers (Clear Glass, idearium) are other
-  // processes, and the Agent tab polls for exactly this row.
+  // §FIXED 2026-09-20 — the source of truth is written and kept; the index is
+  // attempted and its failure REPORTED, never fatal (it used to throw after the
+  // .response was already durable, which let a disposable accelerator decide the
+  // outcome). Flushed at once, not on JaaStore's 1.5 s debounce: the readers
+  // (Clear Glass, idearium) are other processes, and the Agent tab polls for
+  // exactly this row.
   let indexed = false;
   let indexError = null;
   try {
     const st = _store(p);
     st.insert(INDEX_TABLE, _row({ id, kind, provider, chat_id: chatId, agent_id: agent, job_id: job, captured_at: capturedAt,
-      content_hash: contentHash, response_path: responseRelPath, artifact_path: artifactPath }));
+      content_hash: contentHash, response_path: responseRelPath, artifact_path: artifactPath, ...extra }));
     st.flushAll();
     indexed = true;
   } catch (e) {
@@ -251,6 +248,8 @@ function rebuildIndexFromResponses(root) {
           agent_id: _agentOf(parsed), job_id: _jobOf(parsed),
           content_hash: parsed.content_hash || rawHash, response_path: relPath,
           artifact_path: parsed.artifact_path || null, status: 'ok',
+          chat_key: parsed.chat_key, version: parsed.version,
+          transcript_hash: parsed.transcript_hash, message_count: parsed.message_count,
         });
         recovered++;
       } catch (e) {
@@ -282,7 +281,7 @@ function rebuildIndexFromResponses(root) {
  *      files copied in by hand), it is rebuilt from responses/ and read again;
  *   3. if JAA itself fails, responses/ is read directly — slower, and correct.
  */
-function queryItems(root, { kind, provider, chatId, agentId, jobId, limit = 100 } = {}) {
+function queryItems(root, { kind, provider, chatId, chatKey, agentId, jobId, limit = 100 } = {}) {
   const p = _paths(root);
   const where = {};
   if (kind)     where.kind = kind;
@@ -290,6 +289,7 @@ function queryItems(root, { kind, provider, chatId, agentId, jobId, limit = 100 
   if (chatId)   where.chat_id = chatId;
   if (agentId)  where.agent_id = agentId;
   if (jobId)    where.job_id = jobId;
+  if (chatKey)  where.chat_key = chatKey;
   try {
     const st = _store(p);
     st.reloadTable(INDEX_TABLE);
@@ -302,7 +302,7 @@ function queryItems(root, { kind, provider, chatId, agentId, jobId, limit = 100 
     return st.all(INDEX_TABLE, where, { orderBy: 'captured_at', order: 'DESC', limit });
   } catch (e) {
     console.warn(`[${MODULE_ID}] queryItems: JAA index unavailable (${e.message}) — reading responses/ directly`);
-    return _scanResponses(p, { kind, provider, chatId, agentId, jobId, limit });
+    return _scanResponses(p, { kind, provider, chatId, chatKey, agentId, jobId, limit });
   }
 }
 
@@ -310,7 +310,7 @@ function queryItems(root, { kind, provider, chatId, agentId, jobId, limit = 100 
  *  .response files themselves, newest first. A file that will not parse
  *  is reported with status:'unreadable' rather than skipped silently,
  *  the same rule rebuildIndexFromResponses() already applies. */
-function _scanResponses(p, { kind, provider, chatId, agentId, jobId, limit = 100 } = {}) {
+function _scanResponses(p, { kind, provider, chatId, chatKey, agentId, jobId, limit = 100 } = {}) {
   let names;
   try { names = fs.readdirSync(p.responsesDir).filter(n => n.endsWith('.response')); }
   catch (_) { return []; }
@@ -322,7 +322,7 @@ function _scanResponses(p, { kind, provider, chatId, agentId, jobId, limit = 100
     catch (e) {
       // 0.39.241 — an unreadable file can't be attributed to an agent, job or provider,
       // so it answers only an unfiltered listing (as the JAA index does: its fields are null).
-      if (kind || provider || chatId || agentId || jobId) continue;
+      if (kind || provider || chatId || chatKey || agentId || jobId) continue;
       out.push({ id: name.replace(/\.response$/, ''), kind: null, provider: null, chat_id: null, agent_id: null, job_id: null,
         captured_at: 0, content_hash: null, response_path: path.join('responses', name),
         artifact_path: null, status: 'unreadable', error: e.message });
@@ -333,9 +333,12 @@ function _scanResponses(p, { kind, provider, chatId, agentId, jobId, limit = 100
     if (chatId && r.chat_id !== chatId) continue;
     if (agentId && _agentOf(r) !== agentId) continue;
     if (jobId && _jobOf(r) !== jobId) continue;
+    if (chatKey && r.chat_key !== chatKey) continue;
     out.push({ id: r.id, kind: r.kind, provider: r.provider, chat_id: r.chat_id, agent_id: _agentOf(r), job_id: _jobOf(r),
       captured_at: r.captured_at, content_hash: r.content_hash,
-      response_path: path.join('responses', name), artifact_path: r.artifact_path, status: 'ok' });
+      response_path: path.join('responses', name), artifact_path: r.artifact_path, status: 'ok',
+      chat_key: r.chat_key || null, version: r.version || null,
+      transcript_hash: r.transcript_hash || null, message_count: r.message_count ?? null });
   }
   out.sort((a, b) => (b.captured_at || 0) - (a.captured_at || 0));
   return out.slice(0, limit);
@@ -371,6 +374,136 @@ function findResponseByJobId(root, jobId) {
   return best; // null if genuinely never captured — never fabricates a match
 }
 
+// ── Chat transcripts (0.39.254) ─────────────────────────────────────────────
+// James: "getting the download manager logging agent chats" … "i want nexus to
+// help remember. persistent memory for ai agents." One record per chat, versioned:
+// a chat is keyed provider:chatId, and a new .response (kind 'transcript') is
+// written only when the chat's messages actually changed. Every version is kept
+// (the .response files are the history); readers take the newest.
+
+function chatKeyOf(provider, chatId) { return `${provider}:${chatId}`; }
+
+/** The messages as stored: role user|assistant, non-empty text, in DOM order. */
+function normalizeMessages(messages) {
+  if (!Array.isArray(messages)) return [];
+  const out = [];
+  for (const m of messages) {
+    const text = typeof m?.text === 'string' ? m.text.trim() : '';
+    if (!text) continue;
+    out.push({ role: m.role === 'user' ? 'user' : 'assistant', text });
+  }
+  return out;
+}
+
+function transcriptHash(messages) { return `sha256:${sha256(JSON.stringify(normalizeMessages(messages)))}`; }
+
+/** true when every message of `a` appears in `b`, in the same order (a ⊑ b). */
+function _subsequence(a, b) {
+  let j = 0;
+  for (const m of a) {
+    while (j < b.length && !(b[j].role === m.role && b[j].text === m.text)) j++;
+    if (j === b.length) return false;
+    j++;
+  }
+  return true;
+}
+
+/** The newest version of one chat, read from its .response file, or null. */
+function latestTranscript(root, chatKey) {
+  // Highest version, not newest captured_at: two versions can share a millisecond.
+  const rows = queryItems(root, { kind: 'transcript', chatKey, limit: 100000 });
+  if (!rows.length) return null;
+  const top = rows.reduce((a, b) => ((b.version || 0) > (a.version || 0) ? b : a));
+  const r = readItem(root, top.id);
+  return r && r.status !== 'unreadable' ? r : null;
+}
+
+/**
+ * recordChat(root, { provider, chatId, url, agentId, tabId, messages, partial, source })
+ * -> { recorded: true, id, chatKey, version, ... }
+ *  | { recorded: false, reason, chatKey?, id?, version? }
+ *
+ * Refusals, each named:
+ *   no-provider / no-chat-id — nothing to key the chat by ('home' is a new chat
+ *                              the provider has not given an id yet);
+ *   empty                    — the page gave no messages (a selector miss, not a chat);
+ *   unchanged                — the same messages as the newest version;
+ *   contained-in-latest      — every message is already in the newest version, in
+ *                              order: a partial or lazily-loaded read never replaces
+ *                              a fuller one.
+ */
+function recordChat(root, { provider, chatId, url, agentId, tabId, messages, partial, source, extractedAt } = {}) {
+  if (!provider) return { recorded: false, reason: 'no-provider' };
+  if (!chatId || chatId === 'home') return { recorded: false, reason: 'no-chat-id' };
+  const chatKey = chatKeyOf(provider, chatId);
+  const msgs = normalizeMessages(messages);
+  if (!msgs.length) return { recorded: false, reason: 'empty', chatKey };
+
+  const hash = transcriptHash(msgs);
+  const latest = latestTranscript(root, chatKey);
+  if (latest) {
+    if (latest.transcript_hash === hash) return { recorded: false, reason: 'unchanged', chatKey, id: latest.id, version: latest.version };
+    if (_subsequence(msgs, normalizeMessages(latest.raw?.messages))) {
+      return { recorded: false, reason: 'contained-in-latest', chatKey, id: latest.id, version: latest.version };
+    }
+  }
+  const version = (latest?.version || 0) + 1;
+  const agent = agentId || latest?.agent_id || null;   // a chat once owned by an agent stays filed under it
+
+  const stored = _write(root, {
+    kind: 'transcript', provider, chatId, agentId: agent, jobId: null,
+    extra: { chat_key: chatKey, version, transcript_hash: hash, message_count: msgs.length },
+    raw: {
+      provider, chatId, url: url || null, agentId: agent, tabId: tabId || null,
+      source: source || null, partial: !!partial, extractedAt: extractedAt || null,
+      supersedes: latest?.id || null, messages: msgs,
+    },
+  });
+  return { recorded: true, chatKey, version, messageCount: msgs.length, supersedes: latest?.id || null, ...stored };
+}
+
+/**
+ * listChats(root, { agentId, provider, q, limit }) — one row per chat: its newest
+ * version, plus how many versions exist. `q` matches the chat's own text
+ * (case-insensitive), read from the newest .response — this is the recall side
+ * an agent uses to remember.
+ */
+function listChats(root, { agentId, provider, q, limit = 100 } = {}) {
+  let out = collapseVersions(queryItems(root, { kind: 'transcript', agentId, provider, limit: 100000 }));
+  if (q) {
+    const needle = String(q).toLowerCase();
+    out = out.filter(r => {
+      const it = readItem(root, r.id);
+      return (it?.raw?.messages || []).some(m => m.text.toLowerCase().includes(needle));
+    });
+  }
+  return out.slice(0, limit);
+}
+
+/**
+ * collapseVersions(rows) — every transcript row replaced by one row per chat: its
+ * highest version, with `versions` = how many exist. Other rows pass through.
+ * Order: newest captured_at first.
+ */
+function collapseVersions(rows) {
+  const byKey = new Map();
+  const out = [];
+  for (const r of rows) {
+    if (r.kind !== 'transcript') { out.push(r); continue; }
+    const k = r.chat_key || chatKeyOf(r.provider, r.chat_id);
+    const e = byKey.get(k);
+    if (!e) { byKey.set(k, { ...r, chat_key: k, versions: 1 }); continue; }
+    const versions = e.versions + 1;
+    byKey.set(k, (r.version || 0) > (e.version || 0) ? { ...r, chat_key: k, versions } : { ...e, versions });
+  }
+  return out.concat([...byKey.values()]).sort((a, b) => (b.captured_at || 0) - (a.captured_at || 0));
+}
+
+/** chatVersions(root, chatKey) — every version of one chat, newest first (index rows). */
+function chatVersions(root, chatKey) {
+  return queryItems(root, { kind: 'transcript', chatKey, limit: 100000 });
+}
+
 /**
  * readItem(root, id) — 0.39.239. The full record for one item, read from its
  * .response file (the source of truth, never the index). The Library's
@@ -403,4 +536,5 @@ module.exports = {
   MODULE_ID, COMPARTMENT_NAME,
   ensureCompartment, recordResponse, queryItems, rebuildIndexFromResponses, backupSnapshot,
   findResponseByJobId, readItem, defaultRoot,
+  recordChat, listChats, chatVersions, collapseVersions, latestTranscript, chatKeyOf, normalizeMessages, transcriptHash,
 };

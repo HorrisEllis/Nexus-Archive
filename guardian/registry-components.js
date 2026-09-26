@@ -6,7 +6,7 @@
  * Declares every Guardian capability to the orchestrator on boot.
  */
 
-const V = '3.11.1';   // §5.4 — tracks canonical lib/version.js services.guardian. 0.39.252: 3.11.0 -> 3.11.1 (agent wakes answered once, by wake-loop, as a job). 0.39.237: 3.8.0 -> 3.9.0 (repo jobs go to their own tab or wait; guardian.job.agent_tab_fallback). 2026-08-08: was 3.6.1, drifted. 2026-09-23: 3.6.2 -> 3.7.0 with the account-authority + job-evidence + .job-source-of-truth work (guardian/spec/guardian.spec built_2026_09_23 block)
+const V = '3.14.0';   // §5.4 — tracks canonical lib/version.js services.guardian. 0.39.256: 3.13.0 -> 3.14.0 (gate trail: every failure names its gate; /status carries gate + gates; transcript streaming). 0.39.255: 3.12.0 -> 3.13.0 (a job completes from its chat transcript; a chat is filed under the job whose prompt it holds; repo jobs wear their repo hat). 0.39.254: 3.11.1 -> 3.12.0 (every provider chat logged as one versioned transcript per chat; /api/chats). 0.39.252: 3.11.0 -> 3.11.1 (agent wakes answered once, by wake-loop, as a job). 0.39.237: 3.8.0 -> 3.9.0 (repo jobs go to their own tab or wait; guardian.job.agent_tab_fallback). 2026-08-08: was 3.6.1, drifted. 2026-09-23: 3.6.2 -> 3.7.0 with the account-authority + job-evidence + .job-source-of-truth work (guardian/spec/guardian.spec built_2026_09_23 block)
 const NS = 'guardian';
 function _c(id, method, path, desc, opts = {}) {
   return {
@@ -35,6 +35,10 @@ module.exports = [
   _c('providers.list',       'GET',  '/providers',              'Connected NCP browser tab providers'),
   _c('provider.channel',     'GET',  '/channel',                'NCP SSE channel — browser tabs connect here', { tags:['ncp'] }),
   _c('provider.result',      'POST', '/result',                 'NCP result from browser tab', { tags:['ncp'] }),
+  // 0.39.254 — chat transcripts (lib/chat-transcripts.js): every provider chat, one versioned record per chat in Clear Glass's downloads index. The recall side agents read to remember.
+  _c('chats.list',           'GET',  '/api/chats',              'Every logged chat at its newest version (?agentId ?provider ?q=text recall ?limit)', { tags:['chats','memory'] }),
+  _c('chats.versions',       'GET',  '/api/chats/versions',     'Every version of one chat (?key=provider:chatId), newest first', { tags:['chats','memory'] }),
+  _c('chats.item',           'GET',  '/api/chats/item/:id',     'One chat version: the full transcript from its .response file', { tags:['chats','memory'] }),
 
   // ── Jobs ───────────────────────────────────────────────────────────────
   _c('job.list',             'GET',  '/jobs',                   'Active + recent jobs'),

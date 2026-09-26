@@ -695,6 +695,21 @@
       "method": "GET",
       "path": "/api/ollama/models",
       "_action": "ollama.models"
+    },
+    {
+      "method": "GET",
+      "path": "/api/repos/:uuid/agent/tools",
+      "_action": "repo.agent.tools"
+    },
+    {
+      "method": "POST",
+      "path": "/api/repos/:uuid/agent/debug",
+      "_action": "repo.agent.debug"
+    },
+    {
+      "method": "GET",
+      "path": "/api/repos/:uuid/agent/graph",
+      "_action": "repo.agent.graph"
     }
   ]
 }

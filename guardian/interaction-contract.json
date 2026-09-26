@@ -44,7 +44,11 @@
       "guardian.cfr.gap",
       "contract.structural.fail",
       "contract.behavioral.fail",
-      "contract.temporal.fail"
+      "contract.temporal.fail",
+      "guardian.ncp.transcript",
+      "guardian.chat.transcript.recorded",
+      "guardian.job.completed_from_transcript",
+      "guardian.job.gate"
     ],
     "consumes": []
   },
@@ -338,6 +342,21 @@
         "minSigma"
       ],
       "description": "Filtered causal replay"
+    },
+    {
+      "method": "GET",
+      "path": "/api/chats",
+      "_confirmed": "server.js _chatTranscripts.route (lib/chat-transcripts.js) — 0.39.254"
+    },
+    {
+      "method": "GET",
+      "path": "/api/chats/versions",
+      "_confirmed": "server.js _chatTranscripts.route (lib/chat-transcripts.js) — 0.39.254"
+    },
+    {
+      "method": "GET",
+      "path": "/api/chats/item/:id",
+      "_confirmed": "server.js _chatTranscripts.route (lib/chat-transcripts.js) — 0.39.254"
     }
   ],
   "cli": {

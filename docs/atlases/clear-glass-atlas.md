@@ -232,6 +232,7 @@ Full real chain traced and patched this pass, five files, not one:
 | 3.10.0 – 3.13.2 | 2026-09-23 – 2026-09-25 | **Not rowed here** — this table was not kept up through those releases. They are recorded in `clear-glass.spec`'s `version_history` and in the sections above/below (accounts, job intake, agent tabs, downloads/Library). |
 | 3.14.0 | 2026-09-25 (v0.39.251) | The element picker assigns provider selectors — see "The element picker assigns provider selectors" below. Versionium: see the spec entry's `versioniumCommitId`. |
 | 3.14.1 | 2026-09-25 (v0.39.252) | `src/copilot/wake-relay.js` leaves an agent's "hey nexus" to guardian's wake-loop — see "The wake relay leaves agent wakes to guardian" below. |
+| 3.15.0 | 2026-09-26 (v0.39.254) | The downloads manager logs every provider chat, one versioned record per chat — see "Every chat, one versioned record" below. |
 
 **Whether clear-glass reports to Versionium separately** — not confirmed this session. Releases are recorded in Versionium from outside (`versionium/lib/engine.js` `commit`), and the id goes in the spec entry.
 
@@ -279,3 +280,31 @@ Handoff 2026-09-25, step 1. Picking an element on a provider's page (◎ Element
 James: *"its not voice assistance. its for the agents to talk to nexus through clearglass."* `src/copilot/wake-relay.js` listens to cortex's `nexus.wake.detected`. Cortex raises that from `/api/meta/observe`, which the userscript posts when an agent's reply first **appears**, while it is still streaming. The relay answered that fragment (`hey nexus, w` → co-pilot asked "w") as a `/wake-reply` job. The job queued behind the unfinished reply and was never typed. At the same time, the page's own `checkMessage()` answered the same fragment with an overlay, and typed the answer into the composer unsent.
 
 An agent's wake (`role: 'assistant'`) is now answered once, by guardian's `lib/wake-loop.js`, from the completed reply, as a job sent into the same tab (guardian atlas, 3.11.1). The relay logs `agent wake from <agent> left to guardian's wake-loop` and returns. A non-agent wake is still answered by the relay as before. Test WK-018 runs the real relay against a fake cortex stream: no co-pilot call, no guardian job, no overlay.
+
+## Every chat, one versioned record (3.15.0, v0.39.254)
+
+James: *"we were working on getting the download manager logging agent chats."* Asked, he chose a full-transcript sync, one record per chat (versioned), and every provider chat, including the userscripts in his own browser: *"i want nexus to help remember. persistent memory for ai agents."*
+
+**Why the job path was not enough.** Until now a chat reached the downloads index only when a guardian job **completed**. The 0.39.253 live log has four ChatGPT jobs and none completed (reply detection is the open break), so the index held nothing from them. A chat opened by hand never completes a job at all.
+
+**The record.** `src/downloads/artifact-chat-index.js` gains kind `transcript`:
+
+| field | meaning |
+|---|---|
+| `chat_key` | `provider:chatId`, the chat's identity |
+| `version` | 1, 2, 3 … the newest is the **highest version**, not the newest `captured_at` (two versions can share a millisecond) |
+| `transcript_hash` | sha256 of the normalized messages only |
+| `message_count` | messages in this version |
+| `raw.messages` | `[{role: user\|assistant, text}]` in page order; `raw.supersedes` = the previous version's id |
+
+`recordChat()` writes a new `.response` only when the messages changed. It refuses, by name:
+- `no-provider` / `no-chat-id` (`home`, a new chat the provider has not named yet);
+- `empty`;
+- `unchanged`;
+- `contained-in-latest`: every message is already in the newest version, in order, so a partial or lazily-loaded read never replaces a fuller one.
+
+Every version is kept. A chat keeps the agent it was first filed under. `recordResponse()` and `recordChat()` share one write path (`_write`: the `.response` is fsync'd first, then the index row; an index failure is reported, never fatal). The writer is guardian (`lib/chat-transcripts.js`, guardian atlas 3.12.0); Clear Glass reads.
+
+**The Library.** `/cli/downloads/responses` lists a chat once, at its newest version with `versions`; `?versions=all` lists every version and `?chatKey=` one chat. Library → Responses shows a chat row (☰, `chat · v2 (2 versions) · 4 messages`), opens it as a conversation (prompt / reply), and a version picker opens any earlier version.
+
+Tests: `test-chat-transcripts` TX-01–TX-10 (the index, each guard mutation-checked); `tests/probe/clearglass-library-window.js` 29/29 in real Chromium, with 4 new chat checks.
