@@ -405,7 +405,7 @@ export interface OSConfig {
 
 export const DEFAULT_CONFIG: OSConfig = {
   bridge: {
-    target: { type: "local", port: 9222, host: "localhost" },
+    target: { type: "local", port: 9222, host: "127.0.0.1" },
     reconnectDelayMs: 1000,
     maxReconnectAttempts: 10,
     commandTimeoutMs: 30000,
@@ -438,11 +438,12 @@ export const DEFAULT_CONFIG: OSConfig = {
     maxEvents: 50000,
     flushIntervalMs: 2000,
   },
-};
-
-// Appended defaults for new modules
-// NOTE: Merged into DEFAULT_CONFIG above during build
-export const BEHAVIOR_DEFAULTS = {
+  // §0.39.264 — these three were declared in OSConfig but only ever lived in
+  // BEHAVIOR_DEFAULTS below, whose note said they were "merged into
+  // DEFAULT_CONFIG above during build" — they never were. Every POST
+  // /api/connect then crashed in new RoutingEngine(DEFAULT_CONFIG.routing)
+  // with "Cannot read properties of undefined (reading 'defaultLevel')",
+  // so ErosmancerOS could never attach to a browser.
   behavior: {
     defaultProfile: "precise" as BehaviorProfileName,
     sandboxByDefault: false,
@@ -458,4 +459,11 @@ export const BEHAVIOR_DEFAULTS = {
     debounceMs: 100,
     watchSubtree: true,
   },
+};
+
+// Kept for callers that import it; the same objects as DEFAULT_CONFIG's.
+export const BEHAVIOR_DEFAULTS = {
+  behavior: DEFAULT_CONFIG.behavior,
+  routing:  DEFAULT_CONFIG.routing,
+  observer: DEFAULT_CONFIG.observer,
 };
