@@ -109,9 +109,12 @@ const EVIDENCE = { url: 'https://chatgpt.com/c/abc', matched: 2, text: 'Latest a
   });
   g.server.close(); fs.rmSync(g.dir, { recursive: true, force: true });
 
-  await test('SA-06', 'guardian-picker.js: one line added against git HEAD, nothing removed or changed (its look is untouched)', () => {
+  // Baseline pinned to 0.39.250 (43c3f62), the last picker before 0.39.251's one line — NOT git HEAD, which contains
+  // the line once 0.39.251 is committed (this test compared against HEAD in 0.39.251 and could only pass uncommitted).
+  // A later change to guardian-picker.js must move this baseline on purpose.
+  await test('SA-06', 'guardian-picker.js: exactly one line added to the 0.39.250 picker, nothing removed or changed (its look is untouched)', () => {
     let head;
-    try { head = execFileSync('git', ['show', 'HEAD:clear-glass/renderer/guardian-picker.js'], { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26 }); }
+    try { head = execFileSync('git', ['show', '43c3f62:clear-glass/renderer/guardian-picker.js'], { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26 }); }
     catch (_) { return 'SKIP'; }
     const now = fs.readFileSync(path.join(ROOT, 'clear-glass/renderer/guardian-picker.js'), 'utf8');
     const a = head.split('\n'), b = now.split('\n');

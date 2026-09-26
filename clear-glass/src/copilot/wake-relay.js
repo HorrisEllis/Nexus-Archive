@@ -95,6 +95,13 @@ function startWakeRelay(providerHost, opts = {}) {
   }
 
   async function handleWake(d) {
+    // §0.39.252 — James (2026-09-25): "is supposed to be injected into the chat like a job. it is for the agents to talk
+    // to nexus. not me." An AGENT's wake (the assistant's own "hey nexus, …") is answered by guardian's wake-loop
+    // (guardian/lib/wake-loop.js) from the COMPLETED reply, as a wake-reply job sent into the same tab. This relay heard
+    // it from cortex's /api/meta/observe, which the userscript calls when a reply first APPEARS — still streaming — so it
+    // answered the first fragment ("hey nexus, w") a second time, as a job that queued behind the unfinished reply.
+    // Cortex still records the event (nexus_wake_events, the REPL); this relay just no longer answers it.
+    if (d.role === 'assistant') { log(`[wake-relay] agent wake from ${d.agent || '?'} left to guardian's wake-loop (answered on the completed reply)`); return; }
     if (!d.agent) { log(`[wake-relay] event with no agent, cannot inject back — ${d.request?.slice(0,60)}`); return; }
     log(`[wake-relay] wake from ${d.agent}${d.account ? ' ('+d.account+')' : ''}: ${d.request?.slice(0,80)}`);
     let text = null;

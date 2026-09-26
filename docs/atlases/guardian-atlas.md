@@ -242,3 +242,30 @@ When a userscript's `findResponseEl()` finds no reply element, the watch now rep
 ## One selector map per provider (3.11.0, v0.39.249)
 
 Where a provider's input box, send button and reply live is one map, held by `lib/agent-registry.js` and served by `lib/selector-map.js`. Every NCP connect pushes `GUARDIAN_SELECTORS` to that tab; every change (`POST /api/agents/:id/selectors`) is pushed to all of that provider's open tabs, so the next job uses it. A key counts as **verified** only when its last change came from a live-checked source (the Clear Glass element picker, archaeology) with evidence; copilot may propose, never verify. `userscript-chatgpt.js` 10.5.0 uses a verified value first, then its own built-in lookup, then the unverified seed. Versionium: 0.39.248 `vtm-eebbc621`, 0.39.249 `vtm-a91834dc`.
+
+## An agent's "hey nexus" is answered once, as a job (3.11.1, v0.39.252)
+
+James: *"is supposed to be injected into the chat like a job. it is for the agents to talk to nexus. not me."* / *"its not voice assistance. its for the agents to talk to nexus through clearglass."*
+
+A wake is the **agent** asking NEXUS something: the agent hint (`lib/wake-hint.js`) tells the model it may start a line with `hey nexus,`. The answer has to reach the agent as its next turn.
+
+**Before.** Three places answered one wake, and none completed the job.
+- **The page.** `userscript-nexus-wake.js` `checkMessage()`, called on every mutation of a streaming reply, matched the first fragment (`hey nexus, w`). It asked co-pilot "w", drew an overlay for the person, and typed the answer into the composer without sending it.
+- **Clear Glass's relay.** Cortex's `/api/meta/observe` (posted when the reply first appears) matched the same fragment. `clear-glass/src/copilot/wake-relay.js` answered it again as a `/wake-reply` job, which queued behind the unfinished reply and was never typed.
+- **`lib/wake-loop.js`.** The right design, but it ran for mesh jobs only.
+
+**Now.** `lib/wake-loop.js` is the one answerer, for every transport.
+
+| step | what happens |
+|---|---|
+| trigger | `guardian.job.complete` — the **completed** reply (`job.responseText`), never a streaming fragment |
+| match | a line that starts with the wake phrase (fences and `>` quotes ignored), its paragraph parsed by `lib/agent-chat.parseWake` |
+| guard | once per job; depth cap `GUARDIAN_WAKE_MAX_DEPTH` (3); a copilot failure resends nothing |
+| answer | co-pilot `POST :3750/api/prompt/tools` (the tool loop — live data) |
+| reply | a `wake-reply` job for the same agent/account: pinned to the userscript tab (`transport: 'ncp'`) unless the asking job was mesh-delivered; typed **and sent** like any job; prompt `[NEXUS] answer to your "hey nexus, <ask>"` + the answer |
+
+`checkMessage()` only reports whether a message addresses NEXUS (nexus-wake 1.1.0). The relay returns on `role: 'assistant'`. Cortex still records every wake (`nexus_wake_events`, the REPL).
+
+**Depends on reply detection.** A wake is answered when its job completes; on ChatGPT that needs the reply detected (the open break — 0.39.251's element picker is how it is fixed). A wake in a chat that was not a guardian job has no completion and is not answered here.
+
+Tests: `test-guardian-wake` 16/16 (WK-012, WK-017, WK-018 new/rewritten), `test-nexus-wake` NW-027 / NW-030 rewritten; each fix mutation-checked.

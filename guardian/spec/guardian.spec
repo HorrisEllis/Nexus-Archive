@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        guardian
-    version:     3.11.0   # 0.39.249 MINOR — selector map: GET/POST /api/agents/:id/selectors, GUARDIAN_SELECTORS pushed on every NCP connect and change (lib/selector-map.js). Previous 3.10.0: 0.39.247 MINOR — one tab, one job at a time (userscript busy guard), every reply back (see CHANGELOG-0.39.247.md); this line was left at 3.9.5 while lib/version.js and registry-components.js moved, synced in 0.39.248. Previous 3.9.5: 0.39.244 PATCH — agentId jobs pass the shared-tab fail-fast; /events job frames carry payload+agentId; userscripts report the node anchor. Previous 3.9.4: 0.39.242 PATCH — jaa-store.js opts.settings:false. Previous 3.9.3: 0.39.241 PATCH — code-artifact.js: ARTIFACT_DIR honours the test sandbox / NEXUS_DATA_ROOT; no "not indexed" warning per reply when better-sqlite3 is simply absent
+    version:     3.11.1   # 0.39.252 PATCH — agent "hey nexus" answered ONCE, by lib/wake-loop.js, from the COMPLETED reply of any job (was mesh only), as a wake-reply job sent into the same tab; the page and Clear Glass's relay no longer answer it. Previous 3.11.0: 0.39.249 MINOR — selector map: GET/POST /api/agents/:id/selectors, GUARDIAN_SELECTORS pushed on every NCP connect and change (lib/selector-map.js). Previous 3.10.0: 0.39.247 MINOR — one tab, one job at a time (userscript busy guard), every reply back (see CHANGELOG-0.39.247.md); this line was left at 3.9.5 while lib/version.js and registry-components.js moved, synced in 0.39.248. Previous 3.9.5: 0.39.244 PATCH — agentId jobs pass the shared-tab fail-fast; /events job frames carry payload+agentId; userscripts report the node anchor. Previous 3.9.4: 0.39.242 PATCH — jaa-store.js opts.settings:false. Previous 3.9.3: 0.39.241 PATCH — code-artifact.js: ARTIFACT_DIR honours the test sandbox / NEXUS_DATA_ROOT; no "not indexed" warning per reply when better-sqlite3 is simply absent
     foundation:  nexus-system-foundation@1.0.0
     port:        7820
     uuid:        nexus-guardian-v3-0000-2026-0615-jamesbrooks-001
@@ -369,3 +369,33 @@ spec:
       registry-components / interaction-contract entries for the two routes; the other userscripts
       (claude, gemini, perplexity, deepseek) do not read the map yet.
     tests: tests/modules/test-selector-map.test.js 15/15 (mutation-checked).
+  built_2026_09_25_wake_is_a_job:
+    shipped: "0.39.252"
+    versionium: "vtm-7a5e6093"
+    asked_by: >-
+      James — "is supposed to be injected into the chat like a job. it is for the agents to talk to nexus. not me." / "its not voice assistance. its for the agents to talk to nexus through clearglass"
+    found: >-
+      Three answerers for one agent wake, none complete. (1) userscript-nexus-wake.js checkMessage(), called by the
+      reply observer on every mutation of a STREAMING reply, matched the first fragment ("hey nexus, w"), asked
+      co-pilot "w", drew an overlay for the person and typed the answer into the composer WITHOUT sending it (the
+      text left in James's composer). (2) cortex /api/meta/observe, posted when the reply first APPEARS, matched
+      the same fragment and Clear Glass's wake-relay answered it again as a /wake-reply job — which queued behind
+      the unfinished reply (the tab stays busy until the reply is detected; ChatGPT's is not, the open break) and
+      was never typed. (3) lib/wake-loop.js — the right design (completed reply, fences/quotes skipped, depth cap,
+      once per job, copilot /api/prompt/tools, a real job back) — ran for MESH jobs only, "the userscript answers
+      its own wakes".
+    rule: >-
+      lib/wake-loop.js is the ONE answerer of an agent wake, for every job transport. The answer goes back as a
+      wake-reply job: pinned to the userscript tab (transport 'ncp') when the asking job was not mesh-delivered,
+      through the mesh when it was; typed AND sent like any job, so the agent receives it. The prompt says what it
+      answers: [NEXUS] answer to your "hey nexus, <ask>" — then copilot's answer. checkMessage() now only reports
+      whether a message addresses NEXUS (nexus-wake 1.1.0); wake-relay.js returns on role 'assistant'. Cortex still
+      records every wake (nexus_wake_events, the REPL) — only the answering moved.
+    depends_on: >-
+      a wake is answered when its job COMPLETES. On ChatGPT that needs the reply to be detected — the open break
+      (0.39.251's element picker is how it gets fixed). A wake in a chat that was not a guardian job (a person
+      chatting with the agent directly) has no completion and is not answered by this loop.
+    tests: >-
+      tests/modules/test-guardian-wake.js 16/16 (WK-012 ncp jobs answered + pinned, WK-017 full request + framing,
+      WK-018 the real relay stays silent for an assistant wake); test-nexus-wake.js NW-027/NW-030 (checkMessage has
+      no side effects). Each fix mutation-checked.

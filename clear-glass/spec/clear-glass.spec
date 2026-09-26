@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        clear-glass
-    version:     3.14.0
+    version:     3.14.1
     foundation:  nexus-system-foundation@1.1.0
     port:        7702
     uuid:        nexus-clear-glass-v1-0000-2026-0901-jamesbrooks-001
@@ -306,6 +306,17 @@ spec:
         opened: 2026-09-25
 
   version_history:
+    - version: 3.14.1
+      date: 2026-09-25
+      summary: >-
+        PATCH (v0.39.252) — James: "is supposed to be injected into the chat like a job. it is for the agents to talk to nexus. not me." / "its not voice assistance. its for the agents to talk to nexus through clearglass" src/copilot/wake-relay.js no
+        longer answers an AGENT wake (role 'assistant'): it heard cortex's /api/meta/observe, posted when the
+        agent's reply first appears — still streaming — so it answered the first fragment ("hey nexus, w", copilot
+        asked "w") as a /wake-reply job that queued behind the unfinished reply and was never typed. Guardian's
+        wake-loop now answers agent wakes once, from the completed reply, as a job sent into the same tab (guardian
+        3.11.1). The relay logs where the wake went; it still answers a non-agent wake as before. Test WK-018 runs
+        the real relay against a fake cortex stream: no copilot call, no guardian job, no overlay.
+      versioniumCommitId: vtm-7a5e6093
     - version: 3.14.0
       date: 2026-09-25
       summary: >-

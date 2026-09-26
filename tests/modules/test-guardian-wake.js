@@ -91,13 +91,38 @@ const read = (p) => fs.readFileSync(path.join(__dirname, '../..', p), 'utf8');
     const r = await h.wl.handleComplete({ jobId: 'm1' });
     assert.strictEqual(r.replied, 'reply-1'); assert.strictEqual(h.asked[0][0], 'is the build green?'); assert.strictEqual(h.asked[0][1].sessionId, 'wake-mesh-chatgpt-work');
     const c = h.created[0];
-    assert.deepStrictEqual([c.command, c.provider, c.prompt, c.source, c.agentId, c.accountId, c.wakeDepth], ['wake-reply', 'chatgpt', 'live data', 'copilot', 'mesh-chatgpt-work', 'work', 1]);
+    assert.deepStrictEqual([c.command, c.provider, c.prompt, c.source, c.agentId, c.accountId, c.wakeDepth], ['wake-reply', 'chatgpt', '[NEXUS] answer to your "hey nexus, is the build green?"\n\nlive data', 'copilot', 'mesh-chatgpt-work', 'work', 1]);
+    assert.strictEqual(c.transport, null, 'a mesh wake is answered through the mesh again');
     assert.deepStrictEqual(h.dispatched, ['reply-1']); assert.ok(h.events.some(e => e[0] === 'guardian.wake.replied'));
   });
-  await test('WK-012', 'userscript-delivered jobs are NOT handled here (the userscript answers its own wakes; both would answer twice)', async () => {
+  await test('WK-012', '0.39.252 — userscript-delivered (ncp / unpinned) jobs ARE answered here, once, pinned back to that userscript tab; the page no longer answers (James: "is supposed to be injected into the chat like a job")', async () => {
     const h = loop({ m1: meshJob({ transport: 'ncp' }), m2: meshJob({ id: 'm2', transport: null }) });
-    assert.strictEqual((await h.wl.handleComplete({ jobId: 'm1' })).skipped, 'not_mesh'); assert.strictEqual((await h.wl.handleComplete({ jobId: 'm2' })).skipped, 'not_mesh');
-    assert.strictEqual(h.asked.length, 0);
+    const r1 = await h.wl.handleComplete({ jobId: 'm1' }), r2 = await h.wl.handleComplete({ jobId: 'm2' });
+    assert.ok(r1.replied && r2.replied, JSON.stringify([r1, r2]));
+    assert.strictEqual(h.asked.length, 2);
+    assert.deepStrictEqual(h.created.map(c => [c.command, c.transport, c.agentId, c.accountId]), [['wake-reply', 'ncp', 'mesh-chatgpt-work', 'work'], ['wake-reply', 'ncp', 'mesh-chatgpt-work', 'work']]);
+    assert.strictEqual((await h.wl.handleComplete({ jobId: 'm1' })).skipped, 'already_handled');
+  });
+  await test('WK-017', '0.39.252 — the wake is read from the COMPLETED reply: the whole request reaches copilot, and the agent is told what the answer answers', async () => {
+    const full = "hey nexus, what's the current state of the dangling-hook failures, including the open gaps and any recent test results?";
+    const h = loop({ j: meshJob({ id: 'j', transport: 'ncp', responseText: full }) });
+    await h.wl.handleComplete({ jobId: 'j' });
+    assert.strictEqual(h.asked[0][0], full.replace(/^hey nexus,\s*/i, ''));
+    assert.ok(h.created[0].prompt.startsWith('[NEXUS] answer to your "hey nexus, what\'s the current state of the dangling-hook failures'), h.created[0].prompt.slice(0, 120));
+  });
+  await test('WK-018', '0.39.252 — Clear Glass\'s wake-relay leaves an AGENT wake (role assistant, as cortex emits it) to this loop: no copilot call, no guardian job — it used to answer the streaming fragment a second time', async () => {
+    const calls = { copilot: 0, guardian: 0 }, logs = [];
+    const mk = (fn) => new Promise((res) => { const s = http.createServer(fn); s.listen(0, '127.0.0.1', () => res(s)); });
+    const cortex = await mk((q, r) => { r.writeHead(200, { 'Content-Type': 'text/event-stream' }); r.write(`data: ${JSON.stringify({ type: 'nexus.wake.detected', agent: 'chatgpt', role: 'assistant', account: 'work', request: 'w' })}\n\n`); });
+    const copilot = await mk((q, r) => { calls.copilot++; r.writeHead(200); r.end(JSON.stringify({ text: 'Hello! How can I assist you today?' })); });
+    const guardian = await mk((q, r) => { calls.guardian++; r.writeHead(200); r.end(JSON.stringify({ ok: true, jobId: 'J9' })); });
+    const relay = startWakeRelay({ injectAnswer: async () => { calls.overlay = (calls.overlay || 0) + 1; return { ok: true }; } },
+      { cortexPort: cortex.address().port, copilotPort: copilot.address().port, guardianPort: guardian.address().port, log: (m) => logs.push(m) });
+    for (let i = 0; i < 40 && !logs.some(l => /left to guardian/.test(l)); i++) await sleep(30);
+    await sleep(200);
+    relay.stop(); [cortex, copilot, guardian].forEach(s => s.close());
+    assert.ok(logs.some(l => /agent wake from chatgpt left to guardian's wake-loop/.test(l)), 'the relay must say where the agent wake went: ' + JSON.stringify(logs));
+    assert.deepStrictEqual([calls.copilot, calls.guardian, calls.overlay || 0], [0, 0, 0]);
   });
   await test('WK-013', 'LOOP GUARD: an agent that keeps asking is stopped at the depth cap, with an event, and copilot is not called again', async () => {
     const jobs = { m1: meshJob() }; const h = loop(jobs, { maxDepth: 3 });
@@ -134,7 +159,7 @@ const read = (p) => fs.readFileSync(path.join(__dirname, '../..', p), 'utf8');
   });
 
   // ── the real wake relay against fake cortex / copilot / guardian ──
-  await test('WK-020', 'agent wake in a userscript tab: the relay answers via copilot and creates a guardian job PINNED to that userscript tab (transport ncp) with the account', async () => {
+  await test('WK-020', 'a NON-agent wake (no role — not the assistant\'s own reply; agent wakes are WK-018) is still answered by the relay via copilot, as a guardian job PINNED to that userscript tab (transport ncp) with the account', async () => {
     const seen = {};
     const mk = (fn) => new Promise((res) => { const s = http.createServer(fn); s.listen(0, '127.0.0.1', () => res(s)); });
     const cortex = await mk((q, r) => { r.writeHead(200, { 'Content-Type': 'text/event-stream' }); r.write(`data: ${JSON.stringify({ type: 'nexus.wake.detected', agent: 'chatgpt', account: 'work', agentId: 'mesh-chatgpt-work', request: 'status?' })}\n\n`); });

@@ -1,6 +1,7 @@
 'use strict';
 /**
- * guardian/lib/wake-loop.js — agent-initiated "hey nexus," for jobs delivered by the mesh. 2026-09-19.
+ * guardian/lib/wake-loop.js — agent-initiated "hey nexus," answered back into the agent's chat as a job. 2026-09-19;
+ * the ONE owner of agent wakes since 0.39.252 (mesh AND userscript-delivered jobs).
  *
  * The agent hint (wake-hint.js) tells the model it can emit a line starting "hey nexus," to ask NEXUS for real system
  * state. The userscript watches the model's output for that line and answers it back into the chat. A mesh-delivered job
@@ -11,7 +12,14 @@
  *   -> create a 'wake-reply' guardian job for the same agent/account -> it goes through the normal ladder into the same
  *   deterministic tab -> whose answer may itself contain a wake (depth + 1).
  *
- * WHY MESH ONLY. On the userscript path the userscript already answers wakes; handling them here too would answer twice.
+ * 0.39.252 — NOT MESH ONLY ANY MORE. James (2026-09-25, screenshot + log): "is supposed to be injected into the chat like
+ * a job. it is for the agents to talk to nexus. not me." The userscript path "answered its own wakes" in the page: it
+ * matched the FIRST streaming fragment of the agent's reply ("hey nexus, w" — copilot was asked "w"), drew an overlay
+ * for the person, and typed the answer into the composer without sending it; Clear Glass's wake-relay answered the
+ * same fragment a second time, as a job that queued behind the still-unfinished reply. A wake is the agent talking to
+ * NEXUS, so it is answered here, once, from the COMPLETED reply, as a job the agent actually receives. The page no
+ * longer answers (userscript-nexus-wake.js checkMessage), the relay no longer answers agent wakes (wake-relay.js).
+ * A wake-reply to a userscript-delivered job is pinned to that userscript tab (transport 'ncp'), like the relay did.
  *
  * SAFETY (each has a test):
  *  - depth cap (GUARDIAN_WAKE_MAX_DEPTH, default 3): an agent asking NEXUS which makes the agent ask again is a loop; it is
@@ -44,6 +52,12 @@ function extractWake(text) {
   return null;
 }
 
+/** What the agent receives: its own question, then NEXUS's answer. */
+function frameReply(ask, text) {
+  const q = String(ask || '').replace(/\s+/g, ' ').trim();
+  return `[NEXUS] answer to your "hey nexus, ${q.length > 240 ? q.slice(0, 237) + '...' : q}"\n\n${String(text || '').trim()}`;
+}
+
 function createCopilotAsk({ url = process.env.COPILOT_URL || 'http://127.0.0.1:3750', timeoutMs = parseInt(process.env.GUARDIAN_WAKE_COPILOT_TIMEOUT_MS || '600000', 10) } = {}) {
   return (request, { sessionId } = {}) => new Promise((resolve) => {
     const u = new URL('/api/prompt/tools', url);
@@ -64,7 +78,7 @@ function createWakeLoop({ askCopilot, createJob, dispatchJob, getJob, bus = { em
   async function handleComplete({ jobId }) {
     if (!jobId || handled.has(jobId)) return { skipped: 'already_handled' };
     const job = getJob(jobId);
-    if (!job || job.transport !== 'mesh') return { skipped: 'not_mesh' };            // the userscript path answers its own wakes
+    if (!job) return { skipped: 'no_job' };
     if (job.command === 'wake') return { skipped: 'wake_job' };
     const ask = extractWake(job.responseText || job.response || '');
     if (!ask) return { skipped: 'no_wake' };
@@ -81,12 +95,15 @@ function createWakeLoop({ askCopilot, createJob, dispatchJob, getJob, bus = { em
       bus.emit('guardian.wake.failed', { jobId, provider: job.provider, error: (ans && ans.error) || 'empty answer' });
       return { failed: (ans && ans.error) || 'empty answer' };
     }
-    const reply = createJob({ command: 'wake-reply', provider: job.provider, prompt: ans.text, source: 'copilot',
-      accountId: job.accountId || null, agentId: job.agentId || null, wakeDepth: depth + 1 });
+    // The agent receives this as its next turn, so it says what it answers — the agent asked a question, often several
+    // turns back in its own reasoning; a bare copilot answer reads like a stranger's message.
+    const reply = createJob({ command: 'wake-reply', provider: job.provider, prompt: frameReply(ask, ans.text), source: 'copilot',
+      accountId: job.accountId || null, agentId: job.agentId || null, wakeDepth: depth + 1,
+      transport: job.transport === 'mesh' ? null : 'ncp' });   // back into the tab that asked: mesh stays mesh, a userscript tab stays pinned
     dispatchJob(reply);
     bus.emit('guardian.wake.replied', { jobId, replyJobId: reply.id, provider: job.provider, depth: depth + 1 });
     return { replied: reply.id, depth: depth + 1 };
   }
   return { handleComplete, extractWake, _handled: handled };
 }
-module.exports = { createWakeLoop, createCopilotAsk, extractWake };
+module.exports = { createWakeLoop, createCopilotAsk, extractWake, frameReply };

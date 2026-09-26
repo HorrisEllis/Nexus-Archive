@@ -256,13 +256,12 @@ test('NW-026', 'chatgpt.js\'s wake-check correctly dedups on wakeHandledIndex �
   assert.ok(/if \(handled\) _nexus\.wakeHandledIndex = newestIdx;/.test(block));
 });
 
-test('NW-027', 'checkMessage() itself now also calls injectText on a real answer — consistent with the onKeyDown handler\'s own fix, not a second, different behavior for the agent-triggered path', () => {
-  const idx = SRC.indexOf('checkMessage(role, text)');
-  const block = SRC.slice(idx, idx + 2200); // widened for the real NW-030 ledgerWrite calls now also in this block
-  // §UPDATED 2026-09-12 — see NW-020's comment: both paths now share the
-  // one real _injectAndTrack() helper rather than each having their own
-  // copy of the guard+call.
-  assert.ok(/_injectAndTrack\(answer\)/.test(block));
+test('NW-027', '0.39.252 — checkMessage() no longer answers in the page: no askNexus, no overlay, no injectText (was: injected the answer into the composer unsent)', () => {
+  const idx = SRC.indexOf('checkMessage(role, text) {');
+  const end = SRC.indexOf('uninstall()', idx);
+  const block = SRC.slice(idx, end);
+  assert.ok(idx > 0 && end > idx);
+  for (const re of [/askNexus\(/, /_render\(/, /injectText\(/, /_injectAndTrack\(/, /ledgerWrite\(/]) assert.ok(!re.test(block), `checkMessage still calls ${re}`);
 });
 
 test('NW-028', 'checkMessage() never calls submit() either — same real cost-safety principle as the onKeyDown path', () => {
@@ -285,14 +284,21 @@ test('NW-029', 'HONEST GAP, named not hidden — gemini.js and perplexity.js sti
 // exact same GUARDIAN_LEDGER_WRITE mechanism this same userscript
 // family already sends elsewhere for other real events.
 
-test('NW-030', 'checkMessage() calls ledgerWrite with a real, matching jobId for both the question and the answer', () => {
-  const writes = [];
-  const inst = _installStub({ provider: 'chatgpt', tabId: 't1', ledgerWrite: (e) => writes.push(e) });
-  inst.checkMessage('assistant', 'hey nexus, status');
-  const question = writes.find(w => w.category === 'WAKE_QUESTION');
-  assert.ok(question, 'expected a real WAKE_QUESTION ledger write');
-  assert.strictEqual(question.msg, 'status');
-  assert.ok(question.jobId, 'expected a real, non-empty jobId');
+test('NW-030', '0.39.252 — checkMessage() only REPORTS a wake: it asks nothing, renders nothing, types nothing, writes no ledger — guardian\'s wake-loop answers the agent from the completed reply, as a job (James: "it is for the agents to talk to nexus. not me")', () => {
+  const writes = [], typed = [], sent = [], gm = [], made = [];
+  global.GM_xmlhttpRequest = (r) => gm.push(r);
+  const inst = _installStub({ provider: 'chatgpt', tabId: 't1', ledgerWrite: (e) => writes.push(e),
+    injectText: (t) => typed.push(t), submit: () => sent.push(1) });
+  const createElement = global.document.createElement;
+  global.document.createElement = (...a) => { made.push(a[0]); return createElement(...a); };
+  try {
+    // The exact streaming fragment from James's log, then the finished line.
+    assert.strictEqual(inst.checkMessage('assistant', 'hey nexus, w'), true);
+    assert.strictEqual(inst.checkMessage('assistant', 'hey nexus, what\'s the current state of the dangling-hook failures?'), true);
+    assert.strictEqual(inst.checkMessage('assistant', 'the build is green'), false);
+    assert.deepStrictEqual([writes.length, typed.length, sent.length, gm.length, made.length], [0, 0, 0, 0, 0],
+      `side effects: ledger ${writes.length}, typed ${typed.length}, sent ${sent.length}, copilot requests ${gm.length}, elements ${made.length}`);
+  } finally { delete global.GM_xmlhttpRequest; global.document.createElement = createElement; }
 });
 
 test('NW-031', 'a missing ledgerWrite (an older caller that never passes it) does not crash checkMessage — real, honest default', () => {

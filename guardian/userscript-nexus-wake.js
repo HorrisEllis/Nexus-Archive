@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // guardian/userscript-nexus-wake.js — "Hey nexus" in any agent tab
 // UUID: nexus-wake-v1-0000-2026-0818-001
-// Version: 1.0.0
+// Version: 1.1.0   (0.39.252 — checkMessage reports only; agent wakes are answered by guardian/lib/wake-loop.js)
 // Component: guardian.userscript.nexus-wake
 // Hook: guardian.userscript.nexus-wake:v1:p0001
 //
@@ -48,7 +48,7 @@
 
   const NEXUS_WAKE = {
     MODULE_ID: 'nexus-wake',
-    VERSION:   '1.0.0',
+    VERSION:   '1.1.0',
     COMP_ID:   'guardian.userscript.nexus-wake',
     HOOK_ID:   'guardian.userscript.nexus-wake:v1:p0001',
   };
@@ -451,48 +451,16 @@
       // uses, so a message ANYWHERE in the conversation — including one the
       // assistant itself writes — can trigger a real co-pilot exchange, not
       // only text typed directly into the composer.
+      // §0.39.252 — James (2026-09-25): "is supposed to be injected into the chat like a job. it is for the agents to
+      // talk to nexus. not me." This used to ANSWER here: the observer calls it on every mutation of a STREAMING reply,
+      // so it matched the first fragment ("hey nexus, w"), asked co-pilot "w", drew the overlay for the person and
+      // typed the answer into the composer without sending it. An agent's wake is now answered by guardian's wake-loop
+      // (guardian/lib/wake-loop.js) from the COMPLETED reply, as a wake-reply job typed AND sent into this tab — the
+      // agent receives it. This only reports whether a message addresses NEXUS (so the caller stops re-checking it);
+      // it asks nothing, renders nothing, types nothing.
       checkMessage(role, text) {
-        const { addressed, ask } = parseWake(text);
-        if (!addressed) return false;
-        _render('question', ask);
-        _render('pending', 'asking nexus co-pilot…');
-        // §FOUND & FIXED 2026-09-07 — James, with a real screenshot: "see
-        // the black box, thats where it gets delivered. it needs to
-        // deliver as a job." Confirmed: askNexus() calls copilot's
-        // /api/prompt/tools directly via GM_xmlhttpRequest, entirely
-        // bypassing guardian's real job/ledger system — the exchange
-        // only ever existed in this floating overlay, invisible to the
-        // real ledger/job views the rest of the system uses. Reused the
-        // exact same real GUARDIAN_LEDGER_WRITE mechanism this same
-        // userscript file already sends for other real events (checked
-        // guardian/userscript-chatgpt.js directly first) rather than
-        // inventing a second one — a real jobId, generated here, ties
-        // the question and the answer together as one real job.
-        const wakeJobId = `wake-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-        ledgerWrite({ jobId: wakeJobId, category: 'WAKE_QUESTION', msg: ask, meta: { provider, tabId } });
-        askNexus(ask).then(r => {
-          if (r.ok) {
-            const answer = r.text || '(co-pilot returned an empty answer)';
-            _render('answer', answer);
-            ledgerWrite({ jobId: wakeJobId, category: 'WAKE_ANSWER', msg: answer, meta: { provider, tabId } });
-            ackWakeJob(wakeJobId, ask, answer);
-            // §NEW 2026-09-07 — same real fix as the onKeyDown handler
-            // above, applied here too: an agent-triggered wake (the
-            // ASSISTANT's own text saying "hey nexus, ...") deserves
-            // the same real injection into the composer, not just the
-            // floating box — injectText() only, never submit(), same
-            // real cost-safety reasoning as above.
-            if (typeof injectText === 'function') {
-              try { injectText(answer); }
-              catch (e) { log(`[nexus-wake] injectText failed (checkMessage): ${e.message}`); }
-            }
-          }
-          else {
-            _render('error', `co-pilot unreachable — ${r.error}.`);
-            ledgerWrite({ jobId: wakeJobId, category: 'WAKE_ERROR', msg: r.error || 'unknown', meta: { provider, tabId } });
-          }
-        }).catch(err => _render('error', `wake handler failed: ${err.message}`));
-        return true;
+        const { addressed } = parseWake(text);
+        return !!addressed;
       },
       uninstall() {
         document.removeEventListener('keydown', onKeyDown, true);

@@ -125,7 +125,7 @@ components:
     id: guardian-nexus-wake
     name: "Nexus Wake Word"
     file: userscript-nexus-wake.js
-    version: "1.0.0"
+    version: "1.1.0"   # 0.39.252 — checkMessage reports only; agent wakes answered by guardian/lib/wake-loop.js as a job
     matches: []                # not independently injectable — see standalone
     grants: []
     standalone: false
