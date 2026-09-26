@@ -167,3 +167,18 @@ Not determined comprehensively — no single `idearium.spec` gaps/history sectio
 ## Copyright
 
 Copyright © 2026 James Brooks (Erosmancer). Part of the rheon.world / NEXUS ecosystem.
+
+
+## The agent backend is a three-way switch; Ollama's models are a dropdown (4.6.0, v0.39.253)
+
+James: *"i want the cli in idearium to be like the 3 way cli in the floating menu cli in the tv ui. that way it doesn't use check box. also have ollamas models to choose from in a drop down menu for the agent tab."*
+
+The Agent tab's CLI, and Settings → Agents, show one control: **ollama · copilot · guardian**, the shape of `ui/tv-shell`'s `#cp-backend-toggle`. It replaces the guardian on/off checkbox, which could not express copilot (stored provider `'auto'`: no backend is sent, and copilot's own default decides). A dropdown appears only where there is a choice:
+- **guardian:** the guardian agents.
+- **ollama:** Ollama's installed models (`GET /api/ollama/models` → the ollama bridge's `/api/models`), with "default (<bridge default>)". A stored model that is no longer installed is labelled so. An unreachable bridge is stated, never guessed.
+
+**Stored per compartment.** `lib/repo-agent.js` holds `ollamaModel`. `setOllamaModel` refuses a model not in the installed list, and refuses when the list cannot be read. The model is sent as `model` on Ollama dispatches only. Copilot 3.5.2 passes it on; it used to drop it.
+
+**CLI.** `/model [name|default]`.
+
+**Tests.** `test-repo-agent-provider` 60/60. **Open:** a Chromium click-through of the switch.

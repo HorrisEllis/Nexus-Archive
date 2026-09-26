@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        idearium
-    version:     4.5.0   # §0.39.248 (MINOR, new route) — sync only: 0.39.245 (spec-engine manifest, 4.4.0) and 0.39.246 (responses to the downloads manager, repo-import graphs, 4.5.0) bumped idearium/package.json alone; this, index.js and lib/version.js stayed at 4.3.1.
+    version:     4.6.0   # §0.39.253 (MINOR, new route) — three-way agent backend switch (ollama/copilot/guardian, no checkbox), per-compartment Ollama model, GET /api/ollama/models. Previous 4.5.0: §0.39.248 (MINOR, new route) — sync only: 0.39.245 (spec-engine manifest, 4.4.0) and 0.39.246 (responses to the downloads manager, repo-import graphs, 4.5.0) bumped idearium/package.json alone; this, index.js and lib/version.js stayed at 4.3.1.
                          # (DOM mutations, the reply's node anchor, stages, streaming text) via
                          # guardian-stream onFeed → os.broadcast (SSE only); late-reply lookup
                          # takes the guardian jobId. Previous — 4.3.0 §0.39.241 (MINOR, two new routes) — GET/POST /api/repos/:uuid/agent/late:
@@ -205,3 +205,18 @@ spec:
     tests: >-
       tests/modules/test-file-tree-plan.js 63/63 (30 new eravos-mod checks), tests/modules/idearium-
       brainstorm-assist.test.js 17/17. Full detail in lib/version.js's 0.39.208/0.39.209 entries.
+  built_2026_09_25_three_way_switch:
+    shipped: "0.39.253"
+    asked_by: >-
+      James: "i want the cli in idearium to be like the 3 way cli in the floating menu cli in the tv ui. that way it doesn't use check box. also have ollamas models to choose from in a drop down menu for the agent tab."
+    change: >-
+      Agent tab CLI + Settings → Agents: segmented switch ollama · copilot · guardian (ui/tv-shell #cp-backend-toggle's
+      shape), replacing the guardian on/off checkbox, which could not express copilot (stored provider 'auto'). Dropdown
+      only where there is a choice: guardian agents, or Ollama's installed models (+ "default (<bridge default>)"; a
+      stored model no longer installed is shown as such). lib/repo-agent.js: backendOf, settingsView.backend,
+      per-compartment ollamaModel (setOllamaModel refuses a model not in the installed list, or when the list cannot be
+      read), sent as payload.model on ollama dispatches only. GET /api/ollama/models (nexus-client → ollama :3749
+      /api/models). CLI /model [name|default]. copilot 3.5.2 passes body.model to Ollama.
+    open: Chromium click-through of the switch not run; copilot.spec is still not valid YAML (pre-existing).
+    tests: tests/modules/test-repo-agent-provider.js 60/60 (18 new or rewritten).
+    versionium: vtm-8b55aba2

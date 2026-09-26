@@ -92,3 +92,8 @@ Not read this session.
 ## Copyright
 
 Copyright © 2026 James Brooks (Erosmancer). Part of the rheon.world / NEXUS ecosystem.
+
+
+## `/api/prompt` passes the Ollama model on (3.5.2, v0.39.253)
+
+The `backend: 'ollama'` branch of `/api/prompt` called `lifeline.dispatchToOllama` without `body.model`, so a caller's chosen model never reached the bridge. `_tryOllama` already sends `opts.model` to `/api/jobs`. It is now passed, trimmed, for Ollama only; unset sends nothing, so the bridge's default applies as before. The reply carries `model_used`. The caller is idearium's per-compartment Ollama model (idearium atlas, 4.6.0).

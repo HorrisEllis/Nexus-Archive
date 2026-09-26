@@ -1,6 +1,6 @@
 'use strict';
 /**
- * tests/modules/test-repo-agent-provider.js — §2026-09-21 chatgpt/gemini/
+ * tests/modules/test-repo-agent-provider.js — (0.39.253: + the three-way switch and the Ollama model) §2026-09-21 chatgpt/gemini/
  * deepseek/… wearing the repo hat. A real http stub on copilot's :3750
  * records the route each dispatch carries (backend/agent — what copilot's
  * /api/prompt reads to call guardian's dispatchToNcpAgent), and answers like
@@ -60,6 +60,22 @@ async function main() {
     const sv3 = RA.settingsView(U);
     check('settingsView: explicit auto reports guardian-on (not ollama), agent null — honest, not invented', sv3.useGuardian === true && sv3.guardianAgent === null);
   }
+  { // §THREE-WAY 0.39.253 — James: "i want the cli in idearium to be like the 3 way cli in the floating menu cli in the tv ui"
+    check('backendOf: ollama → ollama, auto → copilot, a guardian agent → guardian', RA.backendOf('ollama') === 'ollama' && RA.backendOf('auto') === 'copilot' && RA.backendOf('gemini') === 'guardian');
+    RA.setProvider(U, 'auto'); check('settingsView reports the switch position: auto is copilot', RA.settingsView(U).backend === 'copilot');
+    RA.setProvider(U, 'ollama'); check('…ollama is ollama', RA.settingsView(U).backend === 'ollama');
+    RA.setProvider(U, 'chatgpt'); check('…a guardian agent is guardian', RA.settingsView(U).backend === 'guardian');
+    check('a fresh compartment has no Ollama model of its own (null = the bridge default)', RA.settingsView(U).ollamaModel === null);
+    const inst = ['qwen2.5-coder:7b', 'llama3.2:3b'];
+    check('a model cannot be set without Ollama\'s installed list (bridge down) — refused, said why', RA.setOllamaModel(U, 'llama3.2:3b', { installed: null }).ok === false);
+    const bad = RA.setOllamaModel(U, 'bard:1b', { installed: inst });
+    check('a model that is not installed is refused, with the installed list', bad.ok === false && /not installed/.test(bad.errors[0]) && bad.errors[0].includes('llama3.2:3b'));
+    check('an installed model is stored', RA.setOllamaModel(U, 'llama3.2:3b', { installed: inst }).ok && RA.settingsView(U).ollamaModel === 'llama3.2:3b');
+    check('setting the model does not touch which backend wears the hat', RA.getProvider(U) === 'chatgpt');
+    RA.setProvider(U, 'ollama');
+    check('…and switching backend keeps the model', RA.settingsView(U).ollamaModel === 'llama3.2:3b');
+    RA.setProvider(U, 'auto');   // the dispatch checks below start from an explicit auto, as they always have
+  }
 
   const bodies = [];
   let reply = '';
@@ -79,6 +95,18 @@ async function main() {
     reply = 'plain';
     await RA.dispatch({ repo, repoDir: null, message: 'hi', layer });
     check('auto (explicitly set above) sends no backend/agent — copilot decides', bodies[0].backend === undefined && bodies[0].agent === undefined);
+
+    // §THREE-WAY 0.39.253 — the compartment's Ollama model reaches copilot as `model` (copilot passes it to the bridge).
+    RA.setProvider(U, 'ollama'); bodies.length = 0; reply = 'plain';
+    await RA.dispatch({ repo, repoDir: null, message: 'hi', layer });
+    check('ollama wearing the hat sends backend ollama with the chosen model', bodies[0].backend === 'ollama' && bodies[0].model === 'llama3.2:3b', JSON.stringify({ backend: bodies[0].backend, model: bodies[0].model }));
+    RA.setOllamaModel(U, null); bodies.length = 0;
+    await RA.dispatch({ repo, repoDir: null, message: 'hi', layer });
+    check('the default model sends no model at all (the bridge decides, as before)', bodies[0].backend === 'ollama' && !('model' in bodies[0]));
+    RA.setOllamaModel(U, 'llama3.2:3b', { installed: ['llama3.2:3b'] }); RA.setProvider(U, 'chatgpt'); bodies.length = 0;
+    await RA.dispatch({ repo, repoDir: null, message: 'hi', layer });
+    check('a guardian dispatch never carries the Ollama model', bodies[0].backend === 'guardian' && !('model' in bodies[0]));
+    RA.setOllamaModel(U, null);
 
     RA.setProvider(U, RA.defaultProvider());
     bodies.length = 0; reply = 'plain';
@@ -120,8 +148,29 @@ async function main() {
   const APP = fs.readFileSync(path.join(ROOT, 'idearium', 'ui', 'js', 'app.js'), 'utf8');
   // §DEFAULT-GUARDIAN 2026-09-21 — the flat <select id="agent-provider"> is
   // now a switch (guardian on/off) + a guardian-agent dropdown.
-  check('the Agent tab offers a guardian switch', APP.includes('id="agent-use-guardian"') && APP.includes('agentSetUseGuardian(this.checked)'));
-  check('the Agent tab offers a guardian-agent dropdown', APP.includes('id="agent-guardian-agent"') && APP.includes('agentSetGuardianAgent(this.value)'));
+  // §THREE-WAY 0.39.253 — the guardian on/off checkbox is gone; the three-way switch replaces it everywhere.
+  check('no checkbox decides the backend any more', !APP.includes('id="agent-use-guardian"') && !APP.includes('agentSetUseGuardian'));
+  check('the three-way switch: ollama · copilot · guardian, each sending only what it owns',
+    /btn\('ollama',[\s\S]{0,80}btn\('copilot',[\s\S]{0,80}btn\('guardian',/.test(APP)
+    && /backend === 'ollama' \? \{ provider: 'ollama' \} : backend === 'copilot' \? \{ provider: 'auto' \} : \{ useGuardian: true \}/.test(APP));
+  check('the Agent tab CLI and Settings → Agents both render the same control', (APP.match(/_agentBackendHtml\(/g) || []).length >= 3);
+  check('guardian shows its agents; ollama shows the installed models; copilot shows no dropdown',
+    APP.includes('onchange="agentSetGuardianAgent(this.value)"') && APP.includes('onchange="agentSetOllamaModel(this.value)"') && APP.includes("copilot's own default answers"));
+  check('the CLI has /model, documented in /help', APP.includes("case 'model':") && APP.includes("'/model [name|default]"));
+  const COP = fs.readFileSync(path.join(ROOT, 'copilot', 'server.js'), 'utf8');
+  check('copilot /api/prompt passes body.model to Ollama (it dropped it)', /const olModel = body\.backend === 'ollama'[^\n]*body\.model/.test(COP) && /dispatchFn\(prompt, \{[^}]*model: olModel/.test(COP));
+  { // idearium's model list, against a stub ollama bridge on :3749 — and without one
+    const down = await api._ollamaModels();
+    const okDown = down.ok === false && /unreachable|did not answer/.test(down.error) && Array.isArray(down.models) && down.models.length === 0;
+    const bridge = await new Promise((res) => { const s = http.createServer((q, r) => { r.writeHead(200, { 'Content-Type': 'application/json' }); r.end(JSON.stringify(q.url === '/api/models' ? { ok: true, models: ['qwen2.5-coder:7b', 'llama3.2:3b'], active: 'qwen2.5-coder:7b' } : {})); });
+      s.on('error', () => res(null)); s.listen(3749, '127.0.0.1', () => res(s)); });
+    if (!bridge) { check('stub ollama bridge on :3749', false, 'port in use — a real bridge is running; not asserting against it'); }
+    else {
+      const up = await api._ollamaModels(); bridge.close();
+      check('the model list is Ollama\'s installed models, with the bridge default', up.ok === true && JSON.stringify(up.models) === '["qwen2.5-coder:7b","llama3.2:3b"]' && up.active === 'qwen2.5-coder:7b');
+      check('with no bridge the list is unavailable, with the reason — never a guessed list', okDown, JSON.stringify(down));
+    }
+  }
   check('the CLI has /provider, documented in /help', APP.includes("case 'provider':") && APP.includes("'/provider [name]"));
 
   fs.rmSync(process.env.NEXUS_INJECT_DIR, { recursive: true, force: true });

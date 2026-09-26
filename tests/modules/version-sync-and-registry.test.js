@@ -52,14 +52,14 @@ function main() {
   const ID_SPEC = fs.readFileSync(path.join(ROOT, 'idearium', 'spec', 'idearium.spec'), 'utf8');
   const ID_INDEX = fs.readFileSync(path.join(ROOT, 'idearium', 'index.js'), 'utf8');
 
-  check('idearium/package.json reads 4.5.0', ID_PKG.version === '4.5.0');
+  check('idearium/package.json reads 4.6.0', ID_PKG.version === '4.6.0');
   check('idearium.spec\'s meta.version matches, with a real reason given (not silently bumped)',
     // 0.39.248 — pinned the exact wording of an older comment ('§0.39.244 (PATCH)', 'MINOR, two
     // new routes'), which cannot survive the next bump. Requires what it names: the version and a
     // stated reason (the release and whether it is a PATCH or MINOR) on the same line.
-    /version:\s*4\.5\.0\s+#\s*§0\.39\.\d+ \((PATCH|MINOR)[^)]*\)\s*\S/.test(ID_SPEC));
-  check('idearium/index.js\'s VERSION export matches', /export const VERSION\s*=\s*'4\.5\.0'/.test(ID_INDEX));
-  check('lib/version.js\'s services.idearium matches', /idearium:\s*'4\.5\.0'/.test(VERSION_JS));
+    /version:\s*4\.6\.0\s+#\s*§0\.39\.\d+ \((PATCH|MINOR)[^)]*\)\s*\S/.test(ID_SPEC));
+  check('idearium/index.js\'s VERSION export matches', /export const VERSION\s*=\s*'4\.6\.0'/.test(ID_INDEX));
+  check('lib/version.js\'s services.idearium matches', /idearium:\s*'4\.6\.0'/.test(VERSION_JS));
 
   // ── registry-components.js: the real new entries ──────────────────────
   const CG_REGISTRY = require(path.join(ROOT, 'clear-glass', 'registry-components.js'));
@@ -137,7 +137,7 @@ function main() {
   } catch (e) { check('clear-glass.spec parses as real YAML', false, e.message); }
   try {
     const id = yaml.load(ID_SPEC);
-    check('idearium.spec parses as real YAML', id.spec.meta.version === '4.5.0');
+    check('idearium.spec parses as real YAML', id.spec.meta.version === '4.6.0');
     check('the eravos-mods/brainstorm-AI history block is real, present in the parsed doc',
       !!id.spec.built_2026_09_22_eravos_mods_and_brainstorm_ai);
   } catch (e) { check('idearium.spec parses as real YAML', false, e.message); }
@@ -151,7 +151,7 @@ function main() {
   const specDrift = require(path.join(ROOT, 'orchestrator', 'lib', 'spec-drift.js'));
   const driftResult = specDrift.check({});
   check('the real, live spec-drift checker (orchestrator/lib/spec-drift.js) reports idearium synced at the correct version',
-    (driftResult.synced || []).some(s => s.system === 'idearium' && s.version === '4.5.0'));
+    (driftResult.synced || []).some(s => s.system === 'idearium' && s.version === '4.6.0'));
   check('...and clear-glass synced at the correct version too', (driftResult.synced || []).some(s => s.system === 'clear-glass' && s.version === '3.14.1'));
 
   console.log(`\n  ${passed} passed, ${failed} failed\n`);

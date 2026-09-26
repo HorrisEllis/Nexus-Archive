@@ -690,6 +690,11 @@
       "method": "GET",
       "path": "/api/repos/:uuid/run/capabilities",
       "_action": "repo.run.capabilities"
+    },
+    {
+      "method": "GET",
+      "path": "/api/ollama/models",
+      "_action": "ollama.models"
     }
   ]
 }

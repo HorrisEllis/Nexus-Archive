@@ -2355,9 +2355,13 @@ const server = http.createServer(async (req, res) => {
         // silently cut short by this hop's own hardcoded 45s default.
         // Only meaningful for 'guardian' (ollama's own dispatch has no
         // equivalent per-call override here).
-        const result = await dispatchFn(prompt, { provider: body.agent || undefined, agentId: body.backend === 'guardian' ? (body.agentId || undefined) : undefined, timeoutMs: body.backend === 'guardian' ? (body.timeoutMs || undefined) : undefined, requestId, sessionId });
+        // 0.39.253 — body.model reaches Ollama (lifeline._tryOllama already sends opts.model to the bridge's /api/jobs; this
+        // handler dropped it, so a caller's chosen model — idearium's per-compartment Ollama model — never arrived).
+        // Unset = nothing sent, the bridge's own default applies, as before. guardian ignores it.
+        const olModel = body.backend === 'ollama' && typeof body.model === 'string' && body.model.trim() ? body.model.trim() : undefined;
+        const result = await dispatchFn(prompt, { provider: body.agent || undefined, agentId: body.backend === 'guardian' ? (body.agentId || undefined) : undefined, timeoutMs: body.backend === 'guardian' ? (body.timeoutMs || undefined) : undefined, model: olModel, requestId, sessionId });
         if (result?.ok || result?.text) {
-          json(res, 200, { ok: true, text: result.text, provider_used: body.backend === 'guardian' ? (result.provider || body.agent) : 'ollama', requestId });
+          json(res, 200, { ok: true, text: result.text, provider_used: body.backend === 'guardian' ? (result.provider || body.agent) : 'ollama', model_used: body.backend === 'ollama' ? (result.model || olModel || null) : undefined, requestId });
         } else {
           // 0.39.244 — jobId: guardian DID create a job (its reply may still come, late); absent = none was created.
           json(res, 502, { ok: false, error: result?.error || `${body.backend} unavailable or returned no real response`, jobId: result?.jobId || null, requestId });

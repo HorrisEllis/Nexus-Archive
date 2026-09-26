@@ -590,6 +590,17 @@ async function readBody(req) {
 // unreachable system (it never resolves {error}), so a bare await lands in
 // the outer catch as a generic 500. Repo snapshot routes need to tell "no
 // such commit" (404) from "versionium is down" (502).
+// 0.39.253 — Ollama's installed models, through the ollama bridge (GET :3749/api/models → { ok, models, active }).
+// { ok:false, error } when the bridge or Ollama did not answer — never a guessed list: the bridge's own route answers
+// ok:false with models [] when Ollama is unreachable, and that is passed on as unreachable.
+async function _ollamaModels() {
+  try {
+    const d = await _nexusClient.get('ollama', '/api/models', { timeout: 4000 });
+    if (!d || d.ok === false || !Array.isArray(d.models)) return { ok: false, error: 'Ollama did not answer (the bridge reached it and got nothing)', models: [], active: d && d.active || null };
+    return { ok: true, models: d.models, active: d.active || null };
+  } catch (e) { return { ok: false, error: `ollama bridge unreachable: ${e.message}`, models: [], active: null }; }
+}
+
 async function _versionium(method, urlPath, body, timeout) {
   try {
     const opts = timeout ? { timeout } : undefined;
@@ -1024,6 +1035,8 @@ function matchRoute(method, url) {
     ['GET',    ['api','repos',    ':uuid','run','capabilities'],    'repo.run.capabilities'],
     ['GET',    ['api','repos',    ':uuid','agent','settings'],      'repo.agent.settings.get'],
     ['POST',   ['api','repos',    ':uuid','agent','settings'],      'repo.agent.settings.set'],
+    // 0.39.253 — Ollama's installed models, for the Agent tab's ollama dropdown
+    ['GET',    ['api','ollama',   'models'],                        'ollama.models'],
     // §REPO-AGENT-NODE 2026-09-20 — the agent as portable node files.
     // .hat + .agent (as of 0.39.190 RAID's health snapshot is .health, so .agent is free for this;
     // see lib/repo-agent-node.js's header for the collision).
@@ -2704,8 +2717,8 @@ async function handle(req, res, route, query, body) {
           // §DEFAULT-GUARDIAN 2026-09-21. If both provider and the pair are
           // sent, provider wins — it is the more specific, explicit request.
           if (body.injectMode === undefined && body.provider === undefined
-              && body.useGuardian === undefined && body.guardianAgent === undefined) {
-            return err(res, 400, 'injectMode, provider, and/or useGuardian/guardianAgent required');
+              && body.useGuardian === undefined && body.guardianAgent === undefined && body.ollamaModel === undefined) {
+            return err(res, 400, 'injectMode, provider, ollamaModel, and/or useGuardian/guardianAgent required');
           }
           const RA = _require('../../lib/repo-agent.js');
           let out = { ok: true, repoUuid: params.uuid };
@@ -2723,10 +2736,26 @@ async function handle(req, res, route, query, body) {
             }
             const r = RA.setProvider(params.uuid, target); if (!r.ok) return done(r); out.provider = r.provider;
           }
+          // 0.39.253 — the Ollama model this compartment uses when ollama wears the hat; null/'' = the bridge's default.
+          // A named model is checked against Ollama's real installed list first.
+          if (body.ollamaModel !== undefined) {
+            const want = typeof body.ollamaModel === 'string' ? body.ollamaModel.trim() : '';
+            const list = want ? await _ollamaModels() : null;
+            const r = RA.setOllamaModel(params.uuid, want || null, { installed: list && list.ok ? list.models : null });
+            if (!r.ok) return err(res, want && list && !list.ok ? 502 : 400, r.errors.join('; '));
+            out.ollamaModel = r.ollamaModel;
+          }
           return ok(res, out);
         }
       }
       return err(res, 500, `unhandled inject route ${action}`);
+    }
+
+    // 0.39.253 — Ollama's installed models for the Agent tab's dropdown. Unreachable is 502 with the reason, never a
+    // guessed list.
+    case 'ollama.models': {
+      const r = await _ollamaModels();
+      return r.ok ? ok(res, r) : err(res, 502, r.error, { models: [], active: r.active });
     }
 
     case 'repo.agent.prompt': {
@@ -3903,7 +3932,7 @@ function _startBuildQueuePoller(port) {
   return timer; // real handle — lets a caller (or a test) stop this poller; startAPI() itself never needs to
 }
 
-export { _startBuildQueuePoller, _buildingSpecs, _reconcileSpecRepos, getRepoLayer }; // getRepoLayer: the real layer, exported so tests exercise the production write path, not a fake
+export { _startBuildQueuePoller, _buildingSpecs, _reconcileSpecRepos, getRepoLayer, _ollamaModels }; // getRepoLayer: the real layer, exported so tests exercise the production write path, not a fake
 
 export function startAPI() {
   const os = getIdeaOS();

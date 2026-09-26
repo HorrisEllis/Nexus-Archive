@@ -2448,11 +2448,8 @@ learned    ${mem.total} observation${mem.total === 1 ? '' : 's'}
 exchanges  ${st.exchanges || 0}
 toolScope  ${st.toolScopeEnforced ? 'enforced' : 'NOT enforced on this path'}</div>
       <div style="margin:8px 0;font-size:10px">wearing the hat:
-        <label style="cursor:pointer"><input type="checkbox" id="agent-use-guardian" ${cfg.useGuardian !== false ? 'checked' : ''} onchange="agentSetUseGuardian(this.checked)"> guardian</label>
-        <select id="agent-guardian-agent" onchange="agentSetGuardianAgent(this.value)" ${cfg.useGuardian === false ? 'disabled' : ''} style="font-size:10px;background:var(--bg2);color:var(--text);border:1px solid var(--b1);border-radius:3px;padding:1px 4px;margin-left:4px">
-          ${(cfg.guardianProviders || []).map(p => `<option value="${escapeHtml(p)}"${p === cfg.guardianAgent ? ' selected' : ''}>${escapeHtml(p)}</option>`).join('')}
-        </select>
-        <span style="opacity:.55">— on: they answer through their guardian tab, every output lands the same way. off: ollama.</span>
+        ${_agentBackendHtml(cfg, _agentBackendOf(cfg) === 'ollama' ? await _ollamaModelList() : null)}
+        <div class="ag-note" style="margin-top:4px">ollama — a local model · copilot — copilot's own default · guardian — through that agent's tab; every output lands the same way.</div>
       </div>
       <div class="action-row">
         ${st.exists
@@ -2831,7 +2828,8 @@ async function renderRepoAgent(repo) {
   if (!el || !repo) return;
   el.innerHTML = '<div class="detail-empty">loading agent…</div>';
 
-  try { AGENT_SETTINGS.set(repo.uuid, await api(`/api/repos/${repo.uuid}/agent/settings`)); } catch (_) { /* select falls back to auto */ }
+  try { AGENT_SETTINGS.set(repo.uuid, await api(`/api/repos/${repo.uuid}/agent/settings`)); }
+  catch (_) { AGENT_SETTINGS.delete(repo.uuid); /* the backend control says it did not load — never shows a guessed position */ }
   let st;
   try { st = await api(`/api/repos/${repo.uuid}/agent`); }
   catch (e) { el.innerHTML = `<div class="detail-empty">agent unavailable: ${escapeHtml(e.message)}</div>`; return; }
@@ -2859,7 +2857,7 @@ indexed    ${idx.indexed ? `${idx.fileCount ?? '?'} files · ${idx.chunkCount ??
 learned    ${mem.total} observation${mem.total === 1 ? '' : 's'}${kindCounts ? ` (${kindCounts})` : ''}
 exchanges  ${st.exchanges || 0}</div>
     </div>
-    <div style="margin:6px 0;font-size:10px;opacity:.6">hat, provider, teaching, export/import and inject mode live in <span style="cursor:pointer;text-decoration:underline" onclick="setRepoSubtab('settings')">Settings → Agents</span>${st.exists ? '' : ' — no hat forged yet'}</div>
+    <div style="margin:6px 0;font-size:10px;opacity:.6">hat, teaching, export/import and inject mode live in <span style="cursor:pointer;text-decoration:underline" onclick="setRepoSubtab('settings')">Settings → Agents</span>${st.exists ? '' : ' — no hat forged yet'}</div>
 `;
 
   const memHtml = '';
@@ -2876,6 +2874,9 @@ exchanges  ${st.exchanges || 0}</div>
       <div id="agent-feed" data-repo="${escapeHtml(repo.uuid)}" style="font-size:10px;font-family:var(--mono,monospace);padding:4px 0">${_agentFeedHtml(repo.uuid)}</div>
     </div>
     <div class="ds"><div class="ds-label">cli</div>
+      ${AGENT_SETTINGS.get(repo.uuid)
+        ? _agentBackendHtml(AGENT_SETTINGS.get(repo.uuid), _agentBackendOf(AGENT_SETTINGS.get(repo.uuid)) === 'ollama' ? await _ollamaModelList() : null)
+        : '<span class="ag-note ag-warn">backend unknown — this compartment\'s agent settings did not load</span>'}
       <div id="agent-transcript" style="font-size:10px;max-height:320px;overflow-y:auto;padding:4px 0">${transcript}</div>
       <textarea id="agent-input" class="field-textarea" rows="3" spellcheck="false" placeholder="ask this project's agent…   (/help for commands · ↑↓ history)"></textarea>
       <div style="margin-top:6px">
@@ -3092,24 +3093,84 @@ function _agentDetail(r) {
 // remembered client-side that the server does not also hold.
 // ════════════════════════════════════════════════════
 const AGENT_SETTINGS = new Map();     // repoUuid -> { provider, providers, useGuardian, guardianAgent, guardianProviders, injectMode } (display; server is truth)
-// §DEFAULT-GUARDIAN 2026-09-21 — the flat provider <select> (incl. 'auto')
-// became a switch (guardian on/off, off = ollama) + a dropdown of guardian
-// agents that only applies when the switch is on. Two calls, not one, so
-// flipping the switch never silently picks/loses a guardian agent choice —
-// each control sends only what it owns.
-async function agentSetUseGuardian(useGuardian) {
+// §THREE-WAY 0.39.253 — James: "i want the cli in idearium to be like the 3 way cli in the floating menu cli in the tv
+// ui. that way it doesn't use check box. also have ollamas models to choose from in a drop down menu for the agent tab."
+// Same shape as ui/tv-shell's #cp-backend-toggle: ollama · copilot · guardian, and a dropdown only where there is a real
+// choice — guardian's agents, or Ollama's installed models. copilot is the stored provider 'auto' (copilot's own
+// DEFAULT_PROVIDER decides; nothing to pick). Each control sends only what it owns; the server is the truth and every
+// change re-renders from it. Replaces the 2026-09-21 guardian on/off checkbox (which could not say "copilot").
+const OLLAMA_MODELS_TTL_MS = 30000;
+let _ollamaModelsCache = { at: 0, data: null };
+async function _ollamaModelList(force = false) {
+  if (!force && _ollamaModelsCache.data && Date.now() - _ollamaModelsCache.at < OLLAMA_MODELS_TTL_MS) return _ollamaModelsCache.data;
+  let data;
+  try { data = await api('/api/ollama/models'); if (!Array.isArray(data.models)) throw new Error('no model list in the answer'); data = { ok: true, models: data.models, active: data.active || null }; }
+  catch (e) { data = { ok: false, error: e.message, models: [] }; }
+  _ollamaModelsCache = { at: Date.now(), data };
+  return data;
+}
+function _agentBackendOf(cfg) {
+  if (cfg && cfg.backend) return cfg.backend;
+  const p = cfg && cfg.provider;
+  return p === 'ollama' ? 'ollama' : (!p || p === 'auto') ? 'copilot' : 'guardian';
+}
+function _agentBackendHtml(cfg, models) {
+  const b = _agentBackendOf(cfg || {});
+  const btn = (k, tip) => `<button class="ag-toggle-btn${b === k ? ' ag-toggle-active' : ''}" onclick="agentSetBackend('${k}')" title="${tip}">${k}</button>`;
+  let drop;
+  if (b === 'guardian') {
+    const gp = cfg.guardianProviders || [];
+    drop = `<select class="ag-select" onchange="agentSetGuardianAgent(this.value)" title="which guardian agent answers, through its own tab">` +
+      (cfg.guardianAgent ? '' : `<option value="" selected disabled>pick an agent</option>`) +
+      gp.map(p => `<option value="${escapeHtml(p)}"${p === cfg.guardianAgent ? ' selected' : ''}>${escapeHtml(p)}</option>`).join('') + `</select>`;
+  } else if (b === 'ollama') {
+    if (models && models.ok) {
+      const list = models.models.slice();
+      const stored = cfg.ollamaModel || '';
+      const missing = stored && !list.includes(stored);
+      drop = `<select class="ag-select" onchange="agentSetOllamaModel(this.value)" title="which installed Ollama model answers">` +
+        `<option value=""${stored ? '' : ' selected'}>default${models.active ? ` (${escapeHtml(models.active)})` : ''}</option>` +
+        (missing ? `<option value="${escapeHtml(stored)}" selected>${escapeHtml(stored)} — not installed</option>` : '') +
+        list.map(m => `<option value="${escapeHtml(m)}"${m === stored ? ' selected' : ''}>${escapeHtml(m)}</option>`).join('') + `</select>` +
+        (list.length ? '' : `<span class="ag-note">no models installed — ollama pull &lt;model&gt;</span>`);
+    } else {
+      drop = `<span class="ag-note ag-warn" title="${escapeHtml((models && models.error) || '')}">ollama models unavailable — ${escapeHtml((models && models.error) || 'not loaded')}</span>`;
+    }
+  } else {
+    drop = `<span class="ag-note">copilot's own default answers</span>`;
+  }
+  return `<span class="ag-backend"><span class="ag-toggle" title="which backend wears this repo's hat">` +
+    btn('ollama', 'a local Ollama model') + btn('copilot', "copilot's own default provider") + btn('guardian', "a guardian agent, through its own tab") +
+    `</span>${drop}</span>`;
+}
+function _agentControlsRerender() {   // both places the backend control shows: the Agent tab and Settings → Agents
   if (!CURRENT_API_REPO) return;
-  try { await api(`/api/repos/${CURRENT_API_REPO.uuid}/agent/settings`, { method: 'POST', body: JSON.stringify({ useGuardian }) });
-    toast(useGuardian ? 'guardian wears this repo\'s hat' : 'ollama wears this repo\'s hat', 'ok'); }
-  catch (e) { toast(`provider failed: ${e.message}`, 'err'); }
   renderRepoAgent(CURRENT_API_REPO);
+  if (document.getElementById('repo-agents-section')) renderRepoAgentSettings(CURRENT_API_REPO);
+}
+async function agentSetBackend(backend) {
+  if (!CURRENT_API_REPO) return;
+  // guardian keeps this compartment's guardian agent (or the stated default) — the server resolves it, so switching
+  // away and back never silently loses the choice.
+  const body = backend === 'ollama' ? { provider: 'ollama' } : backend === 'copilot' ? { provider: 'auto' } : { useGuardian: true };
+  try { const r = await api(`/api/repos/${CURRENT_API_REPO.uuid}/agent/settings`, { method: 'POST', body: JSON.stringify(body) });
+    toast(backend === 'copilot' ? 'copilot wears this repo\'s hat' : backend === 'ollama' ? 'ollama wears this repo\'s hat' : `${r.provider} wears this repo's hat`, 'ok'); }
+  catch (e) { toast(`backend failed: ${e.message}`, 'err'); }
+  _agentControlsRerender();
 }
 async function agentSetGuardianAgent(guardianAgent) {
-  if (!CURRENT_API_REPO) return;
+  if (!CURRENT_API_REPO || !guardianAgent) return;
   try { await api(`/api/repos/${CURRENT_API_REPO.uuid}/agent/settings`, { method: 'POST', body: JSON.stringify({ useGuardian: true, guardianAgent }) });
     toast(`${guardianAgent} now wears this repo's hat`, 'ok'); }
   catch (e) { toast(`provider failed: ${e.message}`, 'err'); }
-  renderRepoAgent(CURRENT_API_REPO);
+  _agentControlsRerender();
+}
+async function agentSetOllamaModel(model) {
+  if (!CURRENT_API_REPO) return;
+  try { await api(`/api/repos/${CURRENT_API_REPO.uuid}/agent/settings`, { method: 'POST', body: JSON.stringify({ ollamaModel: model || null }) });
+    toast(model ? `ollama answers with ${model}` : 'ollama answers with its default model', 'ok'); }
+  catch (e) { toast(`model failed: ${e.message}`, 'err'); }
+  _agentControlsRerender();
 }
 const AGENT_INJECT_MODE = new Map();   // repoUuid -> 'review' | 'auto' (display only; server is truth)
 const AGENT_NO_CONTEXT = new Set();    // repoUuids with retrieval switched off for this session
@@ -3125,7 +3186,8 @@ const AGENT_CLI_HELP = [
   '/memory [kind]                what the agent has learned',
   '/learn <kind>: <text> [evidence: x]   teach it (kind default: correction)',
   '/forget <id-prefix>           remove one observation',
-  '/provider [name]              which model wears the hat (auto, ollama, chatgpt, claude, gemini, deepseek, perplexity)',
+  '/provider [name]              which model wears the hat (auto = copilot, ollama, chatgpt, claude, gemini, deepseek, perplexity)',
+  '/model [name|default]         which installed Ollama model answers when ollama wears the hat (no name: list them)',
   '/mode review|auto             where agent code goes: waits for you, or written on arrival',
   '/injects [status]             list .inject nodes',
   '/inject <path>                open the editor on a new write to <path>',
@@ -3207,6 +3269,20 @@ async function agentCommand(line) {
         if (!first) { const st = await api(`/api/repos/${uuid}/agent/settings`); _cli(uuid, `${st.provider} wears the hat · available: ${st.providers.join(', ')}`); break; }
         await api(`/api/repos/${uuid}/agent/settings`, { method: 'POST', body: JSON.stringify({ provider: first }) });
         _cli(uuid, `${first} now wears this repo's hat — same persona, context, learning and injects`); break;
+      }
+      case 'model': {
+        const list = await _ollamaModelList(true);
+        if (!first) {
+          const st = await api(`/api/repos/${uuid}/agent/settings`);
+          if (!list.ok) { _cli(uuid, `ollama models unavailable — ${list.error}`, `this compartment: ${st.ollamaModel || 'default'}`); break; }
+          _cli(uuid, list.models.length ? list.models.map(m => `${m === st.ollamaModel ? '*' : ' '} ${m}${m === list.active ? '   (bridge default)' : ''}`).join('\n') : 'no models installed — ollama pull <model>',
+            `this compartment: ${st.ollamaModel || `default${list.active ? ` (${list.active})` : ''}`}${st.backend === 'ollama' ? '' : ` · ${st.backend} wears the hat now — the model applies when ollama does`}`);
+          break;
+        }
+        const model = first === 'default' ? null : first;
+        const r = await api(`/api/repos/${uuid}/agent/settings`, { method: 'POST', body: JSON.stringify({ ollamaModel: model }) });
+        _cli(uuid, r.ollamaModel ? `ollama answers with ${r.ollamaModel}` : 'ollama answers with its default model');
+        _agentControlsRerender(); return;
       }
       case 'mode': {
         if (!['review', 'auto'].includes(first)) throw new Error('usage: /mode review|auto');

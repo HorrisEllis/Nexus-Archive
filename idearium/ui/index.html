@@ -72,6 +72,16 @@ body{display:flex;flex-direction:column;position:relative}
 .tb-btn{font-family:var(--mono);font-size:10px;padding:3px 9px;border-radius:3px;border:1px solid var(--b1);background:none;color:var(--text2);cursor:pointer;transition:all .15s}
 .tb-btn:hover{border-color:var(--b2);color:var(--text)}
 .tb-btn.active{background:rgba(56,189,248,.1);border-color:var(--b2);color:var(--sky)}
+/* 0.39.253 — the agent backend switch: ollama · copilot · guardian, same shape as ui/tv-shell's #cp-backend-toggle */
+.ag-backend{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap;margin:4px 0 8px}
+.ag-toggle{display:inline-flex;border:1px solid var(--b1);border-radius:6px;overflow:hidden}
+.ag-toggle-btn{background:transparent;border:none;color:var(--text2);font-family:var(--mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:3px 9px;cursor:pointer;transition:all .15s}
+.ag-toggle-btn+.ag-toggle-btn{border-left:1px solid var(--b1)}
+.ag-toggle-btn:hover{color:var(--text)}
+.ag-toggle-btn.ag-toggle-active{background:rgba(56,189,248,.14);color:var(--sky)}
+.ag-select{font-family:var(--mono);font-size:10px;background:var(--bg2);color:var(--text);border:1px solid var(--b1);border-radius:3px;padding:2px 6px;max-width:260px}
+.ag-note{font-size:9px;color:var(--text2);opacity:.8}
+.ag-warn{color:#f59e0b;opacity:1}
 /* §INJECT 2026-09-21 — inject list */
 .inj-act{cursor:pointer;opacity:.7;border-bottom:1px dotted;margin-left:4px}.inj-act:hover{opacity:1}
 .inj-st{font-size:9px;padding:0 4px;border-radius:2px;border:1px solid var(--b1)}
