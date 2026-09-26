@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Guardian — DeepSeek v1.0
 // @namespace    nexus.guardian.deepseek
-// @version      10.7.0
+// @version      10.8.0
 // @description  Guardian - DeepSeek: NCP v10 protocol parity (handshake, IndexedDB
 //               kernel, SHA-256 dedup, tab-claim, SEAM jobs, intelligence injection,
 //               usage detection) cloned from userscript-perplexity.js per reuse-
@@ -34,7 +34,7 @@ const CORTEX_URL  = 'http://127.0.0.1:3748';
 const INTELLIGENCE_URL = 'http://127.0.0.1:3753'; // intelligence is its own sovereign system (moved out of cortex 2026-09-19)
 const ORCH_URL    = 'http://127.0.0.1:9000';
 const PROVIDER    = 'deepseek';
-const VERSION     = '10.7.0';
+const VERSION     = '10.8.0';
 // §P113: exponential backoff 3s→30s — eliminates SSE flood on disconnect
 const RECONNECT_MIN_MS = 3000;
 const RECONNECT_MAX_MS = 30000;
@@ -585,11 +585,12 @@ async function scanArtifacts(jobId, responseEl) {
 }
 
 // ── Inject + submit ────────────────────────────────────────────────────────────
-function injectText(text) {
+function injectText(text, opts = {}) {
   // §NEXUS-WAKE 2026-08-18 — one-line hook (HOOKUP.md §3): if the outgoing
   // turn earned the agent hint (per-provider hintMode), append it here, right
   // before injection, same as every other provider script.
-  text = NEXUS ? NEXUS.decorate(text) : text;
+  // 0.39.258 — a composed job (opts.composed) is sent exactly as its caller built it: no agent hint appended.
+  if (NEXUS && !opts.composed) text = NEXUS.decorate(text);
   const inp = _getInput();
   if (!inp) return false;
   inp.focus();
@@ -898,16 +899,23 @@ async function handleJob(msg) {
     // §ACK-INJECTION-FIX — see chatgpt userscript for full writeup.
     let intelHdr = '';
     const hatHdr = _buildHatHeader(hat);
-    if (!hatHdr) {
+    // 0.39.258 — James: "the paste shouldn't be injecting. only injecting the persona and the .inject nodes set in
+    // the agent tab and settings." A repo agent's job arrives already composed (its persona, its inject rules, the
+    // question — lib/repo-agent.js compose(), copilot's tool loop). guardian marks it on the hat (personaInPrompt,
+    // guardian/lib/jobs.js _repoJobHat), and that hat's persona is deliberately EMPTY — which made hatHdr '' and sent
+    // this job down the no-hat branch: [NEXUS CONTEXT] prepended and the [NEXUS] hint appended. A composed job gets
+    // nothing added here: no context blob, no tools header, no hint.
+    const composed = !!(hat && (hat.personaInPrompt || hat.composed));
+    if (!hatHdr && !composed) {
       const intel = await pullIntelligenceContext(text, command);
       intelHdr = buildContextHeader(intel);
     }
     const scopedTools = _scopedTools(tools, hat);
     if (Array.isArray(scopedTools) && scopedTools.length) _toolCallCounts.set(jobId, 0);
-    const toolsHdr = _buildToolsHeader(scopedTools);
+    const toolsHdr = composed ? '' : _buildToolsHeader(scopedTools);
 
     const finalText = toolsHdr + (hatHdr || intelHdr) + text;
-    if (!injectText(finalText)) throw new Error('Input not found — Perplexity composer not detected');
+    if (!injectText(finalText, { composed })) throw new Error('Input not found — Perplexity composer not detected');
     send({ type:'GUARDIAN_DELIVERED', jobId, chatUrl:location.href, account:getAccount(), requestId:jobId });
     await dbPut('requests', { uuid:jobId, status:'dispatched', sessionId, dispatchedAt:Date.now() });
     setTimeout(() => {

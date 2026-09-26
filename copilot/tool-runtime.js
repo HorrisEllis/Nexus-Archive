@@ -99,8 +99,12 @@ function makeOllamaCallModel(dispatch, pollJob, opts = {}) {
   return async function callModel(messages, toolSchemas) {
     // Flatten the running message list: system+user+prior tool results become
     // the context; the latest user/tool content is the live prompt.
-    const system = messages.find(m => m.role === 'system')?.content || '';
-    const convo = messages
+    const system = opts.composed ? '' : (messages.find(m => m.role === 'system')?.content || '');
+    // 0.39.258 composed: ollama keeps no conversation, so every turn is re-sent — but unlabeled, as composed, with
+    // tool results framed by the caller's 'tool-result' template.
+    const convo = opts.composed
+      ? messages.filter(m => m.role !== 'system').map(m => m.role === 'tool' ? formatToolResult(opts.resultTemplate, m.name, m.content) : String(m.content || '')).filter(Boolean).join('\n\n')
+      : messages
       .filter(m => m.role !== 'system')
       .map(m => {
         if (m.role === 'tool') return `[tool:${m.name}] ${m.content}`;
@@ -261,8 +265,56 @@ function _isFreshlyPrimed(provider) {
  * {ok, text, confidence}). No separate poll step — NCP dispatch is already
  * one round trip by the time this is called.
  */
+// ── 0.39.258 composed mode ──────────────────────────────────────────────────
+// James: "not to inject anything into it that i cant edit in the agent settings." A composed caller (idearium's
+// repo agent) has already built the whole prompt from blocks the person edits (lib/repo-prompt-blocks.js). Here
+// only its two tool placeholders are filled — {tools}: the names in scope; {tool_guide}: tool-guide.js for those
+// names — and nothing is added: no system prompt, no identity, no USER:/ASSISTANT: labels, no priming logic.
+// Follow-up rounds send ONLY the new tool results, each framed by the caller's 'tool-result' template ({name},
+// {result}); with no template a result goes as its bare JSON. A browser tab keeps its own conversation, so the
+// earlier turns are never re-pasted.
+function _scopeNames(scope) {
+  const all = agentTools.getToolSchemas().map(t => t.function.name);
+  return Array.isArray(scope) && scope.length ? all.filter(n => scope.includes(n)) : all;
+}
+function fillToolPlaceholders(text, scope) {
+  let out = String(text || '');
+  if (out.includes('{tools}')) out = out.split('{tools}').join(_scopeNames(scope).join(', '));
+  if (out.includes('{tool_guide}')) {
+    let guide = '';
+    try { guide = require('../lib/agent-tools/tool-guide').toolGuide(_scopeNames(scope)); }
+    catch (e) { guide = ''; console.warn(`[copilot/tool-runtime] {tool_guide} could not be built (left empty, not guessed): ${e.message}`); }
+    out = out.split('{tool_guide}').join(guide);
+  }
+  return out;
+}
+function formatToolResult(template, name, content) {
+  if (typeof template !== 'string' || !template) return String(content);
+  return template.split('{name}').join(String(name || '')).split('{result}').join(String(content));
+}
+
 function makeNcpCallModel(dispatchToAgent, opts = {}) {
+  let _composedSent = 0;   // composed mode: how many messages this tab has already been given
   return async function callModel(messages, toolSchemas) {
+    if (opts.composed) {
+      // First round: the user message exactly as composed. Later rounds: only the tool results since then.
+      const fresh = messages.slice(Math.max(_composedSent, 1)).filter(m => m.role === 'user' || m.role === 'tool');
+      const out = fresh.map(m => m.role === 'tool' ? formatToolResult(opts.resultTemplate, m.name, m.content) : String(m.content || '')).join('\n\n');
+      _composedSent = messages.length;
+      _recordInjection({ provider: opts.provider || 'auto', primed: false, composed: true, injectedSystemPrompt: false,
+        injectedToolGuide: false, toolCount: toolSchemas.length, promptLength: out.length, idleMsThreshold: PROVIDER_IDLE_MS });
+      const result = await dispatchToAgent(out, { ...opts, tools: [] });
+      if (!result || !result.ok) {
+        const jobId = result && result.jobId;
+        const recovered = jobId ? await _fetchGuardianResponse(jobId) : null;
+        if (recovered && recovered.response) return { text: recovered.response, toolCalls: null, viaLedgerFallback: true, recoveredJobId: jobId };
+        const why = (result && result.error) || 'no response';
+        return { text: (result && result.text) || `[NCP dispatch failed — ${why}]`, toolCalls: null, failed: !(result && result.text), error: why, jobId: jobId || null };
+      }
+      const toolCalls = _parseToolBlocks(result.text);
+      const text = toolCalls.length ? result.text.replace(TOOL_BLOCK_RE, '').trim() : result.text;
+      return { text, toolCalls: toolCalls.length ? toolCalls : null };
+    }
     // §EXTENDED 2026-08-13 (P8) — a hat with a toolScope narrows which
     // tools are even OFFERED, not just which are allowed to run. A
     // "debugging hat" scoped to {read_file, diagnose} should never see
@@ -407,7 +459,14 @@ async function runViaAgent(agent, dispatchToAgent, userPrompt, opts = {}) {
   // callModel() — the "skip resending full context to an already-primed
   // tab" check above could never fire, since opts.provider was always
   // undefined regardless of which real agent this dispatch targets.
-  const callModel = makeNcpCallModel(dispatchToAgent, { ...(opts.modelOpts || {}), toolScope: opts.toolScope, provider: agent });
+  const callModel = makeNcpCallModel(dispatchToAgent, { ...(opts.modelOpts || {}), toolScope: opts.toolScope, provider: agent,
+    composed: !!opts.composed, resultTemplate: opts.resultTemplate || null });
+  if (opts.composed) {
+    // 0.39.258 — the caller's prompt is the whole prompt; nothing of copilot's own is added.
+    return agentTools.runToolLoop(callModel, '', fillToolPlaceholders(userPrompt, opts.toolScope), {
+      maxIterations: opts.maxIterations || 6, allowedTools: opts.toolScope || undefined, context: opts.context || null,
+    });
+  }
   // 0.39.257 — opts.identity: who this run is (a repo's project agent says so, instead of "the NEXUS co-pilot");
   // opts.context: what its tools work in (context.repoDir → file tools default to that repo, lib/agent-tools/tool-root.js).
   const systemPrompt = [
@@ -441,7 +500,14 @@ async function runViaAgent(agent, dispatchToAgent, userPrompt, opts = {}) {
  */
 async function run(o = {}) {
   if (!o.dispatch || !o.pollJob) throw new Error('[tool-runtime] dispatch and pollJob are required');
-  const callModel = makeOllamaCallModel(o.dispatch, o.pollJob, { ...(o.modelOpts || {}), toolScope: o.toolScope || undefined });
+  const callModel = makeOllamaCallModel(o.dispatch, o.pollJob, { ...(o.modelOpts || {}), toolScope: o.toolScope || undefined,
+    composed: !!o.composed, resultTemplate: o.resultTemplate || null });
+  if (o.composed) {
+    // 0.39.258 — as runViaAgent: the caller's prompt is the whole prompt.
+    return agentTools.runToolLoop(callModel, '', fillToolPlaceholders(o.userPrompt, o.toolScope), {
+      maxIterations: o.maxIterations || 6, allowedTools: o.toolScope || undefined, context: o.context || null,
+    });
+  }
 
   // The system prompt carries co-pilot's identity + persistent memory (P2) +
   // the live continuous stream (P3). Both are optional and injected, so P1
@@ -462,4 +528,4 @@ async function run(o = {}) {
   });
 }
 
-module.exports = { run, runViaAgent, makeOllamaCallModel, makeNcpCallModel, _extractToolCalls, _parseToolBlocks, toolCount: () => agentTools.TOOLS.size };
+module.exports = { run, runViaAgent, makeOllamaCallModel, makeNcpCallModel, fillToolPlaceholders, formatToolResult, _extractToolCalls, _parseToolBlocks, toolCount: () => agentTools.TOOLS.size };

@@ -36,10 +36,11 @@ function createHintInjector({ env = process.env } = {}) {
   const hinted = new Set();
   const keyOf = ({ agentId, provider }) => agentId || provider;
   // Returns the prompt to SEND (the caller keeps the original) and whether the hint was added.
-  function apply({ provider, agentId, command, prompt }) {
+  function apply({ provider, agentId, command, prompt, composed = false }) {
     const mode = hintMode(provider, env);
     const base = { prompt, injected: false, mode, key: keyOf({ agentId, provider }) };
     if (mode === 'off') return base;
+    if (composed) return { ...base, skipped: 'composed' };        // 0.39.258 — the caller built the whole prompt (a repo agent); nothing is added
     if (/^wake/.test(command || '')) return base;                 // a reply to a wake: the model plainly already knows
     if (typeof prompt !== 'string' || !prompt.trim()) return base; // nothing typed to attach it to
     if (mode === 'once' && hinted.has(base.key)) return base;

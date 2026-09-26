@@ -634,6 +634,20 @@ const _llmQueue = require('../lib/work-queue').get('copilot.llm', {
   timeoutMs: 180000,   // a hung generation must not hold the only slot forever
 });
 
+/**
+ * resolveDefaultBackend(provider) — 0.39.258. Maps copilot's default provider to the { backend, agent } an explicit
+ * /api/prompt call takes. 'auto' is lifeline's cascade, which starts at Ollama and escalates to guardian only on
+ * low confidence; a composed caller gets its first tier (ollama) and is told the escalation is not applied.
+ */
+function resolveDefaultBackend(provider) {
+  const p = String(provider || 'auto');
+  if (p === 'ollama') return { provider: p, backend: 'ollama', agent: null };
+  if (p === 'guardian') return { provider: p, backend: 'guardian', agent: null, note: 'guardian picks the agent (RAID)' };
+  if (p === 'auto' || p === 'copilot') return { provider: p, backend: 'ollama', agent: null,
+    note: 'copilot default is auto: ollama first; lifeline\'s low-confidence escalation to guardian does not apply to a composed prompt' };
+  return { provider: p, backend: 'guardian', agent: p };
+}
+
 async function _dispatchToOllama(prompt, context, opts = {}) {
   return _llmQueue.push(() => _dispatchToOllamaNow(prompt, context, opts),
     `ollama:${opts.intent || 'ask'}:${(opts.requestId || '').slice(0, 8)}`,
@@ -642,7 +656,8 @@ async function _dispatchToOllama(prompt, context, opts = {}) {
 
 async function _dispatchToOllamaNow(prompt, context, opts = {}) {
   return _post(`${OL_URL}/api/jobs`, {
-    prompt:      `SYSTEM CONTEXT:\n${context}\n\nUSER: ${prompt}\nNEXUS CO-PILOT: `,
+    // 0.39.258 — opts.raw: a composed prompt goes to the model as it stands (no SYSTEM CONTEXT / USER / NEXUS CO-PILOT frame)
+    prompt:      opts.raw ? String(prompt) : `SYSTEM CONTEXT:\n${context}\n\nUSER: ${prompt}\nNEXUS CO-PILOT: `,
     // §BUGFIX 2026-07-04: was hardcoded to 'mistral:7b' (ollama-bridge's
     // FALLBACK_MODEL) instead of leaving it unset so ollama-bridge's real
     // DEFAULT_MODEL (qwen2.5-coder:7b, what the CLI tells users to pull)
@@ -2205,6 +2220,13 @@ const server = http.createServer(async (req, res) => {
   // §TOOLS 0.39.257 — the tool catalog in plain language (lib/agent-tools/tool-catalog.js): idearium's Agent tab
   // /tools and /help read it here, where the registry is already loaded (loading it elsewhere re-indexes cortex's
   // tool_index). ?q= narrows it; ?scope=a,b,c marks which are in a caller's scope.
+  // 0.39.258 — GET /api/prompt/resolve: which backend copilot's default (config.DEFAULT_PROVIDER) resolves to, for a
+  // caller that composes its own prompt (idearium's repo agent in the "copilot" position) and must send it straight
+  // there instead of through /api/prompt's plain path, which adds copilot's own context. Pure: config only.
+  if (method === 'GET' && p === '/api/prompt/resolve') {
+    json(res, 200, { ok: true, ...resolveDefaultBackend(config.DEFAULT_PROVIDER) });
+    return;
+  }
   if (method === 'GET' && p === '/api/tools/list') {
     try {
       const agentTools = require('../lib/agent-tools/index.js');
@@ -2407,15 +2429,19 @@ const server = http.createServer(async (req, res) => {
           const context = T.repoDir ? { repoDir: String(T.repoDir), agentId: body.agentId || null } : null;
           const identity = typeof T.identity === 'string' && T.identity.trim() ? T.identity.trim() : null;
           const maxIterations = Math.min(Math.max(parseInt(T.maxIterations, 10) || 6, 1), 12);
+          // 0.39.258 — composed: the caller (idearium's repo agent) built the whole prompt from blocks the person
+          // edits; the loop adds no system prompt, identity or turn labels (copilot/tool-runtime.js composed mode).
+          const composed = T.composed === true;
+          const resultTemplate = composed && typeof T.resultTemplate === 'string' ? T.resultTemplate : null;
           let loop;
           if (body.backend === 'guardian') {
             const agent = body.agent || 'guardian';
             const dispatchToAgent = (fullPrompt, o = {}) => _lifeline.dispatchToNcpAgent(fullPrompt, { ...o, provider: body.agent || undefined,
               agentId: body.agentId || undefined, timeoutMs: body.timeoutMs || undefined, requestId, sessionId });
-            loop = await toolRuntime.runViaAgent(agent, dispatchToAgent, prompt, { toolScope: scope, identity, context, maxIterations });
+            loop = await toolRuntime.runViaAgent(agent, dispatchToAgent, prompt, { toolScope: scope, identity: composed ? null : identity, context, maxIterations, composed, resultTemplate });
           } else {
-            loop = await toolRuntime.run({ userPrompt: prompt, identity, context, toolScope: scope, maxIterations,
-              dispatch: (convo, sysContext, o) => _dispatchToOllama(convo, sysContext, { ...o, intent: 'tool-loop', requestId, sessionId, model: olModel }),
+            loop = await toolRuntime.run({ userPrompt: prompt, identity: composed ? null : identity, context, toolScope: scope, maxIterations, composed, resultTemplate,
+              dispatch: (convo, sysContext, o) => _dispatchToOllama(convo, sysContext, { ...o, intent: 'tool-loop', requestId, sessionId, model: olModel, raw: composed }),
               pollJob: _pollOllamaJobHeadless });
           }
           const toolCallLog = (loop.toolCallLog || []).map(t => ({ name: t.name, arguments: t.arguments, iteration: t.iteration, scopeRejected: !!t.scopeRejected,
@@ -2838,4 +2864,4 @@ server.listen(PORT, () => {
 });
 }
 
-module.exports = { server, streamIngest, _resolveIntuitionResponse, extractDispatchText };
+module.exports = { server, streamIngest, _resolveIntuitionResponse, extractDispatchText, resolveDefaultBackend };

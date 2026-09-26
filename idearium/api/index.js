@@ -1039,6 +1039,10 @@ function matchRoute(method, url) {
     ['GET',    ['api','repos',    ':uuid','run','capabilities'],    'repo.run.capabilities'],
     ['GET',    ['api','repos',    ':uuid','agent','settings'],      'repo.agent.settings.get'],
     ['POST',   ['api','repos',    ':uuid','agent','settings'],      'repo.agent.settings.set'],
+    // 0.39.258 — the prompt blocks: everything the agent is sent besides its persona, edited here (lib/repo-prompt-blocks.js)
+    ['GET',    ['api','repos',    ':uuid','agent','blocks'],        'repo.agent.blocks.get'],
+    ['POST',   ['api','repos',    ':uuid','agent','blocks'],        'repo.agent.blocks.set'],
+    ['POST',   ['api','repos',    ':uuid','agent','blocks','preview'], 'repo.agent.blocks.preview'],
     // 0.39.253 — Ollama's installed models, for the Agent tab's ollama dropdown
     ['GET',    ['api','ollama',   'models'],                        'ollama.models'],
     // §REPO-AGENT-NODE 2026-09-20 — the agent as portable node files.
@@ -2666,7 +2670,8 @@ async function handle(req, res, route, query, body) {
     // ── §INJECT 2026-09-21 — .inject nodes ─────────────────────────────────
     case 'repo.inject.list': case 'repo.inject.create': case 'repo.inject.get':
     case 'repo.inject.edit': case 'repo.inject.apply': case 'repo.inject.reject':
-    case 'repo.inject.revert': case 'repo.agent.settings.get': case 'repo.agent.settings.set': {
+    case 'repo.inject.revert': case 'repo.agent.settings.get': case 'repo.agent.settings.set':
+    case 'repo.agent.blocks.get': case 'repo.agent.blocks.set': case 'repo.agent.blocks.preview': {
       const repo = getRepoLayer().get(params.uuid);
       if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
       const RI = _require('../../lib/repo-inject.js');
@@ -2707,6 +2712,35 @@ async function handle(req, res, route, query, body) {
           const r = RI.revert(params.id, { layer, force: !!body.force });
           if (r.ok) os.emit('idearium.repo.inject.reverted', { repoUuid: params.uuid, inject: params.id, path: r.inject.path });
           return done(r);
+        }
+        case 'repo.agent.blocks.get': {
+          const PB = _require('../../lib/repo-prompt-blocks.js');
+          return ok(res, { repoUuid: params.uuid, blocks: PB.getBlocks(params.uuid), placeholders: PB.PLACEHOLDERS, version: PB.VERSION });
+        }
+        case 'repo.agent.blocks.set': {
+          const PB = _require('../../lib/repo-prompt-blocks.js');
+          const r = body.reset ? PB.resetBlocks(params.uuid, Array.isArray(body.reset) ? body.reset : null) : PB.setBlocks(params.uuid, body.blocks);
+          if (r.ok) os.emit('idearium.repo.agent.blocks.changed', { repoUuid: params.uuid });
+          return done(r.ok ? { ok: true, repoUuid: params.uuid, blocks: r.blocks } : r);
+        }
+        case 'repo.agent.blocks.preview': {
+          // The exact first message this agent would be sent for body.message — persona + enabled blocks, with the real
+          // retrieval for that message. {tools}/{tool_guide} are shown filled when copilot can be asked, else as placeholders.
+          const RA = _require('../../lib/repo-agent.js');
+          const RH = _require('../../lib/repo-hat.js');
+          const message = String(body.message || 'hello');
+          const hat = RH.getRepoHat(params.uuid);
+          const provider = RA.getProvider(params.uuid);
+          const backend = RA.routeFor(provider).backend;
+          let context = { kind: null, block: '' };
+          const repoDir = repo.materializeDir || path.join(layer.dataDir, 'projects', params.uuid);   // same derivation as the atlas routes
+          if (repoDir) { try { const c = _require('../../lib/repo-context.js').retrieve({ repoDir, message, bare: true }); context = { kind: c.kind || null, block: c.block }; } catch (_) { /* preview without context, said below */ } }
+          let text = RA.compose({ hat, message, context, repoUuid: params.uuid, backend });
+          let toolsFilled = false;
+          if (/\{tools\}|\{tool_guide\}/.test(text)) {
+            try { const TR = _require('../../copilot/tool-runtime.js'); text = TR.fillToolPlaceholders(text, RA.scopeFor(params.uuid, hat)); toolsFilled = true; } catch (_) { toolsFilled = false; }
+          }
+          return ok(res, { repoUuid: params.uuid, provider, backend, text, chars: text.length, toolsFilled, context: context.kind || 'none' });
         }
         case 'repo.agent.settings.get': {
           const RA = _require('../../lib/repo-agent.js');

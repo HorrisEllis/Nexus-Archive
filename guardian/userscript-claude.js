@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Guardian — Claude v10.0
 // @namespace    nexus.guardian.claude
-// @version      10.8.0
+// @version      10.9.0
 // @description  Guardian v10: IndexedDB kernel, SHA-256 dedup, pre-prompt intelligence
 //               injection, full system widget, connection info, log/ledger, options,
 //               SEAM, queue, tags — fully system aware, no localStorage for state.
@@ -32,7 +32,7 @@ const CORTEX_URL  = 'http://127.0.0.1:3748';
 const INTELLIGENCE_URL = 'http://127.0.0.1:3753'; // intelligence is its own sovereign system (moved out of cortex 2026-09-19)
 const ORCH_URL    = 'http://127.0.0.1:9000';
 const PROVIDER    = 'claude';
-const VERSION    = '10.8.0';
+const VERSION    = '10.9.0';
 // §P113: exponential backoff 3s→30s — eliminates SSE flood on disconnect
 const RECONNECT_MIN_MS = 3000;
 const RECONNECT_MAX_MS = 30000;
@@ -572,11 +572,12 @@ function findResponseEl() {
 function _isGenerating() {
   return !!document.querySelector('[data-is-streaming="true"], .text-streaming, [class*="loading"]');
 }
-function injectText(text) {
+function injectText(text, opts = {}) {
   // §NEXUS-WAKE 2026-08-18 — one-line hook (HOOKUP.md §3): if the outgoing
   // turn earned the agent hint (per-provider hintMode), append it here, right
   // before injection, same as every other provider script.
-  text = NEXUS ? NEXUS.decorate(text) : text;
+  // 0.39.258 — a composed job (opts.composed) is sent exactly as its caller built it: no agent hint appended.
+  if (NEXUS && !opts.composed) text = NEXUS.decorate(text);
   const el = document.querySelector('[contenteditable="true"][data-placeholder]') ||
              document.querySelector('.ProseMirror[contenteditable="true"]') ||
              document.querySelector('[contenteditable="true"]');
@@ -954,7 +955,14 @@ async function handleJob(msg) {
     // No hat (the common case) keeps the prior behavior exactly.
     let intelHdr = '', legacyCtx = '';
     const hatHdr = _buildHatHeader(hat);
-    if (!hatHdr) {
+    // 0.39.258 — James: "the paste shouldn't be injecting. only injecting the persona and the .inject nodes set in
+    // the agent tab and settings." A repo agent's job arrives already composed (its persona, its inject rules, the
+    // question — lib/repo-agent.js compose(), copilot's tool loop). guardian marks it on the hat (personaInPrompt,
+    // guardian/lib/jobs.js _repoJobHat), and that hat's persona is deliberately EMPTY — which made hatHdr '' and sent
+    // this job down the no-hat branch: [NEXUS CONTEXT] prepended and the [NEXUS] hint appended. A composed job gets
+    // nothing added here: no context blob, no tools header, no hint.
+    const composed = !!(hat && (hat.personaInPrompt || hat.composed));
+    if (!hatHdr && !composed) {
       // §US-04 — pre-prompt intelligence injection
       const intel = await pullIntelligenceContext(text, command);
       intelHdr = buildContextHeader(intel);
@@ -964,10 +972,10 @@ async function handleJob(msg) {
     }
     const scopedTools = _scopedTools(tools, hat);
     if (Array.isArray(scopedTools) && scopedTools.length) _toolCallCounts.set(jobId, 0);
-    const toolsHdr = _buildToolsHeader(scopedTools);
+    const toolsHdr = composed ? '' : _buildToolsHeader(scopedTools);
 
     const finalText = toolsHdr + (hatHdr || intelHdr || legacyCtx) + text;
-    if (!injectText(finalText)) throw new Error('Input not found — no contenteditable');
+    if (!injectText(finalText, { composed })) throw new Error('Input not found — no contenteditable');
 
     send({ type:'GUARDIAN_DELIVERED', jobId, chatUrl:location.href, account:getAccount(), requestId:jobId });
     await dbPut('requests', { uuid:jobId, status:'dispatched', sessionId, dispatchedAt:Date.now() });

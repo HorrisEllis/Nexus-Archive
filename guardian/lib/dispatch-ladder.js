@@ -78,7 +78,7 @@ function createLadder({ registry, mesh, picker, mode = () => process.env.GUARDIA
     const agentId = job.agentId || `mesh-${job.provider}-${accountId || 'default'}`;
 
     // The mesh has no userscript, so the NEXUS agent hint (wake-hint.js) is added here, once, to the SENT prompt only.
-    const hint = wakeHint ? wakeHint.apply({ provider: job.provider, agentId, command: job.command, prompt: job.prompt }) : null;
+    const hint = wakeHint ? wakeHint.apply({ provider: job.provider, agentId, command: job.command, prompt: job.prompt, composed: !!(job.hat && (job.hat.personaInPrompt || job.hat.composed)) }) : null;
     const sentPrompt = hint ? hint.prompt : job.prompt;
     // One owner per job, written on the .job before delivery (guardian is the only writer of it). If the claim
     // cannot be recorded, nothing was sent — the userscript path takes the job with that reason on its trail.

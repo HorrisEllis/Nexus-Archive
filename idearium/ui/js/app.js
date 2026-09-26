@@ -2449,7 +2449,7 @@ exchanges  ${st.exchanges || 0}
 toolScope  ${st.toolScopeEnforced ? 'enforced' : 'NOT enforced on this path'}</div>
       <div style="margin:8px 0;font-size:10px">wearing the hat:
         ${_agentBackendHtml(cfg, _agentBackendOf(cfg) === 'ollama' ? await _ollamaModelList() : null)}
-        <div class="ag-note" style="margin-top:4px">ollama — a local model · copilot — copilot's own default · guardian — through that agent's tab; every output lands the same way.</div>
+        <div class="ag-note" style="margin-top:4px">ollama — a local model · copilot — copilot picks which one answers (only these settings decide what is sent) · guardian — through that agent's tab; every output lands the same way.</div>
       </div>
       <div class="action-row">
         ${st.exists
@@ -2466,7 +2466,10 @@ toolScope  ${st.toolScopeEnforced ? 'enforced' : 'NOT enforced on this path'}</d
     ${inj ? `<div class="ds"><div class="ds-label">injects · mode <span style="cursor:pointer;border-bottom:1px dotted" onclick="agentSetMode('${inj.mode === 'auto' ? 'review' : 'auto'}')">${escapeHtml(inj.mode)}</span> · <span style="cursor:pointer;border-bottom:1px dotted" onclick="agentNewInject()">+ new</span></div>` +
       ((inj.injects || []).length ? `<div style="font-size:10px;line-height:1.9">` + inj.injects.slice(0, 30).map(n => `<div><span style="opacity:.55">${escapeHtml(n.uuid.slice(0, 8))}</span> <span class="inj-st inj-${escapeHtml(n.status)}">${escapeHtml(n.status)}</span> <span style="cursor:pointer;text-decoration:underline" onclick="openInjectEditor('${n.uuid}')">${escapeHtml(n.path)}</span> <span style="opacity:.55">by ${escapeHtml(n.hatName || 'you')}</span>` +
         (n.status === 'proposed' ? ` <span class="inj-act" onclick="agentInjectAction('${n.uuid}','apply')">apply</span> <span class="inj-act" onclick="agentInjectAction('${n.uuid}','reject')">reject</span>` : n.status === 'applied' ? ` <span class="inj-act" onclick="agentInjectAction('${n.uuid}','revert')">revert</span>` : '') + `</div>`).join('') + `</div>`
-        : `<div style="opacity:.5;font-size:10px">no injects yet — code the agent writes for this project lands here</div>`) + `</div>` : ''}`;
+        : `<div style="opacity:.5;font-size:10px">no injects yet — code the agent writes for this project lands here</div>`) + `</div>` : ''}
+    <div id="agent-blocks-section"></div>`;
+  // 0.39.258 — the prompt's blocks, all editable (idearium/ui/js/agent-blocks.js)
+  if (typeof renderAgentBlocks === 'function') renderAgentBlocks(repo);
 }
 
 function renderRepoSettings(repo) {
@@ -2985,7 +2988,7 @@ function _agentSettle(line, r) {
   line.role = ok ? 'agent' : 'agent — failed';
   line.text = ok ? r.text : (r.error || 'no response');
   line.meta = ok
-    ? [r.hatName, r.providerUsed || r.provider, r.modelUsed, r.elapsedMs ? `${Math.round(r.elapsedMs / 100) / 10}s` : null, r.late ? 'late — from the Responses index' : null].filter(Boolean).join(' · ')
+    ? [r.hatName, r.providerUsed || r.provider, r.modelUsed, r.elapsedMs ? `${Math.round(r.elapsedMs / 100) / 10}s` : null, r.late ? 'late — from the Responses index' : null, r.viaCopilot ? `copilot → ${r.viaCopilot.backend}${r.viaCopilot.agent ? ' ' + r.viaCopilot.agent : ''}` : null].filter(Boolean).join(' · ')
     : (r.hatName || null);
   line.detail = _agentDetail(r);
 }
@@ -3156,7 +3159,7 @@ function _agentBackendHtml(cfg, models) {
       drop = `<span class="ag-note ag-warn" title="${escapeHtml((models && models.error) || '')}">ollama models unavailable — ${escapeHtml((models && models.error) || 'not loaded')}</span>`;
     }
   } else {
-    drop = `<span class="ag-note">copilot's own default answers</span>`;
+    drop = `<span class="ag-note">copilot picks who answers; what is sent is still only these settings</span>`;
   }
   return `<span class="ag-backend"><span class="ag-toggle" title="which backend wears this repo's hat">` +
     btn('ollama', 'a local Ollama model') + btn('copilot', "copilot's own default provider") + btn('guardian', "a guardian agent, through its own tab") +

@@ -232,14 +232,25 @@ function createNCPMessageHandler(deps) {
           // declare that variable in their own module scope; it doesn't exist
           // in this process and was throwing ReferenceError on every completion)
           if (jobId) {
-            const sessionId = chatId || chatUrl || jobId || 'unknown';
-            physQueue.logConversation(sessionId.slice(0, 40), {
-              role:      'assistant',
-              content:   (finalText || '').slice(0, 10000),
-              jobId,
-              provider:  provider || 'unknown',
-              ts:        Date.now(),
-            });
+            // 0.39.258 — a transcript completion carries chatUrl, not chatId. The URL itself was used as the
+            // directory name ('https:\\chatgpt.com\\c\\…' on Windows → ENOENT), and the throw escaped this case
+            // AFTER job.status='complete' but BEFORE the completion was announced, so the tab's next job waited
+            // forever behind it ("didn't work a second time"). The chat's own id is the URL's last segment;
+            // lib/queue.js now also refuses any path in a session id. A conversation-log failure is logged
+            // loudly and never stops a completion (§1.2).
+            const urlId = chatUrl ? String(chatUrl).split(/[?#]/)[0].split('/').filter(Boolean).pop() : null;
+            const sessionId = String(chatId || urlId || jobId || 'unknown');
+            try {
+              physQueue.logConversation(sessionId.slice(0, 40), {
+                role:      'assistant',
+                content:   (finalText || '').slice(0, 10000),
+                jobId,
+                provider:  provider || 'unknown',
+                ts:        Date.now(),
+              });
+            } catch (e) {
+              console.warn(`[guardian] ${jobId}: conversation log write failed (completion continues): ${e.message}`);
+            }
           }
 
           // §LAW II — write artifact files to disk before JAA insert

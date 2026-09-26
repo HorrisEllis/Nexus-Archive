@@ -156,6 +156,7 @@ function makeRepo() {
     const s = http.createServer((q, r) => { let d = ''; q.on('data', c => d += c); q.on('end', () => {
       let b = {}; try { b = JSON.parse(d); } catch (_) {}
       r.writeHead(200, { 'Content-Type': 'application/json' });
+      if (q.url === '/api/prompt/resolve') return r.end(JSON.stringify({ ok: true, provider: 'auto', backend: 'ollama', agent: null }));
       if (q.url === '/api/prompt') { bodies.push(b); return r.end(JSON.stringify({ ok: true, text: 'answer', provider_used: b.agent || b.backend, toolCallLog: [{ name: 'read_file', arguments: { path: 'src/a.js' }, ok: true }], tools: { scope: 'all', calls: 1 } })); }
       if (q.url.startsWith('/api/tools/list')) { gets.push(q.url); return r.end(JSON.stringify({ ok: true, total: 102, count: 1, tools: [{ name: 'read_file', groupTitle: 'Files & code', summary: 'Read a file.', inScope: true }] })); }
       if (q.url === '/api/tools/run') { runs.push(b); return r.end(JSON.stringify({ ok: true, name: b.name, result: { from: b.name } })); }
@@ -172,10 +173,14 @@ function makeRepo() {
       const b = bodies[0];
       assert.ok(b && b.tools, 'no tools on the dispatch');
       assert.deepStrictEqual([b.tools.scope, b.tools.repoDir, b.backend, b.agent], ['all', repoDir, 'guardian', 'chatgpt']);
-      assert.ok(new RegExp(`^You are ${RA.status({ repo, repoDir }).hat.name}, the project agent for "${repo.name}"`).test(b.tools.identity), b.tools.identity);
+      // 0.39.258 — the identity line is gone (a second persona nobody could edit); the dispatch is composed and the
+      // tool-result frame is the repo's own editable block.
+      assert.strictEqual(b.tools.identity, undefined, 'no identity line on a composed dispatch');
+      assert.strictEqual(b.tools.composed, true);
+      assert.strictEqual(b.tools.resultTemplate, require('../../lib/repo-prompt-blocks.js').DEFAULT_BLOCKS.find(x => x.id === 'tool-result').text);
       assert.deepStrictEqual([out.ok, out.toolCalls[0].name], [true, 'read_file']);
     });
-    await test('AT-09', '/scope project sends the hat\'s own list (enforced); ollama gets tools too; auto (copilot\'s own routing) gets none and says so', async () => {
+    await test('AT-09', '/scope project sends the hat\'s own list (enforced); ollama gets tools too; auto resolves through copilot and gets them as well (0.39.258)', async () => {
       assert.strictEqual(RA.setToolScope(U, 'nope').ok, false);
       RA.setToolScope(U, 'project'); bodies.length = 0;
       await RA.dispatch({ repo, repoDir, message: 'hi', noContext: true });
@@ -186,8 +191,9 @@ function makeRepo() {
       assert.strictEqual(bodies[0].tools.scope, 'all');
       RA.setProvider(U, 'auto'); bodies.length = 0;
       await RA.dispatch({ repo, repoDir, message: 'hi', noContext: true });
-      assert.strictEqual(bodies[0].tools, undefined);
-      assert.deepStrictEqual([RA.status({ repo, repoDir }).toolScopeEnforced, RA.settingsView(U).toolScope], [false, 'all']);
+      // 0.39.258 — auto resolves through copilot to a named backend, so it runs the enforced, composed tool loop too
+      assert.deepStrictEqual([bodies[0].backend, bodies[0].tools && bodies[0].tools.composed], ['ollama', true]);
+      assert.deepStrictEqual([RA.status({ repo, repoDir }).toolScopeEnforced, RA.settingsView(U).toolScope], [true, 'all']);
       RA.setProvider(U, 'chatgpt');
       assert.strictEqual(RA.status({ repo, repoDir }).toolScopeEnforced, true);
     });
@@ -239,8 +245,9 @@ function makeRepo() {
   await test('AT-13', 'copilot/server.js: /api/prompt runs the tool loop when body.tools is sent (scope enforced, identity, repoDir), and serves /api/tools/list and /api/tools/run', () => {
     const s = fs.readFileSync(path.join(ROOT, 'copilot/server.js'), 'utf8');
     assert.ok(/if \(body\.tools && typeof body\.tools === 'object'\)/.test(s));
-    assert.ok(/toolRuntime\.runViaAgent\(agent, dispatchToAgent, prompt, \{ toolScope: scope, identity, context, maxIterations \}\)/.test(s));
-    assert.ok(/toolRuntime\.run\(\{ userPrompt: prompt, identity, context, toolScope: scope, maxIterations,/.test(s));
+    // 0.39.258 — composed callers get no identity; composed + resultTemplate travel to the loop
+    assert.ok(/toolRuntime\.runViaAgent\(agent, dispatchToAgent, prompt, \{ toolScope: scope, identity: composed \? null : identity, context, maxIterations, composed, resultTemplate \}\)/.test(s));
+    assert.ok(/toolRuntime\.run\(\{ userPrompt: prompt, identity: composed \? null : identity, context, toolScope: scope, maxIterations, composed, resultTemplate,/.test(s));
     assert.ok(/if \(loop\.failed\) \{ json\(res, 502, \{ ok: false, error: loop\.error, jobId: loop\.jobId/.test(s), 'a failed round must keep its jobId (the late watch needs it)');
     assert.ok(/p === '\/api\/tools\/list'/.test(s) && /p === '\/api\/tools\/run'/.test(s));
     assert.ok(/is outside this caller's tool scope — not run/.test(s));

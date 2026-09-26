@@ -82,6 +82,7 @@ async function main() {
   const srv = await new Promise((res, rej) => {
     const s = http.createServer((q, r) => { let d = ''; q.on('data', c => d += c); q.on('end', () => {
       let b = {}; try { b = JSON.parse(d); } catch (_) {}
+      if (q.url === '/api/prompt/resolve') { r.writeHead(200, { 'Content-Type': 'application/json' }); return r.end(JSON.stringify({ ok: true, provider: 'auto', backend: 'ollama', agent: null })); }
       if (q.url === '/api/prompt') bodies.push(b);
       const resolveQ = /Which repo-relative file does it belong in\?/.test(b.prompt || '');
       r.writeHead(200, { 'Content-Type': 'application/json' });
@@ -94,7 +95,9 @@ async function main() {
   try {
     reply = 'plain';
     await RA.dispatch({ repo, repoDir: null, message: 'hi', layer });
-    check('auto (explicitly set above) sends no backend/agent — copilot decides', bodies[0].backend === undefined && bodies[0].agent === undefined);
+    // 0.39.258 — the copilot position asks copilot which backend its default resolves to and sends the composed
+    // prompt there (the plain path adds copilot's own context, which the agent settings cannot edit).
+    check('auto (explicitly set above) asks copilot, then sends the resolved backend, composed', bodies[0].backend === 'ollama' && bodies[0].agent === undefined && bodies[0].tools && bodies[0].tools.composed === true);
 
     // §THREE-WAY 0.39.253 — the compartment's Ollama model reaches copilot as `model` (copilot passes it to the bridge).
     RA.setProvider(U, 'ollama'); bodies.length = 0; reply = 'plain';
@@ -155,7 +158,7 @@ async function main() {
     && /backend === 'ollama' \? \{ provider: 'ollama' \} : backend === 'copilot' \? \{ provider: 'auto' \} : \{ useGuardian: true \}/.test(APP));
   check('the Agent tab CLI and Settings → Agents both render the same control', (APP.match(/_agentBackendHtml\(/g) || []).length >= 3);
   check('guardian shows its agents; ollama shows the installed models; copilot shows no dropdown',
-    APP.includes('onchange="agentSetGuardianAgent(this.value)"') && APP.includes('onchange="agentSetOllamaModel(this.value)"') && APP.includes("copilot's own default answers"));
+    APP.includes('onchange="agentSetGuardianAgent(this.value)"') && APP.includes('onchange="agentSetOllamaModel(this.value)"') && APP.includes("copilot picks who answers; what is sent is still only these settings"));   // 0.39.258 wording
   check('the CLI has /model, documented in /help', APP.includes("case 'model':") && /'\s*\/model \[name\|default\]/.test(APP));   // 0.39.257 — /help regrouped (indented lines)
   const COP = fs.readFileSync(path.join(ROOT, 'copilot', 'server.js'), 'utf8');
   check('copilot /api/prompt passes body.model to Ollama (it dropped it)', /const olModel = body\.backend === 'ollama'[^\n]*body\.model/.test(COP) && /dispatchFn\(prompt, \{[^}]*model: olModel/.test(COP));
