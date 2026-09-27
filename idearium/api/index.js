@@ -445,6 +445,157 @@ async function _reconcileSpecRepos() {
   return { adopted, skipped, failed };
 }
 
+// ── §0.39.271 P2/P3 — Phases manager helpers ───────────────────────────────
+// Runs are append-only rows (one per state change) in idearium_phase_runs; the
+// latest row of each runId is the run.
+function _phaseRuns(repoUuid) {
+  const by = new Map();
+  for (const r of loadTable('idearium_phase_runs')) {
+    if (r.repoUuid !== repoUuid) continue;
+    const cur = by.get(r.runId);
+    if (!cur || (r.ts || 0) >= (cur.ts || 0)) by.set(r.runId, { ...(cur || {}), ...r, startedAt: cur ? cur.startedAt : r.ts });
+  }
+  return [...by.values()].sort((a, b) => (b.ts || 0) - (a.ts || 0));
+}
+
+// Write one phasemap's new text: an ordinary repo through its repo layer; a nexus
+// repo through the apply gate (the live tree, recorded and reversible), then a sync
+// of the owning system so the nexus repos move to the new base.
+async function _phaseWrite(repo, scope, mapPath, text, base, reason) {
+  if (scope.source !== 'nexus') {
+    const w = getRepoLayer().writeTextFile(repo.uuid, mapPath, text);
+    return w.error ? { ok: false, status: 500, error: `could not write ${mapPath}: ${w.error}`, code: 'WRITE_FAILED' } : { ok: true, via: w.via || 'repo-layer' };
+  }
+  const A = _require('../../lib/nexus-self/apply.js');
+  const SYS = _require('../../lib/nexus-self/systems.js');
+  const system = SYS.ownerOf(mapPath);
+  const r = A.apply({ system, base, changes: [{ path: mapPath, content: text }], reason, by: 'idearium.phases' });
+  if (!r.ok) {
+    const why = [...(r.errors || []), ...(r.conflicts || []).map(c => `${c.path}: ${c.why}`)].join('; ');
+    return { ok: false, status: 409, error: `the apply gate refused ${mapPath}: ${why || 'refused'}${(r.conflicts || []).length ? ' — the live file moved since the last nexus sync; sync, then retry' : ''}`, code: 'APPLY_REFUSED' };
+  }
+  getIdeaOS().emit('idearium.nexus-self.applied', { applyId: r.applyId, system, paths: [mapPath], snapshot: r.snapshot });
+  _nexusSelfSync({ only: [system] });
+  return { ok: true, via: 'apply-gate', applyId: r.applyId, snapshot: r.snapshot };
+}
+
+async function _phaseSetStatus(repo, { map, phase, status, force = false, reason = '' }) {
+  const PH = await import('../repo/phases.js');
+  const { setPhaseStatus, RoadmapError } = await import('../repo/roadmap.js');
+  const { maps, scope, snapshot } = PH.mapsFor({ repo, repoDir: _repoDiskDir(repo.uuid) });
+  const found = maps.find(m => m.path === map);
+  if (!found) return { ok: false, status: 404, error: `no phasemap ${map} in this repo` };
+  let edit;
+  try { edit = setPhaseStatus({ text: found.text, mapName: map.split('/').pop().replace(/\.spec$/, ''), phaseId: phase, status, force }); }
+  catch (e) {
+    if (e instanceof RoadmapError) {
+      const code = e.code === 'NOT_FOUND' ? 404 : e.code === 'DEPS_INCOMPLETE' ? 409 : e.code === 'ROUNDTRIP_FAILED' ? 422 : 400;
+      return { ok: false, status: code, error: e.message, extra: { code: e.code, blockers: e.blockers || null } };
+    }
+    throw e;
+  }
+  const w = await _phaseWrite(repo, scope, map, edit.text, snapshot, reason);
+  if (!w.ok) return { ok: false, status: w.status || 500, error: w.error, extra: { code: w.code } };
+  getIdeaOS().emit('idearium.repo.roadmap.updated', { repoUuid: repo.uuid, map, phase, status, via: w.via });
+  return { ok: true, data: { repoUuid: repo.uuid, change: { map, phase, before: edit.before.status, after: status, via: w.via, applyId: w.applyId || null } } };
+}
+
+// Build one phase: (1) a Versionium snapshot of every repo the build can touch —
+// refused without one (map invariant I2); (2) the phase goes active; (3) the repo's
+// agent gets the phase as its task, in the background; the run is recorded at each step.
+async function _phaseBuild(repo, dir, { map, phase, backend = null, agent = null, provider = null, note = '' }) {
+  const PH = await import('../repo/phases.js');
+  const view = PH.managerView({ repo, repoDir: dir, runs: [] });
+  const node = view.phases.find(p => p.map === map && p.phase_key === phase);
+  if (!node) return { ok: false, status: 404, error: `no phase ${phase} in ${map}` };
+  if (node.status === 'complete') return { ok: false, status: 409, error: `${phase} is already complete`, extra: { code: 'ALREADY_COMPLETE' } };
+  const { maps, scope } = PH.mapsFor({ repo, repoDir: dir });
+  const mapText = (maps.find(m => m.path === map) || {}).text || '';
+
+  // which repo builds it: this one, or for all of NEXUS the system that owns the files it names
+  let target = repo;
+  if (scope.source === 'nexus' && !scope.system) {
+    const SYS = _require('../../lib/nexus-self/systems.js');
+    const owner = (node.files || []).map(f => SYS.ownerOf(String(f).split(/[\s(]/)[0])).find(Boolean) || 'core';
+    target = getRepoLayer().list({}).find(r => r.nexusSelf && r.nexusSelf.role === 'system' && r.nexusSelf.system === owner) || null;
+    if (!target) return { ok: false, status: 409, error: `nexus/${owner} has no repo yet — sync the nexus repo first` };
+  }
+  const runId = `phrun-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+  const base = { runId, repoUuid: repo.uuid, targetRepo: target.uuid, map, phase, phaseUuid: node.uuid, title: node.title };
+
+  // (1) snapshot first — never write without one
+  const snap = await _commitRepoSnapshotFor(target.uuid, { message: `before phase ${phase} (${map.split('/').pop()})`, causedBy: `idearium.phases.build:${runId}` });
+  if (!snap.ok) {
+    appendRow('idearium_phase_runs', { uuid: `${runId}-refused`, ...base, state: 'refused', error: `no snapshot: ${snap.error}`, ts: Date.now() });
+    return { ok: false, status: snap.status === 409 ? 409 : 502, error: `not built: the Versionium snapshot before it failed — ${snap.error}`, extra: { code: 'NO_SNAPSHOT', snapshotCode: snap.extra?.code || null } };
+  }
+  const commitId = snap.data.commitId;
+
+  // (2) active (a map that will not take the edit is reported, not fatal)
+  let statusNote = null;
+  if (node.status !== 'active') {
+    const st = await _phaseSetStatus(repo, { map, phase, status: 'active', force: true, reason: `phase ${phase} build started (${runId})` });
+    if (!st.ok) statusNote = st.error;
+  }
+  const depsDone = view.phases.filter(p => node.depends_on.includes(p.uuid) && p.status === 'complete').map(p => p.phase_key);
+  const req = PH.buildRequest({ phase: node, mapText, repo: target, depsDone });
+  const message = note ? `${req.message}\n\nFROM JAMES: ${note}` : req.message;
+  appendRow('idearium_phase_runs', { uuid: `${runId}-started`, ...base, state: 'building', snapshot: commitId, statusNote, promptChars: message.length, ts: Date.now() });
+  getIdeaOS().emit('idearium.repo.phase.run', { ...base, state: 'building', snapshot: commitId });
+
+  // (3) the agent, in the background — its reply can take minutes
+  const RA = _require('../../lib/repo-agent.js');
+  Promise.resolve().then(() => RA.dispatch({ repo: target, repoDir: _repoDiskDir(target.uuid), message, backend, agent, provider, layer: getRepoLayer() }))
+    .then((r) => {
+      const inj = r && r.injects ? { injected: (r.injects.injects || []).map(i => i.path || i.file).filter(Boolean).slice(0, 50), refused: (r.injects.refused || []).length, unresolved: (r.injects.unresolved || []).length } : null;
+      const row = { uuid: `${runId}-${r && r.ok ? 'replied' : 'failed'}`, ...base, state: r && r.ok ? 'replied' : 'failed', snapshot: commitId,
+        error: r && !r.ok ? String(r.error || 'agent failed').slice(0, 500) : null, provider: r && (r.providerUsed || r.provider) || null,
+        reply: r && r.text ? String(r.text).slice(0, 4000) : null, injects: inj, elapsedMs: r && r.elapsedMs || null, ts: Date.now() };
+      appendRow('idearium_phase_runs', row);
+      getIdeaOS().emit('idearium.repo.phase.run', { ...base, state: row.state, snapshot: commitId });
+    })
+    .catch((e) => {
+      appendRow('idearium_phase_runs', { uuid: `${runId}-failed`, ...base, state: 'failed', snapshot: commitId, error: e.message, ts: Date.now() });
+      getIdeaOS().emit('idearium.repo.phase.run', { ...base, state: 'failed', snapshot: commitId });
+    });
+  return { ok: true, data: { runId, state: 'building', snapshot: commitId, targetRepo: target.uuid, targetName: target.name, statusNote, title: req.title, promptChars: message.length } };
+}
+
+// §0.39.271 — one repo snapshot, as POST /api/repos/:uuid/snapshot takes it (moved here
+// from that route unchanged). Returns { ok, data } or { ok:false, status, error, extra }.
+async function _commitRepoSnapshotFor(uuid, body = {}) {
+  const repo = getRepoLayer().get(uuid);
+  if (!repo) return { ok: false, status: 404, error: `repo not found: ${uuid}` };
+  const dir = _repoDiskDir(uuid);
+  if (!dir) return { ok: false, status: 500, error: 'could not resolve repo directory' };
+  const { commitRepoSnapshot, verifyMustRecord } = await import('../repo/snapshot.js');
+  const result = await commitRepoSnapshot({
+    repo, repoDir: dir, message: body.message || null, causedBy: body.causedBy || null,
+    fileLayer: _fileLayers(uuid).fileLayer, snapshotMode: _snapshotMode(),
+    commit: async (payload) => {
+      const r = await _versionium('POST', '/api/versionium/commit', payload);
+      if (!r.ok) return { error: r.error };
+      if (r.data?.error) return { error: r.data.error };
+      return r.data?.commit || { error: 'versionium returned no commit' };
+    },
+  });
+  if (!result.ok) {
+    const status = ['NOT_INDEXED', 'FILES_TOO_BIG'].includes(result.code) ? 409
+      : ['COMMIT_FAILED', 'FILES_PLAN_FAILED', 'FILES_RECORD_FAILED'].includes(result.code) ? 502 : 500;
+    // FILES_RECORD_FAILED leaves a commit behind; say which, so it can be found.
+    return { ok: false, status, error: result.error, extra: { code: result.code, commitId: result.commit?.commitId || null } };
+  }
+  getIdeaOS().emit('idearium.repo.snapshot.committed', {
+    repoUuid: uuid, commitId: result.commit.commitId,
+    sourceFresh: result.record.mustRecord.sourceHash.fresh ?? null,
+  });
+  return { ok: true, data: {
+    repoUuid: uuid, commitId: result.commit.commitId, branch: result.commit.branch,
+    system: result.commit.system, mustRecord: verifyMustRecord(result.record), record: result.record,
+    files: result.files ? { treeHash: result.files.treeHash, counts: result.files.counts, bytes: result.files.bytes || null, alreadyRecorded: !!result.files.alreadyRecorded } : null,
+  } };
+}
+
 function _repoDiskDir(repoUuid) {
   const repo = getRepoLayer().get(repoUuid);
   if (!repo) return null;
@@ -801,7 +952,10 @@ function _baselineSnapshot(repoUuid, reason) {
       const r = await ensureBaselineSnapshot({
         repo, repoDir: dir, enabled, reason,
         listSnapshots: async () => {
-          const h = await _vcall('GET', `/api/versionium/history?system=${encodeURIComponent(SNAPSHOT_SYSTEM)}`);
+          // §0.39.271 V1 — this repo's branch, newest first: without it versionium returned
+          // the FIRST 200 repo commits in store order, and past 200 a repo's newer snapshots
+          // were never listed (a repo looked unversioned and got a second baseline).
+          const h = await _vcall('GET', `/api/versionium/history?system=${encodeURIComponent(SNAPSHOT_SYSTEM)}&branch=${encodeURIComponent('repo-' + repoUuid)}&n=1000`);
           return summarizeRepoSnapshots(h.commits || [], repoUuid);
         },
         takeSnapshot: ({ message }) => commitRepoSnapshot({
@@ -1162,6 +1316,15 @@ function matchRoute(method, url) {
     // (idearium/repo/roadmap.js; spec idearium/spec/idearium.repo-roadmap.spec).
     ['GET',    ['api','repos',    ':uuid','roadmap'],        'repo.roadmap.get'],
     ['POST',   ['api','repos',    ':uuid','roadmap','phase'], 'repo.roadmap.phase.update'],
+    // §0.39.271 P2/P3 — the Phases manager (Roadmap + Phasemap in one): every phasemap
+    // form, one status vocabulary, add, and build a phase (Versionium snapshot first).
+    // §0.39.271 S1 — the living model: the repo's spec/ .spec files, parsed (?path= one file)
+    ['GET',    ['api','repos',    ':uuid','living-spec'],           'repo.living-spec'],
+    ['GET',    ['api','repos',    ':uuid','phases'],                'repo.phases.get'],
+    ['GET',    ['api','repos',    ':uuid','phases','runs'],         'repo.phases.runs'],
+    ['POST',   ['api','repos',    ':uuid','phases','status'],       'repo.phases.status'],
+    ['POST',   ['api','repos',    ':uuid','phases','add'],          'repo.phases.add'],
+    ['POST',   ['api','repos',    ':uuid','phases','build'],        'repo.phases.build'],
     // §CI 2026-09-20 — CI/CD per compartment. cos/ci/index.js owns the
     // pipeline; these are idearium's surface onto it, scoped to a repo
     // (which is what carries the compartmentId).
@@ -1209,6 +1372,10 @@ function matchRoute(method, url) {
     ['POST',   ['api','nexus-self','resolve'],                        'nexus-self.resolve'],   // what an atlas reference opens
     ['GET',    ['api','nexus-self','file'],                           'nexus-self.file'],      // any text file of the immutable base
     ['POST',   ['api','nexus-self','applies',':id','rollback'],       'nexus-self.rollback'],
+    // §0.39.271 V2 — all of NEXUS in versionium: every system repo's versions, and one
+    // snapshot of every system (the nexus repo's own Versionium tab).
+    ['GET',    ['api','nexus-self','versions'],                       'nexus-self.versions'],
+    ['POST',   ['api','nexus-self','snapshot'],                       'nexus-self.snapshot'],
     ['GET',    ['api','nexus-self',':system'],                        'nexus-self.system'],
     ['GET',    ['api','nexus-self',':system','spec'],                 'nexus-self.spec'],
     ['GET',    ['api','nexus-self',':system','branches'],             'nexus-self.branch.list'],
@@ -3043,6 +3210,45 @@ async function handle(req, res, route, query, body) {
       _nexusSelfSync({});
       return ok(res, r);
     }
+    // §0.39.271 V2 — the nexus repo's Versionium tab: its one file is the index
+    // (NEXUS.md); NEXUS's files are versioned per system repo and in the immutable
+    // base. This answers with all of them in one read.
+    case 'nexus-self.versions': {
+      const NS = await import('../repo/nexus-self.js');
+      const st = NS.status(getRepoLayer());
+      const { SNAPSHOT_SYSTEM, summarizeRepoSnapshots, snapshotBranch } = await import('../repo/snapshot.js');
+      const repos = getRepoLayer().list({}).filter(r => r.nexusSelf && r.nexusSelf.role === 'system');
+      const byRepo = {};
+      for (const r of repos) {
+        const hist = await _versionium('GET', `/api/versionium/history?system=${encodeURIComponent(SNAPSHOT_SYSTEM)}&branch=${encodeURIComponent(snapshotBranch(r.uuid))}&n=1000`);
+        if (!hist.ok) return err(res, 502, `versionium unreachable: ${hist.error}`);
+        byRepo[r.uuid] = hist.data.commits || [];
+      }
+      const systems = repos.map(r => {
+        const snaps = summarizeRepoSnapshots(byRepo[r.uuid], r.uuid);
+        const latest = snaps[0] || null;
+        return { system: r.nexusSelf.system, repoUuid: r.uuid, name: r.name, fileCount: r.nexusSelf.fileCount || r.fileCount || 0,
+          bytes: r.nexusSelf.bytes || null, versions: snaps.length, latest,
+          versionError: r.nexusSelf.versionError || null, syncedAt: r.nexusSelf.syncedAt || null };
+      }).sort((a, b) => a.system.localeCompare(b.system));
+      const totals = { systems: systems.length, versions: systems.reduce((n, x) => n + x.versions, 0),
+        files: systems.reduce((n, x) => n + (x.fileCount || 0), 0), unversioned: systems.filter(x => !x.versions).map(x => x.system) };
+      return ok(res, { base: { head: st.head || null, history: (st.history || []).slice(-50) }, systems, totals });
+    }
+    case 'nexus-self.snapshot': {
+      const repos = getRepoLayer().list({}).filter(r => r.nexusSelf && r.nexusSelf.role === 'system');
+      const only = Array.isArray(body.only) ? new Set(body.only.map(String)) : null;
+      const results = [];
+      for (const r of repos) {
+        if (only && !only.has(r.nexusSelf.system)) continue;
+        const x = await _commitRepoSnapshotFor(r.uuid, { message: body.message || `nexus snapshot — ${r.nexusSelf.system}`, causedBy: body.causedBy || 'idearium.nexus-self.snapshot' });
+        results.push(x.ok ? { system: r.nexusSelf.system, ok: true, commitId: x.data.commitId, files: x.data.files }
+          : { system: r.nexusSelf.system, ok: false, error: x.error, code: x.extra?.code || null });
+      }
+      const failed = results.filter(x => !x.ok);
+      os.emit('idearium.nexus-self.snapshot', { systems: results.length, failed: failed.length });
+      return ok(res, { results, failed: failed.length });
+    }
     case 'nexus-self.atlas': {
       const NS = await import('../repo/nexus-self.js');
       return ok(res, NS.nexusAtlas(getRepoLayer()));
@@ -3373,14 +3579,16 @@ async function handle(req, res, route, query, body) {
       } else if (repo.compartmentId) compartment = _require('../../lib/cos-bridge.js').getCompartment(repo.compartmentId);
       const r = await CR.run({ repo, repoDir: repo.nexusSelf ? null : _repoDiskDir(params.uuid), compartment, option,
         file: body.file || body.entry || null, script: body.script || null,
-        timeoutMs: Math.min(parseInt(body.timeoutMs, 10) || 30000, 300000), keepBranch: !!body.keepBranch, nexusBranch });
+        timeoutMs: Math.min(parseInt(body.timeoutMs, 10) || 30000, 300000), keepBranch: !!body.keepBranch, nexusBranch, from: parseInt(body.from, 10) || 0 });
       if (!r.ok) return err(res, 422, (r.errors || ['run failed']).join('; '));
       os.emit('idearium.repo.run', { repoUuid: params.uuid, option: r.option, passed: r.passed, failed: r.failed });
       // kept for the Debug tab: what ran, where, and what failed (the tail of each failing run's stderr)
       try {
         appendRow('idearium_repo_runs', { uuid: `run-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`, repoUuid: params.uuid, option: r.option, label: r.label, where: r.where,
           passed: r.passed, failed: r.failed, allPassed: r.allPassed, durationMs: r.durationMs, branch: body.branch || null, ts: Date.now(),
-          failures: (r.runs || []).filter(x => !x.passed).slice(0, 10).map(x => ({ file: x.file, exitCode: x.exitCode ?? null, error: x.error || null, stderr: String(x.stderr || '').slice(-600), health: x.health && !x.health.ok ? x.health.error || null : null })) });
+          failures: (r.runs || []).filter(x => !x.passed).slice(0, 10).map(x => ({ file: x.file, exitCode: x.exitCode ?? null, error: x.error || null, stderr: String(x.stderr || '').slice(-600), health: x.health && !x.health.ok ? x.health.error || null : null,
+            debug: x.debug ? _require('../../lib/cos-debug-report.js').compact(x.debug) : null })),   // §0.39.271 T3
+          tests: r.report && r.report.tests ? { total: r.report.tests.total, ran: r.report.tests.ran, notRun: r.report.tests.notRun, next: r.report.tests.next } : null });
       } catch (_) { /* the run's own result is returned regardless */ }
       return ok(res, { repoUuid: params.uuid, ...r, mode: option === 'test.all' ? 'test' : 'run' });
     }
@@ -4044,43 +4252,23 @@ async function handle(req, res, route, query, body) {
     // a snapshot of nothing is not a snapshot. A versionium that is down is
     // a 502 with its real error, same convention as snapshot.push.
     case 'repo.snapshot.commit': {
-      const repo = getRepoLayer().get(params.uuid);
-      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
-      const dir = _repoDiskDir(params.uuid);
-      if (!dir) return err(res, 500, 'could not resolve repo directory');
-      const { commitRepoSnapshot, verifyMustRecord } = await import('../repo/snapshot.js');
-      const result = await commitRepoSnapshot({
-        repo, repoDir: dir, message: body.message || null, causedBy: body.causedBy || null,
-        fileLayer: _fileLayers(params.uuid).fileLayer, snapshotMode: _snapshotMode(),
-        commit: async (payload) => {
-          const r = await _versionium('POST', '/api/versionium/commit', payload);
-          if (!r.ok) return { error: r.error };
-          if (r.data?.error) return { error: r.data.error };
-          return r.data?.commit || { error: 'versionium returned no commit' };
-        },
-      });
-      if (!result.ok) {
-        const status = ['NOT_INDEXED', 'FILES_TOO_BIG'].includes(result.code) ? 409
-          : ['COMMIT_FAILED', 'FILES_PLAN_FAILED', 'FILES_RECORD_FAILED'].includes(result.code) ? 502 : 500;
-        // FILES_RECORD_FAILED leaves a commit behind; say which, so it can be found.
-        return err(res, status, result.error, { code: result.code, commitId: result.commit?.commitId || null });
-      }
-      os.emit('idearium.repo.snapshot.committed', {
-        repoUuid: params.uuid, commitId: result.commit.commitId,
-        sourceFresh: result.record.mustRecord.sourceHash.fresh ?? null,
-      });
-      return ok(res, {
-        repoUuid: params.uuid, commitId: result.commit.commitId, branch: result.commit.branch,
-        system: result.commit.system, mustRecord: verifyMustRecord(result.record), record: result.record,
-        files: result.files ? { treeHash: result.files.treeHash, counts: result.files.counts, bytes: result.files.bytes || null, alreadyRecorded: !!result.files.alreadyRecorded } : null,
-      });
+      // §0.39.271 — the body moved into _commitRepoSnapshotFor() unchanged, so the
+      // nexus "snapshot every system" and a phase build (I2: snapshot before write)
+      // take the same snapshot this route takes.
+      const r = await _commitRepoSnapshotFor(params.uuid, body);
+      if (!r.ok) return err(res, r.status, r.error, r.extra);
+      return ok(res, r.data);
     }
 
     case 'repo.snapshot.list': {
       const repo = getRepoLayer().get(params.uuid);
       if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
-      const { SNAPSHOT_SYSTEM, summarizeRepoSnapshots } = await import('../repo/snapshot.js');
-      const hist = await _versionium('GET', `/api/versionium/history?system=${encodeURIComponent(SNAPSHOT_SYSTEM)}`);
+      const { SNAPSHOT_SYSTEM, summarizeRepoSnapshots, snapshotBranch } = await import('../repo/snapshot.js');
+      // §0.39.271 V1 — "get versionium working": versionium's history answered with the
+      // FIRST 200 commits of every repo together, in store order. Once all repos had made
+      // 200 snapshots between them (15 nexus systems per sync alone), a repo's new
+      // snapshots stopped appearing here. Now: this repo's branch only, newest 1000.
+      const hist = await _versionium('GET', `/api/versionium/history?system=${encodeURIComponent(SNAPSHOT_SYSTEM)}&branch=${encodeURIComponent(snapshotBranch(params.uuid))}&n=1000`);
       if (!hist.ok) return err(res, 502, hist.error);
       return ok(res, { repoUuid: params.uuid, snapshots: summarizeRepoSnapshots(hist.data.commits || [], params.uuid) });
     }
@@ -4103,6 +4291,72 @@ async function handle(req, res, route, query, body) {
     // §MCO-E 2026-09-20 — GET: the roadmap (phase_node-shaped, dependency-ordered).
     // 200 with maps:[] when the repo has no phasemap: an ordinary state, not an
     // error (api() throws on ok:false and the UI renders the empty state).
+    // ── §0.39.271 S1 — the living spec ─────────────────────────────────────
+    case 'repo.living-spec': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const LS = await import('../repo/living-spec.js');
+      const dir = _repoDiskDir(params.uuid);
+      const list = await LS.listSpecs({ repo, repoDir: dir });
+      const want = query.path || list.primary;
+      const open = want ? await LS.readSpec({ repo, repoDir: dir, specPath: want }) : null;
+      if (query.path && open && open.error) return err(res, 404, open.error);
+      return ok(res, { repoUuid: params.uuid, ...list, open });
+    }
+
+    // ── §0.39.271 P2/P3 — the Phases manager ───────────────────────────────
+    case 'repo.phases.get': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const dir = _repoDiskDir(params.uuid);
+      if (!dir) return err(res, 500, 'could not resolve repo directory');
+      const PH = await import('../repo/phases.js');
+      return ok(res, PH.managerView({ repo, repoDir: dir, runs: _phaseRuns(params.uuid) }));
+    }
+    case 'repo.phases.runs': {
+      if (!getRepoLayer().get(params.uuid)) return err(res, 404, `repo not found: ${params.uuid}`);
+      const runs = _phaseRuns(params.uuid);
+      return ok(res, { repoUuid: params.uuid, runs: query.phase ? runs.filter(r => r.phase === query.phase) : runs });
+    }
+    case 'repo.phases.status': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const { map, phase, status, force } = body || {};
+      if (!map || !phase || !status) return err(res, 400, 'map, phase and status are required');
+      const r = await _phaseSetStatus(repo, { map, phase, status, force: force === true, reason: body.reason || `phase ${phase} → ${status}` });
+      if (!r.ok) return err(res, r.status, r.error, r.extra);
+      return ok(res, r.data);
+    }
+    case 'repo.phases.add': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const dir = _repoDiskDir(params.uuid);
+      const PH = await import('../repo/phases.js');
+      const { addPhase, RoadmapError } = await import('../repo/roadmap.js');
+      const { maps, scope, snapshot } = PH.mapsFor({ repo, repoDir: dir });
+      const target = body.map ? maps.find(m => m.path === body.map) : null;
+      if (body.map && !target) return err(res, 404, `no phasemap ${body.map} in this repo`);
+      if (!target && scope.source === 'nexus') return err(res, 400, 'name the phasemap (map) to add to — a nexus phase lives in one of docs/*phasemap*.spec');
+      let add;
+      try { add = addPhase({ text: target ? target.text : null, mapName: target ? target.path.split('/').pop().replace(/\.spec$/, '') : 'roadmap-phasemap', title: body.title, does: body.does || '', dependsOn: Array.isArray(body.dependsOn) ? body.dependsOn : [], prefix: body.prefix || 'P' }); }
+      catch (e) { if (e instanceof RoadmapError) return err(res, 400, e.message, { code: e.code }); throw e; }
+      const mapPath = target ? target.path : 'roadmap-phasemap.spec';
+      const w = await _phaseWrite(repo, scope, mapPath, add.text, snapshot, `add phase ${add.id}`);
+      if (!w.ok) return err(res, w.status || 500, w.error, { code: w.code || 'WRITE_FAILED' });
+      getIdeaOS().emit('idearium.repo.roadmap.updated', { repoUuid: params.uuid, map: mapPath, phase: add.id, added: true, via: w.via });
+      return ok(res, { repoUuid: params.uuid, map: mapPath, id: add.id, via: w.via, applyId: w.applyId || null });
+    }
+    case 'repo.phases.build': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const dir = _repoDiskDir(params.uuid);
+      const { map, phase } = body || {};
+      if (!map || !phase) return err(res, 400, 'map and phase are required');
+      const r = await _phaseBuild(repo, dir, { map, phase, backend: body.backend || null, agent: body.agent || null, provider: body.provider || null, note: body.note || '' });
+      if (!r.ok) return err(res, r.status, r.error, r.extra);
+      return ok(res, r.data);
+    }
+
     case 'repo.roadmap.get': {
       const repo = getRepoLayer().get(params.uuid);
       if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);

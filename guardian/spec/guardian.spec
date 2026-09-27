@@ -530,3 +530,10 @@ spec:
   #    waiting-for-choice) and fails with that reason at the no-reply limit. Guardian never picks.
   # 3. POST /command accepts hatInPrompt: "<hat>" — the caller already put that persona in the prompt; the job wears it
   #    with an empty persona instead of a guessed hat (the doubled "[the_builder] You build…" header).
+
+# ── ADDENDUM 2026-09-27 (0.39.271) — docs/2026-09-27-one-idearium-phases-living-spec-nodes-phasemap.spec ──
+# Guardian hosts the agent node types: guardian/data/nodes/{hat,agent} are regenerated at boot from every forged
+# hat (lib/system-nodes.js — agent payload name, intent, commands, personality), and guardian/lib/node-registry.js
+# (per-type watcher + _ledger.jsonl + JAA index) now starts at boot — it never had. 'hat', 'capability' and
+# 'system' joined GUARDIAN_NODE_TYPES; _idFromFilename keeps dotted ids whole. Command nodes mark declared vs
+# served (served read by guardian/lib/command-index-extract.js).

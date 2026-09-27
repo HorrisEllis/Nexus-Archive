@@ -164,3 +164,8 @@ spec:
   # were missing on existing components: nexus.lib.extract-code.export (hand-mapped with no requirer in its map, so its
   # 7 consumers' wires had no endpoint) and nexus.copilot.server.import (nothing could wire into copilot's server).
   # Fresh-bootstrap comparison 0.39.268 → 0.39.269: unresolved wires 112 → 104. bootstrap excludes the map's files.
+
+# ── ADDENDUM 2026-09-27 (0.39.271) — docs/2026-09-27-one-idearium-phases-living-spec-nodes-phasemap.spec ──
+# parsePhasemapText also reads list-form phases ("- id: X1" inside a phases: block — name, status words, depends_on,
+# closes, files) and returns name/closes/files/form for key-form phases too. loom/maps/one-idearium-map.js maps
+# idearium/repo/phases.js, idearium/repo/living-spec.js, lib/cos-debug-report.js, lib/system-nodes.js with wires.

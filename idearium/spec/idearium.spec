@@ -318,3 +318,23 @@ spec:
   #    beside WARP's cache key, not in it. Guardian is sent agentId (repo-<uuid>), hatInPrompt and fileName; Ollama
   #    answers are recorded. The build response names agentId and the memory used.
   # 4. New Spec lists no Eravos mods (GET /api/spec-engine/templates?include=eravos still does).
+
+  # ## ADDENDUM 2026-09-27 (0.39.270) — the Idearium atlas, rewritten from the code
+  # docs/2026-09-27-idearium-atlas-phasemap.spec (mapped before building). docs/atlases/idearium-atlas.md now describes
+  # the system as it is: the process and its stores, the 7 views and 13 repo tabs, the Agent tab end to end (the hat,
+  # one message's path, the backend switch, the 14 prompt blocks, context, both kinds of memory, the 109 tools and 3
+  # scopes, every command, injects, the live feed, late replies, Settings → Agents, where its state lives, its 37
+  # routes), ideas → specs → one chunk's build, repos (import, tiers L0–L8, snapshots, run, git/CI), NEXUS inside
+  # Idearium, the 217 routes by group and the event names. Every reference resolves; test-nexus-atlas-refs now holds it
+  # to 0 dead references. The earlier atlas is archived (docs/atlases/_archive/idearium-atlas.pre-0.39.270.md).
+
+# ── ADDENDUM 2026-09-27 (0.39.271) — docs/2026-09-27-one-idearium-phases-living-spec-nodes-phasemap.spec ──
+# Idearium is one app: the top bar is always Welcome + Repos; Create and Build are the last two entries of the
+# open repo's own tab row, and their views carry a bar back to the repo ("two ideariums" — James).
+# Phasemap + Roadmap are one Phases tab (idearium/repo/phases.js, docs/phases-manager.spec): every phasemap form,
+# board/layers/table/maps, status, add, and build (Versionium snapshot first, then the repo's agent). Phasemap's
+# verification tiers + graphs moved to the Intelligence tab. The Spec tab shows the living spec first
+# (idearium/repo/living-spec.js); the spec-engine chunk builder is under "build manifest". Routes added:
+# repo.phases.{get,runs,status,add,build}, repo.living-spec, nexus-self.{versions,snapshot}. Repo snapshot lists
+# read the repo's own versionium branch, newest first (they read the first 200 commits of every repo). The run
+# route takes `from` (continue a test.all) and keeps each failure's debug report.

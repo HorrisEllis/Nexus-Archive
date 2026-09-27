@@ -121,14 +121,20 @@ export function buildRoadmap({ projectId, maps = [] } = {}) {
         else if (cands.length > 1) { unresolved.push(tok); warnings.push({ type: 'ambiguous_dependency', map: m.path, phase: p.id, token: tok, candidates: cands.map(c => c.id) }); }
         else { unresolved.push(tok); warnings.push({ type: 'unresolved_dependency', map: m.path, phase: p.id, token: tok, note: 'not a phase in this phasemap; it does not order or block anything' }); }
       }
+      // §0.39.271 P2 — a list-form phase ("- id: T1", loom P1) has no slug after its key;
+      // its title is its name:. Key-form titles are unchanged.
+      const slugTitle = p.id.slice(keyOf(p.id).length + 1).replace(/_/g, ' ');
+      const nm = p.name ? String(p.name).replace(/\s+/g, ' ').trim() : '';
       nodes.push({
         uuid, project_id: projectId, order: 0,
-        title: `${keyOf(p.id)} · ${p.id.slice(keyOf(p.id).length + 1).replace(/_/g, ' ') || p.id}`,
+        title: `${keyOf(p.id)} · ${slugTitle || (p.form === 'list' && nm ? nm : '') || p.id}`,
         status: LOOM_TO_NODE[p.status] || 'planned',
         depends_on: deps, module_path: null,
         // additive fields (schema.phase_node, optional)
         map: m.path, phase_key: p.id, line: p.line + 1,
         unresolved_deps: unresolved, blocked_by: [], ready: false, layer: null,
+        // §0.39.271 P2 — what the phase says it does, closes and touches (loom P1)
+        name: nm || null, closes: p.closes || [], files: p.files || [], systems: p.systems || [], form: p.form || 'key',
         _mapIdx: mapIdx,
       });
     }
@@ -251,7 +257,9 @@ function lookaheadDeeper(lines, i, ind) {
 }
 
 // remove an older `status_previous:` in the same phase (not the one just written)
-const PHASE_HDR = /^\s{2,6}[A-Z]{1,3}(?:\d+|-[A-Z0-9]+)_[A-Za-z0-9_]*:/;
+// §0.39.271 P2 — a list-form entry ("- id: T1") also starts a phase; without it an edit
+// in a list-form map would drop every later phase's status_previous.
+const PHASE_HDR = /^\s{2,6}[A-Z]{1,3}(?:\d+|-[A-Z0-9]+)_[A-Za-z0-9_]*:|^\s*-\s+id:\s*\S+\s*$/;
 function dropOldPrevious(lines, hdrIdx, keepIdx) {
   const out = []; let inPhase = true;
   for (let i = 0; i < lines.length; i++) {

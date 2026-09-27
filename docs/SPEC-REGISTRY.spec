@@ -1614,3 +1614,20 @@ spec:
     | `docs/agent-memory.spec` | 1.0.0 | built (0.39.269) | lib/agent-memory.js — record/recall over the Clear Glass download manager, any backend. |
     | `docs/agent-providers.spec` | 1.0.0 | built (0.39.267) | lib/agent-providers.js — the one list of who can wear a hat; copilot resolved, never guessed. |
     | `docs/activity-recall.spec` | 1.0.0 | built (0.39.267) | copilot/lib/activity-recall.js — "what have you been up to", from records. |
+    
+    ## §REGISTERED 2026-09-27 — 0.39.270 Idearium atlas
+    
+    | spec | version | status | governs |
+    |---|---|---|---|
+    | `docs/2026-09-27-idearium-atlas-phasemap.spec` | 1.0.0 | built (0.39.270) | docs/atlases/idearium-atlas.md rewritten from the code (the Agent tab end to end, the 13 repo tabs, the build path, the 217 routes), the old one archived, the atlas reference test holding it to 0 dead references, the Nexus atlas's Idearium paragraph corrected. Mapped before building. |
+    
+    ## §REGISTERED 2026-09-27 — 0.39.271 one Idearium, Phases, living spec, COS debugging, nodes
+    
+    | spec | version | status | governs |
+    |---|---|---|---|
+    | `docs/2026-09-27-one-idearium-phases-living-spec-nodes-phasemap.spec` | 1.0.0 | built (0.39.271) | The :9000 /idearium/ redirect; Versionium's repo lists (their own branch, newest first — they were the first 200 commits of every repo) and the whole-NEXUS Versionium view; one Idearium bar; the Phases manager (Roadmap + Phasemap, every phasemap form, build = snapshot then agent); the Spec tab as the living spec; COS suite / every test / debug reports; copilot's declared = served; per-system nodes + Guardian's .hat/.agent. Mapped before building. |
+    | `docs/system-nodes.spec` | 1.0.0 | built (0.39.271) | lib/system-nodes.js — every system's capability/command/system nodes from the tree (declared vs served), Guardian's .hat/.agent, GET /api/nodes. |
+    | `docs/phases-manager.spec` | 1.0.0 | built (0.39.271) | idearium/repo/phases.js — the Phases tab's model and routes; builds snapshot first. |
+    | `docs/living-spec.spec` | 1.0.0 | built (0.39.271) | idearium/repo/living-spec.js — the repo's spec folder, parsed (meta, sections, version history, gaps, addenda). |
+    | `docs/cos-debug-report.spec` | 1.0.0 | built (0.39.271) | lib/cos-debug-report.js — a failed run's error, repo frames and source lines. |
+

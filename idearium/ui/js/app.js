@@ -39,13 +39,16 @@
 // another port (IDEARIUM_PORT) used to render a UI that talked to :4800 instead.
 // 0.39.263 — served standalone (idearium's own port, not under the orchestrator's /ui/),
 // the Eravos and Architect canvases cannot resolve ../<system>/ against this server: use the orchestrator's.
+// §0.39.271 — the two frames start at about:blank (data-src holds the relative path):
+// loading ../eravos/ before this ran was a 404 on :4800 on every page load.
 (() => {
   try {
-    if (typeof location === 'undefined' || /^\/ui\//.test(location.pathname)) return;
+    if (typeof location === 'undefined') return;
+    const underUi = /^\/ui\//.test(location.pathname);
     const orch = `${location.protocol}//${location.hostname}:9000/ui`;
     const set = () => {
-      const e = document.getElementById('eravos-frame'); if (e) e.src = `${orch}/eravos/`;
-      const a = document.getElementById('architect-frame'); if (a) a.src = `${orch}/architect/arch-builder.html`;
+      const e = document.getElementById('eravos-frame'); if (e) e.src = underUi ? e.dataset.src : `${orch}/eravos/`;
+      const a = document.getElementById('architect-frame'); if (a) a.src = underUi ? a.dataset.src : `${orch}/architect/arch-builder.html`;
     };
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', set); else set();
   } catch (_) {}
@@ -275,6 +278,8 @@ function refreshOnEvent(ev) {
       && CURRENT_REPO_SUBTAB === 'roadmap' && !ROADMAP_EDITING) {
     renderRepoRoadmap(CURRENT_API_REPO);
   }
+  // §0.39.271 P4 — the Phases tab (js/phases.js) repaints on a phase edit or a build step
+  if (typeof phasesOnEvent === 'function') phasesOnEvent(t, ev.payload);
   if (t === 'repo.snapshot.committed' && CURRENT_API_REPO && ev.payload?.repoUuid === CURRENT_API_REPO.uuid
       && CURRENT_REPO_SUBTAB === 'versionium') {
     renderRepoVersionium(CURRENT_API_REPO);
@@ -481,6 +486,29 @@ function setView(v) {
   if (v === 'repo') { exitRepoDetail(); }
   if (v === 'compartment' && typeof renderCompartmentDetail === 'function') { renderCompartmentTree(); renderCompartmentDetail(); }
   document.querySelectorAll('.tt-leaf').forEach(l => l.classList.remove('active'));
+  _syncNestCtx(v);
+}
+
+// §0.39.271 N1 — Create/Build open from the repo's own tab row; their views keep the
+// repo in view with one bar that leads back, so leaving the repo row never looks like
+// a second Idearium. The top bar stays Welcome + Repos.
+const NEST_VIEW_LABEL = { brainstorm: 'Create › Brainstorm', ideas: 'Create › Ideas', eravos: 'Build › Eravos — organism canvas', 'architect-build': 'Build › Architect — block canvas', 'spec-wizard': 'Build › Spec Builder' };
+function _syncNestCtx(v) {
+  const bar = document.getElementById('nest-ctx');
+  if (!bar) return;
+  const show = !!NEST_VIEW_LABEL[v] && typeof REPO_DETAIL_OPEN !== 'undefined' && REPO_DETAIL_OPEN && CURRENT_API_REPO;
+  bar.classList.toggle('show', !!show);
+  if (show) {
+    document.getElementById('nest-ctx-text').textContent = `${CURRENT_API_REPO.name} · ${NEST_VIEW_LABEL[v]}`;
+    document.querySelectorAll('.tab-btn[data-view="repo"]').forEach(b => b.classList.add('active'));
+  }
+}
+function backToRepo() {
+  // setView('repo') would exitRepoDetail() — this returns to the OPEN repo instead.
+  document.querySelectorAll('.view').forEach(el => el.classList.toggle('active', el.id === 'view-repo'));
+  document.querySelectorAll('.tab-btn, .tab-sub').forEach(b => b.classList.toggle('active', b.dataset.view === 'repo'));
+  document.querySelectorAll('.tab-group-btn').forEach(b => b.classList.remove('active'));
+  _syncNestCtx('repo');
 }
 
 // Top-tab subnav dropdowns (Create ▾ / Build ▾) — hover works via CSS,
@@ -1963,6 +1991,7 @@ function selectApiRepo(uuid) {
 let CURRENT_REPO_SUBTAB = null;
 
 function setRepoSubtab(name) {
+  if (name === 'roadmap' || name === 'phasemap') name = 'phases';   // §0.39.271 P4 — one tab now
   CURRENT_REPO_SUBTAB = name;
   document.querySelectorAll('.repo-subtab-btn').forEach(b => b.classList.toggle('active', b.dataset.subtab === name));
   document.querySelectorAll('.repo-subtab-panel').forEach(p => p.classList.toggle('active', p.id === `repo-subtab-${name}`));
@@ -1975,8 +2004,9 @@ function renderCurrentRepoSubtab() {
   else if (CURRENT_REPO_SUBTAB === 'files') renderApiRepoPanel(CURRENT_API_REPO);
   else if (CURRENT_REPO_SUBTAB === 'architect') renderRepoArchitect(CURRENT_API_REPO);
   else if (CURRENT_REPO_SUBTAB === 'spec') renderRepoSpec(CURRENT_API_REPO);
-  else if (CURRENT_REPO_SUBTAB === 'phasemap') renderRepoPhasemap(CURRENT_API_REPO);
-  else if (CURRENT_REPO_SUBTAB === 'roadmap') renderRepoRoadmap(CURRENT_API_REPO);
+  else if (CURRENT_REPO_SUBTAB === 'phases') renderRepoPhases(CURRENT_API_REPO);
+  else if (CURRENT_REPO_SUBTAB === 'phasemap') renderRepoPhasemap(CURRENT_API_REPO);   // no button since 0.39.271 (merged into Phases)
+  else if (CURRENT_REPO_SUBTAB === 'roadmap') renderRepoRoadmap(CURRENT_API_REPO);     // no button since 0.39.271 (merged into Phases)
   else if (CURRENT_REPO_SUBTAB === 'intelligence') renderRepoIntelligence(CURRENT_API_REPO);
   else if (CURRENT_REPO_SUBTAB === 'agent') renderRepoAgent(CURRENT_API_REPO);
   else if (CURRENT_REPO_SUBTAB === 'idea') renderRepoIdea(CURRENT_API_REPO);
@@ -1998,6 +2028,10 @@ function renderRepoSpec(repo) {
   const empty = document.getElementById('repo-spec-empty');
   const mount = document.getElementById('spec-builder');
   if (!empty || !mount || !repo) return;
+  // §0.39.271 S2 — the living spec first (js/living-spec.js); what follows is the build manifest.
+  if (typeof renderLivingSpec === 'function') renderLivingSpec(repo);
+  const manifest = document.getElementById('repo-build-manifest');
+  if (manifest) manifest.style.display = repo.nexusSelf ? 'none' : '';   // a nexus repo is built from its files, not a chunk manifest
   if (repo.nexusSelf && repo.nexusSelf.role === 'system') { mount.style.display = 'none'; empty.style.display = ''; return renderNexusSpec(repo, empty); }
   const say = (html) => { mount.style.display = 'none'; empty.style.display = ''; empty.innerHTML = html; };
 
@@ -2056,10 +2090,14 @@ async function renderRepoHome(repo) {
 // and MCO1's real dependency graph summary. Both are honest about a repo
 // that hasn't been through the import pipeline yet (404, shown as such —
 // never faked as "all green").
-async function renderRepoPhasemap(repo) {
-  const el = document.getElementById('repo-subtab-phasemap');
+// §0.39.271 P4 — the Phasemap tab is merged into Phases. What this function showed for an
+// ordinary repo (verification tiers + the three graphs) was never phases: it now paints
+// into the Intelligence tab (opts.el / opts.subtab). Kept whole, not deleted (§0.3).
+async function renderRepoPhasemap(repo, opts = {}) {
+  const el = opts.el || document.getElementById('repo-subtab-phasemap');
+  const SUB = opts.subtab || 'phasemap';
   if (!el) return;
-  if (repo && repo.nexusSelf && repo.nexusSelf.role === 'system') return renderNexusPhasemap(repo, el);
+  if (!opts.el && repo && repo.nexusSelf && repo.nexusSelf.role === 'system') return renderNexusPhasemap(repo, el);
   el.innerHTML = `<div class="detail-empty">loading…</div>`;
   let verification = null, verificationError = null, graph = null, graphError = null;
   try { verification = await api(`/api/repos/${repo.uuid}/verification`, {}, 15000); }
@@ -2069,7 +2107,7 @@ async function renderRepoPhasemap(repo) {
   try { graph = await api(`/api/repos/${repo.uuid}/graphs`, {}, 15000); }
   catch (e) { graphError = e.message; }
   // repo switched away while these were in flight — don't paint stale data
-  if (CURRENT_API_REPO?.uuid !== repo.uuid || CURRENT_REPO_SUBTAB !== 'phasemap') return;
+  if (CURRENT_API_REPO?.uuid !== repo.uuid || CURRENT_REPO_SUBTAB !== SUB) return;
 
   const tierRow = (t) => `<div class="pend-row" style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--b0)">
     <span style="font-family:var(--mono);font-size:10px;color:var(--text3)">${escapeHtml(t.level)} · ${escapeHtml(t.name || '')}</span>
@@ -2219,10 +2257,24 @@ agent errors         ${bad(d.agentErrors.length)}</div>
     ${nBroken || nMissing ? `<div class="ds"><div class="ds-label">imports that resolve to nothing</div><div class="ds-mono">${(deps.brokenRelative || []).map(b => `${escapeHtml(b.file)} → ${escapeHtml(b.specifier)}`).join('\n')}${nMissing ? `${nBroken ? '\n\n' : ''}not installed: ${escapeHtml(deps.packages.map(p => p.name).join(', '))}` : ''}</div></div>` : ''}
     ${d.parseFailures.length ? `<div class="ds"><div class="ds-label">files the pipeline could not parse</div><div class="ds-mono">${d.parseFailures.map(f => `${escapeHtml(f.path)}${f.error ? `  ${escapeHtml(String(f.error).slice(0, 160))}` : ''}`).join('\n')}</div></div>` : ''}
     ${d.failedTiers.length ? `<div class="ds"><div class="ds-label">verification tiers that failed</div><div class="ds-mono">${d.failedTiers.map(t => `${escapeHtml(t.level)} ${escapeHtml(t.name || '')}${t.failures.length ? '\n' + t.failures.slice(0, 8).map(f => `  · ${escapeHtml(typeof f === 'string' ? f : (f.file || '') + ' ' + (f.error || f.reason || JSON.stringify(f)).slice(0, 200))}`).join('\n') : ''}`).join('\n')}</div></div>` : ''}
+    ${(() => { const lf = d.runs.find(x => !x.allPassed && (x.failures || []).some(f => f.debug)); return lf ? `<div class="ds"><div class="ds-label">failures of the last failing run — ${escapeHtml(lf.label || lf.option)} · ${new Date(lf.ts).toLocaleString()}</div>${lf.failures.filter(f => f.debug).map(f => debugReportHtml(f.debug, f.file)).join('')}</div>` : ''; })()}
     <div class="ds"><div class="ds-label">COS runs · ${d.runs.length}</div>${d.runs.map(r => `<div class="ds-mono" style="border-bottom:1px solid var(--b0);padding:4px 0">${r.allPassed ? '✓' : '✗'} ${escapeHtml(r.label || r.option)} · ${r.passed} passed ${r.failed} failed · ${r.durationMs}ms · ${new Date(r.ts).toLocaleString()}${(r.failures || []).map(f => `\n   ${escapeHtml(f.file)} exit ${f.exitCode ?? '—'} ${escapeHtml(f.error || f.health || '')}${f.stderr ? '\n   ' + escapeHtml(_stderrGist(f.stderr)) : ''}`).join('')}</div>`).join('') || '<div class="ds-mono" style="opacity:.5">no runs yet — Run opens the COS run menu</div>'}</div>
     <div class="ds"><div class="ds-label">agent errors · ${d.agentErrors.length}</div>${d.agentErrors.map(a => `<div class="ds-mono" style="border-bottom:1px solid var(--b0);padding:4px 0">${new Date(a.ts).toLocaleString()} · ${escapeHtml(a.backend || '')}\n  asked: ${escapeHtml(a.message)}\n  <span style="color:var(--coral)">${escapeHtml(a.error || '')}</span></div>`).join('') || '<div class="ds-mono" style="opacity:.5">none</div>'}</div>`;
 }
 let _debugLast = null;
+// §0.39.271 T3 — one failure's debug report (lib/cos-debug-report.js): the error, the frames
+// that land in the repo with their source lines, and what the failure usually means
+function debugReportHtml(dbg, file) {
+  if (!dbg) return '';
+  const frames = (dbg.frames || []).map(f => `<div style="margin:4px 0 2px"><span style="color:var(--sky2)">${escapeHtml(f.file)}:${f.line}${f.col ? ':' + f.col : ''}</span>${f.fn ? ` <span style="opacity:.6">${escapeHtml(f.fn)}</span>` : ''}${f.inRepo ? '' : ' <span style="opacity:.5">(outside the run directory)</span>'}</div>` +
+    (f.excerpt ? `<pre style="margin:0;font-size:10px;line-height:1.5;background:var(--b0);padding:4px 6px;border-radius:4px;overflow:auto">${f.excerpt.map(x => `<span style="${x.at ? 'color:var(--coral)' : 'opacity:.7'}">${String(x.n).padStart(4)} ${x.at ? '▶' : ' '} ${escapeHtml(x.text)}</span>`).join('\n')}</pre>` : '')).join('');
+  return `<div style="border-left:2px solid var(--coral);padding:4px 0 4px 8px;margin:6px 0;font-family:var(--mono);font-size:10.5px">
+    <div><b style="color:var(--coral)">✗ ${escapeHtml(file || dbg.file || '')}</b>${dbg.exitCode != null ? ` <span style="opacity:.6">exit ${dbg.exitCode}</span>` : ''}${dbg.timedOut ? ' <span style="color:var(--amber)">timed out</span>' : ''}</div>
+    ${dbg.error ? `<div style="color:var(--text);margin:3px 0">${escapeHtml(dbg.error)}</div>` : ''}
+    ${(dbg.errorLines || []).slice(1, 4).map(l => `<div style="opacity:.7">${escapeHtml(l)}</div>`).join('')}
+    ${frames}${dbg.outside ? `<div style="opacity:.5;margin-top:3px">${dbg.outside} frame(s) outside the repo (runtime, node_modules)</div>` : ''}
+    ${dbg.hint ? `<div style="color:var(--amber);margin-top:4px">${escapeHtml(dbg.hint)}</div>` : ''}</div>`;
+}
 // the line of a failing run's stderr that says what went wrong (an Error line and
 // the first stack frame in the project), not whatever happened to be printed last
 function _stderrGist(stderr) {
@@ -2240,7 +2292,12 @@ async function repoDebugToAgent() {
   for (const p of (d.deps && d.deps.packages) || []) lines.push(`missing package: ${p.name}`);
   for (const f of d.parseFailures) lines.push(`parse failure: ${f.path}${f.error ? ' ' + f.error : ''}`);
   const r = d.runs.find(x => !x.allPassed);
-  if (r) for (const f of r.failures || []) lines.push(`failing run (${r.label || r.option}): ${f.file} exit ${f.exitCode}${f.stderr ? ' — ' + _stderrGist(f.stderr).replace(/\n\s*/g, ' / ') : ''}`);
+  if (r) for (const f of r.failures || []) {
+    // §0.39.271 T3 — the debug report goes with it: the error, and where in the repo it happened
+    const dbg = f.debug;
+    const at = dbg && dbg.frames && dbg.frames.find(x => x.inRepo);
+    lines.push(`failing run (${r.label || r.option}): ${f.file} exit ${f.exitCode}${dbg && dbg.error ? ` — ${dbg.error}` : f.stderr ? ' — ' + _stderrGist(f.stderr).replace(/\n\s*/g, ' / ') : ''}${at ? ` — at ${at.file}:${at.line}${at.excerpt ? ` \`${(at.excerpt.find(x => x.at) || {}).text || ''}\`` : ''}` : ''}${dbg && dbg.hint ? ` (${dbg.hint})` : ''}`);
+  }
   if (!lines.length) return toast('nothing to hand over — the checks are clean');
   setRepoSubtab('agent');
   for (let i = 0; i < 40 && !document.getElementById('agent-input'); i++) await new Promise(res => setTimeout(res, 100));
@@ -2468,8 +2525,17 @@ async function _nsBranchDiscard() {
 // ordinary state — not an error — so the endpoint returns ok:true with
 // scanned:false and a reason. (It must NOT return ok:false: api() above
 // throws on that, which would make this empty state unreachable.)
+// §0.39.271 P4 — Intelligence = the scan (unchanged, #intel-scan) + the verification
+// tiers and graphs that used to be the Phasemap tab (#intel-verify).
 async function renderRepoIntelligence(repo) {
-  const el = document.getElementById('repo-subtab-intelligence');
+  const host = document.getElementById('repo-subtab-intelligence');
+  if (!host) return;
+  host.innerHTML = `<div id="intel-scan"></div><div id="intel-verify"><div class="detail-empty">loading verification…</div></div>`;
+  renderRepoPhasemap(repo, { el: document.getElementById('intel-verify'), subtab: 'intelligence' });
+  return _renderRepoIntelligenceScan(repo);
+}
+async function _renderRepoIntelligenceScan(repo) {
+  const el = document.getElementById('intel-scan');
   if (!el) return;
   const forUuid = repo.uuid;
   el.innerHTML = `<div class="detail-empty">scanning…</div>`;
@@ -2857,10 +2923,71 @@ async function renderRepoVersionium(repo) {
     ? `<div class="ds"><div class="ds-label">snapshots (${snaps.length}) · newest first</div>${snaps.map(row).join('')}</div>`
     : `<div class="ds"><div class="ds-label">snapshots</div><div class="ds-mono">none yet for this repo.\n\nA snapshot needs the repo to have been through the import pipeline (chunked). If it has not been, taking one will say so.</div></div>`;
 
-  el.innerHTML = actions + listBlock + `<div id="snap-detail"></div>`;
+  // §0.39.271 V2 — the nexus repo's one file is its index (NEXUS.md). NEXUS itself is
+  // versioned per system and in the immutable base, so this tab shows all of that first.
+  const isNexusParent = repo.nexusSelf && repo.nexusSelf.role === 'parent';
+  el.innerHTML = (isNexusParent ? `<div id="nx-versions"><div class="detail-empty">reading every system's versions…</div></div>` : '')
+    + actions.replace('>snapshot<', isNexusParent ? '>snapshot the index only (NEXUS.md)<' : '>snapshot<')
+    + listBlock + `<div id="snap-detail"></div>`;
+  if (isNexusParent) renderNexusVersionium(forUuid, stale);
   if (SNAP_OPEN && SNAP_OPEN.repoUuid === forUuid && snaps.some(s => s.commitId === SNAP_OPEN.commitId)) {
     openRepoSnapshot(forUuid, SNAP_OPEN.commitId, snaps);
   }
+}
+
+// §0.39.271 V2 — GET /api/nexus-self/versions: one row per system repo (its versions in
+// versionium, latest, files kept), the immutable base's snapshot history, and one button
+// that snapshots every system (POST /api/nexus-self/snapshot).
+async function renderNexusVersionium(forUuid, stale) {
+  const box = document.getElementById('nx-versions');
+  if (!box) return;
+  let v;
+  try { v = await api('/api/nexus-self/versions', {}, 20000); }
+  catch (e) {
+    if (stale()) return;
+    box.innerHTML = `<div class="ds"><div class="ds-label">all of nexus · versionium</div><div class="ds-mono">could not read versions: ${escapeHtml(e.message)}\n\nversionium (:3754) holds them — is it running?</div></div>`;
+    return;
+  }
+  if (stale()) return;
+  const t = v.totals || {};
+  const row = (x) => {
+    const l = x.latest;
+    return `<div class="snap-row" style="padding:6px 8px;border-bottom:1px solid var(--b0);cursor:pointer;display:grid;grid-template-columns:130px 70px 90px 1fr 150px;gap:8px;align-items:center;font-family:var(--mono);font-size:10.5px"
+        onclick="enterRepoDetail('${escapeHtml(x.repoUuid)}');setTimeout(()=>setRepoSubtab('versionium'),60)" title="open nexus/${escapeHtml(x.system)}'s own Versionium tab">
+      <span style="color:var(--text)">${escapeHtml(x.system)}</span>
+      <span style="color:${x.versions ? 'var(--mint)' : 'var(--coral)'}">${x.versions} ver.</span>
+      <span style="color:var(--text3)">${x.fileCount} files</span>
+      <span style="color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l ? escapeHtml(l.commitId) + ' · ' + escapeHtml(l.message || '') + (l.files ? ' · ' + l.files.count + ' kept' : '') : (x.versionError ? '<span style="color:var(--coral)">' + escapeHtml(x.versionError) + '</span>' : 'not versioned yet')}</span>
+      <span style="color:var(--text3);text-align:right">${l ? escapeHtml(_snapWhen(l.ts)) : ''}</span>
+    </div>`;
+  };
+  const base = v.base || {};
+  box.innerHTML = `<div class="ds"><div class="ds-label">all of nexus · versionium — ${t.systems || 0} systems · ${t.versions || 0} versions · ${t.files || 0} files</div>
+      <div class="action-row" style="gap:8px;flex-wrap:wrap;margin-bottom:8px">
+        <input id="nx-snap-msg" type="text" placeholder="message for every system's snapshot (optional)" maxlength="200"
+          style="flex:1;min-width:200px;background:var(--b0);border:1px solid var(--b1);color:var(--text);font-family:var(--mono);font-size:11px;padding:6px 8px;border-radius:5px">
+        <button class="action-btn" id="nx-snap-all" onclick="snapshotAllNexus('${forUuid}')">◉ snapshot every system</button>
+      </div>
+      ${(t.unversioned || []).length ? `<div class="ds-mono" style="color:var(--amber);margin-bottom:6px">not versioned yet: ${escapeHtml(t.unversioned.join(', '))}</div>` : ''}
+      ${(v.systems || []).map(row).join('')}
+      <div style="font-family:var(--mono);font-size:9.5px;color:var(--text3);margin-top:6px">each system's files are kept in its own versions (first copy, then diffs) · click a system for its history, diffs and restore</div>
+    </div>
+    <div class="ds"><div class="ds-label">immutable base — ${(base.history || []).length} snapshot(s) of the live tree</div>
+      <div class="ds-mono">head ${escapeHtml(String(base.head || '—').slice(0, 16))}
+${(base.history || []).slice().reverse().slice(0, 12).map(h => `${escapeHtml(String(h.hash || h.snapshot || h).slice(0, 16))}  ${h.at ? new Date(h.at).toLocaleString() : ''}  ${h.files != null ? h.files + ' files' : ''}`).join('\n')}</div></div>`;
+}
+
+async function snapshotAllNexus(parentUuid) {
+  const btn = document.getElementById('nx-snap-all');
+  const msg = (document.getElementById('nx-snap-msg') || {}).value || '';
+  if (btn) { btn.disabled = true; btn.textContent = '◉ snapshotting…'; }
+  try {
+    const r = await api('/api/nexus-self/snapshot', { method: 'POST', body: JSON.stringify(msg.trim() ? { message: msg.trim() } : {}) }, 300000);
+    const bad = (r.results || []).filter(x => !x.ok);
+    toast(`${(r.results || []).length - bad.length} system(s) snapshotted${bad.length ? ` · ${bad.length} failed: ${bad.map(b => b.system + ' (' + (b.code || b.error) + ')').join(', ')}` : ''}`, bad.length ? 'err' : 'ok');
+  } catch (e) { toast(`snapshot every system failed: ${e.message}`, 'err'); }
+  if (btn) { btn.disabled = false; btn.textContent = '◉ snapshot every system'; }
+  if (CURRENT_API_REPO?.uuid === parentUuid && CURRENT_REPO_SUBTAB === 'versionium') renderRepoVersionium(CURRENT_API_REPO);
 }
 
 async function takeRepoSnapshot(uuid) {
@@ -3831,12 +3958,13 @@ async function _vmSetupStart() {
   _vmSetupPoll();
 }
 
-async function _runMenuGo() {
+async function _runMenuGo(from = 0) {
   const M = _runMenu; if (!M) return;
   const out = document.getElementById('run-menu-result');
   const val = (id) => { const el = document.getElementById(id); return el ? (el.type === 'checkbox' ? el.checked : el.value) : null; };
   const payload = { option: M.selected, file: val('run-menu-file') || undefined, script: val('run-menu-script') || undefined,
-    branch: (M.presetBranch = val('run-menu-branch') || '') || undefined, keepBranch: !!val('run-menu-keep'), timeoutMs: (parseInt(val('run-menu-timeout'), 10) || 30) * 1000 };
+    branch: (M.presetBranch = val('run-menu-branch') || '') || undefined, keepBranch: !!val('run-menu-keep'), timeoutMs: (parseInt(val('run-menu-timeout'), 10) || 30) * 1000,
+    from: typeof from === 'number' && from > 0 ? from : undefined };   // §0.39.271 T2 — continue a test.all the time budget cut short
   out.innerHTML = '<div style="opacity:.6">running in COS…</div>';
   out.scrollIntoView({ block: 'nearest' });
   let r;
@@ -3844,6 +3972,8 @@ async function _runMenuGo() {
   catch (e) { out.innerHTML = `<div style="color:var(--bad,#f87171)">${escapeHtml(e.message)}</div>`; return; }
   const col = (ok) => ok ? 'var(--ok,#4ade80)' : 'var(--bad,#f87171)';
   out.innerHTML = `<div style="margin-bottom:6px;opacity:.8">${escapeHtml(r.label || r.option)} · ${escapeHtml(r.where || '')} · ${r.durationMs}ms · <b style="color:${col(r.allPassed)}">${r.passed} passed, ${r.failed} failed</b></div>` +
+    (r.report && r.report.tests ? `<div style="font-size:10px;opacity:.8;margin-bottom:6px">${r.report.tests.ran} of ${r.report.tests.total} test file(s) ran (from #${r.report.tests.from + 1}, ${r.report.tests.concurrency} at a time)${r.report.tests.notRun ? ` · <b style="color:var(--amber,#fbbf24)">${r.report.tests.notRun} not reached in ${Math.round(r.report.tests.budgetMs / 1000)} s</b> <button class="action-btn" onclick="_runMenuGo(${r.report.tests.next})">run the next ${r.report.tests.notRun}</button>` : ''}</div>` : '') +
+    (r.report && r.report.suite ? `<div style="font-size:10px;opacity:.8;margin-bottom:6px">suite: ${escapeHtml(r.report.suite.steps.join(' · '))}${r.report.suite.refusals.length ? ` · not run here: ${escapeHtml(r.report.suite.refusals.join('; '))}` : ''}</div>` : '') +
     (r.report && r.report.vm ? `<div style="font-size:10px;opacity:.75;margin-bottom:6px">VM · accelerator ${escapeHtml(String(r.report.vm.accel))} · network ${escapeHtml(String(r.report.vm.network))}${r.report.vm.network === 'install' ? ` (cut after install — offline ${r.report.vm.offlineVerified ? 'verified' : 'NOT verified'})` : ''} · repo in by ${escapeHtml(String(r.report.vm.share))}</div>` : '') +
     (r.report && r.report.packages ? `<pre style="white-space:pre-wrap;max-height:200px;overflow:auto;margin:0 0 8px">${escapeHtml(r.report.packages.map(p => `${p.via.padEnd(8)} ${p.name}  (${p.usedBy} file${p.usedBy === 1 ? '' : 's'})`).join('\n'))}${r.report.brokenRelative.length ? '\n\nbroken relative imports:\n' + escapeHtml(r.report.brokenRelative.map(b => `${b.file} → ${b.specifier}`).join('\n')) : ''}</pre>` : '') +
     r.runs.map(x => `<div style="margin:8px 0 3px"><span style="color:${col(x.passed)}">${x.passed ? '✓' : '✗'}</span> ${escapeHtml(x.file)} <span style="opacity:.6">${x.exitCode === undefined ? '' : `exit ${x.exitCode === null ? '—' : x.exitCode}`}${x.durationMs ? ` · ${x.durationMs}ms` : ''}${x.killedByTimeout ? ' · TIMED OUT' : ''}${x.killedByOutputLimit ? ' · OUTPUT LIMIT' : ''}${x.external ? ` · external ${escapeHtml(x.runtime)}` : ''}</span></div>` +
@@ -3851,6 +3981,7 @@ async function _runMenuGo() {
       ((x.portMap || []).length ? `<div style="font-size:10px;opacity:.6">ports: ${x.portMap.map(p => `:${p.requested}→:${p.actual}`).join(' ')}</div>` : '') +
       ((x.refused || []).length ? `<div style="font-size:10px;opacity:.6">network isolation refused: ${escapeHtml(x.refused.slice(0, 8).join(', '))}${x.refused.length > 8 ? ' …' : ''}</div>` : '') +
       (x.error ? `<div style="color:${col(false)}">${escapeHtml(x.error)}</div>` : '') +
+      (x.debug ? debugReportHtml(x.debug, x.file) : '') +
       (x.stdout ? `<pre style="white-space:pre-wrap;max-height:160px;overflow:auto;opacity:.8;margin:0">${escapeHtml(x.stdout.slice(-4000))}</pre>` : '') +
       (x.stderr ? `<pre style="white-space:pre-wrap;max-height:160px;overflow:auto;color:${col(false)};margin:0">${escapeHtml(x.stderr.slice(-4000))}</pre>` : '')).join('');
 }

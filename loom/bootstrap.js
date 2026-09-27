@@ -139,6 +139,7 @@ const handMapped = [
   ...require('./maps/accounts-authority-map').FILES.map(f => f[0]),
   ...require('./maps/cos-testenv-map').FILES.map(f => f[0]),     // §0.39.264
   ...require('./maps/agent-memory-map').FILES.map(f => f[0]),    // §0.39.269
+  ...require('./maps/one-idearium-map').FILES.map(f => f[0]),    // §0.39.271
   'loom/agent-suite/index.js',
 ];
 console.log('\nscanning whole tree from source (real require/import edges only)...\n');
@@ -284,6 +285,10 @@ if (mappedCosTestenv.failures.length) { console.log(`  cos-testenv FAILURES: ${m
 const mappedAgentMemory = require('./maps/agent-memory-map').mapAgentMemory(driver);
 console.log(`  agent-memory: ${mappedAgentMemory.components.length} components, ${mappedAgentMemory.hooks.length} hooks, ${mappedAgentMemory.wires.length} wires`);
 if (mappedAgentMemory.failures.length) { console.log(`  agent-memory FAILURES: ${mappedAgentMemory.failures.length}`); for (const f of mappedAgentMemory.failures.slice(0, 6)) console.log(`    ${JSON.stringify(f).slice(0, 200)}`); failures += mappedAgentMemory.failures.length; }
+// §0.39.271 — the Phases manager, the living spec, the COS debug report, per-system nodes
+const mappedOneIdearium = require('./maps/one-idearium-map').mapOneIdearium(driver);
+console.log(`  one-idearium: ${mappedOneIdearium.components.length} components, ${mappedOneIdearium.hooks.length} hooks, ${mappedOneIdearium.wires.length} wires`);
+if (mappedOneIdearium.failures.length) { console.log(`  one-idearium FAILURES: ${mappedOneIdearium.failures.length}`); for (const f of mappedOneIdearium.failures.slice(0, 6)) console.log(`    ${JSON.stringify(f).slice(0, 200)}`); failures += mappedOneIdearium.failures.length; }
 console.log(`  components: ${mappedUi.components.length} ok`);
 console.log(`  hooks:      ${mappedUi.hooks.length} ok`);
 console.log(`  wires:      ${mappedUi.wires.length} ok`);

@@ -1234,6 +1234,25 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
     if (tvShellCandidate && fs.existsSync(tvShellCandidate) && fs.statSync(tvShellCandidate).isFile()) {
       return serveFile(res, tvShellCandidate);
     }
+    // §0.39.271 R1 (docs/2026-09-27-one-idearium-phases-living-spec-nodes-phasemap.spec) —
+    // James's screenshot: ":9000 → route not found: GET /idearium/". The TV shell is
+    // served at "/", so its relative '../idearium/' resolves to /idearium/, a
+    // DIRECTORY — the two file checks above never match a directory. A top-level
+    // segment that names a UI directory (under ui/, or a system UI served under
+    // /ui/<name>/ above: idearium, architect) is redirected to /ui/<path>, where the
+    // /ui handler already serves it. Anything else still falls to the 404 below.
+    const first = relPath.split('/')[0];
+    const SYSTEM_UI_NAMES = ['idearium', 'architect'];
+    let isUiDir = SYSTEM_UI_NAMES.includes(first);
+    if (!isUiDir && first) {
+      const d = _safePath(UI_ROOT, first);
+      try { isUiDir = !!(d && fs.statSync(d).isDirectory()); } catch (_) { isUiDir = false; }
+    }
+    if (isUiDir && first !== 'api') {
+      const target = '/ui/' + relPath + (first === relPath && !relPath.endsWith('/') ? '/' : '') + (u.search || '');
+      res.writeHead(302, { Location: target, 'Cache-Control': 'no-store' });
+      return res.end();
+    }
   }
 
   // ────────────────────────────────────────────────────────────────────────
@@ -1430,6 +1449,21 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
     const remotePath = '/' + parts.slice(3).join('/') + (u.search || '');
     relay.proxyToRemote(peerId, remotePath, req, res);
     return; // relay handles response
+  }
+
+  // ── §0.39.271 X3 — every system's nodes (lib/system-nodes.js) ───────────────
+  // GET  /api/nodes                         counts per type and per system
+  // GET  /api/nodes/:type?system=&q=&limit=&full=1   one type across every system
+  // GET  /api/nodes/:type/:id?system=       one node (its envelope)
+  // POST /api/nodes/sync {only?, dryRun?}   regenerate now
+  if (top === 'api' && sub === 'nodes') {
+    const SN = require('../lib/system-nodes.js');
+    const parts = (rest || '').split('/').filter(Boolean).map(decodeURIComponent);
+    if (M === 'GET' && !parts.length) return json(res, 200, { ok: true, ...SN.index() });
+    if (M === 'POST' && parts[0] === 'sync') { const b = await readBody(req); return json(res, 200, SN.sync({ only: Array.isArray(b.only) ? b.only : null, dryRun: !!b.dryRun })); }
+    if (M === 'GET' && parts.length === 1) return json(res, 200, { ok: true, type: parts[0], nodes: SN.list({ type: parts[0], system: QS.get('system') || null, q: QS.get('q') || null, limit: Math.min(5000, parseInt(QS.get('limit'), 10) || 500), full: QS.get('full') === '1' }) });
+    if (M === 'GET' && parts.length === 2) { const n = SN.get(parts[0], parts[1], { system: QS.get('system') || null }); return n ? json(res, 200, { ok: true, node: n }) : json(res, 404, { ok: false, error: `no ${parts[0]} node ${parts[1]}` }); }
+    return json(res, 404, { ok: false, error: `route not found: ${M} ${u.pathname}` });
   }
 
   // ── File push — /api/push/* ───────────────────────────────────────────────
@@ -2021,8 +2055,11 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
     if (M==='GET'  && action==='files' && !action2) return json(res,200,await GET('cortex',`/api/files?n=${QS.get('n')||200}`));
     if (M==='GET'  && action==='files' && action2==='get') return json(res,200,await GET('cortex',`/api/files/get?hash=${QS.get('hash')||''}`));
     if (M==='POST' && action==='files' && action2==='upload') return json(res,200,await POST('cortex','/api/files/upload',await readBody(req)));
-    if (M==='GET'  && action==='versionium' && action2==='log') return json(res,200,await GET('cortex',`/api/versionium/log?n=${QS.get('n')||50}${QS.get('branch')?'&branch='+QS.get('branch'):''}`));
-    if (M==='POST' && action==='versionium' && action2==='commit') return json(res,200,await POST('cortex','/api/versionium/commit',await readBody(req)));
+    // §0.39.271 V1 — versionium left cortex (§VS1); cortex answers these with "moved to
+    // :3754". The two proxies kept their paths and now call versionium itself; its
+    // list is /api/versionium/history (there is no /log), which takes n and branch.
+    if (M==='GET'  && action==='versionium' && action2==='log') return json(res,200,await GET('versionium',`/api/versionium/history?n=${encodeURIComponent(QS.get('n')||50)}${QS.get('branch')?'&branch='+encodeURIComponent(QS.get('branch')):''}`));
+    if (M==='POST' && action==='versionium' && action2==='commit') return json(res,200,await POST('versionium','/api/versionium/commit',await readBody(req)));
     if (M==='GET'  && action==='projects')         return json(res,200,await GET('cortex','/api/projects'));
     if (M==='POST' && action==='ess' && action2==='analyse') return json(res,200,await POST('cortex','/api/ess/analyse',await readBody(req)));
     if (M==='GET'  && action==='tags')             return json(res,200,await GET('cortex',`/api/tags?entityId=${QS.get('entityId')||''}`));
@@ -2931,6 +2968,16 @@ if (nexusBus) {
 
 const BIND_HOST = process.env.NEXUS_BIND_HOST || '127.0.0.1'; // §REMOTE-15
 server.listen(PORT, BIND_HOST, async () => {
+  // §0.39.271 X1 — every system's capability/command/system nodes regenerated from the tree
+  // (lib/system-nodes.js). Idempotent: unchanged nodes are not rewritten. Off the request
+  // path, never fatal.
+  setTimeout(() => {
+    try {
+      const r = require('../lib/system-nodes.js').sync({ agents: false });
+      const w = Object.values(r.systems).reduce((n, v) => n + v.written, 0), a = Object.values(r.systems).reduce((n, v) => n + v.archived, 0);
+      console.log(`[orchestrator] system nodes: ${Object.keys(r.systems).length} systems · ${w} written · ${a} archived · ${r.ms}ms${r.errors.length ? ' · ' + r.errors.join('; ') : ''}`);
+    } catch (e) { console.warn(`[orchestrator] system node sync failed (non-fatal): ${e.message}`); }
+  }, 4000);
   // BootSequence hoisted to top-level
 
   // ════════════════════════════════════════════════════════════════════════════

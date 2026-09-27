@@ -2234,6 +2234,40 @@ const server = http.createServer(async (req, res) => {
     } catch (e) { json(res, 500, { ok: false, error: e.message }); }
     return;
   }
+  // §0.39.271 C1 — declared in registry-components since 2026-08-19, never served (every call
+  // fell to the 404). The modules were real and tested: lib/introspect.js, lib/agent-capability.js.
+  if (method === 'POST' && p === '/api/introspect') {
+    try {
+      const b = await readBody(req);
+      const r = await require('../lib/introspect.js').examine({ prompt: b.prompt, response: b.response, requestId: b.requestId || null, sessionId: b.sessionId || null, userSaidWrong: !!b.userSaidWrong, intent: b.intent || null });
+      json(res, 200, { ok: true, ...r });
+    } catch (e) { json(res, 500, { ok: false, error: e.message }); }
+    return;
+  }
+  if (method === 'POST' && p === '/api/introspect/retry') {
+    try {
+      const b = await readBody(req);
+      if (!b.prompt || !b.response) return json(res, 400, { ok: false, error: 'prompt and response (the answer being retried) are required' });
+      const r = await require('../lib/introspect.js').retry({ prompt: b.prompt, response: b.response, requestId: b.requestId || null, sessionId: b.sessionId || null, intent: b.intent || null,
+        // the retry goes out the way any copilot prompt does (lifeline's cascade), carrying the finding
+        dispatchFn: async (retryPrompt) => { const l = await _lifeline.route(retryPrompt, { intent: b.intent || 'ask', sessionId: b.sessionId || null, channel: 'copilot-introspect-retry' }); if (!l || !l.ok) throw new Error((l && l.error) || 'no provider answered'); return l.text; } });
+      json(res, 200, { ok: r.ok !== false, ...r });
+    } catch (e) { json(res, 500, { ok: false, error: e.message }); }
+    return;
+  }
+  if (method === 'GET' && p === '/api/introspect/health') {
+    try { json(res, 200, require('../lib/introspect.js').health()); } catch (e) { json(res, 500, { ok: false, error: e.message }); }
+    return;
+  }
+  if (method === 'GET' && p === '/api/agents/capability') {
+    try {
+      const AC = require('../lib/agent-capability.js');
+      const agent = new URL(req.url, 'http://x').searchParams.get('agent');
+      json(res, 200, agent ? { ok: true, ...AC.profile(agent), chunk: AC.chunkFor(agent) } : { ok: true, agents: AC.all(), health: AC.health() });
+    } catch (e) { json(res, 500, { ok: false, error: e.message }); }
+    return;
+  }
+
   // §0.39.267 — what copilot has been up to, structured (the same records intuition's "what have you been up to" reads).
   // ?hours=N (default 6) or ?since=<ms epoch>; &text=1 adds the sentence form.
   if (method === 'GET' && p === '/api/activity') {

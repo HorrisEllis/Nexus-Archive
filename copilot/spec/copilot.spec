@@ -343,3 +343,9 @@ spec:
   #    answers (memory:true) and names the agent as memoryAgent — NOT agentId, which makes _tryGuardian skip its
   #    "is that tab connected?" pre-check. analysis.js recalls (not for the self-test) and files as 'copilot'.
   #    /api/prompt forwards agentId/compartmentId to Ollama as well as Guardian.
+
+# ── ADDENDUM 2026-09-27 (0.39.271) — docs/2026-09-27-one-idearium-phases-living-spec-nodes-phasemap.spec ──
+# Declared = served. POST /api/introspect, /api/introspect/retry, GET /api/introspect/health and
+# /api/agents/capability are served (lib/introspect.js, lib/agent-capability.js were real and never mounted);
+# POST /api/agents/calibrate stays declared, marked served:false (it needs a live probe). 16 served routes were
+# added to registry-components.js; interaction-contract.json's port corrected 4850 → 3750.
