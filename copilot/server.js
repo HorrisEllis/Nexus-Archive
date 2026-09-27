@@ -2437,7 +2437,7 @@ const server = http.createServer(async (req, res) => {
           const toolRuntime = require('./tool-runtime');
           const T = body.tools;
           const scope = Array.isArray(T.scope) && T.scope.length ? T.scope : undefined;   // undefined = every registered tool
-          const context = T.repoDir ? { repoDir: String(T.repoDir), agentId: body.agentId || null } : null;
+          const context = (T.repoDir || T.repoUuid) ? { repoDir: T.repoDir ? String(T.repoDir) : null, agentId: body.agentId || null, repoUuid: T.repoUuid ? String(T.repoUuid) : null } : null;   // 0.39.266 — repoUuid: the harness tools know their repo without the model passing it
           const identity = typeof T.identity === 'string' && T.identity.trim() ? T.identity.trim() : null;
           const maxIterations = Math.min(Math.max(parseInt(T.maxIterations, 10) || 6, 1), 12);
           // 0.39.258 — composed: the caller (idearium's repo agent) built the whole prompt from blocks the person

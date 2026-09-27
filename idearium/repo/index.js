@@ -413,7 +413,7 @@ export class RepoLayer {
   // idearium/data/projects/<repoUuid> — persisted on the repo record so
   // every later materialize() (including quiet ones after an edit) keeps
   // using it. null for every existing caller — purely additive.
-  ingest({ name, specUuid = null, files = [], source = 'drop', parent = null, promotedFromSpec = null, compartmentId = null, materializeBaseDir = null, bare = false, ideaUuid: fromIdea = null } = {}) {
+  ingest({ name, specUuid = null, files = [], source = 'drop', parent = null, promotedFromSpec = null, compartmentId = null, materializeBaseDir = null, bare = false, ideaUuid: fromIdea = null, noIdea = false } = {}) {
     if (!name) return { error: 'repo name required' };
     if (!this.se) return { error: 'repo layer has no spec-engine — cannot store content' };
 
@@ -490,7 +490,9 @@ export class RepoLayer {
     //      nothing is building). 'building' is set by what actually builds —
     //      the build queue and the spec build route — never assumed.
     let ideaUuid = null;
-    try {
+    // §0.39.266 — James: "the specs aren't supposed to stay ideas … supposed to only be nexus and the
+    // nested repos." A repo that is not someone's idea (the nexus-self repos: Nexus itself) gets none.
+    if (!noIdea) try {
       const known = fromIdea && this.os && this.os.db && Array.isArray(this.os.db.ideas) ? this.os.db.ideas.find(i => i.uuid === fromIdea) : null;
       if (known) {
         ideaUuid = known.uuid;
@@ -754,8 +756,80 @@ export class RepoLayer {
     // (includeArchived) with an unchanged hash and left it there: nexus gone for
     // good. An immutable repo's lifecycle belongs to the sync, never to Delete.
     { const im = this._immutableError(repoUuid); if (im) return { error: im, code: 'IMMUTABLE' }; }
-    r.status = 'archived'; r.updatedAt = Date.now(); this._save();   // §7.4 not deleted
-    return { ok: true, uuid: repoUuid };
+    r.status = 'archived'; r.updatedAt = Date.now(); this._save();
+    // §0.39.266 — the UI's "Delete Repository" says content and history go; with James's D2 they do:
+    // the repo's spec versions are purged unless another live repo still uses them.
+    const purged = this.purgeSpecsOf(repoUuid, { includeCurrent: true });
+    return { ok: true, uuid: repoUuid, purgedSpecs: purged };
+  }
+
+  /** specInUse(specUuid, exceptRepo) — true when a live (not archived) repo's CURRENT content is this spec. */
+  specInUse(specUuid, exceptRepo = null) {
+    return this.repos.repos.some(x => x.uuid !== exceptRepo && x.status !== 'archived' && x.specUuid === specUuid);
+  }
+
+  /**
+   * purgeSpecsOf(repoUuid, { includeCurrent }) -> [specUuid] — §0.39.266 (D2). Removes the repo's
+   * previous spec versions from disk (and its current one when includeCurrent), skipping any a live repo
+   * still uses. specHistory keeps the record of what was there; the bytes go.
+   */
+  purgeSpecsOf(repoUuid, { includeCurrent = false } = {}) {
+    const r = this.repos.repos.find(x => x.uuid === repoUuid);
+    if (!r || !this.se || typeof this.se.purgeSpec !== 'function') return [];
+    const ids = [...new Set([...(r.specHistory || []).filter(h => h && !h.purged).map(h => h.specUuid), ...(includeCurrent ? [r.specUuid] : []), r.promotedFromSpec].filter(Boolean))];
+    const out = [];
+    for (const id of ids) {
+      if (id === r.specUuid && !includeCurrent) continue;
+      if (this.specInUse(id, repoUuid)) continue;
+      try { const p = this.se.purgeSpec(id); if (p.purged) out.push(id); } catch (e) { console.warn(`[idearium/repo] purge of spec ${id} failed (non-fatal): ${e.message}`); }
+    }
+    if (out.length) {
+      r.specHistory = (r.specHistory || []).map(h => (h && out.includes(h.specUuid) ? { ...h, purged: true } : h));
+      this._save();
+    }
+    return out;
+  }
+
+  /**
+   * dropRepoIdeasNamed(names) -> count — §0.39.266. Removes every "Repo: <name>" idea that repo ingest made for one
+   * of these repo names, linked or orphaned (re-registering a repo minted a new one each time and left the old).
+   * Only source 'repo-ingest' ideas whose text is exactly "Repo: <name>" — never an idea a person wrote.
+   */
+  dropRepoIdeasNamed(names) {
+    const want = new Set((names || []).map(n => `Repo: ${n}`));
+    const ideas = this.os && this.os.db && Array.isArray(this.os.db.ideas) ? this.os.db.ideas : null;
+    let gone = [];
+    if (ideas) {
+      gone = ideas.filter(i => i && i.source === 'repo-ingest' && want.has(i.text)).map(i => i.uuid);
+      for (let k = ideas.length - 1; k >= 0; k--) if (gone.includes(ideas[k].uuid)) ideas.splice(k, 1);
+    }
+    try {
+      const { jaaDB } = createRequire(import.meta.url)('../../cortex/memory/jaa-db.js');
+      const rows = jaaDB.query('idearium_ideas', row => row.source === 'repo-ingest' && want.has(row.text)) || [];
+      for (const row of rows) if (!gone.includes(row.uuid)) gone.push(row.uuid);
+      jaaDB.delete('idearium_ideas', row => row.source === 'repo-ingest' && want.has(row.text));
+    } catch (_) {}
+    let relinked = false;
+    for (const r of this.repos.repos) if (r.ideaUuid && gone.includes(r.ideaUuid)) { r.ideaUuid = null; relinked = true; }
+    if (relinked) this._save();
+    return gone.length;
+  }
+
+  /**
+   * dropAutoIdea(repoUuid) -> bool — §0.39.266. Removes the "Repo: <name>" idea ingest minted for a repo
+   * that is not an idea (the nexus repos). Only an idea with source 'repo-ingest' is touched — an idea a
+   * person wrote is never removed here.
+   */
+  dropAutoIdea(repoUuid) {
+    const r = this.repos.repos.find(x => x.uuid === repoUuid);
+    if (!r || !r.ideaUuid) return false;
+    const ideas = this.os && this.os.db && Array.isArray(this.os.db.ideas) ? this.os.db.ideas : null;
+    const idea = ideas ? ideas.find(i => i.uuid === r.ideaUuid) : null;
+    if (idea && idea.source !== 'repo-ingest') return false;
+    if (ideas && idea) ideas.splice(ideas.indexOf(idea), 1);
+    try { createRequire(import.meta.url)('../../cortex/memory/jaa-db.js').jaaDB.delete('idearium_ideas', row => row.uuid === r.ideaUuid); } catch (_) {}
+    r.ideaUuid = null; r.updatedAt = Date.now(); this._save();
+    return true;
   }
 
   /** restore(repoUuid) — archived -> active. Used by the nexus-self sync to heal a repo archived before the guard above existed. */

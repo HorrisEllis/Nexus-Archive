@@ -317,6 +317,12 @@ const SUITES = [
   'test-cos-remote-api.test.js',  // 0.39.265 — the same through a real idearium API: a repo's compartment pushed, pulled elsewhere, edits back into the repo, clone
   'test-nexus-self-visible.test.js',  // 0.39.266 — immutable nexus repos refuse Delete; ones already archived are restored by the sync; the library refills on nexus-self events
   'test-nexus-inject-approval.test.js',  // 0.39.266 — agent code on a nexus repo waits for approval, then goes through the apply gate into the live tree; revert = gate rollback
+  'test-jaa-deletes-stick.test.js',  // 0.39.266 — a row deleted by one process stays deleted (compaction stuck at 7,176 → 19,788 rows/h before)
+  'test-nexus-specs-and-ideas-cleanup.test.js',  // 0.39.266 — nexus repos are not ideas; one spec per nexus repo; removing a spec deletes it
+  'test-registry-harness.test.js',  // 0.39.266 — loom's registry as the agent's harness: events, find/card/read, a ~2.7k-char first message
+  'test-component-store.test.js',   // 0.39.266 — the component store: folders, pinned deps, reuse by contract/prompt, harness
+  'test-ollama-activity.test.js',  // 0.39.266 — num_ctx sized to every prompt; every model call logged; nexus-live capped
+  'test-chat-per-agent.test.js',  // 0.39.266 — each repo agent gets its own chat (they all shared one)
   'test-versionium-repo-history.test.js', // 0.39.263 — every repo's history in versionium (staged big versions, files/versions), nexus repos committed on sync, loom reads versionium not git
   'brainos-float-cg.test.js', // 0.39.262 — BrainOS Float Clear Glass tabs + pre-mount registration fix
   'test-agent-tools-and-graph.test.js', // 0.39.257 — every tool (enforced), /tools /debug /graph, the graph in context

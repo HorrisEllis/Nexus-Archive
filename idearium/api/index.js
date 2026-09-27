@@ -213,6 +213,35 @@ import { LANG_TO_EXT } from '../../lib/extract-code.js';
 //   file or doc is far more likely to arrive as plain, unfenced content,
 //   or wrapped in prose explaining it).
 const CODE_EXTENSIONS = _require('../../lib/languages.js').codeExtensions();
+
+// §0.39.266 (C2) — James: "warp is the build logic. supposed to reuse components. i wanted a components store for
+// all components build in folders with their dependancies." Every FILE chunk the build path completes goes into
+// lib/component-store.js (components/<id>/<version>/ + component.json, deps pinned by id + version); a later build
+// asks the store first — by contract (path + layer + purpose) and by prompt — before spending a token.
+// Imports and nexus syncs never reach here (C-D7): they complete chunks through the spec-engine, not this path.
+function _chunkContract(chunk) {
+  return chunk.file ? { path: chunk.file.path || chunk.realPath, layer: chunk.file.layer || '', purpose: chunk.file.purpose || '' }
+                    : { path: chunk.realPath, layer: '', purpose: chunk.sectionDesc || '' };
+}
+function _storeBuilt(manifest, chunk, content, { prompt = null, agent = null, source = null } = {}) {
+  if (!chunk || !chunk.realPath || !content) return null;
+  try {
+    const CS = _require('../../lib/component-store.js');
+    const r = CS.put({
+      project: manifest.name, path: chunk.realPath, content, contract: _chunkContract(chunk), prompt,
+      builtBy: { specUuid: manifest.uuid, specName: manifest.name, chunkUuid: chunk.uuid, agent: agent || chunk.agent || null, source: source || null },
+    });
+    if (r.created) console.log(`[idearium/api] component stored ${r.id}@${r.version} (${Object.keys(r.dependencies).length} dep(s), ${r.unresolved.length} unresolved)`);
+    return r;
+  } catch (e) { console.warn('[idearium/api] component store write failed (chunk is complete regardless):', e.message); return null; }
+}
+function _storedFor(chunk, { prompt = null } = {}) {
+  if (!chunk || !chunk.realPath) return null;
+  try {
+    const CS = _require('../../lib/component-store.js');
+    return prompt ? CS.byPrompt(prompt) : CS.byContract(_chunkContract(chunk));
+  } catch (e) { console.warn('[idearium/api] component store read failed, dispatching:', e.message); return null; }
+}
 import { COMPONENTS as IDEARIUM_COMPONENTS } from '../registry-components.js';
 import path from 'path';
 import fs from 'fs';
@@ -1155,6 +1184,16 @@ function matchRoute(method, url) {
     ['POST',   ['api','nexus-self',':system','branch',':id','apply'], 'nexus-self.branch.apply'],
     // §RUN 2026-09-21 — run/test the repo in a COS test environment (lib/repo-run.js)
     ['POST',   ['api','repos',    ':uuid','run'],                   'repo.run'],
+    // §0.39.266 — the registry harness (lib/registry-harness.js): what a repo agent navigates instead of injected code
+    // §0.39.266 (C1) — the component store (lib/component-store.js)
+    ['GET',    ['api','components'],                                 'components.list'],
+    ['GET',    ['api','components',':id'],                           'components.get'],
+    ['POST',   ['api','components',':id','invalidate'],              'components.invalidate'],
+    ['GET',    ['api','repos',    ':uuid','harness','find'],        'repo.harness.find'],
+    ['GET',    ['api','repos',    ':uuid','harness','card'],        'repo.harness.card'],
+    ['GET',    ['api','repos',    ':uuid','harness','read'],        'repo.harness.read'],
+    ['POST',   ['api','repos',    ':uuid','harness','write'],       'repo.harness.write'],
+    ['POST',   ['api','repos',    ':uuid','harness','test'],        'repo.harness.test'],
     ['GET',    ['api','repos',    ':uuid','run','capabilities'],    'repo.run.capabilities'],
     ['GET',    ['api','repos',    ':uuid','run','options'],         'repo.run.options'],   // §0.39.261 — the COS run menu (lib/cos-run.js)
     // §0.39.264 — the COS test VM: what is there, and setting it up from the run menu (cos/testenv/setup-job.js)
@@ -3200,6 +3239,86 @@ async function handle(req, res, route, query, body) {
       return ok(res, { repoUuid: repo.uuid, verification: ver ? { status: ver.status, level: ver.level } : null, failedTiers, parseFailures, runs, agentErrors, syntax, deps, checkedAt: Date.now() });
     }
 
+    // §0.39.266 — James: "use the component registry as the wiring harness … so chunks can have minial context …
+    // thats way too much to inject when we have tools they can use to get context." find / card / read are pure
+    // reads of the registry (loom's for a nexus repo, the repo's own graph otherwise); write proposes an .inject
+    // (for a nexus repo: the approval prompt, then the gate); test runs the tests the registry says cover it.
+    case 'components.list': case 'components.get': case 'components.invalidate': {
+      const CS = _require('../../lib/component-store.js');
+      if (action === 'components.list') {
+        const q = query.q || query.query;
+        return ok(res, { stats: CS.stats(), components: q ? CS.find(q, { limit: Math.min(parseInt(query.limit, 10) || 25, 200) }) : CS.list() });
+      }
+      const ref = decodeURIComponent(params.id);
+      if (action === 'components.invalidate') {
+        const n = CS.invalidate(ref);
+        if (n) os.emit('idearium.components.invalidated', { ref, keys: n });
+        return ok(res, { ref, keysDropped: n });
+      }
+      const g = CS.get(ref);
+      if (!g) return err(res, 404, `no stored component ${ref}`);
+      return ok(res, { manifest: g.manifest, closure: CS.closure(g.id, g.version), content: query.content === '1' ? g.content : undefined });
+    }
+
+    case 'repo.harness.find': case 'repo.harness.card': case 'repo.harness.read':
+    case 'repo.harness.write': case 'repo.harness.test': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const H = _require('../../lib/registry-harness.js');
+      let idx;
+      try { idx = H.indexFor(repo, repo.nexusSelf ? null : _repoDiskDir(params.uuid)); }
+      catch (e) { return err(res, 409, `no registry for this repo: ${e.message}`); }
+      if (action === 'repo.harness.find') {
+        const r = H.find(idx, query.q || query.query, { kind: query.kind || 'any', limit: Math.min(parseInt(query.limit, 10) || 15, 50) });
+        return r.error ? err(res, 400, r.error) : ok(res, r);
+      }
+      if (action === 'repo.harness.card') {
+        const ref = query.id || query.path || query.event;
+        if (!ref) return err(res, 400, 'id (a component id or path) or event is required');
+        const r = query.event ? H.eventCard(idx, query.event) : H.card(idx, ref);
+        return r.error ? err(res, 404, r.error) : ok(res, r);
+      }
+      if (action === 'repo.harness.read') {
+        const r = H.read(idx, query.id || query.path, { start: query.start, end: query.end });
+        return r.error ? err(res, 404, r.error) : ok(res, r);
+      }
+      if (action === 'repo.harness.write') {
+        const RI = _require('../../lib/repo-inject.js');
+        const target = body.path || (body.id ? (H.resolve(idx, body.id) || {}).file : null);
+        if (!target) return err(res, 400, 'path (or the id of an existing component) is required');
+        if (typeof body.content !== 'string') return err(res, 400, 'content (the whole file) is required');
+        const hat = _require('../../lib/repo-hat.js').getRepoHat(params.uuid);
+        const p = RI.propose({ layer: getRepoLayer(), repo, hat, path: target, content: body.content, source: { kind: 'agent', via: 'loom.write.tool' } });
+        if (!p.ok) return err(res, 400, (p.errors || ['propose failed']).join('; '));
+        let applied = null;
+        if (RI.modeFor(repo) === 'auto') { applied = RI.apply(p.inject.uuid, { layer: getRepoLayer() }); }
+        const n = applied && applied.ok ? applied.inject : p.inject;
+        os.emit('idearium.repo.inject.proposed', { repoUuid: params.uuid, inject: n.uuid, path: n.path, status: n.status, approval: !!repo.nexusSelf });
+        return ok(res, { inject: n.uuid, path: n.path, status: n.status, creates: n.creates,
+          next: n.status === 'applied' ? 'written' : repo.nexusSelf ? 'waiting for James to approve it (the approval prompt is open in the Agent tab)' : 'proposed — waiting for review',
+          applyError: applied && !applied.ok ? applied.errors.join('; ') : undefined });
+      }
+      // test — the tests the registry says cover this component, run through the COS run menu (test.file)
+      const c = H.card(idx, body.id || body.path, { cap: 50 });
+      if (c.error) return err(res, 404, c.error);
+      const testFiles = (c.tests || []).filter(t => !String(t).startsWith('…')).map(t => idx.fileOf(t) || t).filter(Boolean).slice(0, Math.min(parseInt(body.max, 10) || 3, 6));
+      if (!testFiles.length) return ok(res, { id: c.id, tests: [], note: 'no test in the registry covers this component' });
+      const CR = _require('../../lib/cos-run.js');
+      const runs = [];
+      for (const f of testFiles) {
+        let runRepo = repo, compartment = null;
+        if (repo.nexusSelf) {
+          const sys = _require('../../lib/nexus-self/systems.js').ownerOf(f);
+          runRepo = getRepoLayer().list({ includeArchived: true }).find(r => r.nexusSelf && r.nexusSelf.role === 'system' && r.nexusSelf.system === sys) || repo;
+          compartment = _require('../../lib/cos-bridge.js').getCompartment(`nexus-self-${sys}`);
+        } else if (repo.compartmentId) compartment = _require('../../lib/cos-bridge.js').getCompartment(repo.compartmentId);
+        const r = await CR.run({ repo: runRepo, repoDir: runRepo.nexusSelf ? null : _repoDiskDir(runRepo.uuid), compartment, option: 'test.file', file: f, timeoutMs: 120000 });
+        const one = (r.runs || [])[0] || {};
+        runs.push({ file: f, ok: !!r.ok, passed: r.ok ? !!r.allPassed : false, error: r.ok ? undefined : (r.errors || []).join('; '), exitCode: one.exitCode ?? null, tail: String(one.stderr || one.stdout || '').slice(-800) });
+      }
+      return ok(res, { id: c.id, tests: runs, allPassed: runs.every(x => x.passed) });
+    }
+
     case 'repo.run': {
       const repo = getRepoLayer().get(params.uuid);
       if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
@@ -3315,8 +3434,9 @@ async function handle(req, res, route, query, body) {
           const backend = RA.routeFor(provider).backend;
           let context = { kind: null, block: '' };
           const repoDir = repo.materializeDir || path.join(layer.dataDir, 'projects', params.uuid);   // same derivation as the atlas routes
-          if (repoDir) { try { const c = _require('../../lib/repo-context.js').retrieve({ repoDir, message, bare: true }); context = { kind: c.kind || null, block: c.block }; } catch (_) { /* preview without context, said below */ } }
-          let text = RA.compose({ hat, message, context, repoUuid: params.uuid, backend });
+          // §0.39.266 — the same context the dispatch uses (harness scope: the registry card, not code)
+          try { const c = RA.contextFor({ repo, repoDir, message, bare: true }); context = { kind: c.kind || null, block: c.block }; } catch (_) { /* preview without context, said below */ }
+          let text = RA.fillListedTools(RA.compose({ hat, message, context, repoUuid: params.uuid, backend }), params.uuid);
           let toolsFilled = false;
           if (/\{tools\}|\{tool_guide\}/.test(text)) {
             try { const TR = _require('../../copilot/tool-runtime.js'); text = TR.fillToolPlaceholders(text, RA.scopeFor(params.uuid, hat)); toolsFilled = true; } catch (_) { toolsFilled = false; }
@@ -4401,10 +4521,25 @@ async function handle(req, res, route, query, body) {
         // never dispatch. Content-addressed on the section contract, not the
         // spec identity. Opt-out via body.noReuse for a deliberate fresh build.
         if (!body.noReuse) {
+          // §0.39.266 (C2) — a stored component with this exact contract: its bytes, 0 tokens. Unlike
+          // findPriorSection below, this survives the spec it was built in being purged.
+          const stored = _storedFor(chunk);
+          if (stored) {
+            se.completeChunk(params.uuid, chunk.uuid, stored.content, { preserveWhitespace: true });
+            const um = se.loadSpec(params.uuid);
+            _syncPhaseFromManifest(os, um);
+            os.emit('idearium.spec-engine.chunk.complete', {
+              specUuid: params.uuid, chunkUuid: chunk.uuid, sectionId: chunk.sectionId,
+              progress: um.progress, source: 'component-store', component: `${stored.id}@${stored.version}`, cost: 0, cacheHit: true,
+            });
+            return ok(res, { reused: true, component: `${stored.id}@${stored.version}`, sectionId: chunk.sectionId,
+              progress: um.progress, message: `reused component ${stored.id}@${stored.version} — 0 tokens` });
+          }
           try {
             const prior = se.findPriorSection(chunk.sectionId, chunk.sectionDesc, params.uuid);
             if (prior && prior.content) {
               se.completeChunk(params.uuid, chunk.uuid, prior.content);
+              _storeBuilt(manifest, chunk, prior.content, { source: 'reuse' });   // a file built before the store existed joins it
               const um = se.loadSpec(params.uuid);
               _syncPhaseFromManifest(os, um);
               os.emit('idearium.spec-engine.chunk.complete', {
@@ -4420,6 +4555,23 @@ async function handle(req, res, route, query, body) {
         // Get system context for the agent
         const systemContext = await as.getSystemContext().catch(() => '');
         const chunkPrompt   = se.buildChunkPrompt(manifest, chunk, systemContext);
+        // §0.39.266 (C2) — the same prompt built before (WARP's exact-cache key), answered from the store: a crystal
+        // that outlives warp-crystals.json and the spec it was built in.
+        if (!body.noReuse && chunk.realPath) {
+          const stored = _storedFor(chunk, { prompt: chunkPrompt });
+          if (stored) {
+            se.completeChunk(params.uuid, chunk.uuid, stored.content, { preserveWhitespace: true });
+            _storeBuilt(manifest, chunk, stored.content, { source: 'component-store' });   // records this chunk's contract on it
+            const um = se.loadSpec(params.uuid);
+            _syncPhaseFromManifest(os, um);
+            os.emit('idearium.spec-engine.chunk.complete', {
+              specUuid: params.uuid, chunkUuid: chunk.uuid, sectionId: chunk.sectionId,
+              progress: um.progress, source: 'component-store', component: `${stored.id}@${stored.version}`, cost: 0, cacheHit: true,
+            });
+            return ok(res, { reused: true, component: `${stored.id}@${stored.version}`, sectionId: chunk.sectionId,
+              progress: um.progress, message: `reused component ${stored.id}@${stored.version} — 0 tokens` });
+          }
+        }
         // §BUILT 2026-09-03 — James: "send each chunk to the respectable
         // agent." Was `body.agent || manifest.agent || 'ollama'` — one
         // agent for every chunk in the spec, `chunk.agent` never read here
@@ -4541,6 +4693,8 @@ async function handle(req, res, route, query, body) {
           }
           if (result.ok && !result.queued && result.text) {
             se.completeChunk(params.uuid, chunk.uuid, result.text);
+            const stored = _storeBuilt(manifest, chunk, se.loadSpec(params.uuid).chunks.find(c => c.uuid === chunk.uuid)?.content || result.text,
+                                       { prompt: chunkPrompt, agent: result.agent || preferAgent, source: result.source || 'agent' });
             const updatedManifest = se.loadSpec(params.uuid);
             _syncPhaseFromManifest(os, updatedManifest);
             os.emit('idearium.spec-engine.chunk.complete', {
@@ -4551,6 +4705,7 @@ async function handle(req, res, route, query, body) {
               source: result.source || 'agent',
               cacheHit: result.cacheHit === true,
               cost: result.cost ?? null,
+              component: stored ? `${stored.id}@${stored.version}` : null,
               verifiedAttempts: result.attempts, detectionComposite: result.detection?.composite,
             });
           } else if (result.queued) {
@@ -4578,6 +4733,8 @@ async function handle(req, res, route, query, body) {
       try {
         const chunk = se.completeChunk(params.uuid, params.chunkUuid, content);
         const manifest = se.loadSpec(params.uuid);
+        // §0.39.266 (C2) — a queued (browser-agent) build lands here; it is a WARP build like any other.
+        _storeBuilt(manifest, manifest.chunks.find(c => c.uuid === params.chunkUuid) || chunk, chunk.content || content, { agent: body.agent || null, source: 'callback' });
         _syncPhaseFromManifest(os, manifest);
         os.emit('idearium.spec-engine.chunk.complete', {
           specUuid: params.uuid, chunkUuid: params.chunkUuid,
@@ -4637,9 +4794,23 @@ async function handle(req, res, route, query, body) {
       const se = getSpecEngine();
       if (!se) return err(res, 503, 'spec-engine not ready');
       try {
-        const manifest = se.deleteSpec(params.uuid);
-        os.emit('idearium.spec.deleted', { specUuid: params.uuid, name: manifest.name });
-        return ok(res, { deleted: true, uuid: params.uuid, name: manifest.name });
+        // §0.39.266 (D2) — James: "delete old specs, idearium is supposed to do that when removing them from
+        // the list." Removing a spec deletes it from disk — unless it is a live repo's CURRENT content: a
+        // repo's files ARE its spec, so that one is only stopped (the old soft remove, restorable) and goes
+        // when the repo itself is deleted.
+        const L = getRepoLayer();
+        const user = L && L.repos ? L.repos.repos.find(r => r.status !== 'archived' && r.specUuid === params.uuid) : null;
+        if (user) {
+          const manifest = se.deleteSpec(params.uuid);
+          os.emit('idearium.spec.deleted', { specUuid: params.uuid, name: manifest.name, purged: false });
+          return ok(res, { deleted: true, purged: false, uuid: params.uuid, name: manifest.name,
+                           note: `stopped, not deleted: it is the content of repo "${user.name}" — delete the repo to remove it` });
+        }
+        let name = null; try { name = se.loadSpecMeta(params.uuid).name; } catch (_) {}
+        const p = se.purgeSpec(params.uuid);
+        if (!p.purged) return err(res, 404, `spec ${params.uuid} not found`);
+        os.emit('idearium.spec.deleted', { specUuid: params.uuid, name, purged: true });
+        return ok(res, { deleted: true, purged: true, uuid: params.uuid, name, chunkNodes: p.chunkNodes, mirrorRows: p.mirrorRows });
       } catch(e) { return err(res, 404, e.message); }
     }
 
@@ -4773,6 +4944,15 @@ function _startBuildQueuePoller(port) {
         const recovered = se.recoverOrphanedChunks();
         if (recovered.length) console.log(`[idearium/build-queue] boot recovery: ${recovered.length} orphaned chunk(s) reset BUILDING -> PENDING`);
       } catch (e) { console.warn(`[idearium/build-queue] orphaned-chunk recovery failed (non-fatal): ${e.message}`); }
+      // §0.39.266 (D2) — specs removed before removal meant deletion are still on disk, flagged deleted.
+      // Once per process: purge every one no live repo uses as its content.
+      try {
+        const L = getRepoLayer();
+        const live = new Set(L && L.repos ? L.repos.repos.filter(r => r.status !== 'archived').map(r => r.specUuid) : []);
+        const gone = se.listSpecs({ includeDeleted: true }).filter(sp => sp.deleted && !live.has(sp.uuid));
+        let n = 0; for (const sp of gone) { try { if (se.purgeSpec(sp.uuid).purged) n++; } catch (_) {} }
+        if (n) console.log(`[idearium/build-queue] purged ${n} removed spec(s) from disk (D2 — removing a spec deletes it)`);
+      } catch (e) { console.warn(`[idearium/build-queue] removed-spec purge skipped: ${e.message}`); }
       _recoveryDone = true; // once per real process lifetime — recovering an already-recovered (or genuinely, currently building) chunk on tick 2 would be wrong
     }
     let specs;
@@ -4898,6 +5078,9 @@ function _nexusSelfSync({ only = null, force = false } = {}) {
         },
       });
       _nexusSelfLast = { at: Date.now(), ok: r.ok, snapshot: r.snapshot, ms: r.ms, changed: [...r.systems.filter(x => x.status !== 'unchanged').map(x => `${x.system}:${x.status}`), ...(r.restored || []).map(x => `${x.name}:restored`)], understanding: r.understanding };
+      // §0.39.266 — any sync over 1 s says where the time went, changed or not
+      if (r.ms > 1000 && r.timing) console.log(`[idearium/nexus-self] sync took ${r.ms}ms — ${Object.entries(r.timing).filter(([, v]) => v >= 50).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${v}ms`).join(' · ')}${r.stats0 ? ` · tree ${r.stats0.files} files, ${r.stats0.hashed} re-hashed` : ''}`);
+      _nexusSelfLast.timing = r.timing || null;
       if (_nexusSelfLast.changed.length) console.log(`[idearium/nexus-self] synced in ${r.ms}ms — ${_nexusSelfLast.changed.join(', ')}${r.understanding && r.understanding.improved && r.understanding.improved.length ? ` · understanding improved: ${r.understanding.improved.join(', ')}` : ''}${r.understanding && r.understanding.regressed && r.understanding.regressed.length ? ` · regressed: ${r.understanding.regressed.join(', ')}` : ''}`);
       return r;
     } catch (e) {

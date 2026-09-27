@@ -1181,6 +1181,32 @@ export function deleteSpec(specUuid) {
   return manifest;
 }
 
+/**
+ * purgeSpec(specUuid) -> { purged, chunkNodes, mirrorRows } — §0.39.266. James: "delete old specs,
+ * idearium is supposed to do that when removing them from the list." Removes the spec for real: its
+ * directory (manifest, .spec, chunk files), its .chunk nodes, its cortex mirror rows, and the caches.
+ * Supersedes §7.4 "archived, not deleted" for specs, by James's decision (docs/2026-09-27-registry-
+ * harness-and-stability-phasemap.spec D2). Callers decide WHETHER a spec may go (a spec that is a live
+ * repo's content is that repo's files) — this only decides HOW.
+ */
+export function purgeSpec(specUuid) {
+  if (!specUuid || !/^[\w-]+$/.test(specUuid)) throw new Error(`invalid spec uuid: ${specUuid}`);
+  const specDir = path.join(SPECS_ROOT, specUuid);
+  if (!fs.existsSync(specDir)) return { purged: false, reason: 'not on disk' };
+  let chunkUuids = [];
+  try { chunkUuids = (loadSpecMeta(specUuid).chunks || []).map(c => c.uuid); } catch (_) { /* unreadable manifest — the directory still goes */ }
+  fs.rmSync(specDir, { recursive: true, force: true });
+  _metaCache.delete(specUuid); _summaryCache.delete(specUuid);
+  const chunkNodesRemoved = chunkNodes.removeChunkNodes(chunkUuids);
+  let mirrorRows = 0;
+  try {
+    mirrorRows += jaaDB.delete(MANIFEST_TABLE, r => r.uuid === specUuid) || 0;
+    mirrorRows += jaaDB.delete(CHUNK_TABLE, r => r.specUuid === specUuid) || 0;
+    for (const k of [..._mirrorSig.keys()]) if (k === MANIFEST_TABLE + specUuid || chunkUuids.some(u => k === CHUNK_TABLE + u)) _mirrorSig.delete(k);
+  } catch (e) { console.warn(`[${MODULE_ID}] §1.2 cortex mirror purge failed for ${specUuid} (non-fatal): ${e.message}`); }
+  return { purged: true, chunkNodes: chunkNodesRemoved, mirrorRows };
+}
+
 export function restoreSpec(specUuid) {
   const manifest = loadSpec(specUuid);
   manifest.deleted = false;
@@ -1372,7 +1398,7 @@ export default {
   createSpec, createFileTreeSpec, loadSpec, loadSpecMeta, saveSpec, listSpecs,
   nextPendingChunk, markChunkBuilding, completeChunk, failChunk, setChunkAgent, recordDispatchJob, setWarpPrimitives,
   recoverOrphanedChunks,
-  buildChunkPrompt, archiveSpec, expandSpec, deleteSpec, restoreSpec,
+  buildChunkPrompt, archiveSpec, expandSpec, deleteSpec, restoreSpec, purgeSpec,   // purgeSpec: 0.39.266 (D2)
   computeRootHash, findByRootHash, ingestFilesAsSpec, addChunk, removeChunk,
   reconstructSpecText,
   SPEC_SECTIONS, CHUNK_STATES, WARP_PRIMITIVES: [...WARP_PRIMITIVES],

@@ -182,9 +182,14 @@ console.log(`  boundary .export hooks for hand-mapped files required by the tree
     prefixes.some(p => c.id.startsWith(p)) ||
     (typeof c.uuid === 'string' && c.uuid.startsWith('nexus-loom-scan-') && !live.has(c.id));
   const staleComps = new Set(Object.values(driver.registry.all('component')).filter(isStaleComp).map(c => c.id));
+  // §0.39.266 — scan-owned EVENT hooks/wires are re-derived every run (below, in mapSource): drop them
+  // first, so an event that stopped being emitted or heard leaves the registry instead of dangling, and
+  // loom.unique-id does not reject the fresh declaration of one that still exists.
+  const scanEvent = (rec) => typeof rec.uuid === 'string' && rec.uuid.startsWith('nexus-loom-scan-') && rec.type === 'event';
   const r1 = driver.registry.removeWhere((kind, rec) =>
     (kind === 'component' && staleComps.has(rec.id)) ||
-    (kind === 'hook' && staleComps.has(rec.component_id)));
+    (kind === 'hook' && (staleComps.has(rec.component_id) || scanEvent(rec))) ||
+    (kind === 'wire' && scanEvent(rec)));
   const hooksLeft = driver.registry.all('hook');
   const r2 = driver.registry.removeWhere((kind, rec) =>
     kind === 'wire' && (!hooksLeft[rec.from_hook_id] || !hooksLeft[rec.to_hook_id]));
@@ -192,6 +197,16 @@ console.log(`  boundary .export hooks for hand-mapped files required by the tree
 }
 const mappedSrc = mapSource(driver, scan.FILES);
 console.log(`  components: ${mappedSrc.components.length} ok   hooks: ${mappedSrc.hooks.length} ok   wires: ${mappedSrc.wires.length} ok`);
+// §0.39.266 — the registry as an event bus map: wired events became hooks + wires above; every event,
+// wired or not, is written beside the registry for component cards and registry.find.
+{
+  const { eventMap } = require('./scanners/source-map');
+  const em = eventMap(scan.FILES);
+  const names = Object.keys(em.byEvent);
+  console.log(`  events: ${names.length} named · ${mappedSrc.eventHooks.length} event hooks · ${mappedSrc.eventWires.length} emit→listen wires (${names.filter(n => em.byEvent[n].emitters.length && em.byEvent[n].listeners.length).length} events with both sides)`);
+  try { require('fs').writeFileSync(require('path').join(__dirname, 'data', 'events.json'), JSON.stringify({ generatedAt: Date.now(), ...em }, null, 1)); }
+  catch (e) { console.log(`  events.json not written: ${e.message}`); }
+}
 if (mappedSrc.failures.length) {
   console.log(`  FAILURES: ${mappedSrc.failures.length}`);
   for (const f of mappedSrc.failures.slice(0, 6)) console.log(`    ${JSON.stringify(f).slice(0, 200)}`);

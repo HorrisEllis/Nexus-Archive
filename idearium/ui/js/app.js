@@ -33,7 +33,7 @@
 // NEXUS API CLIENT — wired to the real Idearium service (idearium/api/index.js)
 // Real routes: GET /api/ideas, /api/specs, /api/gaps, /api/snapshots, /api/stats,
 // /api/events, /sse · POST /api/ideas, /api/gaps, /api/snapshots, etc.
-// Tries direct :4800, falls back to orchestrator proxy at :9000/api/idearium
+// Talks to idearium directly (:4800). §0.39.266 — no orchestrator-proxy fallback (see API_CANDIDATES).
 // ════════════════════════════════════════════════════
 // §0.39.263 — the idearium that served this page comes first: an idearium on
 // another port (IDEARIUM_PORT) used to render a UI that talked to :4800 instead.
@@ -50,9 +50,16 @@
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', set); else set();
   } catch (_) {}
 })();
+// §0.39.266 — James: "is it the sse? or the orchastrator? why is it need the orchastrator?" It is not
+// needed: the page's API is idearium itself. Two candidates are gone:
+//   · the orchestrator proxy (:9000/api/idearium) — its /health is idearium's, so it passed the probe,
+//     but it routes no /api/*: /api/idearium/api/repos → 404. After a slow moment the reconnect could
+//     land there and every list failed until a reload.
+//   · the page's own origin when the orchestrator serves it (/ui/idearium/) — the orchestrator's /health
+//     fans out to every system (up to 3 s) and is never idearium's anyway.
 const API_CANDIDATES = [...new Set([
-  ...(typeof location !== 'undefined' && /^https?:$/.test(location.protocol) && !/^\/api\/idearium/.test(location.pathname) ? [location.origin] : []),
-  'http://127.0.0.1:4800', 'http://127.0.0.1:9000/api/idearium',
+  ...(typeof location !== 'undefined' && /^https?:$/.test(location.protocol) && !/^\/(api|ui)\//.test(location.pathname) ? [location.origin] : []),
+  'http://127.0.0.1:4800',
 ])];
 let API_BASE = null;
 let CONNECTED = false;
@@ -274,6 +281,12 @@ function refreshOnEvent(ev) {
   }
   // §0.39.266 — the nexus-self sync creates/updates the Nexus repos after boot (first run
   // 20s in, core ~1,800 files); without this the library stayed empty until a reload.
+  // §0.39.266 — loom.write.tool proposed a file on a nexus repo: the approval prompt opens for it, like a reply's inject
+  if (t === 'repo.inject.proposed' && ev.payload && ev.payload.approval && ev.payload.status === 'proposed'
+      && CURRENT_API_REPO && ev.payload.repoUuid === CURRENT_API_REPO.uuid && typeof NEXUS_APPROVAL_QUEUE !== 'undefined') {
+    if (!NEXUS_APPROVAL_QUEUE.includes(ev.payload.inject)) NEXUS_APPROVAL_QUEUE.push(ev.payload.inject);
+    setTimeout(_nexusApprovalNext, 0);
+  }
   if (t.startsWith('nexus-self.')) { clearTimeout(refreshOnEvent._nx); refreshOnEvent._nx = setTimeout(loadApiRepos, 800); }   // one reload per burst (one event per system)
   if (t.startsWith('repo.')) {
     loadApiRepos().then(() => {
@@ -695,11 +708,12 @@ async function archiveIdea(uuid) {
 // chunks being dispatched. The repo record stays; loadSpecs() then re-renders
 // the Spec subtab, which shows the removed state with a restore button.
 async function deleteSpec(uuid, name) {
-  if (!confirm(`remove spec "${name}"?\n\nit stops building and drops out of spec listings. the repo stays. nothing on disk is deleted — this can be undone from the repo's Spec tab.`)) return;
+  // §0.39.266 (D2) — removing a spec deletes it; the one exception is a spec that is a live repo's content.
+  if (!confirm(`remove spec "${name}"?\n\nit is deleted from disk. if it is a repo's content, it is only stopped, and goes when the repo is deleted.`)) return;
   try {
-    await api(`/api/spec-engine/specs/${uuid}`, { method: 'DELETE' });
+    const r = await api(`/api/spec-engine/specs/${uuid}`, { method: 'DELETE' });
     if (SELECTED_SPEC === uuid) SELECTED_SPEC = null;
-    toast('spec removed', 'ok');
+    toast(r.purged ? 'spec deleted' : (r.note || 'spec stopped'), 'ok');
     await loadSpecs();
   } catch(e) { toast(e.message, 'err'); }
 }
@@ -4279,7 +4293,10 @@ function _agentDetail(r) {
     const ids = Array.isArray(c.chunkIds) ? c.chunkIds : [];
     // 0.39.257 — the graph: connections for matched files, or the project map when nothing matched
     const g = c.graph || null;
-    const head = ids.length
+    // §0.39.266 — the harness sends a registry card (what the question names), never code; the agent reads the rest
+    const head = c.kind === 'card' && Array.isArray(c.cards) && c.cards.length
+      ? `context: registry card of ${c.cards.map(x => x.id).join(', ')} · ${c.chars || 0} chars — the agent reads code with loom.read.tool`
+      : ids.length
       ? `context: ${ids.length} chunk${ids.length === 1 ? '' : 's'} · ${files.length} file${files.length === 1 ? '' : 's'} · ${c.chars || 0} chars${c.dropped ? ` · ${c.dropped} dropped for budget` : ''}${g && g.connections ? ` · graph: ${g.connections} connection${g.connections === 1 ? '' : 's'}` : ''}`
       : g && g.overview ? `context: project map from the graph (${g.files} files) — the question named no code`
       : `context: none${c.reason ? ` — ${c.reason}` : ''}`;

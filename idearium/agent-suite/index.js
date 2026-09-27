@@ -242,8 +242,12 @@ export async function generateWithOllama(system, prompt, { model = _OLLAMA_FALLB
 
   if (!runtime) {
     // Direct HTTP fallback if runtime not available
-    const body = JSON.stringify({ model, prompt: `${system}\n\n${prompt}`, stream: false,
-      options: { temperature: 0.3, num_predict: 2048 } });
+    // §0.39.266 — num_ctx sized to the prompt; the call recorded (lib/ollama-activity.js)
+    const OA = _require('../../lib/ollama-activity.js');
+    const _full = `${system}\n\n${prompt}`;
+    const _ctx = OA.withNumCtx({ temperature: 0.3, num_predict: 2048 }, _full.length);
+    const _t0 = Date.now();
+    const body = JSON.stringify({ model, prompt: _full, stream: false, options: _ctx.options });
     const r = await new Promise((resolve) => {
       const req = http.request({
         hostname: '127.0.0.1', port: OLLAMA_PORT, path: '/api/generate',
@@ -263,6 +267,7 @@ export async function generateWithOllama(system, prompt, { model = _OLLAMA_FALLB
       req.write(body);
       req.end();
     });
+    OA.record({ caller: 'idearium/agent-suite', op: 'generate', model, promptChars: _full.length, numCtx: _ctx.numCtx, ms: Date.now() - _t0, ok: !!r.ok, error: r.ok ? undefined : r.error, warning: _ctx.warning });
     return r;
   }
 

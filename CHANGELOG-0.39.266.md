@@ -1,6 +1,6 @@
-# NEXUS 0.39.266: nexus is back in Idearium, and the agent builds it from inside with approval
+# NEXUS 0.39.266: nexus back in Idearium, agents build it through the registry harness, deletes stick
 
-**Date:** 2026-09-26 · base: Nexus-main-9 (package.json 0.39.264, with 0.39.265 code and tests already in the tree but no CHANGELOG-0.39.265.md)
+**Date:** 2026-09-26 → 27 · base: Nexus-main-9 (package.json 0.39.264, with 0.39.265 code and tests already in the tree but no CHANGELOG-0.39.265.md)
 
 James:
 
@@ -99,3 +99,179 @@ James:
   - nexus/core was resynced.
 - `PUT` of `injectMode: 'auto'` on nexus/core returned 409.
 - Regressions: `test-repo-inject` 79/79, `test-nexus-self-and-cos-run` 30/30, `test-versionium-repo-history` 7/7, `test-nexus-atlas-and-glass` 9/9.
+
+
+---
+
+# Part 2 (2026-09-27): stability, and the registry as the agent's harness
+
+Mapped first in `docs/2026-09-27-registry-harness-and-stability-phasemap.spec`, which holds the measurements, decisions, results and open items.
+
+James:
+
+> *"idearium is laggy as hell. is it the sse? or the orchastrator?"* · *"don't even know what ollama is doing?"* · *"the chunks aren't meant to be as small as possible. use the component registry as the wiring harness like loom does for nexus … right now its not coding at all."* · *"it's meant to make small llms capable of building entire codebases regardless of the size … thats way too much to inject when we have tools they can use to get context"* · *"those tools are for using clearglass and automating"* · *"one component = one file … yes delete old specs … supposed to only be nexus and the nested repos … loom should have this mapped already"*
+
+## Deletes stick across processes (`guardian/jaa-store.js`)
+
+- **What was wrong:** every process wrote its whole in-memory copy of a shared table back on each flush.
+  - Orchestrator's compactor deleted the same 7,176 event_log rows every 10 minutes, and they were back seconds later. On James's machine event_log went 7,176 → 19,788 rows in an hour, loaded by every process.
+  - The same flush also overwrote other processes' *updates* with a stale copy.
+- **Fix:**
+  - A process writes back only the rows it changed since its last flush.
+  - A clean row that is gone from disk was deleted elsewhere, so it is dropped.
+  - A clean row that changed on disk is refreshed from disk.
+  - `reloadTable()` follows the same rule.
+- **Test:** `test-jaa-deletes-stick` 5/5; the original code fails 3 of them.
+
+## The page never lands on the orchestrator proxy (`idearium/ui/js/app.js`)
+
+- **What was wrong:** after a slow moment the page could reconnect through `:9000/api/idearium`. Its `/health` passes (it's Idearium's), but every `/api/*` through it was 404, until a reload.
+- **Fix:**
+  - The proxy candidate is gone.
+  - The page's own origin is skipped when the orchestrator serves it.
+- **Checked live:** loaded from `:9000/ui/idearium/`, the page's API base is `:4800`.
+
+## Only nexus and its nested repos; one spec each; removing a spec deletes it
+
+- **What was wrong:**
+  - Every repo ingest minted a "Repo: <name>" idea, so the nexus sync alone made 15.
+  - Every re-registration minted another, orphaning the last.
+  - Every nexus/core change kept a new ~55 MB spec (19 MB manifest, 16.7 MB `.spec`, ~1,700 chunk files and ~1,700 chunk nodes) forever.
+  - Removing a spec only set a flag.
+- **Fix:**
+  - Nexus repos mint no idea (`noIdea`).
+  - The sync removes linked and orphaned "Repo: nexus…" ideas. An idea written by a person is never touched.
+  - Replacing a nexus repo's spec purges the old version: the directory, its chunk nodes and its cortex mirror rows (`purgeSpec`). History stays in the snapshot store and versionium.
+  - Removing a spec deletes it, unless it is a live repo's content. A repo's files *are* its spec, so that one is only stopped, and goes when the repo is deleted.
+  - Deleting a repo purges its specs.
+  - A one-time boot pass purges specs that were already removed.
+  - **This supersedes §7.4 "archived, not deleted" for specs, by James's decision.**
+- **Caught live, not by tests:** `purgeSpec` wasn't on spec-engine's default export, which is what the API calls, so every purge was silently skipped. Fixed; SC-008 guards it.
+- **Live, on data left by earlier runs:** 15 ideas removed, 20 old versions purged, 15 specs on disk, 0 ideas.
+- **Test:** `test-nexus-specs-and-ideas-cleanup` 8/8.
+
+## A slow sync names its slow step (`idearium/repo/nexus-self.js`)
+
+- Any sync over 1 s logs its steps, for example: `sync took 7791ms — systems 4524ms · cleanup 1754ms · understanding 792ms · … · tree 2905 files, 4 re-hashed`.
+- James's 10-minute Idearium outage happens on syncs that changed nothing. That takes 236 ms here, so its cause on his machine is still unlocated. This line will name it on the next run.
+
+## The registry is the harness: loom's map, now with events
+
+- **Events in loom's registry** (`loom/scanners/source-map.js`, `loom/bootstrap.js`):
+  - The scanner reads what each file emits (`emit`/`broadcast`/`publish`/`fire`, including `emit(new Event(…))`) and hears (`.on`/`.once`/`.subscribe`/…, and SISO `signature:`). Names must contain `.` or `:`.
+  - Wired events become `event` hooks and emit→listen wires, only where both sides exist, so no hook dangles.
+  - Every event, wired or not, goes to `loom/data/events.json`.
+  - Refresh result: 709 events, 379 event hooks, 459 wires, 0 dangling. Every other bootstrap count is identical to before.
+- **`lib/registry-harness.js`:** a read view over the maps Nexus already keeps.
+  - For nexus repos: loom's registry and events, plus the snapshot for which file each id is (loom's `idFor`).
+  - For any other repo: its `graph.json` in the same shape.
+  - One component = one file. The operations:
+    - `find`: components by path; events; words in code, with code lines ranked above comments.
+    - `card`: purpose, exports, requires and required-by, events in and out with who's on the other end, routes, covering tests.
+    - `read`: 200-line numbered ranges.
+    - `namedIn`: which component a question names.
+- **Idearium routes:** `/api/repos/:uuid/harness/{find,card,read,write,test}`.
+  - `write` proposes an `.inject`. On a nexus repo that opens the approval prompt, then goes through the gate.
+  - `test` runs covering tests through the COS run menu, each under the nexus repo that owns it.
+- **Five tools** (`lib/agent-tools/tools/loom/harness.js`): `loom.find.tool`, `loom.card.tool`, `loom.read.tool`, `loom.write.tool`, `loom.test.tool`. They learn their repo from the run context.
+- **The first message** (`lib/repo-agent.js`, `lib/repo-prompt-blocks.js`):
+  - The new default tool scope, `harness`, allows every tool but lists five, plus one line naming the other groups (Browser & Clear Glass, COS, Versions …) to find with `loom.find.tool`.
+  - A new `context-card` block carries the card of what the question names.
+  - `context-code` and `context-map` are off by default and can be switched back on in Settings → Agents.
+  - For "add a retry limit to the flush lock in guardian/jaa-store.js": **22,269 → 2,701 chars** (ChatGPT via Guardian) and 2,092 (Ollama). The card is of the right file, where the 4 pre-fetched chunks were the wrong files.
+- **UI:**
+  - A `loom.write.tool` write opens the approval prompt.
+  - The Agent tab shows which card was sent.
+- **Checked live on nexus/core:**
+  - card: 7 ms, 660 chars;
+  - find: 271 ms;
+  - read by range;
+  - write, then the prompt, then approve, then the file in the live tree;
+  - test runs the covering tests in COS in about 2 s.
+- **Test:** `test-registry-harness` 7/7.
+
+## Ollama: window sized to the prompt, every call logged (`lib/ollama-activity.js`)
+
+- `num_ctx` was set nowhere, so a long prompt was cut from the front, instructions first.
+- **Window size:** every call path now sets it from the prompt's size (floor 4096, ceiling `OLLAMA_NUM_CTX_MAX`, default 16384). A prompt that can't fit says so. Call paths covered:
+  - the bridge's generate, chat-with-tools and channel stream;
+  - `lib/cli-reasoning`, the `ollama_generate` tool, `lib/context-builder`;
+  - Idearium's and loom's agent suites;
+  - `ollama-runtime`.
+- **Logging:** every call is one console line and one row in `data/ollama/activity.jsonl`, recording caller, operation, model, prompt size, window, duration and failure. Embedding calls are logged too. The bridge serves `GET /api/activity?n=`.
+- **`nexus-live` capped:** it grew every 5 s and nothing read it. Its context lines are now capped at 200.
+- **Test:** `test-ollama-activity` 5/5, against a fake Ollama.
+
+## One chat per repo agent (`guardian/lib/chat-transcripts.js`, dispatcher, userscripts 10.11.1)
+
+- **What was wrong:** an agent with no chat yet had its first job typed into whatever chat the tab showed, then filed that chat as its own. The nexus and nexus/core agents shared one ChatGPT conversation.
+- **Fix:**
+  - Such an agent gets a new chat (`newChat` tells the tab not to wait for earlier turns).
+  - A chat another agent holds is never handed to a second agent.
+- **Test:** `test-chat-per-agent` 5/5.
+
+## Regressions
+
+- Suites that pass:
+  - JAA: jaa-db 53, multiprocess, flush-lock 7, selective-load 8, artifact-index 9, cookie-vault 7;
+  - nexus-self: 30, versionium history 7, atlas 9, visible 4, inject approval 8;
+  - repo agent: repo-inject 79, repo-agent 35, provider 60, node 44, learn 33, late 17, hat-memory 35, agent-tools-and-graph 13;
+  - Ollama: command-index 17, runtime 8;
+  - chats: chat-transcripts 31, back-and-forth 18, live-stream 13;
+  - dangling-hooks 19.
+- **Updated to the new default** (`harness` instead of `all`, every tool still allowed): AT-08 and one `test-repo-agent` check.
+- **Failing before and after, not touched:** `test-tool-guide` T-001 (56 older tools have no guide note), `nexus-nerve` and `nerve-phase0-phase1` (hard-coded paths), and `flush-redundancy` (missing module).
+
+---
+
+# Part 3 — the component store
+
+James: "warp is the build logic. supposed to reuse components. i wanted a components store for all components build in folders with their dependancies." His answers: store everything WARP builds; reference each dependency by id + version; the store is a nested repo in Idearium; atlases are hand-written narrative plus generated sections. Plan and status: `docs/2026-09-27-components-store-and-atlases-phasemap.spec`.
+
+## What was wrong
+
+- A file WARP built lived only inside one spec directory, and was deleted with it when the spec was purged.
+- The only reuse was `warp-crystals.json`, keyed by the whole prompt. The prompt includes the spec name, so the same file built for a second project never hit.
+- Nothing recorded what a built file requires.
+
+## The store (`lib/component-store.js`, `components/`)
+
+- **Layout:** each component is `components/<id>/<version>/`, holding the file byte for byte and a `component.json`. The manifest follows architect's component nodes (id, namespace, name, version) and adds path, sha256, purpose, dependencies, unresolved requires, npm packages, who built it, and the reuse keys that point at it.
+- **Identity:** the id is `<project>.<dotted path>`. Versions count up as `1.0.n`, and the same bytes never make a new version.
+- **Dependencies:** each relative require is pinned as `{ id: version }`. If the file it needs is stored later, the pin is added then. A require that matches nothing is kept as unresolved, never dropped. npm packages are listed separately; node built-ins are not.
+- **Reuse is exact:** by contract (path, layer and purpose) or by prompt. A file edited by hand no longer matches its sha256 and is refused. `invalidate()` stops a wrong version from being reused.
+- **Nested repo:** `components` is a nexus-self system (`lib/nexus-self/systems.js`). Loom never scans it, and tests get their own store (`NEXUS_COMPONENTS_DIR` in `lib/test-sandbox.js`).
+
+## WARP's build path (`idearium/api/index.js`)
+
+- **Before dispatch**, the build asks the store in this order:
+  1. by contract, before the existing prior-section reuse;
+  2. by prompt, right after the prompt is built.
+  A hit completes the chunk with the stored bytes at 0 tokens (`source: 'component-store'`).
+- **After completion**, the file is stored on both paths: a synchronous WARP build, and a queued browser-agent build that completes through `speceng.chunk.complete`. The chunk-complete event names the stored component.
+- **Not stored:** imports and nexus syncs complete chunks elsewhere and never reach the store.
+- **API:**
+  - `GET /api/components` lists components, or searches with `?q=`;
+  - `GET /api/components/:id` returns the manifest and closure;
+  - `POST /api/components/:id/invalidate` stops a version being reused.
+
+## Agents (`lib/registry-harness.js`, `loom.*.tool`)
+
+- `loom.find.tool` with kind `stored` finds components already built for any project.
+- `loom.card.tool` and `loom.read.tool` accept `store:<id>@<version>`. A near match is found by the agent, never pushed into its prompt.
+- `buildNexusIndex({ files, root })` is split out, so the harness index can be built over any file list.
+
+## Atlases
+
+- **Generator built:** `lib/atlas-generate.js` and `scripts/generate-atlases.js` write a generated section between markers in each atlas. It covers the counts, routes, events and their listeners, and each directory's files with purpose, exports, dependency counts, events and covering tests.
+- **Not yet done:**
+  - running the generator over all atlases;
+  - rewriting the stale diagnostic narrative;
+  - raising the resolver's 2,000-reference cap.
+- **Added:** `docs/atlases/components-atlas.md` and a `### components` section in the Nexus atlas.
+
+## Tests
+
+- **New:** `test-component-store` 8/8.
+- **Still passing:** `test-registry-harness` 7/7.
+- **`test-nexus-atlas-refs`:** 46/47. The one failure is a leftover `bridge/input` runtime directory in the build tree; it is not in the shipped tree.

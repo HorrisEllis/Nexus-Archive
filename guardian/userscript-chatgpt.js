@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Guardian — ChatGPT v10.0
 // @namespace    nexus.guardian.chatgpt
-// @version      10.11.0
+// @version      10.11.1
 // @description  Guardian v10 — ChatGPT: full feature parity with Claude v10. IndexedDB
 //               kernel, SHA-256 dedup, intelligence injection, SEAM, NEXUS module,
 //               memory/RAID/self-heal hooks, structured output detection, tool intercept.
@@ -27,7 +27,7 @@ const CORTEX_URL  = 'http://127.0.0.1:3748';
 const INTELLIGENCE_URL = 'http://127.0.0.1:3753'; // intelligence is its own sovereign system (moved out of cortex 2026-09-19)
 const ORCH_URL    = 'http://127.0.0.1:9000';
 const PROVIDER    = 'chatgpt';
-const VERSION    = '10.11.0';
+const VERSION    = '10.11.1';
 // §P113: exponential backoff 3s→30s — eliminates SSE flood on disconnect
 const RECONNECT_MIN_MS = 3000;
 const RECONNECT_MAX_MS = 30000;
@@ -1273,7 +1273,8 @@ function _nexusResumeCarriedJob() {
     let turns = 0; try { turns = (_nexusGetFullChat().messages || []).length; } catch (_) {}
     // The chat's earlier turns must be on the page before the job starts: the reply watch and the
     // transcript streamer both count what was there before this job's own turn.
-    if ((!composer || (landed && !turns)) && Date.now() - t0 < 20000) { setTimeout(waitReady, 400); return; }
+    // §0.39.266 — a new chat (msg.newChat) has no earlier turns to wait for
+    if ((!composer || (landed && !turns && !msg.newChat)) && Date.now() - t0 < 20000) { setTimeout(waitReady, 400); return; }
     if (!composer) {
       send({ type:'GUARDIAN_ERROR', jobId:msg.jobId, gate:'resume',
              error:`opened ${st.path} for this job, but no input appeared within 20s`, chatUrl:location.href, account:getAccount() });
