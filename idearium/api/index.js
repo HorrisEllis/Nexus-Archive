@@ -2482,7 +2482,7 @@ async function handle(req, res, route, query, body) {
 
     case 'repo.archive': {
       const result = getRepoLayer().archive(params.uuid);
-      if (result.error) return err(res, 404, result.error);
+      if (result.error) return err(res, result.code === 'IMMUTABLE' ? 409 : 404, result.error);
       return ok(res, result);
     }
 
@@ -3244,7 +3244,7 @@ async function handle(req, res, route, query, body) {
         : err(res, r.conflict ? 409 : 400, (r.errors || ['failed']).join('; '), { conflict: !!r.conflict });
       switch (action) {
         case 'repo.inject.list':
-          return ok(res, { repoUuid: params.uuid, mode: RI.getMode(params.uuid), injects: RI.list(params.uuid, { status: query.status || null }) });
+          return ok(res, { repoUuid: params.uuid, mode: RI.modeFor(repo), approval: !!repo.nexusSelf, injects: RI.list(params.uuid, { status: query.status || null }) });
         case 'repo.inject.create': {
           const RH = _require('../../lib/repo-hat.js');
           // body.asAgent:true attributes it to this repo's hat; default is the person.
@@ -3253,16 +3253,32 @@ async function handle(req, res, route, query, body) {
           if (r.ok && body.apply) return done(RI.apply(r.inject.uuid, { layer, force: !!body.force }));
           return done(r);
         }
-        case 'repo.inject.get':
-          return owned() ? ok(res, { inject: owned(), current: (layer.readFile(params.uuid, owned().path) || {}).content ?? null })
-                         : err(res, 404, `inject not found in this repo: ${params.id}`);
+        case 'repo.inject.get': {
+          const n = owned();
+          if (!n) return err(res, 404, `inject not found in this repo: ${params.id}`);
+          // §0.39.266 — a nexus-gate inject compares against the live tree (via a fresh snapshot), and carries
+          // what approving would do: the owning system, the diff and the gate's plan.
+          if (n.target && n.target.kind === 'nexus-gate') {
+            const G = _require('../../lib/nexus-self/inject-gate.js');
+            let current = null; try { current = G.current(n.path); } catch (_) {}
+            const pv = n.status === 'proposed' ? RI.preview(n.uuid) : { ok: true, gate: null };
+            return ok(res, { inject: n, current, gate: pv.ok ? pv.gate : { plan: { ok: false, errors: pv.errors, conflicts: [] } } });
+          }
+          return ok(res, { inject: n, current: (layer.readFile(params.uuid, n.path) || {}).content ?? null });
+        }
         case 'repo.inject.edit':
           if (!owned()) return err(res, 404, `inject not found in this repo: ${params.id}`);
           return done(RI.edit(params.id, body.content));
         case 'repo.inject.apply': {
           if (!owned()) return err(res, 404, `inject not found in this repo: ${params.id}`);
-          const r = RI.apply(params.id, { layer, force: !!body.force });
+          const r = RI.apply(params.id, { layer, force: !!body.force, approvedBy: body.approvedBy || 'idearium' });
           if (r.ok) os.emit('idearium.repo.inject.applied', { repoUuid: params.uuid, inject: params.id, path: r.inject.path });
+          // §0.39.266 — approved into the live Nexus tree: say so, and bring that system's repo to the new snapshot
+          if (r.ok && r.gate) {
+            os.emit('idearium.nexus-self.apply', { system: r.gate.system, applyId: r.gate.applyId, snapshot: r.gate.snapshot, paths: [r.inject.path], inject: params.id });
+            const synced = await _nexusSelfSync({ only: [r.gate.system] });
+            return done(r, { synced: synced && synced.systems ? synced.systems : null });
+          }
           return done(r);
         }
         case 'repo.inject.reject':
@@ -3272,6 +3288,10 @@ async function handle(req, res, route, query, body) {
           if (!owned()) return err(res, 404, `inject not found in this repo: ${params.id}`);
           const r = RI.revert(params.id, { layer, force: !!body.force });
           if (r.ok) os.emit('idearium.repo.inject.reverted', { repoUuid: params.uuid, inject: params.id, path: r.inject.path });
+          if (r.ok && r.gate) {
+            os.emit('idearium.nexus-self.rollback', { system: r.gate.system, applyId: r.inject.applyId, snapshot: r.gate.snapshot, inject: params.id });
+            await _nexusSelfSync({ only: [r.gate.system] });
+          }
           return done(r);
         }
         case 'repo.agent.blocks.get': {
@@ -3305,7 +3325,7 @@ async function handle(req, res, route, query, body) {
         }
         case 'repo.agent.settings.get': {
           const RA = _require('../../lib/repo-agent.js');
-          return ok(res, { repoUuid: params.uuid, injectMode: RI.getMode(params.uuid), modes: RI.MODES,
+          return ok(res, { repoUuid: params.uuid, injectMode: RI.modeFor(repo), modes: repo.nexusSelf ? ['review'] : RI.MODES,
                            ...RA.settingsView(params.uuid) });
         }
         case 'repo.agent.settings.set': {
@@ -3323,6 +3343,8 @@ async function handle(req, res, route, query, body) {
           let out = { ok: true, repoUuid: params.uuid };
           // 0.39.257 — 'all' (default) or 'project' (the repo hat's own tools); enforced on ollama/guardian dispatches
           if (body.toolScope !== undefined) { const r = RA.setToolScope(params.uuid, body.toolScope); if (!r.ok) return done(r); out.toolScope = r.toolScope; }
+          // §0.39.266 — a Nexus repo's code reaches the live tree only on approval: 'auto' is refused there
+          if (body.injectMode !== undefined && repo.nexusSelf && body.injectMode !== 'review') return err(res, 409, 'a nexus repo is always review — agent code waits for your approval, then goes through the apply gate');
           if (body.injectMode !== undefined) { const r = RI.setMode(params.uuid, body.injectMode); if (!r.ok) return done(r); out.injectMode = r.injectMode; }
           if (body.provider !== undefined) {
             const r = RA.setProvider(params.uuid, body.provider); if (!r.ok) return done(r); out.provider = r.provider;
@@ -4875,7 +4897,7 @@ function _nexusSelfSync({ only = null, force = false } = {}) {
           return r.ok ? { ok: true, commitId: r.commit.commitId } : { ok: false, error: `${r.code}: ${r.error}` };
         },
       });
-      _nexusSelfLast = { at: Date.now(), ok: r.ok, snapshot: r.snapshot, ms: r.ms, changed: r.systems.filter(x => x.status !== 'unchanged').map(x => `${x.system}:${x.status}`), understanding: r.understanding };
+      _nexusSelfLast = { at: Date.now(), ok: r.ok, snapshot: r.snapshot, ms: r.ms, changed: [...r.systems.filter(x => x.status !== 'unchanged').map(x => `${x.system}:${x.status}`), ...(r.restored || []).map(x => `${x.name}:restored`)], understanding: r.understanding };
       if (_nexusSelfLast.changed.length) console.log(`[idearium/nexus-self] synced in ${r.ms}ms — ${_nexusSelfLast.changed.join(', ')}${r.understanding && r.understanding.improved && r.understanding.improved.length ? ` · understanding improved: ${r.understanding.improved.join(', ')}` : ''}${r.understanding && r.understanding.regressed && r.understanding.regressed.length ? ` · regressed: ${r.understanding.regressed.join(', ')}` : ''}`);
       return r;
     } catch (e) {

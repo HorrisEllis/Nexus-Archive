@@ -748,8 +748,23 @@ export class RepoLayer {
   archive(repoUuid) {
     const r = this.repos.repos.find(x => x.uuid === repoUuid);
     if (!r) return { error: 'not found' };
+    // §0.39.266 — James: "nexus should be in idearium but isn't." Archive had no
+    // immutable guard, so Delete on the nexus repo archived nexus/core (and the
+    // parent). list() hides archived rows, and the sync found the archived row
+    // (includeArchived) with an unchanged hash and left it there: nexus gone for
+    // good. An immutable repo's lifecycle belongs to the sync, never to Delete.
+    { const im = this._immutableError(repoUuid); if (im) return { error: im, code: 'IMMUTABLE' }; }
     r.status = 'archived'; r.updatedAt = Date.now(); this._save();   // §7.4 not deleted
     return { ok: true, uuid: repoUuid };
+  }
+
+  /** restore(repoUuid) — archived -> active. Used by the nexus-self sync to heal a repo archived before the guard above existed. */
+  restore(repoUuid) {
+    const r = this.repos.repos.find(x => x.uuid === repoUuid);
+    if (!r) return { error: 'not found' };
+    if (r.status !== 'archived') return { ok: true, uuid: repoUuid, restored: false };
+    r.status = 'active'; r.updatedAt = Date.now(); this._save();
+    return { ok: true, uuid: repoUuid, restored: true };
   }
 
   // ── file CRUD — v2 has no content store of its own, so these resolve

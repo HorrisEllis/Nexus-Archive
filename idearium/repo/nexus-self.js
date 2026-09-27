@@ -81,7 +81,8 @@ export function ensureCompartments() {
 }
 
 function _findRepo(rl, pred) {
-  return rl.list({ includeArchived: true }).find(pred) || null;
+  const all = rl.list({ includeArchived: true }).filter(pred);
+  return all.find(r => r.status !== 'archived') || all[0] || null;   // §0.39.266 — an active row wins over an archived twin
 }
 
 function _parentReadme(snap, repoBySystem) {
@@ -183,6 +184,22 @@ export async function sync(rl, se, { only = null, force = false, log = () => {},
   const snap = store.loadSnapshot(snap0.hash);
   const comps = ensureCompartments();
 
+  // §0.39.266 — heal: a Nexus repo archived by Delete (before RepoLayer.archive
+  // refused immutable repos) is invisible to list() yet still "existing" to
+  // _findRepo, so an unchanged hash left it hidden forever. Restore it — unless
+  // an active twin for the same role/system exists, which is then the one used.
+  const restored = [];
+  if (typeof rl.restore === 'function') {
+    const all = rl.list({ includeArchived: true }).filter(r => r.nexusSelf);
+    const key = (r) => `${r.nexusSelf.role}:${r.nexusSelf.system || ''}`;
+    const active = new Set(all.filter(r => r.status !== 'archived').map(key));
+    for (const r of all) {
+      if (r.status !== 'archived' || active.has(key(r))) continue;
+      const x = rl.restore(r.uuid);
+      if (x.ok && x.restored) { restored.push({ uuid: r.uuid, name: r.name }); active.add(key(r)); log(`[${MODULE_ID}] restored archived ${r.name} (${r.uuid})`); }
+    }
+  }
+
   // parent repo — an index of the systems (its one file is regenerated per snapshot)
   let parent = _findRepo(rl, r => r.nexusSelf && r.nexusSelf.role === 'parent');
   const results = [];
@@ -261,7 +278,7 @@ export async function sync(rl, se, { only = null, force = false, log = () => {},
   }
 
   return {
-    ok: results.every(r => r.status !== 'failed'),
+    ok: results.every(r => r.status !== 'failed'), restored,
     snapshot: snap.hash, snapshotCreated: snap0.created, stats: snap0.stats, understanding: understanding && { improved: understanding.improved, regressed: understanding.regressed, delta: understanding.delta, totals: understanding.totals },
     parentRepo: parent ? parent.uuid : null,
     compartments: { parent: comps.parent ? comps.parent.id : null, children: Object.fromEntries(Object.entries(comps.children).map(([k, v]) => [k, v.id])), errors: comps.errors },

@@ -2129,6 +2129,8 @@ async function saveToIdearium(){
   <div class="modal" style="max-width:900px;width:90vw">
     <div class="modal-title" id="inj-ed-title">inject</div>
     <div id="inj-ed-meta" style="font-size:9px;opacity:.6;margin-bottom:6px"></div>
+    <!-- §0.39.266 — approval prompt for agent code on a Nexus repo: what approving writes into the live tree -->
+    <div id="inj-ed-gate" style="display:none;margin-bottom:6px"></div>
     <textarea id="inj-ed-content" spellcheck="false" style="width:100%;height:46vh;font-family:var(--mono,monospace);font-size:11px;line-height:1.5;tab-size:2;white-space:pre;background:var(--bg2,#0b1220);color:inherit;border:1px solid var(--b1);border-radius:3px;padding:8px;box-sizing:border-box"></textarea>
     <pre id="inj-ed-current" style="display:none;max-height:28vh;overflow:auto;font-size:10px;opacity:.75;border:1px dashed var(--b1);border-radius:3px;padding:8px;margin-top:6px;white-space:pre"></pre>
     <div class="modal-actions">

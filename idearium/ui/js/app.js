@@ -272,6 +272,9 @@ function refreshOnEvent(ev) {
       && CURRENT_REPO_SUBTAB === 'versionium') {
     renderRepoVersionium(CURRENT_API_REPO);
   }
+  // §0.39.266 — the nexus-self sync creates/updates the Nexus repos after boot (first run
+  // 20s in, core ~1,800 files); without this the library stayed empty until a reload.
+  if (t.startsWith('nexus-self.')) { clearTimeout(refreshOnEvent._nx); refreshOnEvent._nx = setTimeout(loadApiRepos, 800); }   // one reload per burst (one event per system)
   if (t.startsWith('repo.')) {
     loadApiRepos().then(() => {
       if (CURRENT_API_REPO && ev.payload?.repoUuid === CURRENT_API_REPO.uuid) {
@@ -3398,10 +3401,10 @@ function renderRepoSettings(repo) {
     <div class="ds"><div class="ds-label">agent / provenance</div><div class="ds-mono">source ${escapeHtml(repo.source || 'unknown')}\nspec ${repo.specUuid || '—'}\nidea ${repo.ideaUuid || '—'}\npromoted from ${repo.promotedFromSpec || '—'}</div></div>
     <div class="ds"><div class="ds-label">repository</div>
       <div class="action-row">
-        <button class="action-btn" onclick="addApiRepoFile('${repo.uuid}')">+ add file</button>
-        <button class="action-btn" onclick="forkApiRepo('${repo.uuid}')">⑂ fork</button>
+        ${repo.immutable ? '' : `<button class="action-btn" onclick="addApiRepoFile('${repo.uuid}')">+ add file</button>
+        <button class="action-btn" onclick="forkApiRepo('${repo.uuid}')">⑂ fork</button>`}
         <button class="action-btn" onclick="exportApiRepo()">⇩ export .zip</button>
-        <button class="action-btn danger" onclick="openDeleteRepoModal()">✕ delete</button>
+        ${repo.immutable ? '<span class="ds-mono" title="0.39.266 — its lifecycle belongs to the nexus-self sync">immutable — edit on a COS branch, apply through the gate</span>' : '<button class="action-btn danger" onclick="openDeleteRepoModal()">✕ delete</button>'}
       </div>
     </div>
     <div id="repo-agents-section"></div>`;
@@ -4190,6 +4193,20 @@ function _agentSettle(line, r) {
     ? [r.hatName, r.providerUsed || r.provider, r.modelUsed, r.elapsedMs ? `${Math.round(r.elapsedMs / 100) / 10}s` : null, r.late ? 'late — from the Responses index' : null, r.viaCopilot ? `copilot → ${r.viaCopilot.backend}${r.viaCopilot.agent ? ' ' + r.viaCopilot.agent : ''}` : null].filter(Boolean).join(' · ')
     : (r.hatName || null);
   line.detail = _agentDetail(r);
+  // §0.39.266 — James: "just prompt for approval." Code the agent wrote for a Nexus repo
+  // is proposed, never applied; the approval prompt opens on it now, one inject at a time.
+  const I = ok && r.injects;
+  if (I && I.approval) {
+    const ids = (I.injects || []).filter(x => x.status === 'proposed').map(x => x.uuid);
+    if (ids.length) { NEXUS_APPROVAL_QUEUE.push(...ids.filter(id => !NEXUS_APPROVAL_QUEUE.includes(id))); setTimeout(_nexusApprovalNext, 0); }
+  }
+}
+// §0.39.266 — pending approvals (inject uuids) for the repo open in the Agent tab
+const NEXUS_APPROVAL_QUEUE = [];
+function _nexusApprovalNext() {
+  if (document.getElementById('inject-editor-modal').classList.contains('open')) return;   // one prompt at a time
+  const id = NEXUS_APPROVAL_QUEUE.shift();
+  if (id) openInjectEditor(id);
 }
 function _agentRerender(uuid) { if (CURRENT_API_REPO && CURRENT_API_REPO.uuid === uuid) renderRepoAgent(CURRENT_API_REPO); }
 
@@ -4624,8 +4641,10 @@ async function agentSetMode(mode) {
 async function agentInjectAction(id, action, force = false) {
   if (!CURRENT_API_REPO) return;
   try {
-    const r = await api(`/api/repos/${CURRENT_API_REPO.uuid}/injects/${id}/${action}`, { method: 'POST', body: JSON.stringify({ force }) });
-    toast(`${r.inject.status}: ${r.inject.path}`, 'ok');
+    const r = await api(`/api/repos/${CURRENT_API_REPO.uuid}/injects/${id}/${action}`, { method: 'POST', body: JSON.stringify({ force }) }, 300000);
+    toast(r.gate ? `${r.inject.status}: ${r.inject.path} — live tree, nexus/${r.gate.system}${r.gate.applyId ? ` (${r.gate.applyId})` : ''}` : `${r.inject.status}: ${r.inject.path}`, 'ok');
+    // §0.39.266 — an approval decided: on to the next one waiting
+    if (r.inject && r.inject.target && r.inject.target.kind === 'nexus-gate' && (action === 'apply' || action === 'reject') && INJECT_EDITOR_ID === id) { closeInjectEditor(); renderRepoAgent(CURRENT_API_REPO); return; }
   } catch (e) {
     // A conflict is a real, specific refusal; offer the override rather than hiding it.
     // Typing the word is deliberate friction: forcing discards a newer edit.
@@ -4651,9 +4670,9 @@ async function openInjectEditor(id, newPath = null) {
   const uuid = CURRENT_API_REPO.uuid;
   const $ = x => document.getElementById(x);
   INJECT_EDITOR_ID = id; INJECT_EDITOR_PATH = newPath;
-  let n = null, current = null;
+  let n = null, current = null, gate = null;
   try {
-    if (id) { const r = await api(`/api/repos/${uuid}/injects/${id}`); n = r.inject; current = r.current; }
+    if (id) { const r = await api(`/api/repos/${uuid}/injects/${id}`, {}, 60000); n = r.inject; current = r.current; gate = r.gate || null; }
     else {
       try { const f = await api(`/api/repos/${uuid}/file?path=${encodeURIComponent(newPath)}`); current = f.content ?? null; } catch (_) { current = null; }
     }
@@ -4671,9 +4690,38 @@ async function openInjectEditor(id, newPath = null) {
   $('inj-ed-apply').style.display = editable ? '' : 'none';
   $('inj-ed-reject').style.display = n && n.status === 'proposed' ? '' : 'none';
   $('inj-ed-revert').style.display = n && n.status === 'applied' ? '' : 'none';
+  _injectGatePanel(n, gate);
   $('inject-editor-modal').classList.add('open');
 }
-function closeInjectEditor() { document.getElementById('inject-editor-modal').classList.remove('open'); INJECT_EDITOR_ID = null; }
+// §0.39.266 — a nexus-gate inject: the editor becomes the approval prompt. It says which
+// system's live files change, shows the diff against the live tree and the gate's plan,
+// and "approve → live tree" is the only way the code lands. A plan error blocks approval;
+// a conflict goes through the existing type-"force" path.
+function _injectGatePanel(n, gate) {
+  const el = document.getElementById('inj-ed-gate');
+  const btn = document.getElementById('inj-ed-apply');
+  const isGate = !!(n && n.target && n.target.kind === 'nexus-gate');
+  btn.textContent = isGate ? 'approve → live tree' : 'save + apply';
+  btn.disabled = false;
+  if (!isGate) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  el.style.display = '';
+  if (n.status !== 'proposed') {
+    el.innerHTML = `<div class="ds-mono" style="font-size:10px">nexus/${escapeHtml(n.target.system)} · ${escapeHtml(n.status)}${n.applyId ? ` · gate apply ${escapeHtml(n.applyId)}` : ''}${n.approvedBy ? ` · approved by ${escapeHtml(n.approvedBy)}` : ''}${n.status === 'applied' ? ' · revert rolls that apply back' : ''}</div>`;
+    return;
+  }
+  const g = gate || {};
+  const plan = g.plan || { ok: false, errors: ['no preview'], conflicts: [] };
+  const problems = [...(plan.errors || []), ...(plan.conflicts || []).map(c => `CONFLICT ${c.path}: ${c.why}`)];
+  if ((plan.errors || []).length) btn.disabled = true;
+  const diff = String(g.diff || '').split('\n').map(l => `<div style="color:${l.startsWith('+') ? 'var(--good,#4ade80)' : l.startsWith('-') ? 'var(--bad,#f87171)' : 'inherit'}">${escapeHtml(l)}</div>`).join('');
+  el.innerHTML = `<div style="border:1px solid var(--accent,#38bdf8);border-radius:3px;padding:8px;font-size:10px">
+      <div style="font-weight:600;margin-bottom:4px">approval needed — ${g.creates ? 'creates' : 'changes'} <span class="ds-mono">${escapeHtml(g.path || n.path)}</span> in the live Nexus tree (system <b>${escapeHtml(g.system || n.target.system)}</b>)</div>
+      <div style="opacity:.7;margin-bottom:6px">approve writes it through the apply gate (recorded, revertible), snapshots, and resyncs nexus/${escapeHtml(g.system || n.target.system)}. ${NEXUS_APPROVAL_QUEUE.length ? `${NEXUS_APPROVAL_QUEUE.length} more waiting.` : ''}</div>
+      ${problems.length ? `<div style="color:var(--bad,#f87171);margin-bottom:6px">${problems.map(escapeHtml).join('<br>')}</div>` : `<div style="color:var(--good,#4ade80);margin-bottom:6px">gate plan: ok</div>`}
+      <div class="ds-mono" style="max-height:24vh;overflow:auto;white-space:pre;font-size:10px">${diff || '<span style="opacity:.6">(no line changes)</span>'}</div>
+    </div>`;
+}
+function closeInjectEditor() { document.getElementById('inject-editor-modal').classList.remove('open'); INJECT_EDITOR_ID = null; setTimeout(_nexusApprovalNext, 0); }
 function toggleInjectCurrent() { const c = document.getElementById('inj-ed-current'); c.style.display = c.style.display === 'none' ? '' : 'none'; }
 
 async function saveInjectEditor(andApply = false) {
