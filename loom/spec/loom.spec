@@ -156,3 +156,11 @@ spec:
       date: 2026-09-01
       summary: "First real .spec authored, matching live code@1.5.0 exactly (no version bump required)."
       versioniumCommitId: null
+
+  # ## ADDENDUM 2026-09-27 (0.39.269) — loom/maps/agent-memory-map.js
+  # Maps lib/agent-providers.js, lib/agent-memory.js, copilot/lib/activity-recall.js with their real require edges
+  # (and agent-providers → copilot/server, HTTP), plus the consumer edges from hand-mapped files the scanner skips
+  # (copilot/lifeline, copilot/server, ollama/lib/dispatch, idearium/api, idearium/spec-engine). Declares two hooks that
+  # were missing on existing components: nexus.lib.extract-code.export (hand-mapped with no requirer in its map, so its
+  # 7 consumers' wires had no endpoint) and nexus.copilot.server.import (nothing could wire into copilot's server).
+  # Fresh-bootstrap comparison 0.39.268 → 0.39.269: unresolved wires 112 → 104. bootstrap excludes the map's files.

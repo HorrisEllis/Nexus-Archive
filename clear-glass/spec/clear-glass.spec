@@ -596,3 +596,12 @@ spec:
   # last error, recent output) and POST /eros-supervisor/start (start, or reconnect if running).
   # Settings → ErosmancerOS shows who started it, offers Start/Reconnect, and its DevTools port
   # field defaults to Clear Glass's real port (was a hard-coded 9222; Clear Glass opens 9333).
+
+  # ## ADDENDUM 2026-09-27 (0.39.269) — the download manager is agent memory
+  # docs/2026-09-27-agent-hat-memory-download-manager-phasemap.spec (M1–M5). No Clear Glass code changed.
+  # James: "everything is supposed to persist with agents. using the download manager." The downloads list
+  # (src/downloads/store.js) and the chat/artifact index (src/downloads/artifact-chat-index.js) now receive every
+  # backend's exchanges, not only Guardian's: lib/agent-memory.js record() writes Ollama and copilot exchanges through
+  # guardian/lib/response-sink.js (downloads entry, pending queue when Clear Glass is closed) and recordResponse() (same
+  # raw shape as guardian/lib/code-artifact.js). recall() reads the index back (queryItems by agentId, readItem) as the
+  # agent's memory. The Library's Responses tab therefore shows Ollama replies too, filed by agent.

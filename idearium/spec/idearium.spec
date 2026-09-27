@@ -304,3 +304,17 @@ spec:
   # 4. A new Eravos organism arrives from the Eravos frame (postMessage, frame-checked) as an idea, or
   #    the New Spec dialog filled in and linked to it.
   # Proven: tests/probe/nexus-atlas-home.js 17/17 in a real browser; test-nexus-atlas-refs 45/45.
+
+  # ## ADDENDUM 2026-09-27 (0.39.267–269) — the hat on any backend, memory in builds, no Eravos in New Spec
+  # docs/2026-09-27-agent-hat-memory-download-manager-phasemap.spec (H2, H3, G5, M5).
+  # 1. Providers are lib/agent-providers.js (copilot, ollama, every guardian userscript on disk) — GET /api/agent-providers;
+  #    the per-chunk select reads it, gains "default" (the repo's Agent-tab switch and hat), a hand pick is pinned
+  #    (chunk.agentPinned), "" un-pins, unknown names refused.
+  # 2. speceng.build and the codebase planners go through _buildIdentity(specUuid): a repo's spec wears the repo hat and
+  #    builds on the repo's switch and Ollama model; a spec with no repo wears the_builder. buildChunkWithAgent resolves
+  #    'copilot' first and records the provider that answered. Builds default to DEFAULT_MODEL (not the 7b).
+  # 3. Memory: before a chunk goes out, lib/agent-memory.js recall() — the agent's own exchanges from the download
+  #    manager and the files already finished in this spec (exports/requires) — sits between the hat and the prompt,
+  #    beside WARP's cache key, not in it. Guardian is sent agentId (repo-<uuid>), hatInPrompt and fileName; Ollama
+  #    answers are recorded. The build response names agentId and the memory used.
+  # 4. New Spec lists no Eravos mods (GET /api/spec-engine/templates?include=eravos still does).

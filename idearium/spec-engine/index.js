@@ -933,14 +933,32 @@ export function recoverOrphanedChunks() {
 // for content that agent never touched — §1.2, loud refusal, not a silent
 // no-op or an overwrite that makes the record lie.
 export function setChunkAgent(specUuid, chunkUuid, agent) {
-  if (!agent || typeof agent !== 'string') throw new Error('agent required (non-empty string)');
+  // §0.39.267 — '' / null un-pins: the chunk goes back to the default (the repo's Agent-tab switch, else its own agent).
+  if (agent === '' || agent === null) {
+    const m = loadSpec(specUuid);
+    const c = m.chunks.find(x => x.uuid === chunkUuid);
+    if (!c) throw new Error(`chunk ${chunkUuid} not found in spec ${specUuid}`);
+    if (c.status !== CHUNK_STATES.PENDING) throw new Error(`cannot reassign agent on a '${c.status}' chunk — only PENDING chunks can be reassigned before dispatch`);
+    c.agentPinned = false; c.updatedAt = Date.now(); saveSpec(m);
+    return c;
+  }
+  if (typeof agent !== 'string') throw new Error('agent required (non-empty string)');
   const manifest = loadSpec(specUuid);
   const chunk = manifest.chunks.find(c => c.uuid === chunkUuid);
   if (!chunk) throw new Error(`chunk ${chunkUuid} not found in spec ${specUuid}`);
   if (chunk.status !== CHUNK_STATES.PENDING) {
     throw new Error(`cannot reassign agent on a '${chunk.status}' chunk — only PENDING chunks can be reassigned before dispatch`);
   }
-  chunk.agent = agent;
+  // §0.39.267 — a hand-picked agent is pinned: it wins over the repo's Agent-tab switch at build time
+  // (idearium/api speceng.build). Names are checked against lib/agent-providers.js, the one list.
+  let norm = agent;
+  try {
+    const P = _require('../../lib/agent-providers.js');
+    norm = P.normalize(agent);
+    if (!P.isKnown(norm)) throw new Error(`unknown agent "${agent}" — one of: ${P.all().join(', ')}`);
+  } catch (e) { if (/unknown agent/.test(e.message)) throw e; }
+  chunk.agent = norm;
+  chunk.agentPinned = true;
   chunk.updatedAt = Date.now();
   saveSpec(manifest);
   return chunk;

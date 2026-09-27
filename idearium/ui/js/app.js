@@ -332,7 +332,7 @@ async function loadGaps()     { try { GAPS  = (await api('/api/gaps')).gaps  || 
 // read it, and the topbar count uses it. A refresh re-renders whichever of those
 // two subtabs is open, and only those — an open builder is no longer painted
 // into a hidden pane on every SSE chunk event.
-async function loadSpecs()    { try { SPECS = (await api('/api/specs')).specs|| []; if (CURRENT_REPO_SUBTAB === 'architect' || CURRENT_REPO_SUBTAB === 'spec') renderCurrentRepoSubtab(); } catch(e){ console.warn('[idearium] loadSpecs failed:', e.message); toast('failed to load specs: '+e.message,'err'); } }
+async function loadSpecs()    { try { loadAgentOptions(); SPECS = (await api('/api/specs')).specs|| []; if (CURRENT_REPO_SUBTAB === 'architect' || CURRENT_REPO_SUBTAB === 'spec') renderCurrentRepoSubtab(); } catch(e){ console.warn('[idearium] loadSpecs failed:', e.message); toast('failed to load specs: '+e.message,'err'); } }
 async function loadSnapshots(){ try { SNAPSHOTS = (await api('/api/snapshots')).snapshots || []; renderVersionium(); } catch(e){ console.warn('[idearium] loadSnapshots failed:', e.message); } }
 async function loadStats()    { try { STATS = (await api('/api/stats')).stats; } catch(e){ console.warn('[idearium] loadStats failed:', e.message); } updateStats(); }
 // Ideas/Repo merge: repos are no longer their own rail tab — they're looked
@@ -1061,7 +1061,8 @@ function renderSpecEngineBuilder(spec) {
                 // shows its real, already-fixed agent as text instead.
                 c.status === 'pending'
                   ? `<select class="agent-select" style="font-family:var(--mono);font-size:11px;background:var(--bg2,#1a1a1a);color:var(--text2);border:1px solid var(--b0);border-radius:3px;padding:1px 4px" onchange="setChunkAgent('${spec.uuid}','${c.uuid}',this.value)">
-                      ${AGENT_OPTIONS.map(a => `<option value="${a}" ${a===c.agent?'selected':''}>${a}</option>`).join('')}
+                      <option value="" ${c.agentPinned?'':'selected'} title="the repo's Agent-tab switch and hat; a spec with no repo uses ${escapeHtml(c.agent||'its own agent')} wearing the_builder">default</option>
+                      ${AGENT_OPTIONS.map(a => `<option value="${a}" ${c.agentPinned&&a===c.agent?'selected':''}>${a}</option>`).join('')}
                     </select>`
                   : `<span style="color:var(--text3)">${escapeHtml(c.agent||'')}${c.agentModel&&c.agentModel.startsWith('template')?' (template)':''}</span>`
               }
@@ -1112,7 +1113,14 @@ function renderSpecEngineBuilder(spec) {
 // list buildChunkWithAgent() actually checks against). Not a guess: an
 // agent offered here that agent-suite doesn't recognize would be a UI
 // promising a destination that doesn't exist.
-const AGENT_OPTIONS = ['ollama', 'mistral', 'claude', 'chatgpt', 'gemini', 'perplexity', 'deepseek'];
+// §0.39.267 — filled from GET /api/agent-providers (lib/agent-providers.js: copilot, ollama, and every guardian agent on
+// disk). This literal is only what shows before that answers.
+let AGENT_OPTIONS = ['copilot', 'ollama', 'claude', 'chatgpt', 'gemini', 'perplexity', 'deepseek'];
+let _AGENT_OPTIONS_LOADED = false;
+async function loadAgentOptions() {
+  if (_AGENT_OPTIONS_LOADED) return;
+  try { const r = await api('/api/agent-providers'); if (r && Array.isArray(r.providers) && r.providers.length) { AGENT_OPTIONS = r.providers; _AGENT_OPTIONS_LOADED = true; } } catch (_) {}
+}
 
 // §BUILT 2026-09-03 — per-chunk agent reassignment, PENDING chunks only
 // (the select in renderSpecEngineBuilder only renders for pending chunks
@@ -1308,11 +1316,8 @@ async function openNewSpecModal({ name = '', description = '', ideaUuid = null }
   const groups = [
     ['COS archetypes — one compartment, real starting files', templates.filter(t => t.source === 'cos-archetype')],
     ['COS blueprints — several roles, one directory each', templates.filter(t => t.source === 'cos-blueprint')],
-    // §BUILT 2026-09-21 — James: "add eravos organisms to architecture &
-    // features — select any combination." Same real shape as a COS
-    // archetype (one compartment, real starting files), read live from
-    // eravos/ui/mods/ by lib/file-tree-plan.js's listEravosMods().
-    ['Eravos mods — one mod, real starting files (schema + engine)', templates.filter(t => t.source === 'eravos-mod')],
+    // §0.39.267 — James: "the eravos options need to be removed from this prompt." The API no longer lists
+    // eravos mods here (GET /api/spec-engine/templates?include=eravos still does).
     ['spec-document templates', templates.filter(t => !String(t.source || '').startsWith('cos-') && t.source !== 'eravos-mod')],
   ].filter(([, list]) => list.length);
   wrap.innerHTML = groups.map(([title, list]) =>

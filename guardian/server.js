@@ -3417,7 +3417,8 @@ function handleExtendedRoutes(req, res, url, method) {
         // §CODE-ARTIFACT 2026-09-19 — the file this job's code belongs in,
         // and the fence language to trust. Both optional: absent means the
         // completion listener captures nothing, exactly as before.
-        fileName: body.fileName, syntax: body.syntax });
+        fileName: body.fileName, syntax: body.syntax,
+        hatInPrompt: typeof body.hatInPrompt === 'string' ? body.hatInPrompt : null });   // §0.39.269 — persona already in the prompt
       dispatchJob(job);
       pRes(res, 200, { ok:true, jobId: job.id, status: job.status, provider });
 

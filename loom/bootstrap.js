@@ -138,6 +138,7 @@ const handMapped = [
   ...require('./maps/raid-events-and-tools-map').FILES.map(f => f[0]),
   ...require('./maps/accounts-authority-map').FILES.map(f => f[0]),
   ...require('./maps/cos-testenv-map').FILES.map(f => f[0]),     // §0.39.264
+  ...require('./maps/agent-memory-map').FILES.map(f => f[0]),    // §0.39.269
   'loom/agent-suite/index.js',
 ];
 console.log('\nscanning whole tree from source (real require/import edges only)...\n');
@@ -279,6 +280,10 @@ const mappedAccounts = mapAccountsAuthority(driver); // §0.39.223 — account a
 const mappedCosTestenv = require('./maps/cos-testenv-map').mapCosTestenv(driver);
 console.log(`  cos-testenv: ${mappedCosTestenv.components.length} components, ${mappedCosTestenv.hooks.length} hooks, ${mappedCosTestenv.wires.length} wires`);
 if (mappedCosTestenv.failures.length) { console.log(`  cos-testenv FAILURES: ${mappedCosTestenv.failures.length}`); for (const f of mappedCosTestenv.failures.slice(0, 6)) console.log(`    ${JSON.stringify(f).slice(0, 200)}`); failures += mappedCosTestenv.failures.length; }
+// §0.39.269 — agent providers, agent memory over the Clear Glass download manager, copilot's activity recall
+const mappedAgentMemory = require('./maps/agent-memory-map').mapAgentMemory(driver);
+console.log(`  agent-memory: ${mappedAgentMemory.components.length} components, ${mappedAgentMemory.hooks.length} hooks, ${mappedAgentMemory.wires.length} wires`);
+if (mappedAgentMemory.failures.length) { console.log(`  agent-memory FAILURES: ${mappedAgentMemory.failures.length}`); for (const f of mappedAgentMemory.failures.slice(0, 6)) console.log(`    ${JSON.stringify(f).slice(0, 200)}`); failures += mappedAgentMemory.failures.length; }
 console.log(`  components: ${mappedUi.components.length} ok`);
 console.log(`  hooks:      ${mappedUi.hooks.length} ok`);
 console.log(`  wires:      ${mappedUi.wires.length} ok`);

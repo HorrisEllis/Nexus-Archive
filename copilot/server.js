@@ -2234,6 +2234,21 @@ const server = http.createServer(async (req, res) => {
     } catch (e) { json(res, 500, { ok: false, error: e.message }); }
     return;
   }
+  // §0.39.267 — what copilot has been up to, structured (the same records intuition's "what have you been up to" reads).
+  // ?hours=N (default 6) or ?since=<ms epoch>; &text=1 adds the sentence form.
+  if (method === 'GET' && p === '/api/activity') {
+    try {
+      const recall = require('./lib/activity-recall.js');
+      const u = new URL(req.url, 'http://x');
+      const hours = parseFloat(u.searchParams.get('hours') || '6');
+      const sinceMs = u.searchParams.get('since') ? parseInt(u.searchParams.get('since'), 10) : Date.now() - (Number.isFinite(hours) ? hours : 6) * 3600000;
+      const r = recall.recall({ sinceMs, stream: _stream.slice(-200) });
+      if (u.searchParams.get('text')) r.text = recall.format(r, { label: `in the last ${hours} hour${hours === 1 ? '' : 's'}` });
+      json(res, 200, { ok: true, ...r });
+    } catch (e) { json(res, 500, { ok: false, error: e.message }); }
+    return;
+  }
+
   if (method === 'GET' && p === '/api/prompt/resolve') {
     json(res, 200, { ok: true, ...resolveDefaultBackend(config.DEFAULT_PROVIDER) });
     return;
@@ -2466,7 +2481,7 @@ const server = http.createServer(async (req, res) => {
             model_used: body.backend === 'ollama' ? (olModel || null) : undefined, toolCallLog, tools: toolsInfo, requestId });
           return;
         }
-        const result = await dispatchFn(prompt, { canonical: body.backend === 'guardian' && typeof body.canonical === 'string' ? body.canonical : undefined, provider: body.agent || undefined, agentId: body.backend === 'guardian' ? (body.agentId || undefined) : undefined, timeoutMs: body.backend === 'guardian' ? (body.timeoutMs || undefined) : undefined, model: olModel, requestId, sessionId });
+        const result = await dispatchFn(prompt, { canonical: body.backend === 'guardian' && typeof body.canonical === 'string' ? body.canonical : undefined, provider: body.agent || undefined, agentId: body.agentId || undefined, compartmentId: body.backend === 'ollama' ? (body.compartmentId || undefined) : undefined, repoUuid: body.backend === 'ollama' ? (body.repoUuid || undefined) : undefined, timeoutMs: body.backend === 'guardian' ? (body.timeoutMs || undefined) : undefined, model: olModel, requestId, sessionId });
         if (result?.ok || result?.text) {
           json(res, 200, { ok: true, text: result.text, provider_used: body.backend === 'guardian' ? (result.provider || body.agent) : 'ollama', model_used: body.backend === 'ollama' ? (result.model || olModel || null) : undefined, requestId });
         } else {

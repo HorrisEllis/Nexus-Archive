@@ -299,6 +299,43 @@ function getRepoLayer() {
   return _repoLayer;
 }
 
+/**
+ * _buildIdentity(specUuid, { agent }) — who builds this spec, wearing which hat.
+ * §0.39.267 — James: "agents tab in idearium is meant to build chunks, entire code bases. the agent hat is meant
+ * to be agnostic, ollama/guardian/copilot." Chunk builds used to go out bare (no hat, a fixed system line) while the
+ * repo's Agent tab wore the repo hat. Now a build wears:
+ *   - the repo's own hat, when the spec is a repo's content (the same hat its Agent tab wears), else
+ *   - the_builder (hat-seed's build hat), else nothing (named in the result, not hidden).
+ * and goes to the repo's Agent-tab switch position (copilot | ollama | a guardian agent) unless the caller or a
+ * pinned per-chunk choice says otherwise. The Ollama model is the repo's Agent-tab model setting.
+ */
+function _buildIdentity(specUuid) {
+  let repo = null;
+  try { const L = getRepoLayer(); repo = ((L.repos && L.repos.repos) || []).find(x => x.specUuid === specUuid && x.status !== 'archived') || null; } catch (_) {}
+  let hat = null, hatSource = null, provider = null, model = null;
+  if (repo) {
+    try { hat = _require('../../lib/repo-hat.js').getRepoHat(repo.uuid); if (hat) hatSource = 'repo'; } catch (_) {}
+    try {
+      const RA = _require('../../lib/repo-agent.js');
+      provider = RA.getProvider(repo.uuid) || null;
+      model = RA.getOllamaModel(repo.uuid) || null;
+    } catch (_) {}
+  }
+  if (!hat) { try { hat = _require('../../lib/hat-forge.js').bySeedKey('the_builder') || null; if (hat) hatSource = 'builder'; } catch (_) {} }
+  const normalize = (a) => { try { return _require('../../lib/agent-providers.js').normalize(a); } catch (_) { return a; } };
+  let agentId = null;
+  try { agentId = _require('../../lib/agent-memory.js').agentIdFor({ repoUuid: repo ? repo.uuid : null, specUuid }); } catch (_) { agentId = repo ? `repo-${repo.uuid}` : (specUuid ? `spec-${specUuid}` : null); }
+  return {
+    repoUuid: repo ? repo.uuid : null,
+    agentId,                                              // §0.39.269 — who remembers this build (lib/agent-memory.js)
+    compartmentId: repo ? (repo.compartmentId || null) : null,
+    hat: hat ? { name: hat.name, uuid: hat.uuid || null, personaPrompt: hat.personaPrompt || '' } : null,
+    hatSource,
+    provider: provider ? normalize(provider) : null,
+    model,
+  };
+}
+
 // §NEXUS-REPO-TOOLS 2026-09-15 — resolves a repo's real, physical,
 // materialized directory: the same computation RepoLayer.materialize()
 // falls back to internally, exposed here for handlers that need the dir
@@ -1052,6 +1089,7 @@ function matchRoute(method, url) {
     // §BUILT 2026-09-03 — per-chunk agent reassignment, PENDING chunks only
     // (spec-engine/index.js's setChunkAgent enforces this, not this route).
     ['POST',   ['api','spec-engine','specs',':uuid','chunk',':chunkUuid','agent'],    'speceng.chunk.setAgent'],
+    ['GET',    ['api','agent-providers'],                                               'agent.providers'],   // §0.39.267 — the one list
     // §BUILT 2026-09-03 — WARP primitives, spec-level (not chunk-level,
     // no PENDING guard — this is declared metadata about the component,
     // editable any time).
@@ -4251,8 +4289,13 @@ async function handle(req, res, route, query, body) {
         let cos = [], eros = [];
         try { cos = FTP.listCosTemplates(); }
         catch (e) { console.warn(`[speceng.templates] COS templates unavailable: ${e.message}`); }
-        try { eros = FTP.listEravosMods(); }
-        catch (e) { console.warn(`[speceng.templates] eravos mods unavailable: ${e.message}`); }
+        // §0.39.267 — James: "the eravos options need to be removed from this prompt." A new spec is a project,
+        // not an eravos mod; the mods stay reachable (?include=eravos) and specs already built from one still build.
+        const wantEravos = /(^|,)eravos(,|$)/.test(String((query && query.include) || ''));
+        if (wantEravos) {
+          try { eros = FTP.listEravosMods(); }
+          catch (e) { console.warn(`[speceng.templates] eravos mods unavailable: ${e.message}`); }
+        }
         return ok(res, { templates: [...se.listTemplates(), ...cos, ...eros] });
       }
       catch (e) { return err(res, 500, e.message); }
@@ -4291,7 +4334,9 @@ async function handle(req, res, route, query, body) {
       const FTP = _require('../../lib/file-tree-plan.js');
       const warpFn = await getWarpChunkDispatch();
       const ask = warpFn ? async (prompt) => {
-        const r = await warpFn(prompt, { chunkTitle: `plan: ${doc.name}`, expectCode: false, preferAgent: body.agent || null });
+        const who = _buildIdentity(params.uuid);   // §0.39.267 — the planner wears the same hat the files will be built in
+        const r = await warpFn(prompt, { chunkTitle: `plan: ${doc.name}`, expectCode: false, preferAgent: body.agent || who.provider || null, hat: who.hat, model: who.model,
+          agentId: who.agentId, compartmentId: who.compartmentId, repoUuid: who.repoUuid });
         if (!r || !r.ok) throw new Error((r && r.error) || 'plan dispatch failed');
         return r.text;
       } : null;
@@ -4369,7 +4414,8 @@ async function handle(req, res, route, query, body) {
         if (body.fileTree === true || fileTreeIds.length) {
           const warpFn = await getWarpChunkDispatch();
           const ask = warpFn ? async (prompt) => {
-            const r = await warpFn(prompt, { chunkTitle: `plan: ${name}`, expectCode: false, preferAgent: agent || null });
+            const who = _buildIdentity(null);   // §0.39.267 — no repo yet: the_builder plans a new codebase
+            const r = await warpFn(prompt, { chunkTitle: `plan: ${name}`, expectCode: false, preferAgent: agent || null, hat: who.hat, model: who.model });
             if (!r || !r.ok) throw new Error((r && r.error) || 'plan dispatch failed');
             return r.text;
           } : null;
@@ -4587,7 +4633,11 @@ async function handle(req, res, route, query, body) {
         // §CHANGED 2026-09-03 — tail default 'ollama' → 'chatgpt' (James:
         // "set default to chatgpt"). Real fallback-on-failure to gemini
         // is wired via fallbackAgent below, not here.
-        const preferAgent   = body.agent || chunk.agent || manifest.agent || 'chatgpt';
+        // §0.39.267 — a repo's spec builds with that repo's Agent-tab switch and hat. Order: this call's body.agent,
+        // then a chunk agent someone picked by hand (agentPinned, set by the per-chunk select), then the repo's
+        // switch, then the chunk's creation-time agent, the spec's, and chatgpt.
+        const who = _buildIdentity(params.uuid);
+        const preferAgent   = body.agent || (chunk.agentPinned ? chunk.agent : null) || who.provider || chunk.agent || manifest.agent || 'chatgpt';
         const fallbackAgent = body.fallbackAgent || (preferAgent === 'chatgpt' ? 'gemini' : null);
 
         se.markChunkBuilding(params.uuid, chunk.uuid, { agent: preferAgent });
@@ -4612,7 +4662,7 @@ async function handle(req, res, route, query, body) {
         let raidQueueId = null;
         try {
           const submitted = _require('../../cortex/core/raid/contract-intake.js').submitContract(
-            { content: chunkPrompt, file: null, title: chunk.title || chunk.sectionId, forAgent: preferAgent },
+            { content: chunkPrompt, file: null, title: chunk.title || chunk.sectionId, forAgent: preferAgent, hat: who.hat ? (who.hat.uuid || who.hat.name) : null },
             { source: 'idearium', intention: 'build' }
           );
           raidQueueId = submitted.queueId;
@@ -4647,9 +4697,21 @@ async function handle(req, res, route, query, body) {
         // that IS a real file (addChunk's realPath, e.g. "lib/foo.js")
         // and whose extension is a real source-code extension opts in.
         const expectCode = !!(chunk.realPath && CODE_EXTENSIONS.has(path.extname(chunk.realPath).toLowerCase()));
+        // §0.39.269 — memory: what this agent built before (the download manager) and the files already finished in
+        // this spec (their exports/requires, so the new file wires to them instead of reinventing them). Beside the
+        // prompt, not in it: WARP's cache key stays the chunk's own contract.
+        let memory = '', memoryInfo = null;
+        try {
+          const siblings = (manifest.chunks || []).filter(c => c.uuid !== chunk.uuid && c.status === 'complete' && c.realPath && typeof c.content === 'string' && c.content.trim())
+            .map(c => ({ path: c.realPath, content: c.content }));
+          const m = await _require('../../lib/agent-memory.js').recall({ agentId: who.agentId, siblings,
+            query: [chunk.realPath, chunk.title || chunk.sectionId, chunk.sectionDesc].filter(Boolean).join(' ') });
+          memory = m.text; memoryInfo = { chars: m.chars, sources: m.sources };
+        } catch (e) { memoryInfo = { error: e.message }; }
+        const route = { hat: who.hat, model: who.model, memory, agentId: who.agentId, compartmentId: who.compartmentId, repoUuid: who.repoUuid, fileName: chunk.realPath || null };
         const dispatchFn = warpFn
-          ? (prompt, dispatchOpts) => warpFn(prompt, { ...dispatchOpts, chunkTitle: chunk.title || chunk.sectionId, expectCode })
-          : (prompt, dispatchOpts) => as.buildChunkWithAgent(prompt, dispatchOpts);
+          ? (prompt, dispatchOpts) => warpFn(prompt, { ...dispatchOpts, chunkTitle: chunk.title || chunk.sectionId, expectCode, ...route })
+          : (prompt, dispatchOpts) => as.buildChunkWithAgent(prompt, { ...dispatchOpts, ...route });
 
         dispatchChunkWithVerification(chunkPrompt, chunk, dispatchFn,
           {
@@ -4721,6 +4783,8 @@ async function handle(req, res, route, query, body) {
         return ok(res, {
           chunkUuid: chunk.uuid, sectionId: chunk.sectionId, sectionTitle: chunk.sectionTitle,
           agent: preferAgent, status: 'building',
+          hat: who.hat ? who.hat.name : null, hatSource: who.hatSource, repoUuid: who.repoUuid,   // §0.39.267 — who's wearing what, visible
+          agentId: who.agentId, memory: memoryInfo,                                                // §0.39.269 — and what it remembered
         });
       } catch(e) { return err(res, 500, e.message); }
     }
@@ -4765,14 +4829,22 @@ async function handle(req, res, route, query, body) {
       }
     }
 
+    case 'agent.providers': {
+      // §0.39.267 — who can wear a hat (lib/agent-providers.js): the UI's per-chunk select reads this, not its own list.
+      try {
+        const P = _require('../../lib/agent-providers.js');
+        return ok(res, { providers: P.all(), backends: Object.fromEntries(P.all().map(n => [n, P.backendOf(n)])), aliases: P.ALIASES });
+      } catch (e) { return err(res, 500, e.message); }
+    }
+
     case 'speceng.chunk.setAgent': {
       const se = getSpecEngine();
       if (!se) return err(res, 503, 'spec-engine not ready');
-      if (!body.agent) return err(res, 400, 'agent required');
+      if (body.agent === undefined) return err(res, 400, 'agent required ("" un-pins back to the default)');   // §0.39.267
       try {
-        const chunk = se.setChunkAgent(params.uuid, params.chunkUuid, body.agent);
+        const chunk = se.setChunkAgent(params.uuid, params.chunkUuid, body.agent || '');
         os.emit('idearium.spec-engine.chunk.agent_set', {
-          specUuid: params.uuid, chunkUuid: params.chunkUuid, sectionId: chunk.sectionId, agent: chunk.agent,
+          specUuid: params.uuid, chunkUuid: params.chunkUuid, sectionId: chunk.sectionId, agent: chunk.agent, pinned: !!chunk.agentPinned,
         });
         return ok(res, { chunk });
       } catch(e) {
@@ -5093,7 +5165,7 @@ function _nexusSelfSync({ only = null, force = false } = {}) {
   return _nexusSelfSyncing;
 }
 
-export { _startBuildQueuePoller, _buildingSpecs, _reconcileSpecRepos, getRepoLayer, _ollamaModels, _nexusSelfSync }; // getRepoLayer: the real layer, exported so tests exercise the production write path, not a fake
+export { _startBuildQueuePoller, _buildingSpecs, _reconcileSpecRepos, getRepoLayer, _ollamaModels, _nexusSelfSync, _buildIdentity }; // getRepoLayer: the real layer, exported so tests exercise the production write path, not a fake
 
 export function startAPI() {
   const os = getIdeaOS();

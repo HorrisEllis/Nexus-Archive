@@ -1605,3 +1605,12 @@ spec:
     | spec | version | status | governs |
     |---|---|---|---|
     | `docs/2026-09-26-cos-testenv-vm-and-nexus-atlas-phasemap.spec` | 1.0.0 | built (0.39.264) | The COS test VM for any repo (tar disk, detect, provision, setup, network cut), the written-out Nexus atlas with nested atlases for every system, Create/Build only inside a repo, Eravos new organism → Idearium idea/spec. T1–T3 were built before the map; the drift is recorded in the spec. ErosmancerOS starting with Clear Glass came mid-release and is addended to `erosmancer/spec/erosmancer.spec` and `clear-glass/spec/clear-glass.spec`. |
+    
+    ## §REGISTERED 2026-09-27 — 0.39.267–269 agent hat, agent memory, download manager
+    
+    | spec | version | status | governs |
+    |---|---|---|---|
+    | `docs/2026-09-27-agent-hat-memory-download-manager-phasemap.spec` | 1.0.0 | built (0.39.267–269) | What Ollama was doing (copilot's self-test) and cutting it to 1 call / 10 min; intuition's crashes; vector memory reaching Ollama; copilot's "what have you been up to" (activity recall); one provider list; chunk and codebase builds wearing the repo hat (else the_builder) on ollama / copilot / a guardian agent; RAID's intent check reading the worn hat; guardian capturing code with its fences; the ChatGPT A/B chooser; agent memory as the Clear Glass download manager (record on every backend, recall before every call). Phases O–M were built before the map — the drift is recorded in the spec; X1 is the axioms pass. Addenda in copilot, idearium, guardian, ollama, clear-glass, loom and cortex specs. |
+    | `docs/agent-memory.spec` | 1.0.0 | built (0.39.269) | lib/agent-memory.js — record/recall over the Clear Glass download manager, any backend. |
+    | `docs/agent-providers.spec` | 1.0.0 | built (0.39.267) | lib/agent-providers.js — the one list of who can wear a hat; copilot resolved, never guessed. |
+    | `docs/activity-recall.spec` | 1.0.0 | built (0.39.267) | copilot/lib/activity-recall.js — "what have you been up to", from records. |
