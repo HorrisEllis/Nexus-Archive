@@ -1394,6 +1394,11 @@ function matchRoute(method, url) {
     ['GET',    ['api','components'],                                 'components.list'],
     ['GET',    ['api','components',':id'],                           'components.get'],
     ['POST',   ['api','components',':id','invalidate'],              'components.invalidate'],
+    // §0.39.273 CB4 — the codebase surface (idearium/repo/code-api.js): overview · tree · search · grep · chunk ·
+    // outline · read · definition · changes (GET) and edit · write · delete · move · batch · check (POST). Reads over
+    // lib/code-intel's cards + search index; every write an .inject (lib/code-edit.js → lib/repo-inject.js).
+    ['GET',    ['api','repos',    ':uuid','code',':op'],            'repo.code'],
+    ['POST',   ['api','repos',    ':uuid','code',':op'],            'repo.code'],
     ['GET',    ['api','repos',    ':uuid','harness','find'],        'repo.harness.find'],
     ['GET',    ['api','repos',    ':uuid','harness','card'],        'repo.harness.card'],
     ['GET',    ['api','repos',    ':uuid','harness','read'],        'repo.harness.read'],
@@ -3508,6 +3513,18 @@ async function handle(req, res, route, query, body) {
       const g = CS.get(ref);
       if (!g) return err(res, 404, `no stored component ${ref}`);
       return ok(res, { manifest: g.manifest, closure: CS.closure(g.id, g.version), content: query.content === '1' ? g.content : undefined });
+    }
+
+    case 'repo.code': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const dir = repo.nexusSelf ? (repo.materializeDir || _repoDiskDir(params.uuid)) : _repoDiskDir(params.uuid);
+      if (!dir) return err(res, 500, 'could not resolve repo directory');
+      const { handleCode } = await import('../repo/code-api.js');
+      const r = await handleCode({ method: req.method, op: params.op, layer: getRepoLayer(), repo, uuid: params.uuid, dir, query, body: body || {},
+        emit: (type, payload) => { try { os.emit(type, payload); } catch (_) { /* the write already happened */ } }, tool: (body && body._tool) || query._tool || null });
+      if (r.status >= 400) return err(res, r.status, r.body.error, Object.fromEntries(Object.entries(r.body).filter(([k]) => k !== 'error')));
+      return ok(res, r.body);
     }
 
     case 'repo.harness.find': case 'repo.harness.card': case 'repo.harness.read':

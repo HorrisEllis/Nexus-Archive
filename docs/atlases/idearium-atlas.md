@@ -110,7 +110,7 @@ The top bar has four tabs. Welcome and Repos are always there; Create and Build,
 | Build → Eravos | the Eravos organism canvas, embedded from `eravos/` |
 | Build → Architect | the Architect block canvas, embedded from `architect/` |
 | Build → Spec Builder | the spec wizard: questions, then a spec |
-| Repos | every repo; opening one shows its 12 tabs, then Create and Build (0.39.271: those two sit in the repo's tab row, never in the top bar) |
+| Repos | every repo; opening one shows its 13 tabs, then Create and Build (0.39.271: those two sit in the repo's tab row, never in the top bar) |
 
 A repo opens onto its tabs:
 
@@ -119,6 +119,7 @@ A repo opens onto its tabs:
 | Home | the repo's README or .spec; for the nexus repo, `nexus-atlas.md` | the repo's files, `idearium/ui/js/nexus-atlas.js` |
 | Idea | the idea the repo came from, and its iterations: improve, iterate, expand. Each iteration can go to the agent or onto the roadmap | IdeaOS |
 | Files | the file tree and an editor | the repo's files |
+| Code | search the code by meaning or exact text; open any chunk's card (kind, signature, doc, what it uses and what uses it, its tests and runtime proof) and its code, following uses by link (0.39.273) | `idearium/repo/code-api.js`, `lib/code-intel/index.js` |
 | Architect | the repo's own spec as a blueprint, chunk by chunk | the spec-engine |
 | Spec | the living spec: the .spec files of the repo's spec folder, parsed into meta, sections, version history, gaps and addenda; below it, the build manifest (chunk status, the agent per pending chunk, build remaining, history, export) | `idearium/repo/living-spec.js`, the spec-engine |
 | Phases | every phasemap of the repo (for a nexus repo, of NEXUS) as one manager: summary, Board / Layers / Table / Maps, a phase's dependencies, what it closes and its files; editing a phase edits the phasemap (a nexus repo's through the apply gate); Build takes a Versionium snapshot, then hands the phase to the repo's agent. Replaces Phasemap and Roadmap (0.39.271) | `idearium/repo/phases.js`, `idearium/repo/roadmap.js`, `idearium/ui/js/phases.js` |
@@ -199,11 +200,16 @@ Before each message, the memory block gives the agent its own most relevant earl
 
 | scope | what the agent is offered |
 |---|---|
-| harness (default) | every tool is allowed, but the prompt lists five: loom.find, loom.card, loom.read, loom.write and loom.test (`lib/agent-tools/tools/loom/harness.js`), plus one line naming the other groups to find with loom.find |
+| harness (default) | every tool is allowed, but the prompt lists eight: the codebase tools code_map, code_search, code_chunk, code_read, code_edit, code_write, code_check (`lib/agent-tools/tools/idearium/code.js`, 0.39.273) and loom.find (`lib/agent-tools/tools/loom/harness.js`), plus a line naming code_grep, code_refs, code_batch, code_changes, loom.card and loom.test, and one naming the other groups to find with loom.find |
 | all | every tool, all listed |
 | project | the hat's own 19 tools |
 
 The harness tools learn their repo from the run context, so the model never passes it. loom.write proposes an inject. loom.test runs the covering tests through the COS run menu (`lib/cos-run.js`).
+
+**The codebase tools** (0.39.273, `docs/code-intel.spec`) work on any repo through the routes /api/repos/:uuid/code/… (`idearium/repo/code-api.js`):
+- **Understand:** code_map (the repo in one answer), code_search (ranked chunks by meaning or name, each with a one-line summary and the lines that matched), code_grep (exact text or regex), code_chunk (a chunk's card and code), code_read (lines, or a file's outline), code_refs (where a name is defined and every use).
+- **Change:** code_edit (exact text, line ranges or a whole chunk; every edit in a call refers to the file as last read), code_write (create, replace, delete, move), code_batch (several files, all or nothing). Every write is an inject; in review mode a later edit to the same file stacks onto the pending proposal. A write that introduces a syntax error is refused unless forced.
+- **Check:** code_check (syntax, then the tests that use the changed files), code_changes (list, revert an applied change, withdraw a proposal — never approve).
 
 ### The commands
 
@@ -299,6 +305,8 @@ All of them are under /api/repos/:uuid/, except the last two.
 **The repo layer** (`idearium/repo/index.js`) lists, ingests, forks, archives and restores repos. A repo row points at its spec (its files are its spec) and at a content hash. Immutable repos (the nexus ones) refuse archive, write, delete and fork.
 
 **Import** (`idearium/repo/import-pipeline.js`) runs MAPPING, CHUNKING, VERIFYING, INDEXING and GRAPHING. It writes the repo's atlas, chunk index, symbols and graph (`idearium/repo/graph.js`, `idearium/repo/spec-graph.js`).
+
+**Chunks and cards** (0.39.273, `lib/code-intel/`): chunks are cut only at statement starts of the level being chunked, a declaration's doc comment opens its chunk, no chunk passes 150 lines (a large class splits at its methods, a large switch at its cases), and a chunk's id comes from its kind and qualified name. After GRAPHING the pipeline writes a card per chunk (indexes/cards.json in the repo folder: summary, signature, doc, neighbours, what it uses and what uses it with the basis of each, its tests) and a BM25 search index (indexes/search.json).
 
 **Verification** runs in two passes:
 - **During import:** L0 existence, L1 address, L2 syntax, L3 structural boundary, L4 semantic consistency and L5 dependency consistency. They are real and complete when the import returns.

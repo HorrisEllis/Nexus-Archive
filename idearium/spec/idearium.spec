@@ -338,3 +338,22 @@ spec:
 # repo.phases.{get,runs,status,add,build}, repo.living-spec, nexus-self.{versions,snapshot}. Repo snapshot lists
 # read the repo's own versionium branch, newest first (they read the first 200 commits of every repo). The run
 # route takes `from` (continue a test.all) and keeps each failure's debug report.
+
+# ── ADDENDUM 2026-09-27 (0.39.273) — docs/2026-09-27-idearium-codebase-toolkit-phasemap.spec, docs/code-intel.spec ──
+# James: "I want idearium solid for building codebases. Fully built, enterprise grade. Agent tools completely solid,
+# all context is easy to search and understand for each chunk."
+# 1. Chunks are structural (lib/code-intel/chunker.js 2.0.0): never cut mid-body, a declaration's doc opens its chunk,
+#    ≤150 lines (split at members / cases / sub-headings), every line once, ids from kind + qualified name. Measured
+#    on 0.39.272: 1054 of 3584 chunks began at a nested function and 984 ended in the next symbol's doc.
+# 2. Every chunk has a card (indexes/cards.json): kind, qualified name, signature, doc, one-line summary, neighbours,
+#    what it uses and what uses it — each with its basis (import | same-file | name) — and its tests. A BM25 index
+#    (indexes/search.json) makes the code itself searchable, not only symbol names and paths.
+# 3. Routes: GET/POST /api/repos/:uuid/code/:op (idearium/repo/code-api.js) — overview, tree, search, grep, chunk,
+#    outline, read, definition, changes; edit, write, delete, move, batch, check. Every write is an .inject (review mode
+#    stacks a later edit onto the pending proposal; auto mode applies all-or-nothing); a syntax-breaking write is
+#    refused unless force. /api/repos/:uuid/search and /chunks are unchanged.
+# 4. The repo page has a Code tab (search by meaning or exact text; any chunk's card and code; links follow uses).
+# 5. Agents: eleven idearium.code_*.tool tools; the harness scope lists code_map/search/chunk/read/edit/write/check +
+#    loom.find (loom.read/write stay allowed, no longer listed); the persona and the card block name them.
+# 6. RepoLayer.readTextFile/deleteTextFile: an imported file is read and deleted as its real bytes, not its chunk (a
+#    chunk of a file over max_chunk_bytes is a truncated reading — proposing an edit against it wrote the truncation).

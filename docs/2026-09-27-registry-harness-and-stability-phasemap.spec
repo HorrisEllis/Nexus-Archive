@@ -143,3 +143,11 @@ spec:
     - Events are read statically: a name built at runtime, or heard over SSE/HTTP, is not a wire.
     - tests/modules/test-tool-guide.js T-001 and the two nerve tests fail before and after this release
       (56 older tools lack a guide note; hard-coded paths) — not touched here.
+
+  # ── ADDENDUM 2026-09-27 (0.39.273) — docs/2026-09-27-idearium-codebase-toolkit-phasemap.spec ──────────────
+  # The harness scope's first message now LISTS idearium.code_map / code_search / code_chunk / code_read / code_edit /
+  # code_write / code_check + loom.find.tool (lib/repo-agent.js listedTools()), with one line naming code_grep /
+  # code_refs / code_batch / code_changes / loom.card / loom.test. loom.read.tool and loom.write.tool are still
+  # registered and allowed; they are no longer listed because code_chunk/code_read read by meaning and code_edit changes
+  # part of a file where loom.write needed the whole file reproduced. The first message stays < 3,000 chars (RH-006).
+  # loom.write.tool now proposes against a file's REAL bytes (lib/repo-inject.js _current → RepoLayer.readTextFile).

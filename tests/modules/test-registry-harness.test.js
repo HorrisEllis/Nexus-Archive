@@ -10,7 +10,8 @@
 //   RH-003  find: components by path, events by name, and words in the code (code lines outrank comments)
 //   RH-004  read: numbered line ranges, capped, says what is left
 //   RH-005  namedIn: the component a question names (for the one card a prompt carries)
-//   RH-006  the first message: harness scope lists five tools + one line of groups, carries a card, no code, < 3,000 chars
+//   RH-006  the first message: harness scope lists the codebase tools + loom.find + one line of groups, carries a card,
+//           no code, < 3,000 chars (0.39.273; was the five loom tools)
 //   RH-007  the harness tools register, and find answers for tools (the browser is one find away)
 require('../../lib/test-sandbox.js').ensure();
 
@@ -100,7 +101,7 @@ async function main() {
     assert.deepStrictEqual(H.namedIn(idx, 'how does it work?'), []);
   });
 
-  await test('RH-006', 'the first message: five tools listed, a card, no code, < 3,000 chars', () => {
+  await test('RH-006', 'the first message: the codebase tools listed, a card, no code, < 3,000 chars', () => {
     const RA = require('../../lib/repo-agent.js');
     const U = `rh-${Date.now()}`;
     const repo = { uuid: U, name: 'rh' };
@@ -109,7 +110,9 @@ async function main() {
     assert.strictEqual(ctx.kind, 'card');
     assert.match(ctx.block, /^src\/lock\.js {2}\(src\/lock\.js, \d+ lines\)/);
     const text = RA.fillListedTools(RA.compose({ hat: null, message: 'add a retry limit to the flush lock in src/lock.js', context: ctx, repoUuid: U, backend: 'guardian' }), U);
-    assert.match(text, /Available tools: loom\.find\.tool, loom\.card\.tool, loom\.read\.tool, loom\.write\.tool, loom\.test\.tool/);
+    // 0.39.273 — the codebase tools replace loom.read / loom.write in the LIST (both still allowed); loom.find stays
+    assert.match(text, /Available tools: idearium\.code_map\.tool, idearium\.code_search\.tool, idearium\.code_chunk\.tool, idearium\.code_read\.tool, idearium\.code_edit\.tool, idearium\.code_write\.tool, idearium\.code_check\.tool, loom\.find\.tool/);
+    assert.match(text, /Also: idearium\.code_grep\.tool/);
     assert.match(text, /More tools \(.*Browser & Clear Glass.*\): find one with loom\.find\.tool kind "tool"/);
     assert.ok(!/function acquireFlushLock/.test(text), 'no code in the first message');
     assert.ok(!/\{tools\}|\{tool_guide\}/.test(text));

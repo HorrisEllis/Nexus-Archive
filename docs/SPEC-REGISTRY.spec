@@ -1631,3 +1631,10 @@ spec:
     | `docs/living-spec.spec` | 1.0.0 | built (0.39.271) | idearium/repo/living-spec.js — the repo's spec folder, parsed (meta, sections, version history, gaps, addenda). |
     | `docs/cos-debug-report.spec` | 1.0.0 | built (0.39.271) | lib/cos-debug-report.js — a failed run's error, repo frames and source lines. |
 
+    
+    ## §REGISTERED 2026-09-27 — 0.39.273 Idearium codebase toolkit
+    
+    | spec | version | status | governs |
+    |---|---|---|---|
+    | `docs/2026-09-27-idearium-codebase-toolkit-phasemap.spec` | 1.0.0 | built (0.39.273) | Idearium solid for building codebases: the measured chunker defects (1054 of 3584 chunks cut mid-body, 984 docs split from their symbol, chunks to 1253 lines), chunker v2, chunk cards, the search index, the edit engine, the code API and tools. Mapped before building. |
+    | `docs/code-intel.spec` | 1.0.0 | built (0.39.273) | lib/code-intel (structural chunker v2, cards, BM25 search, grep), lib/code-edit.js, idearium/repo/code-api.js (/api/repos/:uuid/code/*), the eleven idearium.code_*.tool agent tools; the inject delete op and RepoLayer's real-bytes read/delete. |

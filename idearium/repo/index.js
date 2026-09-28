@@ -350,6 +350,8 @@ export class RepoLayer {
   // to spec-engine's completeChunk (whose default trims, per its own
   // §BYTE-FIDELITY note). Source code written by lib/repo-inject.js needs the
   // exact bytes; every existing caller passes nothing and is unchanged.
+  // §0.39.273 opts.defer — skip the materialize+reindex (the caller calls refresh() once after a batch), same meaning
+  // as writeFile's own defer. Used by lib/code-edit.js commit() through lib/repo-inject.js apply({ defer }).
   writeTextFile(repoUuid, relPath, text, opts = {}) {
     { const im = this._immutableError(repoUuid); if (im) return { error: im, code: 'IMMUTABLE' }; }
     if (typeof text !== 'string') return { error: 'text must be a string' };
@@ -357,11 +359,50 @@ export class RepoLayer {
       this.writeFile(repoUuid, relPath, text, { defer: true, preserveWhitespace: !!opts.preserveWhitespace }); // chunk in step; a chunk problem is not this write's failure
       const r = this.writeSourceBytes(repoUuid, relPath, Buffer.from(text, 'utf8'));
       if (r.error) return { error: r.error };
-      this.refresh(repoUuid);
+      if (!opts.defer) this.refresh(repoUuid);
       return { ok: true, via: 'source' };
     }
-    const r = this.writeFile(repoUuid, relPath, text, { preserveWhitespace: !!opts.preserveWhitespace });
+    const r = this.writeFile(repoUuid, relPath, text, { preserveWhitespace: !!opts.preserveWhitespace, defer: !!opts.defer });
     return r.error ? { error: r.error } : { ok: true, via: 'chunk', created: !!r.created };
+  }
+
+  /**
+   * readTextFile(repoUuid, relPath) -> { path, content, via } | { error }
+   * §0.39.273 — the file as it really is. For a file the source layer owns (an imported project's real bytes) that is
+   * the file on disk; its chunk is a reading of it that ingest TRUNCATED at max_chunk_bytes (200 KB by default), so
+   * readFile() on a large imported file returns a prefix. Anything else reads through the chunk store, as before.
+   */
+  readTextFile(repoUuid, relPath) {
+    const clean = String(relPath || '').replace(/^\/+/, '');
+    if (this.isSourceOwned(repoUuid, clean)) {
+      const dir = this._sourceDir(repoUuid);
+      const abs = path.resolve(dir, clean);
+      if (!abs.startsWith(path.resolve(dir) + path.sep)) return { error: `path escapes the repo: ${relPath}` };
+      try { const buf = fs.readFileSync(abs); return { path: clean, content: buf.toString('utf8'), bytes: buf.length, via: 'source' }; }
+      catch (e) { return { error: `source file unreadable: ${e.message}` }; }
+    }
+    const r = this.readFile(repoUuid, clean);
+    return r.error ? r : { ...r, via: 'chunk' };
+  }
+
+  /**
+   * deleteTextFile(repoUuid, relPath, { defer }) — remove a file whichever layer owns it: the source bytes (and the
+   * source manifest's record of them) AND its chunk. deleteFile() alone removes only the chunk, and materialize()
+   * never deletes a source-owned path — so an imported file "deleted" that way stayed on disk and in the index.
+   */
+  deleteTextFile(repoUuid, relPath, opts = {}) {
+    { const im = this._immutableError(repoUuid); if (im) return { error: im, code: 'IMMUTABLE' }; }
+    const clean = String(relPath || '').replace(/^\/+/, '');
+    let via = null;
+    if (this.isSourceOwned(repoUuid, clean)) {
+      const r = this.deleteSourceFile(repoUuid, clean);
+      if (r.error) return { error: r.error };
+      via = 'source';
+    }
+    const c = this.deleteFile(repoUuid, clean, { defer: true });
+    if (c.error && !via) return { error: c.error };
+    if (!opts.defer) this.refresh(repoUuid);
+    return { ok: true, path: clean, via: via ? (c.error ? 'source' : 'source+chunk') : 'chunk' };
   }
 
   deleteSourceFile(repoUuid, relPath) {

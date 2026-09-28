@@ -140,6 +140,7 @@ const handMapped = [
   ...require('./maps/cos-testenv-map').FILES.map(f => f[0]),     // §0.39.264
   ...require('./maps/agent-memory-map').FILES.map(f => f[0]),    // §0.39.269
   ...require('./maps/one-idearium-map').FILES.map(f => f[0]),    // §0.39.271
+  ...require('./maps/idearium-codebase-map').FILES.map(f => f[0]), // §0.39.273
   'loom/agent-suite/index.js',
 ];
 console.log('\nscanning whole tree from source (real require/import edges only)...\n');
@@ -289,6 +290,10 @@ if (mappedAgentMemory.failures.length) { console.log(`  agent-memory FAILURES: $
 const mappedOneIdearium = require('./maps/one-idearium-map').mapOneIdearium(driver);
 console.log(`  one-idearium: ${mappedOneIdearium.components.length} components, ${mappedOneIdearium.hooks.length} hooks, ${mappedOneIdearium.wires.length} wires`);
 if (mappedOneIdearium.failures.length) { console.log(`  one-idearium FAILURES: ${mappedOneIdearium.failures.length}`); for (const f of mappedOneIdearium.failures.slice(0, 6)) console.log(`    ${JSON.stringify(f).slice(0, 200)}`); failures += mappedOneIdearium.failures.length; }
+// §0.39.273 — idearium's codebase toolkit: lib/code-intel, lib/code-edit, idearium/repo/code-api, the code tools
+const mappedCodebase = require('./maps/idearium-codebase-map').mapIdeariumCodebase(driver);
+console.log(`  idearium-codebase: ${mappedCodebase.components.length} components, ${mappedCodebase.hooks.length} hooks, ${mappedCodebase.wires.length} wires`);
+if (mappedCodebase.failures.length) { console.log(`  idearium-codebase FAILURES: ${mappedCodebase.failures.length}`); for (const f of mappedCodebase.failures.slice(0, 6)) console.log(`    ${JSON.stringify(f).slice(0, 200)}`); failures += mappedCodebase.failures.length; }
 console.log(`  components: ${mappedUi.components.length} ok`);
 console.log(`  hooks:      ${mappedUi.hooks.length} ok`);
 console.log(`  wires:      ${mappedUi.wires.length} ok`);

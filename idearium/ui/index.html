@@ -1024,6 +1024,7 @@ body.tab-tree-open #tab-tree-toggle{color:var(--sky)}
             <button class="repo-subtab-btn active" data-subtab="home" onclick="setRepoSubtab('home')">Home</button>
             <button class="repo-subtab-btn" data-subtab="idea" onclick="setRepoSubtab('idea')">Idea</button>
             <button class="repo-subtab-btn" data-subtab="files" onclick="setRepoSubtab('files')">Files</button>
+            <button class="repo-subtab-btn" data-subtab="code" onclick="setRepoSubtab('code')" title="search the code by meaning, read any chunk's card (0.39.273)">Code</button>
             <button class="repo-subtab-btn" data-subtab="architect" onclick="setRepoSubtab('architect')">Architect</button>
             <button class="repo-subtab-btn" data-subtab="spec" onclick="setRepoSubtab('spec')">Spec</button>
             <!-- §0.39.271 P4 — James: "i want the roadmap and phases combined into a fully enterprise
@@ -1079,6 +1080,7 @@ body.tab-tree-open #tab-tree-toggle{color:var(--sky)}
           <!-- ARCHITECT — this repo's blueprint: its own spec-engine spec,
                chunk by chunk. Same renderer the old global Build > Architect
                view used, scoped to one repo via repo.specUuid. -->
+          <div class="repo-subtab-panel" id="repo-subtab-code"></div>
           <div class="repo-subtab-panel" id="repo-subtab-architect">
             <div class="detail-empty">← select a repo</div>
           </div>
