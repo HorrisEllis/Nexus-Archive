@@ -1,0 +1,23 @@
+{
+  "id": "chunk-146db60cb9e51526",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/master-fx/master-fx.engine.js",
+  "range": {
+    "start_line": 43,
+    "end_line": 49
+  },
+  "symbols": [
+    "_applyAll"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "8a05b1123af0ad575ead855385eddf06321058fb57c6a40b2f31a9c7b1690308"
+  },
+  "status": "complete",
+  "content": "  function _applyAll() {\n    audio.boot();\n    audio.setReverb({ mix: _params.reverbMix, time: _params.reverbTime, decay: _params.reverbDecay });\n    audio.setDelay({ mix: _params.delayMix, time: _params.delayTime, feedback: _params.delayFB });\n    audio.setCompressor({ threshold: _params.compThresh, ratio: _params.compRatio });\n  }\n"
+}

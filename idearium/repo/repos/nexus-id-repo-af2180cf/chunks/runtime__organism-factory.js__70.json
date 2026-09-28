@@ -1,0 +1,23 @@
+{
+  "id": "chunk-5420686bf512c919",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "runtime/organism-factory.js",
+  "range": {
+    "start_line": 2018,
+    "end_line": 2050
+  },
+  "symbols": [
+    "_drawFreq"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "54c1f647f74937081e2683c17b75aaf99e52224926acd93b310ae2ae4d49ebbf"
+  },
+  "status": "complete",
+  "content": "    function _drawFreq(ctx, W, H) {\n      const pA = state.peaksA, pB = state.peaksB;\n\n      /* LED grid lines */\n      ctx.strokeStyle = 'rgba(42,60,88,.3)'; ctx.lineWidth = .5;\n      for (let i = 0; i < 10; i++) {\n        const y = H - (i/9) * H;\n        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();\n      }\n\n      /* Frequency band markers */\n      const bands = [\n        { label:'20', freq:20 },{ label:'50', freq:50 },{ label:'100', freq:100 },\n        { label:'200', freq:200 },{ label:'500', freq:500 },{ label:'1k', freq:1000 },\n        { label:'2k', freq:2000 },{ label:'5k', freq:5000 },{ label:'10k', freq:10000 },\n        { label:'20k', freq:20000 },\n      ];\n      const logMin = Math.log10(20), logMax = Math.log10(20000);\n      bands.forEach(b => {\n        const x = ((Math.log10(b.freq) - logMin) / (logMax - logMin)) * W;\n        ctx.strokeStyle = 'rgba(42,60,88,.5)'; ctx.lineWidth = .5;\n        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H-14); ctx.stroke();\n        ctx.fillStyle = 'rgba(100,136,168,.4)'; ctx.font='6px \"Share Tech Mono\",monospace'; ctx.textAlign='center';\n        ctx.fillText(b.label, x, H-3);\n      });\n\n      if (!pA.length && !pB.length) {\n        ctx.fillStyle='rgba(100,136,168,.2)'; ctx.font='8px \"Share Tech Mono\",monospace'; ctx.textAlign='center';\n        ctx.fillText('DROP AUDIO INTO SLOTS A AND B', W/2, H/2);\n        return;\n      }\n\n      /* Draw bars — both spectra as vertical bar chart */"
+}

@@ -1,0 +1,23 @@
+{
+  "id": "chunk-f61375592b65092c",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "kernel/intake.js",
+  "range": {
+    "start_line": 95,
+    "end_line": 100
+  },
+  "symbols": [
+    "ingestOne"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "0f18cf3f35133d48b068936e934946399ab6a8b0d657fee406dd2b92feda8dd0"
+  },
+  "status": "complete",
+  "content": "async function ingestOne(file, bus) {\n  const r = await _identify(file);\n  if (bus) bus.publish('intake:file', r);\n  return r;\n}\n"
+}

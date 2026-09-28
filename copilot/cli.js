@@ -310,7 +310,7 @@ async function exec(input) {
       console.log(c.dim('  Usage: switch ollama | switch guardian | switch <agent: claude|chatgpt|gemini|perplexity> | switch auto'));
       return;
     }
-    const GUARDIAN_AGENTS = ['claude', 'chatgpt', 'gemini', 'perplexity', 'deepseek'];
+    const GUARDIAN_AGENTS = ['claude', 'chatgpt', 'gemini', 'perplexity'];
     if (target === 'ollama' || target === 'auto' || GUARDIAN_AGENTS.includes(target)) {
       _cliProvider = target;
     } else if (target === 'guardian') {

@@ -1,0 +1,23 @@
+{
+  "id": "chunk-1a052ddbba14a02c",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/sequencer/sequencer.engine.js",
+  "range": {
+    "start_line": 162,
+    "end_line": 197
+  },
+  "symbols": [
+    "_keyHandler"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "0360091f62c1967eaa174ceecd3058672f30126e9e65a89092999f5ed5946279"
+  },
+  "status": "complete",
+  "content": "  const _keyHandler = ev => {\n    if (ev.target.tagName==='SELECT'||ev.target.tagName==='INPUT') return;\n    if (ev.code==='Space') { ev.preventDefault(); playing ? _stop() : _play(); }\n  };\n  document.addEventListener('keydown', _keyHandler);\n\n  _syncUI();\n\n  KERNEL.registry.register({\n    instanceId, id: 'eravos.sequencer', label: 'Sequencer',\n    provides: ['capability.sequencer', 'capability.clock_source'],\n    requires: ['capability.audio_context'],\n    permissions: ['audio_out', 'bus_publish', 'bus_subscribe'],\n    hooks: [\n      { hook_id:'seq.hook.fire_out',  direction:'out', event_type:'seq:fire',        contract_version:'1.0.0' },\n      { hook_id:'seq.hook.play_out',  direction:'out', event_type:'seq:play',        contract_version:'1.0.0' },\n      { hook_id:'seq.hook.stop_out',  direction:'out', event_type:'seq:stop',        contract_version:'1.0.0' },\n      { hook_id:'seq.hook.bank_in',   direction:'in',  event_type:'pad:bank-change', contract_version:'1.0.0' },\n      { hook_id:'seq.hook.record_in', direction:'in',  event_type:'pad:trigger',     contract_version:'1.0.0' },\n    ],\n  });\n\n  return {\n    unmount() {\n      _stop();\n      _unsubs.forEach(u => u());\n      document.removeEventListener('keydown', _keyHandler);\n      KERNEL.registry.unregister(instanceId);\n    },\n    play: _play, stop: _stop, syncUI: _syncUI,\n  };\n}\n\nreturn { mount };\n})();\n"
+}

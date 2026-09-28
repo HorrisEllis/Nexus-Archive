@@ -1,0 +1,21 @@
+{
+  "id": "chunk-f0e1b4bae01fed5a",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/serial-bridge/schema/schema.json",
+  "range": {
+    "start_line": 1,
+    "end_line": 33
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "e500fa145a3688465fcec990f387459678d1a7c171203cb3e5192053aa29da41"
+  },
+  "status": "complete",
+  "content": "{\n  \"schema_version\": \"1.0.0\",\n  \"id\": \"eravos.serial-bridge\",\n  \"label\": \"Serial Bridge\",\n  \"icon\": \"🤖\",\n  \"accent\": \"#00ff88\",\n  \"domain\": [\"robotics\", \"hardware\", \"automation\", \"serial\"],\n  \"description\": \"Real hardware I/O over Web Serial. Connects to GRBL/Arduino/stepper-controller style devices over USB-serial, sends raw or G-code lines, streams incoming telemetry to the bus, and can be wired (via the wire system) so any organism's output — sequencer steps, XY pad, LFO — drives a physical device. Requires a Chromium-based browser (Web Serial is not implemented in Firefox or Safari) and a user gesture to grant port access.\",\n  \"permissions\": [\"serial_access\", \"bus_publish\", \"bus_subscribe\"],\n  \"provides\": [\"capability.serial_io\", \"capability.hardware_control\"],\n  \"requires\": [],\n  \"dependencies\": {\n    \"runtime\": [\"kernel/kernel.js\"],\n    \"browser_apis\": [\"Web Serial API (navigator.serial)\"],\n    \"external_libs\": [],\n    \"constraints\": [\n      \"Chromium-based browsers only (Chrome, Edge, Opera) — Web Serial has no Firefox/Safari implementation.\",\n      \"Requires a direct user click to call navigator.serial.requestPort() — cannot be triggered programmatically.\",\n      \"Runs over a secure context; file:// origins are treated as secure by Chromium so the packaged shell works, but confirm on the target browser version.\"\n    ]\n  },\n  \"hooks\": [\n    { \"hook_id\": \"serial.hook.data_in\",  \"direction\": \"in\",  \"event_type\": \"mod:xy\",       \"contract_version\": \"1.0.0\" },\n    { \"hook_id\": \"serial.hook.trig_in\",  \"direction\": \"in\",  \"event_type\": \"pad:trigger\",  \"contract_version\": \"1.0.0\" },\n    { \"hook_id\": \"serial.hook.rx_out\",   \"direction\": \"out\", \"event_type\": \"serial:rx\",    \"contract_version\": \"1.0.0\" }\n  ],\n  \"params\": {\n    \"baudRate\":   { \"type\": \"enum\", \"options\": [9600, 19200, 38400, 57600, 115200, 250000], \"default\": 115200 },\n    \"lineEnding\": { \"type\": \"enum\", \"options\": [\"\\n\", \"\\r\\n\"], \"default\": \"\\n\" },\n    \"mapMode\":    { \"type\": \"enum\", \"options\": [\"off\", \"xy_to_gcode\", \"trigger_to_line\"], \"default\": \"off\" }\n  }\n}\n"
+}

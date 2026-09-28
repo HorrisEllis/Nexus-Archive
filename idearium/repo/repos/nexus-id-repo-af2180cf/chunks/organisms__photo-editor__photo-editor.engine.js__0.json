@@ -1,0 +1,21 @@
+{
+  "id": "chunk-d1d5170e2b81e5da",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/photo-editor/photo-editor.engine.js",
+  "range": {
+    "start_line": 1,
+    "end_line": 13
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "eca3d2eb50bc6aaaefd1eeb686479c13381eec643d5fca74e7f5dfd7b75843af"
+  },
+  "status": "complete",
+  "content": "/* ═══════════════════════════════════════════════════════════\n   ORGANISM: PHOTO EDITOR  v1.0.0\n   id: eravos.photo-editor\n\n   Raster image editor. Holds the loaded image + params; the\n   canvas element and file/drag UI live in organism-factory.js\n   buildUI, which calls back into these pure helpers so the\n   filter/crop/export logic has exactly one implementation.\n   ═══════════════════════════════════════════════════════════ */\n\nwindow.PhotoEditorEngine = (() => {\n'use strict';\n"
+}

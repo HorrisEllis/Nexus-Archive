@@ -1,0 +1,5044 @@
+[
+  {
+    "id": "chunk-69786d4ee679b345",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 1,
+      "end_line": 20
+    },
+    "symbols": [],
+    "hash": "23da4babfd47a57e650a3fba2d59121b14912f6fe744566c51f76901f4838a53"
+  },
+  {
+    "id": "chunk-d280c2633b8cce27",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 21,
+      "end_line": 55
+    },
+    "symbols": [
+      "mkKnob"
+    ],
+    "hash": "f164c751f4ab05916123aef9c060528233983a0bae584369247b97dc3bd2609d"
+  },
+  {
+    "id": "chunk-152f4f1489ba20fb",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 56,
+      "end_line": 79
+    },
+    "symbols": [
+      "mkToggle"
+    ],
+    "hash": "2448e79e7a1084389e6e27a6b1b048425e790af81a0b3c7ae94adcd7acde4905"
+  },
+  {
+    "id": "chunk-5fd79f1e131108e0",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 80,
+      "end_line": 98
+    },
+    "symbols": [
+      "mkSelect"
+    ],
+    "hash": "9af07df926062b4dc469943263c1220b96df94a0c659a6f057ce46a57d0948eb"
+  },
+  {
+    "id": "chunk-d9c90242a09bdf29",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 99,
+      "end_line": 102
+    },
+    "symbols": [
+      "mkDiv"
+    ],
+    "hash": "3ffe13ab74df17f40e9331ad35cddf8a3455d876237bd378ea30a52860c3ac08"
+  },
+  {
+    "id": "chunk-1237c1a588ce7714",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 103,
+      "end_line": 108
+    },
+    "symbols": [
+      "mkScope"
+    ],
+    "hash": "dbf29a325586d1fc9758d3ad6ef3a65344511953ca1d0494bd4f2fcf708333d0"
+  },
+  {
+    "id": "chunk-36e01a784a4bb6ed",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 109,
+      "end_line": 113
+    },
+    "symbols": [
+      "draw"
+    ],
+    "hash": "0b4db291b80f66bf26087deac3f4f6e25822266be4f9320d9602162b16e29f6d"
+  },
+  {
+    "id": "chunk-980612326ff84923",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 114,
+      "end_line": 131
+    },
+    "symbols": [
+      "mkWave"
+    ],
+    "hash": "7f7f78a0d8964bbaa2687909995587b41f592272e2f7950253d64020751b2f2f"
+  },
+  {
+    "id": "chunk-e09eb33ceb348909",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 132,
+      "end_line": 136
+    },
+    "symbols": [
+      "_fmt"
+    ],
+    "hash": "449f57b2fb7b2ff2295974c7a0dd5e99027146ffa8c936809f77c954c2d59a84"
+  },
+  {
+    "id": "chunk-2d5e53b8c1a45cd2",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 137,
+      "end_line": 151
+    },
+    "symbols": [
+      "mkBtn"
+    ],
+    "hash": "86bfebdeac68c8dc65b5eea5356698ae3b849b54fd75654b7365f9f4e7229600"
+  },
+  {
+    "id": "chunk-839d870e5c881a44",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 152,
+      "end_line": 183
+    },
+    "symbols": [
+      "reg"
+    ],
+    "hash": "c0f5581cd0ae8ca26a52da57dd6a945686849ec53c750f1cee025e098c19c012"
+  },
+  {
+    "id": "chunk-3de1f3f2611e21ce",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 184,
+      "end_line": 201
+    },
+    "symbols": [
+      "renderPads"
+    ],
+    "hash": "fedec7d8415aabe8064f5da0db2475337d9fee3b32b1c99083b1510181ffb890"
+  },
+  {
+    "id": "chunk-991d08dc335b4f26",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 202,
+      "end_line": 209
+    },
+    "symbols": [
+      "litPad"
+    ],
+    "hash": "4de63da4bd9223958a426c57aaf44d948113206bf202a3ee722e1d2bfe4ab747"
+  },
+  {
+    "id": "chunk-a939369800594a3e",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 210,
+      "end_line": 257
+    },
+    "symbols": [
+      "renderQA"
+    ],
+    "hash": "f9343aa1ad3def41294e21e4891bd6476631746634c1c9d86d881eab8bf8caf2"
+  },
+  {
+    "id": "chunk-dce349c49f5cc1be",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 258,
+      "end_line": 258
+    },
+    "symbols": [
+      "btnPlay"
+    ],
+    "hash": "a693b90198296fc1ac2cb2ef04c13d557b495b54d1f00b3474a9f2245489a378"
+  },
+  {
+    "id": "chunk-64c633f4b98d92d6",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 259,
+      "end_line": 259
+    },
+    "symbols": [
+      "btnRand"
+    ],
+    "hash": "1967003935ce6c39913079732d37998b887acafd8fbe7748e1df494059c4ffc3"
+  },
+  {
+    "id": "chunk-27d56d30c9e045dd",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 260,
+      "end_line": 270
+    },
+    "symbols": [
+      "btnClr"
+    ],
+    "hash": "dd2933aeb0ddc72f0ecec74b7e24e55f2a5f3aefceaa19e4c30108f4d435c876"
+  },
+  {
+    "id": "chunk-47dedde2a43bfaa3",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 271,
+      "end_line": 280
+    },
+    "symbols": [
+      "sep"
+    ],
+    "hash": "2ba46c48b03e178b35c9947f23cca46218d1e5fc81b13404096a91d76ded6465"
+  },
+  {
+    "id": "chunk-bce53ce3e7f7a0ae",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 281,
+      "end_line": 332
+    },
+    "symbols": [
+      "renderGrid"
+    ],
+    "hash": "f4b35f53f6cafa1a475d0747190e8e128c9397258f4ded41a68b58fe8a16a063"
+  },
+  {
+    "id": "chunk-6f297a9e592b1d78",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 333,
+      "end_line": 333
+    },
+    "symbols": [
+      "btnPlay"
+    ],
+    "hash": "a693b90198296fc1ac2cb2ef04c13d557b495b54d1f00b3474a9f2245489a378"
+  },
+  {
+    "id": "chunk-656cb66b27b08ac8",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 334,
+      "end_line": 334
+    },
+    "symbols": [
+      "btnStop"
+    ],
+    "hash": "5e4faac18691e8edb997ed227ce38cd8fa438361d1439f389fe2136e6bb3d135"
+  },
+  {
+    "id": "chunk-42c97cad3d2df9c2",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 335,
+      "end_line": 344
+    },
+    "symbols": [
+      "btnRec"
+    ],
+    "hash": "3cca6b2ee1d307c6a0de8d1277de9c918d20457b1241a1c40884e3eb03b16a2b"
+  },
+  {
+    "id": "chunk-c1b2715754f322e9",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 345,
+      "end_line": 345
+    },
+    "symbols": [
+      "addLaneBtn"
+    ],
+    "hash": "688614229245438d93acf26a44e0e0afd51edbd62e3f601dad1fb17da9a86b11"
+  },
+  {
+    "id": "chunk-caef7df4dc82cc92",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 346,
+      "end_line": 376
+    },
+    "symbols": [
+      "sep"
+    ],
+    "hash": "b06cbd05588e7aa8bd386bd370dbaffae3d3a02351064e00b4ce83ea8e778c60"
+  },
+  {
+    "id": "chunk-834d35829225d0db",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 377,
+      "end_line": 407
+    },
+    "symbols": [
+      "drawRuler"
+    ],
+    "hash": "c5a9027b802727f5a3b08fb11fffbcd5ee4ee86236d5b8695aecc1b3de29d9e5"
+  },
+  {
+    "id": "chunk-7d1b8ada50ae16e4",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 408,
+      "end_line": 442
+    },
+    "symbols": [
+      "addLaneEl"
+    ],
+    "hash": "69064408cd7e204242e836ac2b22628a8b351393c3b30c50916c7c606c0f3af4"
+  },
+  {
+    "id": "chunk-2ce3ce27a5f339b2",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 443,
+      "end_line": 462
+    },
+    "symbols": [
+      "addClipEl"
+    ],
+    "hash": "6619b9c48b145525a629ad57ee6295c7830069ceeb8b971fd5ee196b480380cb"
+  },
+  {
+    "id": "chunk-1f1f9328e3bff46e",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 463,
+      "end_line": 468
+    },
+    "symbols": [
+      "posClip"
+    ],
+    "hash": "c1babba232121c5f2edf2e8e421044652d43b31d5572944687777bca6ff452c1"
+  },
+  {
+    "id": "chunk-7e2b597fac839ce1",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 469,
+      "end_line": 528
+    },
+    "symbols": [
+      "reposAll"
+    ],
+    "hash": "eb64dd4a83fa251f16b7b213b97568ee3910b8a82974b86319ebef32eb1c2fc8"
+  },
+  {
+    "id": "chunk-6c9e694c3ab00c4f",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 529,
+      "end_line": 542
+    },
+    "symbols": [
+      "mkPill"
+    ],
+    "hash": "82ebed65a229fe0104697379947f38023a505e4bce0ab8017d41db7fd7b734d1"
+  },
+  {
+    "id": "chunk-97ba3789777611b3",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 543,
+      "end_line": 543
+    },
+    "symbols": [
+      "loopPill"
+    ],
+    "hash": "7557425db67a3e767377cc01cd29258640e06d3a8aac6cefffde8ff34e2a9939"
+  },
+  {
+    "id": "chunk-6305fb7c951fe5f0",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 544,
+      "end_line": 558
+    },
+    "symbols": [
+      "reversePill"
+    ],
+    "hash": "42cc0353926a5ec9126c2c0b14c05cab3f136ccc2390073e2b9b9ff9eb98f8b5"
+  },
+  {
+    "id": "chunk-fa7d55bd82fdee6e",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 559,
+      "end_line": 630
+    },
+    "symbols": [
+      "mkHandle"
+    ],
+    "hash": "7365f2465ce4514d84402245caa88bb0ed685c0967e6d44aaccec7e8031e64d9"
+  },
+  {
+    "id": "chunk-8f994b53aa356d93",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 631,
+      "end_line": 645
+    },
+    "symbols": [
+      "audio"
+    ],
+    "hash": "81dc75552b50b7b23881cc46d1feff1cc46561a802247d35c2b15c4db67d7cc2"
+  },
+  {
+    "id": "chunk-e1f98a899c1a3fc3",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 646,
+      "end_line": 754
+    },
+    "symbols": [
+      "draw"
+    ],
+    "hash": "2d2da5f0dc5d73c736d7ffe55f823b3f8cd532a62909af20e38553096e5eb182"
+  },
+  {
+    "id": "chunk-dcea8b18473980fc",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 755,
+      "end_line": 835
+    },
+    "symbols": [
+      "_pxToNorm"
+    ],
+    "hash": "b6cb7283c8adc090658f156c3167d5b0033925d3b0b8a21e86c8778df1825b4a"
+  },
+  {
+    "id": "chunk-cb5326e124406dea",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 836,
+      "end_line": 836
+    },
+    "symbols": [
+      "rateK"
+    ],
+    "hash": "b7bccabcf25738bfacc127b9887ee1d11e5066ac3d94bf086431a65fa7c59f6f"
+  },
+  {
+    "id": "chunk-759edb6b2382fc36",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 837,
+      "end_line": 847
+    },
+    "symbols": [
+      "depthK"
+    ],
+    "hash": "bde70ba7fb577992c9150bea9f03297e4d48827a85294fc1ba6885a75d6fa061"
+  },
+  {
+    "id": "chunk-f411e636e52bdee9",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 848,
+      "end_line": 875
+    },
+    "symbols": [
+      "draw"
+    ],
+    "hash": "dbeae2a197e96007f1d5d4e0d175c25e6372acfdf0162c8e119ea1d287159fdc"
+  },
+  {
+    "id": "chunk-8f374d1c46e3a9d4",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 876,
+      "end_line": 935
+    },
+    "symbols": [
+      "activeBtn"
+    ],
+    "hash": "1201f1186f4fc3acae00e4b53acd4283f1bc8b5aab3b423cb2d0c9999066d21a"
+  },
+  {
+    "id": "chunk-81195f6e0365557f",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 936,
+      "end_line": 996
+    },
+    "symbols": [
+      "sustainBtn"
+    ],
+    "hash": "9eb9c405f022ac6e41b8245f1dbc48151d67cb5582162a134f8581a77411b7ff"
+  },
+  {
+    "id": "chunk-2953fb71233e5631",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 997,
+      "end_line": 1015
+    },
+    "symbols": [
+      "_m"
+    ],
+    "hash": "3f9e0d22d3d407b6676d46a9f119ca23d20df2ec9116b47f784c9f19a7437e9e"
+  },
+  {
+    "id": "chunk-ce2c36149117ccef",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 1016,
+      "end_line": 1034
+    },
+    "symbols": [
+      "_nexusCardUI"
+    ],
+    "hash": "5186cd528113b1e2c9a6c1dce44a6a5f7f7ff35da7fc45442ab37530a87447b6"
+  },
+  {
+    "id": "chunk-41a1539a38b7cfcf",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 1035,
+      "end_line": 1035
+    },
+    "symbols": [
+      "diagBtn"
+    ],
+    "hash": "0a89e8fceb3f536f14bdb0ed09ef4dd69bcd6381a230978aa45f2679ac2d289d"
+  },
+  {
+    "id": "chunk-9e5079008d6d95e5",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 1036,
+      "end_line": 1036
+    },
+    "symbols": [
+      "snapBtn"
+    ],
+    "hash": "3c8f15ec40a54a0a88becff3324fba4058a3ecedc4248b621a2b01262be634f2"
+  },
+  {
+    "id": "chunk-13a4e16f6f8a0a79",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 1037,
+      "end_line": 1172
+    },
+    "symbols": [
+      "ideaBtn"
+    ],
+    "hash": "50d8df6a4d523848f2a5f4433ce66dae69972c3330d04877db02fc624c84677e"
+  },
+  {
+    "id": "chunk-642d2fd0b23b3d1c",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 1173,
+      "end_line": 1188
+    },
+    "symbols": [
+      "_scopedBus"
+    ],
+    "hash": "fece4cdf128472795e95c5e75e63be97c013cbb889c680193cef7a7c89e03392"
+  },
+  {
+    "id": "chunk-afe1e0b9b9b0fa2d",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 1189,
+      "end_line": 1219
+    },
+    "symbols": [
+      "spawn"
+    ],
+    "hash": "1a8c7abdf738b1edd6457dd731eb06590f452f9807771eca5b852be2ff1e59ab"
+  },
+  {
+    "id": "chunk-3c6d3c5d23d9bb23",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 1220,
+      "end_line": 1229
+    },
+    "symbols": [
+      "_scopedPub"
+    ],
+    "hash": "1e3f9ad970e6a824d80d68391045c647ff46f24d6c92668d4491fe062493b1bf"
+  },
+  {
+    "id": "chunk-4ac9aec8c681323f",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 1230,
+      "end_line": 1265
+    },
+    "symbols": [
+      "defs"
+    ],
+    "hash": "4a79153fe86ac68dceefd23ba8a8b7849f49d9a5e96dffd1e2695cae3921359e"
+  },
+  {
+    "id": "chunk-90de698a417f298d",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 1266,
+      "end_line": 1317
+    },
+    "symbols": [
+      "mkSection"
+    ],
+    "hash": "f8add63c9648a40cc0d900568e86acb57d7a6361edb70aa99eac9cc2842c47bd"
+  },
+  {
+    "id": "chunk-e034012589d23ed0",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 1318,
+      "end_line": 1338
+    },
+    "symbols": [
+      "mkParamRow"
+    ],
+    "hash": "9b9203ae87f04e3fe9867320a375faa0b0839f3a0a84922b505187a8c93473a5"
+  },
+  {
+    "id": "chunk-0a82f0480dda9c47",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 1339,
+      "end_line": 1339
+    },
+    "symbols": [
+      "freqSlider"
+    ],
+    "hash": "c0a6a309dfd8d9be628378037999792426778884803ae66d3eb5e0f9422339fa"
+  },
+  {
+    "id": "chunk-e8ebd1147f704d38",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 1340,
+      "end_line": 1340
+    },
+    "symbols": [
+      "cutSlider"
+    ],
+    "hash": "17e129918edc785394b2f84b5b27eb7049296fe254e7954c45b72fe56420d28f"
+  },
+  {
+    "id": "chunk-93bb40dd724f2f66",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 1341,
+      "end_line": 1341
+    },
+    "symbols": [
+      "resSlider"
+    ],
+    "hash": "b9add70b5c9e03de17fde29138ed69d78da51bd52f92a2f56b5a958eae2d8c68"
+  },
+  {
+    "id": "chunk-4e7a222dedcd64a7",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 1342,
+      "end_line": 1342
+    },
+    "symbols": [
+      "rateSlider"
+    ],
+    "hash": "283130485957cd7bbfaf6d890449888963b7f45e4439144f0a7610dbeea26753"
+  },
+  {
+    "id": "chunk-111a33beb629d63c",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 1343,
+      "end_line": 1343
+    },
+    "symbols": [
+      "depthSlider"
+    ],
+    "hash": "67340d27ed02b49e7b0f635f7b8e7293939ffcb9db4ad1f22f671ee144d91aba"
+  },
+  {
+    "id": "chunk-c10648ad1d72af0a",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 1344,
+      "end_line": 1367
+    },
+    "symbols": [
+      "driveSlider"
+    ],
+    "hash": "e7fb6d530102f05f4802f19afc4596b224de27ae4ee56c08412e543378203557"
+  },
+  {
+    "id": "chunk-f1adb282e99c1ba0",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 1368,
+      "end_line": 1520
+    },
+    "symbols": [
+      "drawFilterCurve"
+    ],
+    "hash": "acb8435718162021f53563cd876886f92142abea2333c0400a59a9b3b320d722"
+  },
+  {
+    "id": "chunk-9efae2b702ee4c10",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 1521,
+      "end_line": 1576
+    },
+    "symbols": [
+      "drawDensity"
+    ],
+    "hash": "1f5b952b727f723de2ba386da5789ae5253f205a5012e9aedb0d248033835661"
+  },
+  {
+    "id": "chunk-c33a4b554fb3ae5c",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 1577,
+      "end_line": 1594
+    },
+    "symbols": [
+      "_canvasToCell"
+    ],
+    "hash": "660a46f6b4f08ba088a7b2834b03d8034fceb43b36a321dbee80fd75cf908ce7"
+  },
+  {
+    "id": "chunk-8e3ef32193fea45a",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 1595,
+      "end_line": 1667
+    },
+    "symbols": [
+      "_doPaint"
+    ],
+    "hash": "84013f7447f2c9d494298259f0c267ea2e349072e8b87e15d6e2b2de34f9cdd0"
+  },
+  {
+    "id": "chunk-7bb472afdb289e35",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 1668,
+      "end_line": 1710
+    },
+    "symbols": [
+      "_updateDial"
+    ],
+    "hash": "f40fc9e34eda58cb89a48ea3e91559d84766d238cdb0035aca4041b91d374d02"
+  },
+  {
+    "id": "chunk-da029b07412c6ceb",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 1711,
+      "end_line": 1726
+    },
+    "symbols": [
+      "drawOvertones"
+    ],
+    "hash": "b26c09b0838312641e2a64c4c20b8a746930db60a2214697aa368b3753ead5e7"
+  },
+  {
+    "id": "chunk-c0d184ab3c18d85e",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 1727,
+      "end_line": 1776
+    },
+    "symbols": [
+      "logMax"
+    ],
+    "hash": "75412dea724a6c50154e4db88fb8715b2eec35ab4b00780b2811b2e8c2cbb513"
+  },
+  {
+    "id": "chunk-70d4f32fa3b2d840",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 1777,
+      "end_line": 1838
+    },
+    "symbols": [
+      "mkPill"
+    ],
+    "hash": "6b42ce3c961f41575bab420f400ee216a5c867e1d8edf5631a7a08f609228c8f"
+  },
+  {
+    "id": "chunk-7ad07c2ef0742c81",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 1839,
+      "end_line": 1872
+    },
+    "symbols": [
+      "renderAll"
+    ],
+    "hash": "5c14eba448c278a39eb5a65419f5332065b2a5188519d5d691a378fea9560c61"
+  },
+  {
+    "id": "chunk-82075258868dacf2",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 1873,
+      "end_line": 1888
+    },
+    "symbols": [
+      "mkSlotZone"
+    ],
+    "hash": "fbca35a823c88c7f4753ec801e0ea2acdc92b2d9ae58feef326f6d642090d068"
+  },
+  {
+    "id": "chunk-e0691e7cb9c379ac",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 1889,
+      "end_line": 1999
+    },
+    "symbols": [
+      "audio"
+    ],
+    "hash": "f9ce56bd207d8981ce9fdcaa31e8670ad8635d7000212c5730fbd7df984b1d81"
+  },
+  {
+    "id": "chunk-407e36a922e1c736",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 2000,
+      "end_line": 2017
+    },
+    "symbols": [
+      "draw"
+    ],
+    "hash": "92cf9bb05fa48e003f5c360e2d9ede67afe9161eea5f5fc97c7c1bab0136f21a"
+  },
+  {
+    "id": "chunk-5420686bf512c919",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 2018,
+      "end_line": 2050
+    },
+    "symbols": [
+      "_drawFreq"
+    ],
+    "hash": "54c1f647f74937081e2683c17b75aaf99e52224926acd93b310ae2ae4d49ebbf"
+  },
+  {
+    "id": "chunk-76be1bffdb73f277",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 2051,
+      "end_line": 2104
+    },
+    "symbols": [
+      "drawBars"
+    ],
+    "hash": "61d9d3df1b3c9e749bd637679a74dcd74045a349bf7ed1962217a981f34ff12a"
+  },
+  {
+    "id": "chunk-2da0a6e0f9193a03",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 2105,
+      "end_line": 2126
+    },
+    "symbols": [
+      "_drawDyn"
+    ],
+    "hash": "9b03f94a7aaac7a3b43b5edabae81e338aefae3202bec8af89ebf9c42e54f5b0"
+  },
+  {
+    "id": "chunk-9c67855721950115",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 2127,
+      "end_line": 2156
+    },
+    "symbols": [
+      "drawWaveform"
+    ],
+    "hash": "577e0dd110cc516f9a342312b1df05961f032c737dedf64ea074b3d0a518aa2c"
+  },
+  {
+    "id": "chunk-4c761d46db875d9a",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 2157,
+      "end_line": 2198
+    },
+    "symbols": [
+      "rms"
+    ],
+    "hash": "6c2f0b99cf7fd7f5b1ddd035cb244a9263d617ce0c347383905153ce79ddde13"
+  },
+  {
+    "id": "chunk-26f7c517dc277116",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 2199,
+      "end_line": 2423
+    },
+    "symbols": [
+      "_drawRhythmic"
+    ],
+    "hash": "75d8f9d33b8b7739eee18975d8423c8804a1766dd1e692e20c906f59e2316a77"
+  },
+  {
+    "id": "chunk-224dd4013c5bbe3f",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 2424,
+      "end_line": 2468
+    },
+    "symbols": [
+      "tsep"
+    ],
+    "hash": "4deca8adbdb3f27e01cc385e9523d4e228c4e359641fe9a444bc6d95003dae48"
+  },
+  {
+    "id": "chunk-6f393f58e2f71ddc",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 2469,
+      "end_line": 2503
+    },
+    "symbols": [
+      "audio"
+    ],
+    "hash": "a2ef3fa27e70e9114b8f2fdb382c8199a6a80107ed1dd455b2932d036b9fd465"
+  },
+  {
+    "id": "chunk-fbaf34a5d7a12401",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 2504,
+      "end_line": 2506
+    },
+    "symbols": [
+      "totalDur"
+    ],
+    "hash": "3b5ce4cf5198435dbbcc6b5c1f1aa787c4b15241bcde72d468f649e0c12cefd6"
+  },
+  {
+    "id": "chunk-41f12b81acfc08a6",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 2507,
+      "end_line": 2512
+    },
+    "symbols": [
+      "boundaries"
+    ],
+    "hash": "c9ad26c4f13e35bf06aec9c4fe6c000cec484bce20375eab8e8e8df1594ef688"
+  },
+  {
+    "id": "chunk-44fa4b6ba30a41ec",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 2513,
+      "end_line": 2631
+    },
+    "symbols": [
+      "draw"
+    ],
+    "hash": "42f5adbfe0d5ee8c243b80cb0ad30ed8a0609d0a2e72c430d0e3ca209bdf5e42"
+  },
+  {
+    "id": "chunk-231af56dee68aa8b",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 2632,
+      "end_line": 2654
+    },
+    "symbols": [
+      "i"
+    ],
+    "hash": "780953a881fb854bc6a2c855bde8a81a137486a5562438eeadb612ada95a0e26"
+  },
+  {
+    "id": "chunk-174e88da30fb91cf",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 2655,
+      "end_line": 2679
+    },
+    "symbols": [
+      "_getInteraction"
+    ],
+    "hash": "fd640c2edeacadac87d89a6c0506a9f3b4985727d137ddf54be93609b48c5e0c"
+  },
+  {
+    "id": "chunk-7af1cad9e81a9042",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 2680,
+      "end_line": 2743
+    },
+    "symbols": [
+      "idx"
+    ],
+    "hash": "1212ca921fda3f7968f74268ad9d267e6810f8553d5555b0e383d17de6118d76"
+  },
+  {
+    "id": "chunk-8a5b48768714e1f1",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 2744,
+      "end_line": 2762
+    },
+    "symbols": [
+      "_selectStage"
+    ],
+    "hash": "ede62bcf43a347af3dfa2fb96961f7aee8773f8c1c381c50fc41b2a406da78d2"
+  },
+  {
+    "id": "chunk-b74fc48d29fa351b",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 2763,
+      "end_line": 2813
+    },
+    "symbols": [
+      "mkMiniParam"
+    ],
+    "hash": "4e5fc42471edcf34b20028f2afa88a380c3e5c90ed999512048e424068852953"
+  },
+  {
+    "id": "chunk-0bd368d77d92328f",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 2814,
+      "end_line": 2822
+    },
+    "symbols": [
+      "idx"
+    ],
+    "hash": "23f1c58f0b07bb616058955fb0269287889a2f27fe19ab7d6c46debd3b975244"
+  },
+  {
+    "id": "chunk-74b987a820fe7468",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 2823,
+      "end_line": 2856
+    },
+    "symbols": [
+      "tick"
+    ],
+    "hash": "39f1e031f8426c0006528a94d0129d1cc197bb8fcb19ee066bbce52d08fa4c7d"
+  },
+  {
+    "id": "chunk-41542c0108ad77b5",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 2857,
+      "end_line": 2958
+    },
+    "symbols": [
+      "sustainBtn"
+    ],
+    "hash": "8cabbe212a74a27b8eb4a87bf9f53370afd678fbcc11cb3f428cc39f761cab70"
+  },
+  {
+    "id": "chunk-fc7a87ffca8ea0c2",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 2959,
+      "end_line": 2960
+    },
+    "symbols": [
+      "redraw"
+    ],
+    "hash": "fc00c2206b7ac56edfedbb41de3e903907769a25e4ec96ee18b74d8769921672"
+  },
+  {
+    "id": "chunk-2051b2be6c7f39cc",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 2961,
+      "end_line": 3055
+    },
+    "symbols": [
+      "handleFile"
+    ],
+    "hash": "4b34825db94f3ffcd6786b83ececa1811196a6e1e29acd79d72cad9d9606e6ea"
+  },
+  {
+    "id": "chunk-cec9b0da5c043ebb",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 3056,
+      "end_line": 3057
+    },
+    "symbols": [
+      "loop"
+    ],
+    "hash": "44cf9b2e86b63aaa735ff4767e1e1b071d07e9c869a20b421abfe14899edf066"
+  },
+  {
+    "id": "chunk-f73e493b48a11c1f",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 3058,
+      "end_line": 3092
+    },
+    "symbols": [
+      "handleFile"
+    ],
+    "hash": "33db34939ea9a2b55486e8159a1141df2effbb9ef9af21407cbb229a8bf10d0e"
+  },
+  {
+    "id": "chunk-e65188e49c32b0cd",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 3093,
+      "end_line": 3132
+    },
+    "symbols": [
+      "exportBtn"
+    ],
+    "hash": "8d4dede51589bf70e9dbdf06bf5dec4b330c391bb8e629f70d0acd6e533a856b"
+  },
+  {
+    "id": "chunk-bd422d5667dbc7e4",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 3133,
+      "end_line": 3133
+    },
+    "symbols": [
+      "connectBtn"
+    ],
+    "hash": "b32877acb50d9bef2b483bbd98e7cb17af4c0443701ca34a76ed0adea66bd994"
+  },
+  {
+    "id": "chunk-5881794634b1568c",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 3134,
+      "end_line": 3139
+    },
+    "symbols": [
+      "disconnectBtn"
+    ],
+    "hash": "e2e1da69fe0043ccb307a15ca6f89cb56774600fb4887b9d083f9b81789a27a9"
+  },
+  {
+    "id": "chunk-cb254b27e38704e5",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 3140,
+      "end_line": 3148
+    },
+    "symbols": [
+      "sendBtn"
+    ],
+    "hash": "cc4fa630ccba7660e64e8bf22717e784c4da53a4170b2a4707dd116693738f9d"
+  },
+  {
+    "id": "chunk-14c077dff3506f1d",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 3149,
+      "end_line": 3176
+    },
+    "symbols": [
+      "appendLog"
+    ],
+    "hash": "4b8c1e8eb7aa8115a18b617fad27518f22ff0484a8e3cbdad24e849c333ffe22"
+  },
+  {
+    "id": "chunk-df1ab761797ebda5",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 3177,
+      "end_line": 3201
+    },
+    "symbols": [
+      "refreshTargets"
+    ],
+    "hash": "9305b1c17c95a32a65395025ab9e2d815a658019808923e22b611832bb6d04ae"
+  },
+  {
+    "id": "chunk-c7db28271401d1f0",
+    "file": "runtime/organism-factory.js",
+    "range": {
+      "start_line": 3202,
+      "end_line": 3267
+    },
+    "symbols": [
+      "armBtn"
+    ],
+    "hash": "24125642fa88d964746281b4619919ca2c22045a8a215019982d5f3f63ca3791"
+  },
+  {
+    "id": "chunk-f36ba6e66f952b5e",
+    "file": "runtime/precision-clock.worklet.js",
+    "range": {
+      "start_line": 1,
+      "end_line": 14
+    },
+    "symbols": [],
+    "hash": "3b5e14b8a7c94e99ec1c93cc8446f288508082659858340711c6f642867257fa"
+  },
+  {
+    "id": "chunk-c0f12caf24621ee5",
+    "file": "runtime/precision-clock.worklet.js",
+    "range": {
+      "start_line": 15,
+      "end_line": 58
+    },
+    "symbols": [
+      "PrecisionClockProcessor"
+    ],
+    "hash": "9f22020cb0eccaae2a170843266bff7ad62b763f33e7ec512a0f622d071a2d7d"
+  },
+  {
+    "id": "chunk-bd0d56d6e6a2c4a6",
+    "file": "runtime/canvas-wm.js",
+    "range": {
+      "start_line": 1,
+      "end_line": 13
+    },
+    "symbols": [],
+    "hash": "ce323465d3d83813b527b5e057ca706a172d20a94ad86b054ca46e8c2f990448"
+  },
+  {
+    "id": "chunk-e60d822061caa456",
+    "file": "runtime/canvas-wm.js",
+    "range": {
+      "start_line": 14,
+      "end_line": 17
+    },
+    "symbols": [
+      "init"
+    ],
+    "hash": "d42b9a4f8cd189a7e132db456b27d975c860cf1de1e9746bec1e59e984373e34"
+  },
+  {
+    "id": "chunk-46ac4ec217373c61",
+    "file": "runtime/canvas-wm.js",
+    "range": {
+      "start_line": 18,
+      "end_line": 19
+    },
+    "symbols": [
+      "snap"
+    ],
+    "hash": "728d7b7a9aa11e36eb87576f5f6306914948bead692a53d4fd15310e2d6730d2"
+  },
+  {
+    "id": "chunk-7bee75c2edb0210a",
+    "file": "runtime/canvas-wm.js",
+    "range": {
+      "start_line": 20,
+      "end_line": 191
+    },
+    "symbols": [
+      "create"
+    ],
+    "hash": "d92090ef1d66baa103c3b6c3a7842ad751e74c651322dcba1da5cd98c9901517"
+  },
+  {
+    "id": "chunk-42b40944cecd5649",
+    "file": "runtime/canvas-wm.js",
+    "range": {
+      "start_line": 192,
+      "end_line": 195
+    },
+    "symbols": [
+      "_raise"
+    ],
+    "hash": "14f9a60edb57842a571f4cf04dbf6c90ab442e7eaf9f0127ba00e484d53afcd3"
+  },
+  {
+    "id": "chunk-6b144ebf9d9534d0",
+    "file": "runtime/canvas-wm.js",
+    "range": {
+      "start_line": 196,
+      "end_line": 215
+    },
+    "symbols": [
+      "_toggleCollapse"
+    ],
+    "hash": "2ee6acd44a7750ecceba77643c134775b9225a0446b7e5984c3a32a1c358c519"
+  },
+  {
+    "id": "chunk-6c12d5699bfc5193",
+    "file": "runtime/canvas-wm.js",
+    "range": {
+      "start_line": 216,
+      "end_line": 240
+    },
+    "symbols": [
+      "_barBtn"
+    ],
+    "hash": "a87bafde5350317ca67bfe70164c882823b49c45d338e023ab2644643d0271ca"
+  },
+  {
+    "id": "chunk-36ab360dba6d0a6d",
+    "file": "runtime/canvas-cfr.js",
+    "range": {
+      "start_line": 1,
+      "end_line": 41
+    },
+    "symbols": [],
+    "hash": "134440929431b5eeb3382fb4a00490f3c6470b44412749b67ac7806a407102f7"
+  },
+  {
+    "id": "chunk-d851b4b446efc772",
+    "file": "runtime/canvas-cfr.js",
+    "range": {
+      "start_line": 42,
+      "end_line": 49
+    },
+    "symbols": [
+      "_pxToWorld"
+    ],
+    "hash": "23d617fc342ac0e83d09c5f473617a867fe94832bc423794acb38ce52d20bf6d"
+  },
+  {
+    "id": "chunk-196a9d5c0c552720",
+    "file": "runtime/canvas-cfr.js",
+    "range": {
+      "start_line": 50,
+      "end_line": 89
+    },
+    "symbols": [
+      "boot"
+    ],
+    "hash": "773eabdb8d0dab9f66fdc24b7cc4ba33d6f44a2a1aafbced8b9709350fc1b389"
+  },
+  {
+    "id": "chunk-c1a59c16c2e7aeb1",
+    "file": "runtime/canvas-cfr.js",
+    "range": {
+      "start_line": 90,
+      "end_line": 124
+    },
+    "symbols": [
+      "_loop"
+    ],
+    "hash": "baf545ad57d0129b91fb638754b8a72ee13f496955a1b854dbe0795352219ee6"
+  },
+  {
+    "id": "chunk-5f75d83b05ce3f09",
+    "file": "runtime/canvas-cfr.js",
+    "range": {
+      "start_line": 125,
+      "end_line": 130
+    },
+    "symbols": [
+      "connectAnalyser"
+    ],
+    "hash": "180dd3c2ddbbb78b62e701a970893be29f304e984243c107b54a5fb0a21da142"
+  },
+  {
+    "id": "chunk-56bf27ef105b01fe",
+    "file": "runtime/canvas-cfr.js",
+    "range": {
+      "start_line": 131,
+      "end_line": 141
+    },
+    "symbols": [
+      "onSpawn"
+    ],
+    "hash": "6df086cbaece88c90e2d4bd9af42491cf7408be363814c6ef0ffdd2b599e35f0"
+  },
+  {
+    "id": "chunk-8346eb8fad115080",
+    "file": "runtime/canvas-cfr.js",
+    "range": {
+      "start_line": 142,
+      "end_line": 149
+    },
+    "symbols": [
+      "onMove"
+    ],
+    "hash": "4d7c400c2c235847e493ab304b58138bcb38f26a0f5c4da0a311a2621a48d148"
+  },
+  {
+    "id": "chunk-94ecb6ffae169708",
+    "file": "runtime/canvas-cfr.js",
+    "range": {
+      "start_line": 150,
+      "end_line": 160
+    },
+    "symbols": [
+      "onClose"
+    ],
+    "hash": "622dfd2a9d1bb517a6cbc6ed4a1d06be5d1af3650241c04ad474fa850e5d0f88"
+  },
+  {
+    "id": "chunk-86dcb40244487e93",
+    "file": "runtime/canvas-cfr.js",
+    "range": {
+      "start_line": 161,
+      "end_line": 171
+    },
+    "symbols": [
+      "onFault"
+    ],
+    "hash": "1472592631fcd31ad3f02be9e99479d725759a32c45e53ad76a0062d974011db"
+  },
+  {
+    "id": "chunk-384936f75bf519d3",
+    "file": "runtime/canvas-cfr.js",
+    "range": {
+      "start_line": 172,
+      "end_line": 184
+    },
+    "symbols": [
+      "setFieldPreset"
+    ],
+    "hash": "744ced9374d89d8728c9cd3d7424ebdc42eec77d32434363d2e41e503b18d987"
+  },
+  {
+    "id": "chunk-6a8edd2995f98a1a",
+    "file": "runtime/canvas-cfr.js",
+    "range": {
+      "start_line": 185,
+      "end_line": 193
+    },
+    "symbols": [
+      "stop"
+    ],
+    "hash": "365b8aacc8df3874c7c173e2e8de6df93a7c9bd88a2a2dca96690fb4952e9a2b"
+  },
+  {
+    "id": "chunk-23b26bc3875d6389",
+    "file": "runtime/wire-system.js",
+    "range": {
+      "start_line": 1,
+      "end_line": 26
+    },
+    "symbols": [],
+    "hash": "2ab1ff5b7ade4995badf8fabdf805b001e84302d2f5bc2b6f3c1b9627d1c3883"
+  },
+  {
+    "id": "chunk-50bb70ca2888c434",
+    "file": "runtime/wire-system.js",
+    "range": {
+      "start_line": 27,
+      "end_line": 39
+    },
+    "symbols": [
+      "init"
+    ],
+    "hash": "2d4bfa3007efac8c2ade6ea51d74add3eea789a78c4f6b983781de38fd7eae8a"
+  },
+  {
+    "id": "chunk-e086bc0cfadd9c0d",
+    "file": "runtime/wire-system.js",
+    "range": {
+      "start_line": 40,
+      "end_line": 47
+    },
+    "symbols": [
+      "_attachContextMenu"
+    ],
+    "hash": "5c8c4426d89eba07cd6b84be59eccd37621844f5bb31e8e1b2e40cd1428fb8c4"
+  },
+  {
+    "id": "chunk-3f6b1b2cf10e7a1c",
+    "file": "runtime/wire-system.js",
+    "range": {
+      "start_line": 48,
+      "end_line": 110
+    },
+    "symbols": [
+      "_showHookMenu"
+    ],
+    "hash": "91ef32d427c206230852ab27d144b556d9f228fb9304088749d4725a2e409e07"
+  },
+  {
+    "id": "chunk-4d04146877171b24",
+    "file": "runtime/wire-system.js",
+    "range": {
+      "start_line": 111,
+      "end_line": 130
+    },
+    "symbols": [
+      "_startDrag"
+    ],
+    "hash": "273e2bd16da73d4bdf2ece31c4c2286226b3fec90f81ed5004713b70aa18143d"
+  },
+  {
+    "id": "chunk-11f84b55560fc940",
+    "file": "runtime/wire-system.js",
+    "range": {
+      "start_line": 131,
+      "end_line": 140
+    },
+    "symbols": [
+      "_onDragMove"
+    ],
+    "hash": "ace1e71678a3f796dbaf9dc880ec0420c82eaf1b8cbcd15c82ad873d5779536b"
+  },
+  {
+    "id": "chunk-7fe4cf0cf16e40ed",
+    "file": "runtime/wire-system.js",
+    "range": {
+      "start_line": 141,
+      "end_line": 162
+    },
+    "symbols": [
+      "_onDragEnd"
+    ],
+    "hash": "d05827c2cfe02fc495c064186b45fcfc76bddcc6c965c2c960f2075904141896"
+  },
+  {
+    "id": "chunk-12c5315059828222",
+    "file": "runtime/wire-system.js",
+    "range": {
+      "start_line": 163,
+      "end_line": 172
+    },
+    "symbols": [
+      "_highlightCompatible"
+    ],
+    "hash": "4abefd587c6ff52308f472b59e62903060608fdcaeac689c12e579e8e438ffd6"
+  },
+  {
+    "id": "chunk-4decd68feccc3c6c",
+    "file": "runtime/wire-system.js",
+    "range": {
+      "start_line": 173,
+      "end_line": 180
+    },
+    "symbols": [
+      "_clearHighlights"
+    ],
+    "hash": "a0ad8cd8c6ab29f7d2254d14ea895c1ccf7801b8c79f92baa9d5e3b4afa2b1f6"
+  },
+  {
+    "id": "chunk-0dbbc5c04d1a858d",
+    "file": "runtime/wire-system.js",
+    "range": {
+      "start_line": 181,
+      "end_line": 193
+    },
+    "symbols": [
+      "_drawWire"
+    ],
+    "hash": "0fdf1960704d6b9155e410c511c35f03c2c565a223d9db40cbcdb9bc7f0709ea"
+  },
+  {
+    "id": "chunk-3402346dd10480ba",
+    "file": "runtime/wire-system.js",
+    "range": {
+      "start_line": 194,
+      "end_line": 222
+    },
+    "symbols": [
+      "sub"
+    ],
+    "hash": "1a92829e1effe94ecb5805681914286b4324478755a8ee2238a1d173eb6d3b07"
+  },
+  {
+    "id": "chunk-78e8e9a6f6f3116c",
+    "file": "runtime/wire-system.js",
+    "range": {
+      "start_line": 223,
+      "end_line": 230
+    },
+    "symbols": [
+      "observer"
+    ],
+    "hash": "826315e288520b677589ba2b9c771c9b2a61af33dafbcd1e6f0d80950eb6030e"
+  },
+  {
+    "id": "chunk-e298532a2fcf18cd",
+    "file": "runtime/wire-system.js",
+    "range": {
+      "start_line": 231,
+      "end_line": 246
+    },
+    "symbols": [
+      "_updateWirePath"
+    ],
+    "hash": "e920ce3608ab8f4aca2be3c04eb562c8dee0398e1186cc933cd974fce64da1c9"
+  },
+  {
+    "id": "chunk-5f547bfa2d09031c",
+    "file": "runtime/wire-system.js",
+    "range": {
+      "start_line": 247,
+      "end_line": 257
+    },
+    "symbols": [
+      "_removeWire"
+    ],
+    "hash": "93d992a4cece3ee6183b034db8f8844a8c717995fddc6e23d8adb4b75f1f7d32"
+  },
+  {
+    "id": "chunk-22be0b812eaca179",
+    "file": "runtime/wire-system.js",
+    "range": {
+      "start_line": 258,
+      "end_line": 266
+    },
+    "symbols": [
+      "onSpawn"
+    ],
+    "hash": "46a04a415f8ac20e2c000d43535484e224c281737e43dc76f8fab7bfa9ef8d45"
+  },
+  {
+    "id": "chunk-10c386af9264bec1",
+    "file": "runtime/wire-system.js",
+    "range": {
+      "start_line": 267,
+      "end_line": 276
+    },
+    "symbols": [
+      "onClose"
+    ],
+    "hash": "18b765fc6fd850eb652427f7cdfe52cd4ad1850dd6b0c3e6e7a1c1f8f527dc18"
+  },
+  {
+    "id": "chunk-49c1b593bf6c2a17",
+    "file": "runtime/wire-system.js",
+    "range": {
+      "start_line": 277,
+      "end_line": 285
+    },
+    "symbols": [
+      "redrawAll"
+    ],
+    "hash": "2635722895d4838f7f8958a4c294c4e7159cebd371d3de8abf8371785021f9f5"
+  },
+  {
+    "id": "chunk-fbd0f2b5f1e9fd62",
+    "file": "runtime/alk-gl.js",
+    "range": {
+      "start_line": 1,
+      "end_line": 55
+    },
+    "symbols": [],
+    "hash": "61c953035173c129fca0b2a4e7b5867ec6c73c97e18fff5142b0b2ce7880f77b"
+  },
+  {
+    "id": "chunk-332b0bbb375ca999",
+    "file": "runtime/alk-gl.js",
+    "range": {
+      "start_line": 56,
+      "end_line": 349
+    },
+    "symbols": [
+      "buildCompFrag"
+    ],
+    "hash": "8fc7bb07b550810ca6d95942335de7f8214772beee45bede2cb6cb12ded86ca8"
+  },
+  {
+    "id": "chunk-ab405113a66f471b",
+    "file": "runtime/alk-gl.js",
+    "range": {
+      "start_line": 350,
+      "end_line": 428
+    },
+    "symbols": [
+      "ALKGL"
+    ],
+    "hash": "95a7df2d3a66916989642abf460a348ed6e1757e8c067f9ccae06c317248fa38"
+  },
+  {
+    "id": "chunk-9eb493a33635e636",
+    "file": "runtime/alk-gl.js",
+    "range": {
+      "start_line": 429,
+      "end_line": 469
+    },
+    "symbols": [
+      "mk"
+    ],
+    "hash": "f4cfd0c0fecf3dd47075279d4b41c156862b49f7fdd1ce3e9371b41ed7836d32"
+  },
+  {
+    "id": "chunk-532095b9a380ded3",
+    "file": "runtime/alk-gl.js",
+    "range": {
+      "start_line": 470,
+      "end_line": 528
+    },
+    "symbols": [
+      "au"
+    ],
+    "hash": "246cd2120643e462ed601bec6af571bf03ced05fce966a85bd1278537dca82d8"
+  },
+  {
+    "id": "chunk-4426ae989629e2d7",
+    "file": "runtime/alk-gl.js",
+    "range": {
+      "start_line": 529,
+      "end_line": 563
+    },
+    "symbols": [
+      "gauss"
+    ],
+    "hash": "e38188d0d347a9590aeb7ff2da945aa984880ebaa1df7ca9c51d2c72a6a526cf"
+  },
+  {
+    "id": "chunk-d2d89fca0a3fdae4",
+    "file": "runtime/alk-gl.js",
+    "range": {
+      "start_line": 564,
+      "end_line": 897
+    },
+    "symbols": [
+      "u"
+    ],
+    "hash": "4ab35849af5783cad56994ae3df53ba7de3c580d7592e2ecd60f75cf28a0abc6"
+  },
+  {
+    "id": "chunk-d2ee0588f3c07b04",
+    "file": "runtime/precision-clock.js",
+    "range": {
+      "start_line": 1,
+      "end_line": 222
+    },
+    "symbols": [],
+    "hash": "2d39072f69c5bc742825131f2e6eb4f7775e7028a54432f981926953de3319f8"
+  },
+  {
+    "id": "chunk-631f12a75beba770",
+    "file": "runtime/precision-clock.js",
+    "range": {
+      "start_line": 223,
+      "end_line": 291
+    },
+    "symbols": [
+      "boot"
+    ],
+    "hash": "205614127a0ed558f8b934df11b17225e7d3490bc14b9ae9a79dfd5eed78d052"
+  },
+  {
+    "id": "chunk-12c3dadbca6ab097",
+    "file": "runtime/precision-clock.js",
+    "range": {
+      "start_line": 292,
+      "end_line": 302
+    },
+    "symbols": [
+      "getReduction"
+    ],
+    "hash": "1f1b6de0ef2d53fa1a2d0491e184bac635e21dd0b1ffd4c9c20cda0a1c28389e"
+  },
+  {
+    "id": "chunk-92c6a31c90d4f6b9",
+    "file": "runtime/master-transport.js",
+    "range": {
+      "start_line": 1,
+      "end_line": 22
+    },
+    "symbols": [],
+    "hash": "c26af77887069e982af47864e0a70ac06ba6461808c42ee8bde9713aeede3f93"
+  },
+  {
+    "id": "chunk-fd0bc795958d371e",
+    "file": "runtime/master-transport.js",
+    "range": {
+      "start_line": 23,
+      "end_line": 24
+    },
+    "symbols": [
+      "gBus"
+    ],
+    "hash": "7d7a33fd7bd7c337de645c74b6bf684ac357e5237d45a25d664721b0047acce0"
+  },
+  {
+    "id": "chunk-4e6f4d6b3a8612eb",
+    "file": "runtime/master-transport.js",
+    "range": {
+      "start_line": 25,
+      "end_line": 33
+    },
+    "symbols": [
+      "play"
+    ],
+    "hash": "00a6915a5bb33df41d5c9380d9b61766e0e0cf403a625a95e6e276d340f182f3"
+  },
+  {
+    "id": "chunk-422baead7d8a2270",
+    "file": "runtime/master-transport.js",
+    "range": {
+      "start_line": 34,
+      "end_line": 41
+    },
+    "symbols": [
+      "stop"
+    ],
+    "hash": "f6d3a9bb7cfa3e05ec1bd75f02c289b2a1f6a538939bb718389e9fd4998b24b7"
+  },
+  {
+    "id": "chunk-4cb94bd5174b146f",
+    "file": "runtime/master-transport.js",
+    "range": {
+      "start_line": 42,
+      "end_line": 43
+    },
+    "symbols": [
+      "togglePlay"
+    ],
+    "hash": "1ac2c8001b04bbd44854193a0ec76b6a3511773713769e2ea61b0a796bb83416"
+  },
+  {
+    "id": "chunk-a08262f56b4777a6",
+    "file": "runtime/master-transport.js",
+    "range": {
+      "start_line": 44,
+      "end_line": 81
+    },
+    "symbols": [
+      "record"
+    ],
+    "hash": "37928cc0722b7401f9390ce7816e25c3c37a7f691e6c8a9c404cd807a032626b"
+  },
+  {
+    "id": "chunk-bdfebc26ee3d0097",
+    "file": "runtime/master-transport.js",
+    "range": {
+      "start_line": 82,
+      "end_line": 88
+    },
+    "symbols": [
+      "_stopRecord"
+    ],
+    "hash": "351132c03b92b9db76871dd6c35d23ae1c3366f1aaadefc7d7d9a707329ae153"
+  },
+  {
+    "id": "chunk-5b633723201ecfcd",
+    "file": "runtime/master-transport.js",
+    "range": {
+      "start_line": 89,
+      "end_line": 95
+    },
+    "symbols": [
+      "setBPM"
+    ],
+    "hash": "4b4334c2965d61ac535473bcbcf125ff8aa7f0ac8cbffac51234b3acea2f0968"
+  },
+  {
+    "id": "chunk-11f17c78bbcb1ac4",
+    "file": "runtime/master-transport.js",
+    "range": {
+      "start_line": 96,
+      "end_line": 111
+    },
+    "symbols": [
+      "_wire"
+    ],
+    "hash": "3c9054e84e1b7f7f875621e303d7228f340e54efddead8ca6bcb0087620923d5"
+  },
+  {
+    "id": "chunk-18519f870102c1e8",
+    "file": "specs/eravos.organism.sample-player.spec",
+    "range": {
+      "start_line": 1,
+      "end_line": 295
+    },
+    "symbols": [],
+    "hash": "ce5c7d4da69b8b414976e28a9e235231a434a89799ffbe05eeca811cb81f2261"
+  },
+  {
+    "id": "chunk-d2528400d6d75882",
+    "file": "specs/eravos.genomes-ecosystems-behaviors.spec",
+    "range": {
+      "start_line": 1,
+      "end_line": 403
+    },
+    "symbols": [],
+    "hash": "487b2618d93b72c8f40f079dc0624083283285aaf932105918b6824a4d59e44b"
+  },
+  {
+    "id": "chunk-d5758d878e76d8ba",
+    "file": "specs/eravos.organism.pads.spec",
+    "range": {
+      "start_line": 1,
+      "end_line": 446
+    },
+    "symbols": [],
+    "hash": "0e698c4430646b011e5bfa75a18b6fac4e7cb178e67138e886121defa4b00a8f"
+  },
+  {
+    "id": "chunk-036dc3af012cb87a",
+    "file": "specs/ERAVOS.kernel.spec",
+    "range": {
+      "start_line": 1,
+      "end_line": 847
+    },
+    "symbols": [],
+    "hash": "5ec394002ecbbd90f9bee336940f0347a15eb4e02d1220dbc73d0da2d45b1ede"
+  },
+  {
+    "id": "chunk-e063a3e022932f9e",
+    "file": "specs/eravos.nexus.build-contract.spec",
+    "range": {
+      "start_line": 1,
+      "end_line": 344
+    },
+    "symbols": [],
+    "hash": "4fa92f088b9c921d47b8e942c05656c865a2caba40404ef6e13b0f2ed1e0396e"
+  },
+  {
+    "id": "chunk-9679a0505b018830",
+    "file": "specs/eravos.organism.timeline.spec",
+    "range": {
+      "start_line": 1,
+      "end_line": 313
+    },
+    "symbols": [],
+    "hash": "95a26f467805f914f9ebefb5d67c6f99708976f8f0ab1c635598329cf64cd76f"
+  },
+  {
+    "id": "chunk-b3efc04e4a89ed81",
+    "file": "specs/eravos.pack.format.spec",
+    "range": {
+      "start_line": 1,
+      "end_line": 495
+    },
+    "symbols": [],
+    "hash": "df904f7914e2b48d666527fffc945ba031b4f7ea94ee58e587cdecacd9d3a08d"
+  },
+  {
+    "id": "chunk-e167bcadda9ffcb5",
+    "file": "specs/eravos.organism.sequencer.spec",
+    "range": {
+      "start_line": 1,
+      "end_line": 297
+    },
+    "symbols": [],
+    "hash": "86bfee2a104766fa8f8618d69bf988693d6a2d5c380330f605cc60177f48d4d8"
+  },
+  {
+    "id": "chunk-f35b3f67b0396b5a",
+    "file": "organisms/sample-player/schema/schema.json",
+    "range": {
+      "start_line": 1,
+      "end_line": 89
+    },
+    "symbols": [],
+    "hash": "36ddf6f0554a6c0c9eb44ce17a812bcc596d2cf72dd5c485a4e1d78981512513"
+  },
+  {
+    "id": "chunk-494a006e0856fba5",
+    "file": "organisms/sample-player/sample-player.engine.js",
+    "range": {
+      "start_line": 1,
+      "end_line": 6
+    },
+    "symbols": [],
+    "hash": "375e051b354f0d83e2b639fc9adb887bfb10c6ec968c00364b604242a16cc04f"
+  },
+  {
+    "id": "chunk-cd2cf36d8186f7e7",
+    "file": "organisms/sample-player/sample-player.engine.js",
+    "range": {
+      "start_line": 7,
+      "end_line": 13
+    },
+    "symbols": [
+      "mount"
+    ],
+    "hash": "0734228490f29de0ba75075a7b7a6b438750227ec6e97c3cdde47d39eef9ca82"
+  },
+  {
+    "id": "chunk-a3bbc456a68ce442",
+    "file": "organisms/sample-player/sample-player.engine.js",
+    "range": {
+      "start_line": 14,
+      "end_line": 24
+    },
+    "symbols": [
+      "_load"
+    ],
+    "hash": "edb1b5d462507902f485c906b356089a2a226882c10628639ea53ce5d5e73865"
+  },
+  {
+    "id": "chunk-19e709626c2017ce",
+    "file": "organisms/sample-player/sample-player.engine.js",
+    "range": {
+      "start_line": 25,
+      "end_line": 49
+    },
+    "symbols": [
+      "_play"
+    ],
+    "hash": "cfbeea6640cf277fefbc2ec5e92e5eda5b42f90fb4d37ec9ac71a95095cd6635"
+  },
+  {
+    "id": "chunk-522c1c13d2a85c71",
+    "file": "organisms/sample-player/sample-player.engine.js",
+    "range": {
+      "start_line": 50,
+      "end_line": 55
+    },
+    "symbols": [
+      "_stop"
+    ],
+    "hash": "6739739e928c7689dc4509bdefae1370732b58e7ef24e8d30a5ec46ababac77b"
+  },
+  {
+    "id": "chunk-ddde90ad57d70f13",
+    "file": "organisms/sample-player/sample-player.engine.js",
+    "range": {
+      "start_line": 56,
+      "end_line": 95
+    },
+    "symbols": [
+      "_buildPeaks"
+    ],
+    "hash": "ff2f9a1365ada206a044c51905e640ca9fba1224dce324fa80f4ed4a0fbee37b"
+  },
+  {
+    "id": "chunk-e45e6b39c24acf6b",
+    "file": "organisms/nexus-bridge/schema/schema.json",
+    "range": {
+      "start_line": 1,
+      "end_line": 22
+    },
+    "symbols": [],
+    "hash": "e89d9e09c9f20a80243e787e6274439807c7636eb71458fb87312d5a4fb703b0"
+  },
+  {
+    "id": "chunk-e54a938b22165c0a",
+    "file": "organisms/nexus-bridge/nexus-bridge.engine.js",
+    "range": {
+      "start_line": 1,
+      "end_line": 13
+    },
+    "symbols": [],
+    "hash": "e47d68707c117574d8f3aef3b9579624d04927065c7423a3ae0f560a1467f0a0"
+  },
+  {
+    "id": "chunk-0ac011f6934d4fd5",
+    "file": "organisms/nexus-bridge/nexus-bridge.engine.js",
+    "range": {
+      "start_line": 14,
+      "end_line": 33
+    },
+    "symbols": [
+      "mount"
+    ],
+    "hash": "c95c9f5f9ac34238e7d753dfd61154f229f8158776581de21adb5232d3df5928"
+  },
+  {
+    "id": "chunk-1926d43215945e95",
+    "file": "organisms/master-fx/schema/schema.json",
+    "range": {
+      "start_line": 1,
+      "end_line": 29
+    },
+    "symbols": [],
+    "hash": "b25c3486dc3c0ece1b2f7d52a202b5d8e6072be3045b8c43bf86ad2d59632c1d"
+  },
+  {
+    "id": "chunk-284559804e18563d",
+    "file": "organisms/master-fx/master-fx.engine.js",
+    "range": {
+      "start_line": 1,
+      "end_line": 13
+    },
+    "symbols": [],
+    "hash": "c241645cd516cf27d7a36ea7c429f77624e63a584d705cffdcb7cd2d166a8b78"
+  },
+  {
+    "id": "chunk-b6d7e0168a532fb2",
+    "file": "organisms/master-fx/master-fx.engine.js",
+    "range": {
+      "start_line": 14,
+      "end_line": 27
+    },
+    "symbols": [
+      "mount"
+    ],
+    "hash": "428ce4fca86e8975e12411fbb9f612ec1fd909ce3d467fd94e17de538eed3648"
+  },
+  {
+    "id": "chunk-27029777df95187a",
+    "file": "organisms/master-fx/master-fx.engine.js",
+    "range": {
+      "start_line": 28,
+      "end_line": 42
+    },
+    "symbols": [
+      "_apply"
+    ],
+    "hash": "76f1340aa8f4ffacff0b00e949d657c6a0aef7185be5aa94916482004c729e50"
+  },
+  {
+    "id": "chunk-146db60cb9e51526",
+    "file": "organisms/master-fx/master-fx.engine.js",
+    "range": {
+      "start_line": 43,
+      "end_line": 49
+    },
+    "symbols": [
+      "_applyAll"
+    ],
+    "hash": "8a05b1123af0ad575ead855385eddf06321058fb57c6a40b2f31a9c7b1690308"
+  },
+  {
+    "id": "chunk-fd059a4bf4618639",
+    "file": "organisms/master-fx/master-fx.engine.js",
+    "range": {
+      "start_line": 50,
+      "end_line": 79
+    },
+    "symbols": [
+      "_syncUI"
+    ],
+    "hash": "45eff20634d1df715a97cd7764c44cba20bc83f0138da0b1848b0587b6ba4a0f"
+  },
+  {
+    "id": "chunk-dfde0a62f730bf95",
+    "file": "organisms/channel/schema/schema.json",
+    "range": {
+      "start_line": 1,
+      "end_line": 79
+    },
+    "symbols": [],
+    "hash": "3d2cd91d63e1f75e0c1e3e8dc0b8c76a8cf02989adb9113268e0ba69c84fef15"
+  },
+  {
+    "id": "chunk-2d7ebbf1047a0938",
+    "file": "organisms/channel/channel.engine.js",
+    "range": {
+      "start_line": 1,
+      "end_line": 12
+    },
+    "symbols": [],
+    "hash": "0bc3e7d6e53cd1fb193eba7148919fa89d21a02d24479d05e85cb2a60618640d"
+  },
+  {
+    "id": "chunk-87ca8d46f7ba085e",
+    "file": "organisms/channel/channel.engine.js",
+    "range": {
+      "start_line": 13,
+      "end_line": 33
+    },
+    "symbols": [
+      "mount"
+    ],
+    "hash": "1bf6bca6f384739d7961a8819e236e6ed5ee0acfaa1e6395fbf079ca0a1abc9a"
+  },
+  {
+    "id": "chunk-8d3ba853bb0b308d",
+    "file": "organisms/channel/channel.engine.js",
+    "range": {
+      "start_line": 34,
+      "end_line": 46
+    },
+    "symbols": [
+      "_ensureGraph"
+    ],
+    "hash": "19250fc0732948328e0992b553f15e5b55635b46d2acce8835a3f006cad94d03"
+  },
+  {
+    "id": "chunk-7039474b1ed3f954",
+    "file": "organisms/channel/channel.engine.js",
+    "range": {
+      "start_line": 47,
+      "end_line": 56
+    },
+    "symbols": [
+      "_meterInterval"
+    ],
+    "hash": "d9a3c5110f03b31d7dc1d592dd5fadbef07a0d03fa10ebafcac6cc025e0b7867"
+  },
+  {
+    "id": "chunk-c1fbb37c9ae2b453",
+    "file": "organisms/channel/channel.engine.js",
+    "range": {
+      "start_line": 57,
+      "end_line": 62
+    },
+    "symbols": [
+      "_updateGain"
+    ],
+    "hash": "1727cb26c1685e51cff31128e9562c10dba8d062a0a8759e3142854a0b8bb1b1"
+  },
+  {
+    "id": "chunk-d8aa8b6b6d6fc4b8",
+    "file": "organisms/channel/channel.engine.js",
+    "range": {
+      "start_line": 63,
+      "end_line": 110
+    },
+    "symbols": [
+      "_syncUI"
+    ],
+    "hash": "a74f54f845e4ba3a609c3296751a5a7f232a190c19189e7bdb32ed05286c6e0d"
+  },
+  {
+    "id": "chunk-83a6b07b33a34868",
+    "file": "organisms/sequencer/schema/schema.json",
+    "range": {
+      "start_line": 1,
+      "end_line": 80
+    },
+    "symbols": [],
+    "hash": "886bab640d1be23c74bfa557ffc2ced7c48efc7f142b8c44030f2a69e58023f6"
+  },
+  {
+    "id": "chunk-968efe2fb3211609",
+    "file": "organisms/sequencer/sequencer.engine.js",
+    "range": {
+      "start_line": 1,
+      "end_line": 11
+    },
+    "symbols": [],
+    "hash": "be9c6bb4a9798ecf5f99ff4deee957c155f15a3cb850d913af989961c142572f"
+  },
+  {
+    "id": "chunk-acf6f5d6384fa684",
+    "file": "organisms/sequencer/sequencer.engine.js",
+    "range": {
+      "start_line": 12,
+      "end_line": 43
+    },
+    "symbols": [
+      "mount"
+    ],
+    "hash": "d17a5aa627d43d6eeddc58c65f75a1d9464ea225d0ab60d762c5320f51ca9c11"
+  },
+  {
+    "id": "chunk-70006051d96e8f5c",
+    "file": "organisms/sequencer/sequencer.engine.js",
+    "range": {
+      "start_line": 44,
+      "end_line": 79
+    },
+    "symbols": [
+      "_initClock"
+    ],
+    "hash": "cd6f555a8150c4cf8896ab8e59bce856c3ebb330949387ceb332a2ad067de57c"
+  },
+  {
+    "id": "chunk-3cb2a6e0d9c9a910",
+    "file": "organisms/sequencer/sequencer.engine.js",
+    "range": {
+      "start_line": 80,
+      "end_line": 89
+    },
+    "symbols": [
+      "_play"
+    ],
+    "hash": "c399d1ee5087b4e82910bb4a92729786c9661603999e4529bf3bbf6ac10a661f"
+  },
+  {
+    "id": "chunk-3b1b46edd449d1ee",
+    "file": "organisms/sequencer/sequencer.engine.js",
+    "range": {
+      "start_line": 90,
+      "end_line": 97
+    },
+    "symbols": [
+      "_stop"
+    ],
+    "hash": "0ed333743057f8b36fa998ccfe5cdabad971c24d3b1ac9113b4fde94ae5a8326"
+  },
+  {
+    "id": "chunk-8beff764081f19e6",
+    "file": "organisms/sequencer/sequencer.engine.js",
+    "range": {
+      "start_line": 98,
+      "end_line": 161
+    },
+    "symbols": [
+      "_syncUI"
+    ],
+    "hash": "d6f37a82702970d923c09ed108184b49025368a828aeb2fc01866abc9a7fbe01"
+  },
+  {
+    "id": "chunk-1a052ddbba14a02c",
+    "file": "organisms/sequencer/sequencer.engine.js",
+    "range": {
+      "start_line": 162,
+      "end_line": 197
+    },
+    "symbols": [
+      "_keyHandler"
+    ],
+    "hash": "0360091f62c1967eaa174ceecd3058672f30126e9e65a89092999f5ed5946279"
+  },
+  {
+    "id": "chunk-f0e1b4bae01fed5a",
+    "file": "organisms/serial-bridge/schema/schema.json",
+    "range": {
+      "start_line": 1,
+      "end_line": 33
+    },
+    "symbols": [],
+    "hash": "e500fa145a3688465fcec990f387459678d1a7c171203cb3e5192053aa29da41"
+  },
+  {
+    "id": "chunk-9f1f473acf3031e7",
+    "file": "organisms/serial-bridge/serial-bridge.engine.js",
+    "range": {
+      "start_line": 1,
+      "end_line": 20
+    },
+    "symbols": [],
+    "hash": "1dcfb6f7fa5346124af81f0c3795a3f67e7f3e8a937c69343aeed107bd82bd76"
+  },
+  {
+    "id": "chunk-8e6cd92257326d6a",
+    "file": "organisms/serial-bridge/serial-bridge.engine.js",
+    "range": {
+      "start_line": 21,
+      "end_line": 36
+    },
+    "symbols": [
+      "mount"
+    ],
+    "hash": "6d6ccb48cc8bb95c28d87375d4352c517c5fb5a1407b0e205c1f40e0488caf2c"
+  },
+  {
+    "id": "chunk-bd56eab122bc1a6a",
+    "file": "organisms/serial-bridge/serial-bridge.engine.js",
+    "range": {
+      "start_line": 37,
+      "end_line": 40
+    },
+    "symbols": [
+      "supported"
+    ],
+    "hash": "42fac1e60e911516f73e51d7e2a70693eecce5333fb8d6d301c8538caa6be2c1"
+  },
+  {
+    "id": "chunk-f41606b4e44e07a1",
+    "file": "organisms/serial-bridge/serial-bridge.engine.js",
+    "range": {
+      "start_line": 41,
+      "end_line": 60
+    },
+    "symbols": [
+      "connect"
+    ],
+    "hash": "b554a0ee9aa29d8e2b97c3e7fbc05c3e89dc90eb0c90ffd3987b32fc4ae100fe"
+  },
+  {
+    "id": "chunk-bf5db0ca54b99eba",
+    "file": "organisms/serial-bridge/serial-bridge.engine.js",
+    "range": {
+      "start_line": 61,
+      "end_line": 86
+    },
+    "symbols": [
+      "_readLoop"
+    ],
+    "hash": "d25dfe6f83615b26f60f154c39f92d735dc4da4c4aeca992443168a63511453a"
+  },
+  {
+    "id": "chunk-3122523f72e777c3",
+    "file": "organisms/serial-bridge/serial-bridge.engine.js",
+    "range": {
+      "start_line": 87,
+      "end_line": 96
+    },
+    "symbols": [
+      "send"
+    ],
+    "hash": "386631ee570b02aa53d6021d6319d17f03872bf5f0fe25d89d75378e6b399fee"
+  },
+  {
+    "id": "chunk-edb8703f4c947dce",
+    "file": "organisms/serial-bridge/serial-bridge.engine.js",
+    "range": {
+      "start_line": 97,
+      "end_line": 108
+    },
+    "symbols": [
+      "disconnect"
+    ],
+    "hash": "b6164b1d7ad67d3a6b7682d820a99344f48de97450b06f1c43d2d5dd0818551b"
+  },
+  {
+    "id": "chunk-24a49a550776a78c",
+    "file": "organisms/serial-bridge/serial-bridge.engine.js",
+    "range": {
+      "start_line": 109,
+      "end_line": 115
+    },
+    "symbols": [
+      "_xyToGcode"
+    ],
+    "hash": "0c0e13efbfa43135e1ffb8b25e87b2c653237c95a1c3b291076aaa1882de1bd5"
+  },
+  {
+    "id": "chunk-e2e22faf8496e2df",
+    "file": "organisms/serial-bridge/serial-bridge.engine.js",
+    "range": {
+      "start_line": 116,
+      "end_line": 117
+    },
+    "symbols": [
+      "_updateParam"
+    ],
+    "hash": "a9a5955ec5a538e9a96a1bf2fc11fbfb417925e8a3b68e1d6bb2caa184d7aa34"
+  },
+  {
+    "id": "chunk-383ba73ad3154105",
+    "file": "organisms/serial-bridge/serial-bridge.engine.js",
+    "range": {
+      "start_line": 118,
+      "end_line": 159
+    },
+    "symbols": [
+      "_syncUI"
+    ],
+    "hash": "65cd08e327e91c6c60bdf8442241cdb435b95cf76f387621c0281995d687918f"
+  },
+  {
+    "id": "chunk-22af195955bf36c8",
+    "file": "organisms/xy-pad/schema/schema.json",
+    "range": {
+      "start_line": 1,
+      "end_line": 51
+    },
+    "symbols": [],
+    "hash": "5ba56209e2efdab49db69c309c2cb04d765a20c3552335d876f400aa5b56576d"
+  },
+  {
+    "id": "chunk-187e90f71dd544ab",
+    "file": "organisms/xy-pad/xy-pad.engine.js",
+    "range": {
+      "start_line": 1,
+      "end_line": 14
+    },
+    "symbols": [],
+    "hash": "4c1ddcb6b94525e37f9df9923784c4775bab5bb9a4ed2b070d6d24fa357e784a"
+  },
+  {
+    "id": "chunk-f5ce1e368e78057e",
+    "file": "organisms/xy-pad/xy-pad.engine.js",
+    "range": {
+      "start_line": 15,
+      "end_line": 29
+    },
+    "symbols": [
+      "mount"
+    ],
+    "hash": "f43a944b1c45f25deb6d840c5ab73358917f870a7c2ba50ffb9cf4d2bbe82e77"
+  },
+  {
+    "id": "chunk-da701272fd775892",
+    "file": "organisms/xy-pad/xy-pad.engine.js",
+    "range": {
+      "start_line": 30,
+      "end_line": 52
+    },
+    "symbols": [
+      "_move"
+    ],
+    "hash": "f98e2e8dc9f6d70a74b715e27f14f7e58df81480f2e4f4aae839c83a9a08b41f"
+  },
+  {
+    "id": "chunk-127a2d0690787e2f",
+    "file": "organisms/xy-pad/xy-pad.engine.js",
+    "range": {
+      "start_line": 53,
+      "end_line": 57
+    },
+    "symbols": [
+      "_release"
+    ],
+    "hash": "faf72534adc323628f71df2d3a65680abf267af4e9e4e9956e61195ad950e634"
+  },
+  {
+    "id": "chunk-84552da5c9579cd9",
+    "file": "organisms/xy-pad/xy-pad.engine.js",
+    "range": {
+      "start_line": 58,
+      "end_line": 98
+    },
+    "symbols": [
+      "_syncUI"
+    ],
+    "hash": "a7c76cf5bd298905d23899a2aaa1fa8eca7fb116dd3ad17721006b23b9614714"
+  },
+  {
+    "id": "chunk-0aa62fadfc37286a",
+    "file": "organisms/nexus-cortex/schema/schema.json",
+    "range": {
+      "start_line": 1,
+      "end_line": 22
+    },
+    "symbols": [],
+    "hash": "e48d7ade8e7f04312217150af320037e621f40f6061124c6d1fe6120be947cf4"
+  },
+  {
+    "id": "chunk-df847783d8ae134a",
+    "file": "organisms/nexus-cortex/nexus-cortex.engine.js",
+    "range": {
+      "start_line": 1,
+      "end_line": 13
+    },
+    "symbols": [],
+    "hash": "f07c3bd11684b2247c9b8816a8bfdd7238934db18e8da15adb1805073fef2dc7"
+  },
+  {
+    "id": "chunk-457eb818c636fa8d",
+    "file": "organisms/nexus-cortex/nexus-cortex.engine.js",
+    "range": {
+      "start_line": 14,
+      "end_line": 33
+    },
+    "symbols": [
+      "mount"
+    ],
+    "hash": "aea842d895cc8aeed958716fc9b620646438047cda0e2db86b5a2709e2b9c16d"
+  },
+  {
+    "id": "chunk-083a598fc0fb58d3",
+    "file": "organisms/bass-drop-builder/schema/schema.json",
+    "range": {
+      "start_line": 1,
+      "end_line": 112
+    },
+    "symbols": [],
+    "hash": "80ecb857c0c7f6460667fc975245b37a78a3bdff1b0af18cff6535cf73572380"
+  },
+  {
+    "id": "chunk-b6b37e602ffc4f26",
+    "file": "organisms/bass-drop-builder/bass-drop-builder.engine.js",
+    "range": {
+      "start_line": 1,
+      "end_line": 19
+    },
+    "symbols": [],
+    "hash": "0b306af8202c4e828c4996c3bc8cb65473de42f0d12a4956f7b73a751ff60bc3"
+  },
+  {
+    "id": "chunk-8071fe1fb7ac8ff4",
+    "file": "organisms/bass-drop-builder/bass-drop-builder.engine.js",
+    "range": {
+      "start_line": 20,
+      "end_line": 29
+    },
+    "symbols": [
+      "_distort"
+    ],
+    "hash": "8f7c2091e6a99e78a577eefbcf0cc87202f1976d1bfad64a6a277577bb4a6fd0"
+  },
+  {
+    "id": "chunk-f54f0eb1f9e493ac",
+    "file": "organisms/bass-drop-builder/bass-drop-builder.engine.js",
+    "range": {
+      "start_line": 30,
+      "end_line": 78
+    },
+    "symbols": [
+      "_tension"
+    ],
+    "hash": "b76fbef3990d144795a2c9f2b6c2277778e3416795868be2371c2ef2c7d0c67b"
+  },
+  {
+    "id": "chunk-e7fffc7aa0322a63",
+    "file": "organisms/bass-drop-builder/bass-drop-builder.engine.js",
+    "range": {
+      "start_line": 79,
+      "end_line": 126
+    },
+    "symbols": [
+      "_slope"
+    ],
+    "hash": "847f20c18179e6b8f6e47c6dc587a37f57174993c1209befa4317f1815e9f152"
+  },
+  {
+    "id": "chunk-b26edfabb68f7dc8",
+    "file": "organisms/bass-drop-builder/bass-drop-builder.engine.js",
+    "range": {
+      "start_line": 127,
+      "end_line": 178
+    },
+    "symbols": [
+      "_build"
+    ],
+    "hash": "2a8e322e8d118a48cb44df4e65322930631718063e345b02fcbb294709108521"
+  },
+  {
+    "id": "chunk-8525db3bc429db1d",
+    "file": "organisms/bass-drop-builder/bass-drop-builder.engine.js",
+    "range": {
+      "start_line": 179,
+      "end_line": 259
+    },
+    "symbols": [
+      "_drop"
+    ],
+    "hash": "bd8bfe2195527ed8e5c6fbd4329fea0778fda6374f8f6d907295a1dbea29540c"
+  },
+  {
+    "id": "chunk-2cdf5d6693efa22a",
+    "file": "organisms/bass-drop-builder/bass-drop-builder.engine.js",
+    "range": {
+      "start_line": 260,
+      "end_line": 272
+    },
+    "symbols": [
+      "_triggerVocal"
+    ],
+    "hash": "b5ac882917e082fce895f692482bfc41b0a6ec1a9e0cf7a3bca44d5794b81254"
+  },
+  {
+    "id": "chunk-694132e5b533dbf4",
+    "file": "organisms/bass-drop-builder/bass-drop-builder.engine.js",
+    "range": {
+      "start_line": 273,
+      "end_line": 307
+    },
+    "symbols": [
+      "mount"
+    ],
+    "hash": "c75cc45b3794cdbb8557bca81d2ad04b36f993a47debb2fcb4189f235ed36cd5"
+  },
+  {
+    "id": "chunk-77bdad2b2bea1c0e",
+    "file": "organisms/bass-drop-builder/bass-drop-builder.engine.js",
+    "range": {
+      "start_line": 308,
+      "end_line": 317
+    },
+    "symbols": [
+      "_getMasterGain"
+    ],
+    "hash": "5a6ba0dad129952746f00a89ff624f598108cae45a639cd3c414006135fa7270"
+  },
+  {
+    "id": "chunk-121ca73c54cace11",
+    "file": "organisms/bass-drop-builder/bass-drop-builder.engine.js",
+    "range": {
+      "start_line": 318,
+      "end_line": 324
+    },
+    "symbols": [
+      "_stopAll"
+    ],
+    "hash": "c9667f2fb1858a8f3c57d68fe05add2a2db5e58a5a02729900160cef7623e685"
+  },
+  {
+    "id": "chunk-e7633472d65e7145",
+    "file": "organisms/bass-drop-builder/bass-drop-builder.engine.js",
+    "range": {
+      "start_line": 325,
+      "end_line": 443
+    },
+    "symbols": [
+      "_fire"
+    ],
+    "hash": "2eb95d4a45e78a68aed4fb057d759153004fc141f6dd50db36de1a98e3324384"
+  },
+  {
+    "id": "chunk-98b77f3bc1044cdd",
+    "file": "organisms/macro-automation/schema/schema.json",
+    "range": {
+      "start_line": 1,
+      "end_line": 26
+    },
+    "symbols": [],
+    "hash": "066f545deb050130d4f03e21291ff989a0723a9b0c50c3933c5ba00ca1b8003c"
+  },
+  {
+    "id": "chunk-d6c4f96686e7773a",
+    "file": "organisms/macro-automation/macro-automation.engine.js",
+    "range": {
+      "start_line": 1,
+      "end_line": 15
+    },
+    "symbols": [],
+    "hash": "38eed4b85b86525e7cb7f550a5a29f3efb2bab4ddbcb15deed7fd08a96fd07be"
+  },
+  {
+    "id": "chunk-24d0892a469119f3",
+    "file": "organisms/macro-automation/macro-automation.engine.js",
+    "range": {
+      "start_line": 16,
+      "end_line": 31
+    },
+    "symbols": [
+      "mount"
+    ],
+    "hash": "6e49904eec19035398597247f949e4bc109579f89aea7bd8fb3d626e16bece74"
+  },
+  {
+    "id": "chunk-92276d0b1a29ccc3",
+    "file": "organisms/macro-automation/macro-automation.engine.js",
+    "range": {
+      "start_line": 32,
+      "end_line": 33
+    },
+    "symbols": [
+      "_clearTargetSub"
+    ],
+    "hash": "931f684607ad58ebb616c6a7646815315a2d453c1d3a66934869c9c704aee6e7"
+  },
+  {
+    "id": "chunk-38940e55b27f42cc",
+    "file": "organisms/macro-automation/macro-automation.engine.js",
+    "range": {
+      "start_line": 34,
+      "end_line": 43
+    },
+    "symbols": [
+      "setTarget"
+    ],
+    "hash": "5c7e8eef8a4432c1f248f5cbf46205f221cac8b6d3d4e0664696ed599a2eda08"
+  },
+  {
+    "id": "chunk-d770e3583b21ec50",
+    "file": "organisms/macro-automation/macro-automation.engine.js",
+    "range": {
+      "start_line": 44,
+      "end_line": 51
+    },
+    "symbols": [
+      "arm"
+    ],
+    "hash": "d2913e771dd819f11f44bbe6a573f103d920823e904ebda674009bc9c914b82a"
+  },
+  {
+    "id": "chunk-c5ee8f0d383e979c",
+    "file": "organisms/macro-automation/macro-automation.engine.js",
+    "range": {
+      "start_line": 52,
+      "end_line": 56
+    },
+    "symbols": [
+      "stopRecording"
+    ],
+    "hash": "ffaf8e375c2cd960f4714a74b27980bd613ab8d00c3a2a976fbb13737007e454"
+  },
+  {
+    "id": "chunk-6caf036811572b5f",
+    "file": "organisms/macro-automation/macro-automation.engine.js",
+    "range": {
+      "start_line": 57,
+      "end_line": 58
+    },
+    "symbols": [
+      "_clearPlayTimers"
+    ],
+    "hash": "9dd4433f3cc9dcd8393574611ef42fcf83ef5ca7a5f29ddd71b88e244df8bb0f"
+  },
+  {
+    "id": "chunk-47468faf6f5404ba",
+    "file": "organisms/macro-automation/macro-automation.engine.js",
+    "range": {
+      "start_line": 59,
+      "end_line": 80
+    },
+    "symbols": [
+      "play"
+    ],
+    "hash": "5498724cc1144fbb51003eb8c03d558b557de2f92ee604a570aa0dc0baf66caa"
+  },
+  {
+    "id": "chunk-11e78e58a8d88de7",
+    "file": "organisms/macro-automation/macro-automation.engine.js",
+    "range": {
+      "start_line": 81,
+      "end_line": 86
+    },
+    "symbols": [
+      "stopPlayback"
+    ],
+    "hash": "e785acfa8be3b0cd7de0d9843d65df2be3f7a5eba4a1698d0fb97f1c08b94703"
+  },
+  {
+    "id": "chunk-dae1a8df2c54e5db",
+    "file": "organisms/macro-automation/macro-automation.engine.js",
+    "range": {
+      "start_line": 87,
+      "end_line": 91
+    },
+    "symbols": [
+      "clearMacro"
+    ],
+    "hash": "50446db14bd56267dbadc1ad3669bf5d5c472f8aa9bfea5a4acba783fbf1dd3c"
+  },
+  {
+    "id": "chunk-b38d7656d5d9abc1",
+    "file": "organisms/macro-automation/macro-automation.engine.js",
+    "range": {
+      "start_line": 92,
+      "end_line": 131
+    },
+    "symbols": [
+      "_updateParam"
+    ],
+    "hash": "09f309f8ddb5d3079cf7f64e9a0286bdba24020a64f48aab83f0b2f766e3cb70"
+  },
+  {
+    "id": "chunk-fe7039a92de7e291",
+    "file": "organisms/reese-bass/schema/schema.json",
+    "range": {
+      "start_line": 1,
+      "end_line": 84
+    },
+    "symbols": [],
+    "hash": "901d8bd2eaaaf0c25850ed5515744b92fab009b19de8dace1002dca2d3f0f647"
+  },
+  {
+    "id": "chunk-ed49a3c923742c95",
+    "file": "organisms/reese-bass/reese-bass.engine.js",
+    "range": {
+      "start_line": 1,
+      "end_line": 13
+    },
+    "symbols": [],
+    "hash": "3123e4438aba829fed72839abfcf66b6066225afd48a6bfbf8707c0377e0231e"
+  },
+  {
+    "id": "chunk-36f908350ea037c9",
+    "file": "organisms/reese-bass/reese-bass.engine.js",
+    "range": {
+      "start_line": 14,
+      "end_line": 28
+    },
+    "symbols": [
+      "mount"
+    ],
+    "hash": "4a60847c457a900c0dc4fdf93f2a3a1d21682f3b03c63ccaf6c19ed4008f47b7"
+  },
+  {
+    "id": "chunk-28b5e0d6fed3f3c4",
+    "file": "organisms/reese-bass/reese-bass.engine.js",
+    "range": {
+      "start_line": 29,
+      "end_line": 60
+    },
+    "symbols": [
+      "_start"
+    ],
+    "hash": "cc8cd35bb88ce13dcd682f041803af2fa8316e7903b7ce960706da66ff810f51"
+  },
+  {
+    "id": "chunk-876f013d26ac7405",
+    "file": "organisms/reese-bass/reese-bass.engine.js",
+    "range": {
+      "start_line": 61,
+      "end_line": 68
+    },
+    "symbols": [
+      "_stop"
+    ],
+    "hash": "c3e5c0a89527d4969e555b81a93334994a7eb8f960fef4b55c00dbddde62ffcc"
+  },
+  {
+    "id": "chunk-eeda37a5e6e2efe4",
+    "file": "organisms/reese-bass/reese-bass.engine.js",
+    "range": {
+      "start_line": 69,
+      "end_line": 101
+    },
+    "symbols": [
+      "_trigger"
+    ],
+    "hash": "b209b95a843b5c69b9a4773295e4d41613e2f2285a24657c5423dfa87a9b8fdd"
+  },
+  {
+    "id": "chunk-70c8019e9cd9e5f0",
+    "file": "organisms/reese-bass/reese-bass.engine.js",
+    "range": {
+      "start_line": 102,
+      "end_line": 113
+    },
+    "symbols": [
+      "_updateParam"
+    ],
+    "hash": "c0c95e86c6cede647d3785c47e805f7ea51ca5328fc417553b34c1521ed2abcc"
+  },
+  {
+    "id": "chunk-ab18673c9904db6b",
+    "file": "organisms/reese-bass/reese-bass.engine.js",
+    "range": {
+      "start_line": 114,
+      "end_line": 149
+    },
+    "symbols": [
+      "_syncUI"
+    ],
+    "hash": "3465c0223501ab73a8683ae09ce4948819add0d6da179f8c9a8117f6a21b23e0"
+  },
+  {
+    "id": "chunk-a1b7573bdb356ab5",
+    "file": "organisms/photo-editor/schema/schema.json",
+    "range": {
+      "start_line": 1,
+      "end_line": 31
+    },
+    "symbols": [],
+    "hash": "8524a471d60e75d6294ac6606d536eb6baf987d8fe874bd35df3e72b7bb06c14"
+  },
+  {
+    "id": "chunk-d1d5170e2b81e5da",
+    "file": "organisms/photo-editor/photo-editor.engine.js",
+    "range": {
+      "start_line": 1,
+      "end_line": 13
+    },
+    "symbols": [],
+    "hash": "eca3d2eb50bc6aaaefd1eeb686479c13381eec643d5fca74e7f5dfd7b75843af"
+  },
+  {
+    "id": "chunk-fccca2b8dbd0348b",
+    "file": "organisms/photo-editor/photo-editor.engine.js",
+    "range": {
+      "start_line": 14,
+      "end_line": 23
+    },
+    "symbols": [
+      "mount"
+    ],
+    "hash": "9a47ef018c810ff12f828a46911d1cc23cfaa07a12fe85f00cab2be8602c7152"
+  },
+  {
+    "id": "chunk-1749620ed93f540b",
+    "file": "organisms/photo-editor/photo-editor.engine.js",
+    "range": {
+      "start_line": 24,
+      "end_line": 36
+    },
+    "symbols": [
+      "filterString"
+    ],
+    "hash": "c55e02712ced35a8bf5499ef02ccad47583929581c074b617fedbd1a4f1a42da"
+  },
+  {
+    "id": "chunk-13c1a97f9764e9d7",
+    "file": "organisms/photo-editor/photo-editor.engine.js",
+    "range": {
+      "start_line": 37,
+      "end_line": 46
+    },
+    "symbols": [
+      "loadFile"
+    ],
+    "hash": "61298653c34033db13cb280adffb7dcb216a3843fb891def73a617490184c9a4"
+  },
+  {
+    "id": "chunk-cc78e68a630a1daf",
+    "file": "organisms/photo-editor/photo-editor.engine.js",
+    "range": {
+      "start_line": 47,
+      "end_line": 57
+    },
+    "symbols": [
+      "draw"
+    ],
+    "hash": "f9f1fa79d31989625eddecebeea67c2f5a0eb21e26cc25e00970fc700f77b012"
+  },
+  {
+    "id": "chunk-f15483c407b3566b",
+    "file": "organisms/photo-editor/photo-editor.engine.js",
+    "range": {
+      "start_line": 58,
+      "end_line": 75
+    },
+    "symbols": [
+      "applyCrop"
+    ],
+    "hash": "4755d848a669cbc03260ab8410dfd1ebdd270fc552b1eaf2c449ac8491fb89e7"
+  },
+  {
+    "id": "chunk-651ac912fe876381",
+    "file": "organisms/photo-editor/photo-editor.engine.js",
+    "range": {
+      "start_line": 76,
+      "end_line": 91
+    },
+    "symbols": [
+      "exportPNG"
+    ],
+    "hash": "3b235ac8b84f4f5482214e2b8907011c147f71bd4858451bae32e6da631309ff"
+  },
+  {
+    "id": "chunk-a65c37211eb44733",
+    "file": "organisms/photo-editor/photo-editor.engine.js",
+    "range": {
+      "start_line": 92,
+      "end_line": 95
+    },
+    "symbols": [
+      "_updateParam"
+    ],
+    "hash": "5bfe59674ab595bf4143f718471cd3feab377bc5407e6514efb2bd0813082001"
+  },
+  {
+    "id": "chunk-71436f0915f28749",
+    "file": "organisms/photo-editor/photo-editor.engine.js",
+    "range": {
+      "start_line": 96,
+      "end_line": 128
+    },
+    "symbols": [
+      "_syncUI"
+    ],
+    "hash": "95d717195f049df40b628e4f0552712cc3ca70bf306c9422cd9495fefe0ef26e"
+  },
+  {
+    "id": "chunk-12347cffd3f8c982",
+    "file": "organisms/nexus-shared/nexus-node-core.js",
+    "range": {
+      "start_line": 1,
+      "end_line": 45
+    },
+    "symbols": [],
+    "hash": "7ee4b981d9b2c97d753bd6b5cd2c5c04a7bd837f41adb0dab2378476398de500"
+  },
+  {
+    "id": "chunk-de4bed7eaa58ef68",
+    "file": "organisms/nexus-shared/nexus-node-core.js",
+    "range": {
+      "start_line": 46,
+      "end_line": 71
+    },
+    "symbols": [
+      "mount"
+    ],
+    "hash": "169ddec6e29d9960c4337adeb8ccf23812b7c32a6c74ffe1ee45edb976dce4b4"
+  },
+  {
+    "id": "chunk-6ff275a47f0a6680",
+    "file": "organisms/nexus-shared/nexus-node-core.js",
+    "range": {
+      "start_line": 72,
+      "end_line": 75
+    },
+    "symbols": [
+      "_withTimeout"
+    ],
+    "hash": "2a94d9d257ea450aa03a352e078f6747edbd2cdf3750e79e6130c62e36089c55"
+  },
+  {
+    "id": "chunk-42b413fa37f8e0fd",
+    "file": "organisms/nexus-shared/nexus-node-core.js",
+    "range": {
+      "start_line": 76,
+      "end_line": 77
+    },
+    "symbols": [
+      "_sync"
+    ],
+    "hash": "e10eabd28450a3292d8baf1b94218937ca569ddceb0a7dcb708079f6e645e39c"
+  },
+  {
+    "id": "chunk-5bc24b232c22c91e",
+    "file": "organisms/nexus-shared/nexus-node-core.js",
+    "range": {
+      "start_line": 78,
+      "end_line": 99
+    },
+    "symbols": [
+      "_pollOnce"
+    ],
+    "hash": "a237c0d776abe9b1c36e21c4ea48437c181af1e07011c8497697a283c98b395a"
+  },
+  {
+    "id": "chunk-c41be7e659589d9f",
+    "file": "organisms/nexus-shared/nexus-node-core.js",
+    "range": {
+      "start_line": 100,
+      "end_line": 124
+    },
+    "symbols": [
+      "_diagnose"
+    ],
+    "hash": "b534ef89e915deab6fe1455c5c3158e48defd2bfd482b28eaee59061cfe1256c"
+  },
+  {
+    "id": "chunk-883345540a0b2364",
+    "file": "organisms/nexus-shared/nexus-node-core.js",
+    "range": {
+      "start_line": 125,
+      "end_line": 128
+    },
+    "symbols": [
+      "_openSnapshots"
+    ],
+    "hash": "61e8ea86062cec9fd9cc415dff39afb82c8068d47eda408b10fd184848157d92"
+  },
+  {
+    "id": "chunk-031c343890dfd8bb",
+    "file": "organisms/nexus-shared/nexus-node-core.js",
+    "range": {
+      "start_line": 129,
+      "end_line": 132
+    },
+    "symbols": [
+      "_openIdearium"
+    ],
+    "hash": "cf7aa8f8913b6297338dc533b60747142a71db837a22160bd2531cc956d4cac8"
+  },
+  {
+    "id": "chunk-9845c1ced003872d",
+    "file": "organisms/nexus-shared/nexus-node-core.js",
+    "range": {
+      "start_line": 133,
+      "end_line": 139
+    },
+    "symbols": [
+      "_startPolling"
+    ],
+    "hash": "5cd147d23f1a11760a52d80e91ffcd9595885b29cfa44292e98c6188b1dc0a58"
+  },
+  {
+    "id": "chunk-fcd49aa471c37210",
+    "file": "organisms/nexus-shared/nexus-node-core.js",
+    "range": {
+      "start_line": 140,
+      "end_line": 185
+    },
+    "symbols": [
+      "_stopPolling"
+    ],
+    "hash": "922a8c0da280ec5e33917862e134cbf08b3ecdc464cd7b696bbc70a11853b2a0"
+  },
+  {
+    "id": "chunk-ef8bd834816285a6",
+    "file": "organisms/wobble-bass/schema/schema.json",
+    "range": {
+      "start_line": 1,
+      "end_line": 96
+    },
+    "symbols": [],
+    "hash": "4ba373191a65474657f27dd6798e23583fefff91bdceb925d7432d4c7a19f12e"
+  },
+  {
+    "id": "chunk-6afadd576888102c",
+    "file": "organisms/wobble-bass/wobble-bass.engine.js",
+    "range": {
+      "start_line": 1,
+      "end_line": 13
+    },
+    "symbols": [],
+    "hash": "3cb8aad2addd6d143b2fbf84c86f19c3661b356dcf74ba1f51152eb4acfaf458"
+  },
+  {
+    "id": "chunk-d051efc57a531a70",
+    "file": "organisms/wobble-bass/wobble-bass.engine.js",
+    "range": {
+      "start_line": 14,
+      "end_line": 20
+    },
+    "symbols": [
+      "_dist"
+    ],
+    "hash": "baa96be167941c9f0211722321c6a0445440ff0de89aed748909263a7ea9255e"
+  },
+  {
+    "id": "chunk-e67c29bbda6cdcdd",
+    "file": "organisms/wobble-bass/wobble-bass.engine.js",
+    "range": {
+      "start_line": 21,
+      "end_line": 36
+    },
+    "symbols": [
+      "mount"
+    ],
+    "hash": "db5e91e7a6924b573a3f24652ef03d973c5ff1494362e697271a0e334dca2078"
+  },
+  {
+    "id": "chunk-3947b66303455dcb",
+    "file": "organisms/wobble-bass/wobble-bass.engine.js",
+    "range": {
+      "start_line": 37,
+      "end_line": 59
+    },
+    "symbols": [
+      "_start"
+    ],
+    "hash": "429bfb935df493bb47daddfee4c37159abe03b170990e87b5fa4185c738e1bdb"
+  },
+  {
+    "id": "chunk-eb65b56f39c0fbd1",
+    "file": "organisms/wobble-bass/wobble-bass.engine.js",
+    "range": {
+      "start_line": 60,
+      "end_line": 67
+    },
+    "symbols": [
+      "_stop"
+    ],
+    "hash": "c3e5c0a89527d4969e555b81a93334994a7eb8f960fef4b55c00dbddde62ffcc"
+  },
+  {
+    "id": "chunk-69c94d145ec6b522",
+    "file": "organisms/wobble-bass/wobble-bass.engine.js",
+    "range": {
+      "start_line": 68,
+      "end_line": 85
+    },
+    "symbols": [
+      "_trigger"
+    ],
+    "hash": "9cc590ac5099cfa087ca7083ebf7a00b567cfac54958e5f7f7f5b4db304bcad5"
+  },
+  {
+    "id": "chunk-77da3f2ae9870a4b",
+    "file": "organisms/wobble-bass/wobble-bass.engine.js",
+    "range": {
+      "start_line": 86,
+      "end_line": 96
+    },
+    "symbols": [
+      "_updateParam"
+    ],
+    "hash": "cc6be5e9eaf3b4d28899448dadf17eaf5c10815b6b163c818d6f9f625b3f6b67"
+  },
+  {
+    "id": "chunk-c6363b8527d22401",
+    "file": "organisms/wobble-bass/wobble-bass.engine.js",
+    "range": {
+      "start_line": 97,
+      "end_line": 131
+    },
+    "symbols": [
+      "_syncUI"
+    ],
+    "hash": "9de10fe254982eed32267ac247c3fffae9846e8a3fc9449e788fd9d9344db052"
+  },
+  {
+    "id": "chunk-356ed31599512ded",
+    "file": "organisms/supersaw/schema/schema.json",
+    "range": {
+      "start_line": 1,
+      "end_line": 32
+    },
+    "symbols": [],
+    "hash": "d559ad98a6ed038fb862a4a479c72a5cd5b6aa64a3579ba667d5dddbc19b57fb"
+  },
+  {
+    "id": "chunk-ee0e24214136cfe3",
+    "file": "organisms/supersaw/supersaw.engine.js",
+    "range": {
+      "start_line": 1,
+      "end_line": 13
+    },
+    "symbols": [],
+    "hash": "9a44c7c2c814786675110d6f1cb598fc351a6a37daaa94d526accd12f7ba42cb"
+  },
+  {
+    "id": "chunk-f52b4b178607e3fe",
+    "file": "organisms/supersaw/supersaw.engine.js",
+    "range": {
+      "start_line": 14,
+      "end_line": 29
+    },
+    "symbols": [
+      "mount"
+    ],
+    "hash": "3711782fe86960e16d1542f04258fed7572349fab39c1cd0451dc9270d2dbf9c"
+  },
+  {
+    "id": "chunk-20d36688b0e4b7b4",
+    "file": "organisms/supersaw/supersaw.engine.js",
+    "range": {
+      "start_line": 30,
+      "end_line": 31
+    },
+    "symbols": [
+      "_midiToHz"
+    ],
+    "hash": "fe0da0f4e342293ad731b130160209bbb23d0652ac6314f07a6dd5b6a1a029dd"
+  },
+  {
+    "id": "chunk-afd4c95cbb14168c",
+    "file": "organisms/supersaw/supersaw.engine.js",
+    "range": {
+      "start_line": 32,
+      "end_line": 57
+    },
+    "symbols": [
+      "_buildStack"
+    ],
+    "hash": "5192bdf0caf86e8393525a067f47b59276164817616deb729057e8ccee15f88a"
+  },
+  {
+    "id": "chunk-9bfdd95e6db0bc49",
+    "file": "organisms/supersaw/supersaw.engine.js",
+    "range": {
+      "start_line": 58,
+      "end_line": 76
+    },
+    "symbols": [
+      "_trigger"
+    ],
+    "hash": "5220fda7fbde27ff22d4ada45e7a422372472beb522a023a329bb737a0d07a4b"
+  },
+  {
+    "id": "chunk-d08085b1a0e585f6",
+    "file": "organisms/supersaw/supersaw.engine.js",
+    "range": {
+      "start_line": 77,
+      "end_line": 94
+    },
+    "symbols": [
+      "_start"
+    ],
+    "hash": "58c2c2b9acc3a46fffd8c386e26bfb5da1b88ffc38d40ae988ecbe27b5c1ff1d"
+  },
+  {
+    "id": "chunk-fb869fa7fdb280e5",
+    "file": "organisms/supersaw/supersaw.engine.js",
+    "range": {
+      "start_line": 95,
+      "end_line": 105
+    },
+    "symbols": [
+      "_stop"
+    ],
+    "hash": "8115c1144d91fc84d9ce9c0c16bd3e0da7bc38cdb132ccfb1092efdd1e25d179"
+  },
+  {
+    "id": "chunk-b90e095404d88d70",
+    "file": "organisms/supersaw/supersaw.engine.js",
+    "range": {
+      "start_line": 106,
+      "end_line": 110
+    },
+    "symbols": [
+      "_updateParam"
+    ],
+    "hash": "9e992b637ea7c24424364d0f47b9927fbf62308ea8a02471c0a08b519be05d05"
+  },
+  {
+    "id": "chunk-775a8b576aa7ac32",
+    "file": "organisms/supersaw/supersaw.engine.js",
+    "range": {
+      "start_line": 111,
+      "end_line": 151
+    },
+    "symbols": [
+      "_syncUI"
+    ],
+    "hash": "f9de6103bf91a3c8b448dd5b116c99bc38a536a95a2a45d54376b498d2967523"
+  },
+  {
+    "id": "chunk-280ee503ee7b8ac0",
+    "file": "organisms/timeline/schema/schema.json",
+    "range": {
+      "start_line": 1,
+      "end_line": 62
+    },
+    "symbols": [],
+    "hash": "f71b7e7a395c06acf9a1d3843660eeeeebd4941587c82241aaeeb95d89e9afb6"
+  },
+  {
+    "id": "chunk-ceae14f7aeaeed87",
+    "file": "organisms/timeline/timeline.engine.js",
+    "range": {
+      "start_line": 1,
+      "end_line": 6
+    },
+    "symbols": [],
+    "hash": "44becc1f3e1468b0472ce2f9210051096a24db29b90c25c86e8008c89a4c228f"
+  },
+  {
+    "id": "chunk-6d65f0001e60a633",
+    "file": "organisms/timeline/timeline.engine.js",
+    "range": {
+      "start_line": 7,
+      "end_line": 11
+    },
+    "symbols": [
+      "mount"
+    ],
+    "hash": "51ad33b75f5f1d0eb1647704ec99143093733c8b6e5dbf036afb6305ae1e044f"
+  },
+  {
+    "id": "chunk-c0bf139079ba2c20",
+    "file": "organisms/timeline/timeline.engine.js",
+    "range": {
+      "start_line": 12,
+      "end_line": 13
+    },
+    "symbols": [
+      "_uid"
+    ],
+    "hash": "2e5c6f5c9679c6909b4fb48141238e0bbc65726b629f6958acdde3ef059f14c6"
+  },
+  {
+    "id": "chunk-abb7f6e085ade191",
+    "file": "organisms/timeline/timeline.engine.js",
+    "range": {
+      "start_line": 14,
+      "end_line": 20
+    },
+    "symbols": [
+      "_addLane"
+    ],
+    "hash": "2cdb9ffcd97e8640dd9fa1193e9a4b97845c01be80498743e8434940b219810f"
+  },
+  {
+    "id": "chunk-ae289be2f374f0ca",
+    "file": "organisms/timeline/timeline.engine.js",
+    "range": {
+      "start_line": 21,
+      "end_line": 21
+    },
+    "symbols": [
+      "_addClip"
+    ],
+    "hash": "cb30b40c0a2e35b28dcc6f94e723b46108733a02f85bef3da49ad3eb5dcc2dde"
+  },
+  {
+    "id": "chunk-3a6275cf0b4440ce",
+    "file": "organisms/timeline/timeline.engine.js",
+    "range": {
+      "start_line": 22,
+      "end_line": 30
+    },
+    "symbols": [
+      "lane"
+    ],
+    "hash": "18ab142e6d14f81912ed96ab129462ff0e22904bc3e15d562557bfcc2c2778f4"
+  },
+  {
+    "id": "chunk-93b1b130b4eff818",
+    "file": "organisms/timeline/timeline.engine.js",
+    "range": {
+      "start_line": 31,
+      "end_line": 38
+    },
+    "symbols": [
+      "_play"
+    ],
+    "hash": "71c08a455b7656d7bd66a56fd4b08217d7a5298a205d2e9e0645045640e5570e"
+  },
+  {
+    "id": "chunk-e5ef3a47b33a275c",
+    "file": "organisms/timeline/timeline.engine.js",
+    "range": {
+      "start_line": 39,
+      "end_line": 45
+    },
+    "symbols": [
+      "_stop"
+    ],
+    "hash": "9ef4bce6d0077bd60024a390398fca8f4442daccc8d35777145e5b889a6b2f2b"
+  },
+  {
+    "id": "chunk-af40cf3268133511",
+    "file": "organisms/timeline/timeline.engine.js",
+    "range": {
+      "start_line": 46,
+      "end_line": 52
+    },
+    "symbols": [
+      "_tick"
+    ],
+    "hash": "0a0273c3b63a527b88730b0dcc04e98cf74351f8f5cca81d51ad2d2cd356bd91"
+  },
+  {
+    "id": "chunk-cdcb0e8b8d3cb620",
+    "file": "organisms/timeline/timeline.engine.js",
+    "range": {
+      "start_line": 53,
+      "end_line": 57
+    },
+    "symbols": [
+      "_emitPH"
+    ],
+    "hash": "dba343f789212d9a177fb6b733207b7d25a000b82331e6a99d3c85944fec7da5"
+  },
+  {
+    "id": "chunk-27c55a49c5716490",
+    "file": "organisms/timeline/timeline.engine.js",
+    "range": {
+      "start_line": 58,
+      "end_line": 85
+    },
+    "symbols": [
+      "_syncUI"
+    ],
+    "hash": "96b3a61f2d534290d8d9b53580f45a0ffc2548b97f5532dcd4f60e45a9cd02e9"
+  },
+  {
+    "id": "chunk-d910c79b87f3157d",
+    "file": "organisms/timeline/timeline.engine.js",
+    "range": {
+      "start_line": 86,
+      "end_line": 144
+    },
+    "symbols": [
+      "_keyHandler"
+    ],
+    "hash": "d46927560588c13384a467244b578c7067b41923dfa77e02c42c8bc3669a9b43"
+  },
+  {
+    "id": "chunk-86aa7aa0e04f5317",
+    "file": "organisms/nexus-guardian/schema/schema.json",
+    "range": {
+      "start_line": 1,
+      "end_line": 22
+    },
+    "symbols": [],
+    "hash": "91fdd52b4020e5d683269553e9fbbeffb19ec49e9cffc452a53d14523d1877ba"
+  },
+  {
+    "id": "chunk-cd848cd0d0dfacd4",
+    "file": "organisms/nexus-guardian/nexus-guardian.engine.js",
+    "range": {
+      "start_line": 1,
+      "end_line": 13
+    },
+    "symbols": [],
+    "hash": "9f455357936d25f4d6f00d44d023c7e59e2ec4f69d8b231b3b673d7dda78440d"
+  },
+  {
+    "id": "chunk-84ddc87abcc0c008",
+    "file": "organisms/nexus-guardian/nexus-guardian.engine.js",
+    "range": {
+      "start_line": 14,
+      "end_line": 33
+    },
+    "symbols": [
+      "mount"
+    ],
+    "hash": "b1cd7339af05a53df8e5c49334c27c90a943772444ad66cfb09e1a8bb56d73c1"
+  },
+  {
+    "id": "chunk-aa416cf31bb65955",
+    "file": "organisms/nexus-orchestrator/schema/schema.json",
+    "range": {
+      "start_line": 1,
+      "end_line": 22
+    },
+    "symbols": [],
+    "hash": "3e40962202f5190baa8e980a03b199728bf338d25fbf1909ab72312cc4501e54"
+  },
+  {
+    "id": "chunk-18c90cfdfb5e1ba6",
+    "file": "organisms/nexus-orchestrator/nexus-orchestrator.engine.js",
+    "range": {
+      "start_line": 1,
+      "end_line": 13
+    },
+    "symbols": [],
+    "hash": "61486b102100dd16d4670080bbe7d6060a3b3eabb363ab3a2b79ebf9734fce76"
+  },
+  {
+    "id": "chunk-f723afe73cf7832c",
+    "file": "organisms/nexus-orchestrator/nexus-orchestrator.engine.js",
+    "range": {
+      "start_line": 14,
+      "end_line": 33
+    },
+    "symbols": [
+      "mount"
+    ],
+    "hash": "be57fec72f82f955fc5d77b6af0635d63898c2e1a806c87316047f4b6745462e"
+  },
+  {
+    "id": "chunk-f5a6c34bbfab03f8",
+    "file": "organisms/edm-lab/schema/schema.json",
+    "range": {
+      "start_line": 1,
+      "end_line": 94
+    },
+    "symbols": [],
+    "hash": "ac101924bff95114816bdde58084591cfef72ce97a24ee3a4cd06bc817b721a6"
+  },
+  {
+    "id": "chunk-95c66b030d24d961",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "range": {
+      "start_line": 1,
+      "end_line": 17
+    },
+    "symbols": [],
+    "hash": "e0a2b7c3450266aef3013c66af049bcfd6d51fc9827f0b8d4142294d3629e3cb"
+  },
+  {
+    "id": "chunk-58eb549d695563b4",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "range": {
+      "start_line": 18,
+      "end_line": 31
+    },
+    "symbols": [
+      "_dist"
+    ],
+    "hash": "2131c3b5af76d5e491b05e283321bfd063199f83fb466472a312f531c6b5547d"
+  },
+  {
+    "id": "chunk-6f3750d97777245e",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "range": {
+      "start_line": 32,
+      "end_line": 38
+    },
+    "symbols": [
+      "BassEngine"
+    ],
+    "hash": "9808e39c1133d7b10537c98122031a0ac502d10c505e1ca07f0e26570e0790a4"
+  },
+  {
+    "id": "chunk-491d992f173c4e32",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "range": {
+      "start_line": 39,
+      "end_line": 61
+    },
+    "symbols": [
+      "start"
+    ],
+    "hash": "28f4ccd7d1926cf9564901dee81976ecc7004f58a199616575c4e3b150ec7861"
+  },
+  {
+    "id": "chunk-0fa21a9fd5dfe469",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "range": {
+      "start_line": 62,
+      "end_line": 75
+    },
+    "symbols": [
+      "trackFilter"
+    ],
+    "hash": "a5d0a2a1486629d16920aee42fc1f2d5df90f9df24e821cf9a78e35aa2220ec7"
+  },
+  {
+    "id": "chunk-b1ac55178028a3f9",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "range": {
+      "start_line": 76,
+      "end_line": 83
+    },
+    "symbols": [
+      "stop"
+    ],
+    "hash": "7de601c07833a331c64333e3f2a7ea642aa5affbac69a67b7a33cef72978abd1"
+  },
+  {
+    "id": "chunk-837478f5dc0b0ea4",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "range": {
+      "start_line": 84,
+      "end_line": 95
+    },
+    "symbols": [
+      "set"
+    ],
+    "hash": "34b82616404cda702530e29ed64b72f5b673f4baef38834f3f41b0376643958b"
+  },
+  {
+    "id": "chunk-5250a0b2bf6ccd49",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "range": {
+      "start_line": 96,
+      "end_line": 117
+    },
+    "symbols": [
+      "impact"
+    ],
+    "hash": "1fc50afc7636f7fe17676600f30e5ecf4c200b1611321431b3d770e50898c92b"
+  },
+  {
+    "id": "chunk-ba0d70b0d09c9376",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "range": {
+      "start_line": 118,
+      "end_line": 126
+    },
+    "symbols": [
+      "RhythmEngine"
+    ],
+    "hash": "66b0513e66481935bd2916704e0a349865b221b5b1eb44ee117ad533fb775860"
+  },
+  {
+    "id": "chunk-a6c49ce4bc9ed891",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "range": {
+      "start_line": 127,
+      "end_line": 136
+    },
+    "symbols": [
+      "density"
+    ],
+    "hash": "96b9de5308bb1efe030154bddfa408a721fb93f70da29ed83be57d15fcbbf2dc"
+  },
+  {
+    "id": "chunk-e4f6db9a13325589",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "range": {
+      "start_line": 137,
+      "end_line": 159
+    },
+    "symbols": [
+      "_fireKit"
+    ],
+    "hash": "ccee63a5d3705ea24644b986251394eb789a22fbf5b99b51bd96221a4a101246"
+  },
+  {
+    "id": "chunk-1eb21de79a51ab77",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "range": {
+      "start_line": 160,
+      "end_line": 180
+    },
+    "symbols": [
+      "_bootClock"
+    ],
+    "hash": "12a578cda82cc3846a586c93e8f33bc8c7703cc027576b6be7cf9c0fd18a1ec6"
+  },
+  {
+    "id": "chunk-9feac5a6fbce09e7",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "range": {
+      "start_line": 181,
+      "end_line": 192
+    },
+    "symbols": [
+      "_fireKitAt"
+    ],
+    "hash": "c505c6d03ab8263bc6f0b4e68eb335a34d2dd7584c56a2200750aa04a0f26982"
+  },
+  {
+    "id": "chunk-fc841b619bb09162",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "range": {
+      "start_line": 193,
+      "end_line": 198
+    },
+    "symbols": [
+      "start"
+    ],
+    "hash": "bbab115a1d97bda813cce80e1895db3c9446e89812c131da7cad71b36db0d047"
+  },
+  {
+    "id": "chunk-d271201bbf2aa5a6",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "range": {
+      "start_line": 199,
+      "end_line": 204
+    },
+    "symbols": [
+      "stop"
+    ],
+    "hash": "0b00bd11c7dd5aedf92022a4786027996db2d58b2ebe8d9fb70f8db433bbfdd5"
+  },
+  {
+    "id": "chunk-051a683f43d59087",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "range": {
+      "start_line": 205,
+      "end_line": 208
+    },
+    "symbols": [
+      "setDensity"
+    ],
+    "hash": "bf8919816f9655fcf63467733c8e2a913851d36488071b545f55310250de4f49"
+  },
+  {
+    "id": "chunk-f264070f60469f9d",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "range": {
+      "start_line": 209,
+      "end_line": 212
+    },
+    "symbols": [
+      "getDensityMap"
+    ],
+    "hash": "833911ec90a23db1f73763b259230b20902a3d95bc31ec62fe347b8d49a0b9b6"
+  },
+  {
+    "id": "chunk-b9913053beb6263a",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "range": {
+      "start_line": 213,
+      "end_line": 223
+    },
+    "symbols": [
+      "paintBrush"
+    ],
+    "hash": "cad18ef060065f36e129b5ef357f21887da193beecf269cd2ab1b8f377b367a6"
+  },
+  {
+    "id": "chunk-9a8bd3186b7fd46f",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "range": {
+      "start_line": 224,
+      "end_line": 236
+    },
+    "symbols": [
+      "setBPM"
+    ],
+    "hash": "bff8dd5977e5b2f7abf67356567feda3bd0a4eb4419eceb2875354936c7f2ba7"
+  },
+  {
+    "id": "chunk-0cd70a974646fbde",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "range": {
+      "start_line": 237,
+      "end_line": 244
+    },
+    "symbols": [
+      "TensionEngine"
+    ],
+    "hash": "bbb1f03d0b251aab2e6dd64279ec4c9e7870c70cf33b909ad7a963a7ac82c6a4"
+  },
+  {
+    "id": "chunk-7029c4b8fda3efbb",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "range": {
+      "start_line": 245,
+      "end_line": 251
+    },
+    "symbols": [
+      "_intervals"
+    ],
+    "hash": "21208a389d0f6c04e31c7f3c6700a6b2e33b218bb2f54d859696cfb113f3cdfe"
+  },
+  {
+    "id": "chunk-c86623e8a076477b",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "range": {
+      "start_line": 252,
+      "end_line": 259
+    },
+    "symbols": [
+      "start"
+    ],
+    "hash": "11ff84badd717cbdf8127ecbfff89bc6bdc7ffd28f55a87abaaee68b7d40562c"
+  },
+  {
+    "id": "chunk-0819ff74f28a1bdf",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "range": {
+      "start_line": 260,
+      "end_line": 279
+    },
+    "symbols": [
+      "_rebuild"
+    ],
+    "hash": "872447e247663f159ad679eca8233d967a2ad95d9cf9226626e0895c93dbc605"
+  },
+  {
+    "id": "chunk-bc5cfbe34e36aecf",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "range": {
+      "start_line": 280,
+      "end_line": 284
+    },
+    "symbols": [
+      "setTension"
+    ],
+    "hash": "085b2667808273ff0c28cd6993121ce19d52f40b892c7140ca295814063210ba"
+  },
+  {
+    "id": "chunk-640ab5a432e82bdc",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "range": {
+      "start_line": 285,
+      "end_line": 288
+    },
+    "symbols": [
+      "setLevel"
+    ],
+    "hash": "9585790975d7469c99a2a2d5f552f48a72f728de495a69005ef4352bbf79ed79"
+  },
+  {
+    "id": "chunk-013ea8dc3a088ccf",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "range": {
+      "start_line": 289,
+      "end_line": 290
+    },
+    "symbols": [
+      "setBaseFreq"
+    ],
+    "hash": "cdba26b5f2f7ba8913f69a01bc47b38dc532163ea56582ddf7be58d2656ce4bc"
+  },
+  {
+    "id": "chunk-3359388cb8b291e4",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "range": {
+      "start_line": 291,
+      "end_line": 297
+    },
+    "symbols": [
+      "stop"
+    ],
+    "hash": "d5542ab969af009746b568919f6d01d52947eb6b0eaf2e1e1af9e0f99ddbbfd2"
+  },
+  {
+    "id": "chunk-a88635de0598f4e3",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "range": {
+      "start_line": 298,
+      "end_line": 305
+    },
+    "symbols": [
+      "impact"
+    ],
+    "hash": "1f90ecc8a2fd2c6ed44090e87ece420bef4a38fa486e49390d413b7b16f98ca4"
+  },
+  {
+    "id": "chunk-29c3fa31a20fd566",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "range": {
+      "start_line": 306,
+      "end_line": 320
+    },
+    "symbols": [
+      "getOvertones"
+    ],
+    "hash": "d1032988b4f07dc424f561fdea17ffce7fc3befa0f039f62d8e8025c200fc847"
+  },
+  {
+    "id": "chunk-c487455f1d82db7e",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "range": {
+      "start_line": 321,
+      "end_line": 359
+    },
+    "symbols": [
+      "mount"
+    ],
+    "hash": "8ff3270cf0626abbf3e0644c52eb92cb6bf3021db5b749ca5c092a3816d37555"
+  },
+  {
+    "id": "chunk-cd3b981b9b61dde0",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "range": {
+      "start_line": 360,
+      "end_line": 406
+    },
+    "symbols": [
+      "_drop"
+    ],
+    "hash": "6cb0338f1655089ca20c1e437cc30af21f668a81f667921df32306b9638270c6"
+  },
+  {
+    "id": "chunk-8dc82399e47eb962",
+    "file": "organisms/edm-lab/edm-lab.engine.js",
+    "range": {
+      "start_line": 407,
+      "end_line": 447
+    },
+    "symbols": [
+      "_loadRhythmPreset"
+    ],
+    "hash": "7c13e56479851c66e2dfad7569fed5b242cad2be204efa2034aa0954615d73a6"
+  },
+  {
+    "id": "chunk-ee819c7bebd733d7",
+    "file": "organisms/nexus-architect/schema/schema.json",
+    "range": {
+      "start_line": 1,
+      "end_line": 22
+    },
+    "symbols": [],
+    "hash": "9b67edb5113190f292867a4a102d7f4f4e81a9727f2ff96fdb8cd530bd8028f7"
+  },
+  {
+    "id": "chunk-d581e8ea9d4ecfca",
+    "file": "organisms/nexus-architect/nexus-architect.engine.js",
+    "range": {
+      "start_line": 1,
+      "end_line": 13
+    },
+    "symbols": [],
+    "hash": "e142a2b98eed9c359591d1cd3c215a77a99942972d627af97f1e03e4c87c8ffe"
+  },
+  {
+    "id": "chunk-973b72a2e750fc71",
+    "file": "organisms/nexus-architect/nexus-architect.engine.js",
+    "range": {
+      "start_line": 14,
+      "end_line": 33
+    },
+    "symbols": [
+      "mount"
+    ],
+    "hash": "97e3cf942529cae49a8dd48b5dcfa991d7c641efd028eab66cd4862ada9aacaa"
+  },
+  {
+    "id": "chunk-c1e47decfe4a1c45",
+    "file": "organisms/contrast-analyser/schema/schema.json",
+    "range": {
+      "start_line": 1,
+      "end_line": 72
+    },
+    "symbols": [],
+    "hash": "e2b11614cda6059b46218805aa795e304ef0fe0c7a883086962ed18a0e0291c3"
+  },
+  {
+    "id": "chunk-b5db33feaade79e3",
+    "file": "organisms/contrast-analyser/contrast-analyser.engine.js",
+    "range": {
+      "start_line": 1,
+      "end_line": 18
+    },
+    "symbols": [],
+    "hash": "e300e01c0e921fc5736b3b3371169146b57ef869a8c104a6ad2db2556ad89eab"
+  },
+  {
+    "id": "chunk-d339065dc712c9f5",
+    "file": "organisms/contrast-analyser/contrast-analyser.engine.js",
+    "range": {
+      "start_line": 19,
+      "end_line": 57
+    },
+    "symbols": [
+      "detectTransients"
+    ],
+    "hash": "bedb16da7a35a8fccacb0b1f7045d89a84405adb0aeef9a64fef9db8182bb059"
+  },
+  {
+    "id": "chunk-3f13d8c5b4b33c0c",
+    "file": "organisms/contrast-analyser/contrast-analyser.engine.js",
+    "range": {
+      "start_line": 58,
+      "end_line": 59
+    },
+    "symbols": [
+      "detectBPM"
+    ],
+    "hash": "e272f607c1132b916dc6b5438de629e8382eeda18585e3fc5ec4341614c3277e"
+  },
+  {
+    "id": "chunk-4113e653224799a8",
+    "file": "organisms/contrast-analyser/contrast-analyser.engine.js",
+    "range": {
+      "start_line": 60,
+      "end_line": 83
+    },
+    "symbols": [
+      "times"
+    ],
+    "hash": "225ed9f6e87063f56ad8fea1841b27ab87b5e6e3915c7bb96cc6f281cccbf1e1"
+  },
+  {
+    "id": "chunk-d38ceee953f542a3",
+    "file": "organisms/contrast-analyser/contrast-analyser.engine.js",
+    "range": {
+      "start_line": 84,
+      "end_line": 99
+    },
+    "symbols": [
+      "buildRMSPeaks"
+    ],
+    "hash": "2b1196ccf5e86f278e9eb7eca39a398320ef30174b5d53a58435ce4b136ebb9f"
+  },
+  {
+    "id": "chunk-5464feb5575b7d4d",
+    "file": "organisms/contrast-analyser/contrast-analyser.engine.js",
+    "range": {
+      "start_line": 100,
+      "end_line": 110
+    },
+    "symbols": [
+      "peakDb"
+    ],
+    "hash": "c34188ff4246a0dc8e3de8bec27eb1cd6cbe30d186a4b53f46ef2b99a7413fb6"
+  },
+  {
+    "id": "chunk-44aae4c705973ae8",
+    "file": "organisms/contrast-analyser/contrast-analyser.engine.js",
+    "range": {
+      "start_line": 111,
+      "end_line": 111
+    },
+    "symbols": [
+      "avgRMS"
+    ],
+    "hash": "6b90192240cb5bfb995a5aa73a76e7e6cc6fd9aa2671da85772e161f77ef8e76"
+  },
+  {
+    "id": "chunk-9d902e7185c54650",
+    "file": "organisms/contrast-analyser/contrast-analyser.engine.js",
+    "range": {
+      "start_line": 112,
+      "end_line": 118
+    },
+    "symbols": [
+      "sum"
+    ],
+    "hash": "4b66b5972f48f1a303caddd64b67c4f96c8f7670ea7d1a331ebc1d33822886a9"
+  },
+  {
+    "id": "chunk-3607c3729fd34225",
+    "file": "organisms/contrast-analyser/contrast-analyser.engine.js",
+    "range": {
+      "start_line": 119,
+      "end_line": 136
+    },
+    "symbols": [
+      "clashScore"
+    ],
+    "hash": "2c7114e3c644bc24d4f3f209b9a768e251b6e8c34158daf9195644a9c6593b1c"
+  },
+  {
+    "id": "chunk-a3350e97c580086d",
+    "file": "organisms/contrast-analyser/contrast-analyser.engine.js",
+    "range": {
+      "start_line": 137,
+      "end_line": 158
+    },
+    "symbols": [
+      "displacementScore"
+    ],
+    "hash": "35a3bfbe3bb3ca412444e4cb1c5571929b858524408fc2d167ba7789e0d6a274"
+  },
+  {
+    "id": "chunk-5774dfbc7e0eb321",
+    "file": "organisms/contrast-analyser/contrast-analyser.engine.js",
+    "range": {
+      "start_line": 159,
+      "end_line": 166
+    },
+    "symbols": [
+      "dynamicContrastScore"
+    ],
+    "hash": "0768648c5f05bffcf70075a861665868620a2f54defd40a4ebeb165ae4eab1dc"
+  },
+  {
+    "id": "chunk-ee2a701b8e0ee1cc",
+    "file": "organisms/contrast-analyser/contrast-analyser.engine.js",
+    "range": {
+      "start_line": 167,
+      "end_line": 189
+    },
+    "symbols": [
+      "analysisText"
+    ],
+    "hash": "60ecefd2c89c01bbdd16ab7110bcca0b11b23301cfdc3575bcc2e8ba6fe998a3"
+  },
+  {
+    "id": "chunk-235aff49390b99ed",
+    "file": "organisms/contrast-analyser/contrast-analyser.engine.js",
+    "range": {
+      "start_line": 190,
+      "end_line": 206
+    },
+    "symbols": [
+      "mount"
+    ],
+    "hash": "885ea1b849e9e92672bfcd11266adbab3861019fafd7633d1b6cda6f4a3093e7"
+  },
+  {
+    "id": "chunk-6962a5ed9d21826c",
+    "file": "organisms/contrast-analyser/contrast-analyser.engine.js",
+    "range": {
+      "start_line": 207,
+      "end_line": 214
+    },
+    "symbols": [
+      "_bootAnalysers"
+    ],
+    "hash": "ac656583436bb21bc39f1eeefa533f4ac42e5be225522824de2752d4712fa47d"
+  },
+  {
+    "id": "chunk-84bd98c74a710648",
+    "file": "organisms/contrast-analyser/contrast-analyser.engine.js",
+    "range": {
+      "start_line": 215,
+      "end_line": 247
+    },
+    "symbols": [
+      "_loadSlot"
+    ],
+    "hash": "d0bbe996ea63fa2ca9eaea57ef82bb725ed6d1fc124377b27e1fff2845cf4caf"
+  },
+  {
+    "id": "chunk-91155f6b9c518292",
+    "file": "organisms/contrast-analyser/contrast-analyser.engine.js",
+    "range": {
+      "start_line": 248,
+      "end_line": 273
+    },
+    "symbols": [
+      "_runAnalysis"
+    ],
+    "hash": "2bd3a35ecdf30aeaebf2552e3169281fe403e33c2970e0b41de13d98590b90fc"
+  },
+  {
+    "id": "chunk-16e4da20656d6374",
+    "file": "organisms/contrast-analyser/contrast-analyser.engine.js",
+    "range": {
+      "start_line": 274,
+      "end_line": 292
+    },
+    "symbols": [
+      "bpmResult"
+    ],
+    "hash": "423cbf43c8dd155c5247440140b94875a670279b6c7db22fdd40ba7990cdfe8b"
+  },
+  {
+    "id": "chunk-d18e507fd4aba04b",
+    "file": "organisms/contrast-analyser/contrast-analyser.engine.js",
+    "range": {
+      "start_line": 293,
+      "end_line": 338
+    },
+    "symbols": [
+      "_bufferFFT"
+    ],
+    "hash": "add638cb5c635fda855832f7fdfcd0928182be0a15bd8bb29165821052d9cb03"
+  },
+  {
+    "id": "chunk-71fc402413eec1dd",
+    "file": "organisms/contrast-analyser/contrast-analyser.engine.js",
+    "range": {
+      "start_line": 339,
+      "end_line": 345
+    },
+    "symbols": [
+      "_tapBPM"
+    ],
+    "hash": "78c40365d07441844e47d558e77c6323a9b0444c406b4b94edf1d676c647abd8"
+  },
+  {
+    "id": "chunk-4a7a5e04a8ddc8d9",
+    "file": "organisms/contrast-analyser/contrast-analyser.engine.js",
+    "range": {
+      "start_line": 346,
+      "end_line": 375
+    },
+    "symbols": [
+      "avg"
+    ],
+    "hash": "60a2ae765a465c58f944a769af53714a173321d700b37c69783cda3eacdd13f9"
+  },
+  {
+    "id": "chunk-6873d0b2bdde1551",
+    "file": "organisms/lfo/schema/schema.json",
+    "range": {
+      "start_line": 1,
+      "end_line": 75
+    },
+    "symbols": [],
+    "hash": "ce6d4bcb26dcddb36b0ab17eef82f6352c0248ba4ccf263b870db613a7126f47"
+  },
+  {
+    "id": "chunk-77a521cc2723f762",
+    "file": "organisms/lfo/lfo.engine.js",
+    "range": {
+      "start_line": 1,
+      "end_line": 15
+    },
+    "symbols": [],
+    "hash": "9aaea74a22f5b3e530647a381cdd340feb5e6bbbec049b0b1d9c860498990383"
+  },
+  {
+    "id": "chunk-829bb75c4a6105be",
+    "file": "organisms/lfo/lfo.engine.js",
+    "range": {
+      "start_line": 16,
+      "end_line": 35
+    },
+    "symbols": [
+      "mount"
+    ],
+    "hash": "e8e519767d2c1ac9e4bb42e2044e48272c51a666c7af23c9a2f3686c4a5b4883"
+  },
+  {
+    "id": "chunk-cdd72d653afe8af8",
+    "file": "organisms/lfo/lfo.engine.js",
+    "range": {
+      "start_line": 36,
+      "end_line": 63
+    },
+    "symbols": [
+      "_compute"
+    ],
+    "hash": "874209c0e41852b92af9d38edb845eab1a1457d23dcf8ffc58efce456430265f"
+  },
+  {
+    "id": "chunk-f3bbe35249fb553b",
+    "file": "organisms/lfo/lfo.engine.js",
+    "range": {
+      "start_line": 64,
+      "end_line": 84
+    },
+    "symbols": [
+      "_tick"
+    ],
+    "hash": "fd85b9348adc44363996c24e6b05b462fc68047e749fbe0fa7fe34e97d0720c6"
+  },
+  {
+    "id": "chunk-77e53a50ae0133eb",
+    "file": "organisms/lfo/lfo.engine.js",
+    "range": {
+      "start_line": 85,
+      "end_line": 92
+    },
+    "symbols": [
+      "start"
+    ],
+    "hash": "38ec41544146213bd257d5b50093affb507b00f681f8d7b61330f3f22fdcd75c"
+  },
+  {
+    "id": "chunk-d5aba781427fd319",
+    "file": "organisms/lfo/lfo.engine.js",
+    "range": {
+      "start_line": 93,
+      "end_line": 98
+    },
+    "symbols": [
+      "stop"
+    ],
+    "hash": "fcfe00d35d6fd7015b33c38170b90b6a7a99c944326e2d6efdc6dfce2c6217ca"
+  },
+  {
+    "id": "chunk-c810db0051015887",
+    "file": "organisms/lfo/lfo.engine.js",
+    "range": {
+      "start_line": 99,
+      "end_line": 140
+    },
+    "symbols": [
+      "_syncUI"
+    ],
+    "hash": "ece943fd03f6a58830e631ed7cc3fb26e521ee7b7119fbfaea6a58cbcfa4c5bb"
+  },
+  {
+    "id": "chunk-d852a101766308e0",
+    "file": "organisms/video-editor/schema/schema.json",
+    "range": {
+      "start_line": 1,
+      "end_line": 32
+    },
+    "symbols": [],
+    "hash": "dc96af5cd9bf97554b643e64a9fa99382aebf892303cc559ca1d1ed65ceb0758"
+  },
+  {
+    "id": "chunk-77f217b8137d7580",
+    "file": "organisms/video-editor/video-editor.engine.js",
+    "range": {
+      "start_line": 1,
+      "end_line": 14
+    },
+    "symbols": [],
+    "hash": "81792136e51592738c4dbd13822f54aebd46b12ee2353d58ddc37ca59c54d14e"
+  },
+  {
+    "id": "chunk-9362cb714efb6af6",
+    "file": "organisms/video-editor/video-editor.engine.js",
+    "range": {
+      "start_line": 15,
+      "end_line": 27
+    },
+    "symbols": [
+      "mount"
+    ],
+    "hash": "0575d8c43b75276875e1d46622262b91e78e641b1803b0219ea5480058dccf5e"
+  },
+  {
+    "id": "chunk-6ad2375650da5572",
+    "file": "organisms/video-editor/video-editor.engine.js",
+    "range": {
+      "start_line": 28,
+      "end_line": 38
+    },
+    "symbols": [
+      "filterString"
+    ],
+    "hash": "25f7929a72d3abdac0333bea0fbe3d6721a5d62ca4a1744296cf5ed41aa184be"
+  },
+  {
+    "id": "chunk-a4db96876fea874a",
+    "file": "organisms/video-editor/video-editor.engine.js",
+    "range": {
+      "start_line": 39,
+      "end_line": 56
+    },
+    "symbols": [
+      "loadFile"
+    ],
+    "hash": "8dcacfa889ef69079d27e53a3a45b2be05e35f49712898e8f41210c893ff3b16"
+  },
+  {
+    "id": "chunk-0ea7d0abfb9d7f42",
+    "file": "organisms/video-editor/video-editor.engine.js",
+    "range": {
+      "start_line": 57,
+      "end_line": 67
+    },
+    "symbols": [
+      "drawFrame"
+    ],
+    "hash": "f8272ed67837045355d651e5d7bf76e7a097bcbbae83ea6804cde56f26cf783d"
+  },
+  {
+    "id": "chunk-b22cf3f240b5b367",
+    "file": "organisms/video-editor/video-editor.engine.js",
+    "range": {
+      "start_line": 68,
+      "end_line": 75
+    },
+    "symbols": [
+      "_pickMime"
+    ],
+    "hash": "c0a2217aa0e43499fd262fd3ceb8633563a21b2364999da65c955b656d2d5bf9"
+  },
+  {
+    "id": "chunk-4e9984ad1bd4fc13",
+    "file": "organisms/video-editor/video-editor.engine.js",
+    "range": {
+      "start_line": 76,
+      "end_line": 99
+    },
+    "symbols": [
+      "exportClip"
+    ],
+    "hash": "5c0561a7e24ef8cd4808eb4a94d7ccac9317796ea08cdc738b73b84b19a2eff4"
+  },
+  {
+    "id": "chunk-2cd9bee858cfd424",
+    "file": "organisms/video-editor/video-editor.engine.js",
+    "range": {
+      "start_line": 100,
+      "end_line": 114
+    },
+    "symbols": [
+      "pump"
+    ],
+    "hash": "7b68615964c2a37dcb2fc2288fd51700601ef7c44d2c8373c8f8bf017f5d501a"
+  },
+  {
+    "id": "chunk-694777c71ff94c81",
+    "file": "organisms/video-editor/video-editor.engine.js",
+    "range": {
+      "start_line": 115,
+      "end_line": 118
+    },
+    "symbols": [
+      "_updateParam"
+    ],
+    "hash": "5bfe59674ab595bf4143f718471cd3feab377bc5407e6514efb2bd0813082001"
+  },
+  {
+    "id": "chunk-649965ff2b18b373",
+    "file": "organisms/video-editor/video-editor.engine.js",
+    "range": {
+      "start_line": 119,
+      "end_line": 156
+    },
+    "symbols": [
+      "_syncUI"
+    ],
+    "hash": "c903d4a52562167698f4e6ad63ec49b7861490791f1a06526e9f81cbb3cfaf85"
+  },
+  {
+    "id": "chunk-e0b0d2e3f2c269b6",
+    "file": "organisms/nexus-diagnostic/schema/schema.json",
+    "range": {
+      "start_line": 1,
+      "end_line": 22
+    },
+    "symbols": [],
+    "hash": "210e91efe2f6602c2ecd828185aa6dbe73494171aad13c0609b41cb40ca5e48a"
+  },
+  {
+    "id": "chunk-e52fc478dadc4ce0",
+    "file": "organisms/nexus-diagnostic/nexus-diagnostic.engine.js",
+    "range": {
+      "start_line": 1,
+      "end_line": 13
+    },
+    "symbols": [],
+    "hash": "767725a0314fcef8a92292632f330f0544bd1d766ca3bacad798eef1a4754624"
+  },
+  {
+    "id": "chunk-35ae3bd823657875",
+    "file": "organisms/nexus-diagnostic/nexus-diagnostic.engine.js",
+    "range": {
+      "start_line": 14,
+      "end_line": 33
+    },
+    "symbols": [
+      "mount"
+    ],
+    "hash": "c45ab6b87e56b54e9fba6e40576f88864671be3ef884eaf65ae6b41d76e050ff"
+  },
+  {
+    "id": "chunk-fa1a16f42426be74",
+    "file": "organisms/nexus-idearium/schema/schema.json",
+    "range": {
+      "start_line": 1,
+      "end_line": 22
+    },
+    "symbols": [],
+    "hash": "9d16e118d60d46f89844aee46d18027569b0074bf05166c7ffe66212e55935a4"
+  },
+  {
+    "id": "chunk-2160e3f1c06be037",
+    "file": "organisms/nexus-idearium/nexus-idearium.engine.js",
+    "range": {
+      "start_line": 1,
+      "end_line": 13
+    },
+    "symbols": [],
+    "hash": "1a3baac02d68135ecda53cd1a89c71027580ed86848c0334f74711f2edf1acba"
+  },
+  {
+    "id": "chunk-51a26be6db0a1c59",
+    "file": "organisms/nexus-idearium/nexus-idearium.engine.js",
+    "range": {
+      "start_line": 14,
+      "end_line": 33
+    },
+    "symbols": [
+      "mount"
+    ],
+    "hash": "7730efe99177ab9b78000130435991ea38ba852503c9a869ba7bad7fda93329e"
+  },
+  {
+    "id": "chunk-74ff4d2dc8d6fb5f",
+    "file": "organisms/webhook-automation/schema/schema.json",
+    "range": {
+      "start_line": 1,
+      "end_line": 33
+    },
+    "symbols": [],
+    "hash": "9e1eea3770233896a79970cafbc7259861c7e71a81f4a2afc4e1549f654a6c6e"
+  },
+  {
+    "id": "chunk-94922c7d32ad506d",
+    "file": "organisms/webhook-automation/webhook-automation.engine.js",
+    "range": {
+      "start_line": 1,
+      "end_line": 16
+    },
+    "symbols": [],
+    "hash": "395dd1094e4e7298aa935027a84de6ad3d0fc05bf5a500d60e42d8781956364d"
+  },
+  {
+    "id": "chunk-dd96a745d66de376",
+    "file": "organisms/webhook-automation/webhook-automation.engine.js",
+    "range": {
+      "start_line": 17,
+      "end_line": 32
+    },
+    "symbols": [
+      "mount"
+    ],
+    "hash": "9f06d079550a94d59eca049d1ebb6fbd555646697e966284cb7e956f6b3b63e8"
+  },
+  {
+    "id": "chunk-2dd437c78f9dca54",
+    "file": "organisms/webhook-automation/webhook-automation.engine.js",
+    "range": {
+      "start_line": 33,
+      "end_line": 58
+    },
+    "symbols": [
+      "_fire"
+    ],
+    "hash": "4ad0578f6ed75b890de0a4912642f582428d36045dfc841605df7dfa3c7da20e"
+  },
+  {
+    "id": "chunk-293b9cf8e78956a8",
+    "file": "organisms/webhook-automation/webhook-automation.engine.js",
+    "range": {
+      "start_line": 59,
+      "end_line": 66
+    },
+    "symbols": [
+      "_resubscribe"
+    ],
+    "hash": "e275e4e84ebb5e45b11480f9bcd7ac86a524745846592d0becfeef1526ee33b7"
+  },
+  {
+    "id": "chunk-9f5e84b661da7cdd",
+    "file": "organisms/webhook-automation/webhook-automation.engine.js",
+    "range": {
+      "start_line": 67,
+      "end_line": 68
+    },
+    "symbols": [
+      "testFire"
+    ],
+    "hash": "16c2802d5b9257107760fd7b6c274d8db6819634ecdc5b5cf3c8fab6e882b4da"
+  },
+  {
+    "id": "chunk-698ffc6977121f06",
+    "file": "organisms/webhook-automation/webhook-automation.engine.js",
+    "range": {
+      "start_line": 69,
+      "end_line": 74
+    },
+    "symbols": [
+      "_updateParam"
+    ],
+    "hash": "5667d7843d0811b1dab7178dd982820bb0221f6b1e379bf8ee531a8900d9a801"
+  },
+  {
+    "id": "chunk-813d3ebea83cb82d",
+    "file": "organisms/webhook-automation/webhook-automation.engine.js",
+    "range": {
+      "start_line": 75,
+      "end_line": 109
+    },
+    "symbols": [
+      "_syncUI"
+    ],
+    "hash": "8e9a6a5745a3a649219a4913a02af840b7b9fb5ac98285f3ca6a5870f94ef5e3"
+  },
+  {
+    "id": "chunk-e27ec703acca7f1b",
+    "file": "organisms/acid-synth/schema/schema.json",
+    "range": {
+      "start_line": 1,
+      "end_line": 96
+    },
+    "symbols": [],
+    "hash": "c8e6ebb5d96bc445c93822699f0eb5da2e1566fb7ebf7baddd29d4be602121be"
+  },
+  {
+    "id": "chunk-cb2714600a4d2ed3",
+    "file": "organisms/acid-synth/acid-synth.engine.js",
+    "range": {
+      "start_line": 1,
+      "end_line": 12
+    },
+    "symbols": [],
+    "hash": "7b522f60d6cbfaf17c34bee2d0a98c9ffefc7de701c6d9f8dd18a5d84504cf4d"
+  },
+  {
+    "id": "chunk-20af1762afce30ab",
+    "file": "organisms/acid-synth/acid-synth.engine.js",
+    "range": {
+      "start_line": 13,
+      "end_line": 28
+    },
+    "symbols": [
+      "mount"
+    ],
+    "hash": "1400d3e5cf7a214eeca0a8f081b0ffb2eb0a9d357dbdcecb2266b6361cf0fb66"
+  },
+  {
+    "id": "chunk-13f75424374fe44a",
+    "file": "organisms/acid-synth/acid-synth.engine.js",
+    "range": {
+      "start_line": 29,
+      "end_line": 32
+    },
+    "symbols": [
+      "_midiToHz"
+    ],
+    "hash": "214235fc8d4318b3e227b0101f4e45bcaef65f8d0becce9a361041ff15ef527e"
+  },
+  {
+    "id": "chunk-1377fa547251312e",
+    "file": "organisms/acid-synth/acid-synth.engine.js",
+    "range": {
+      "start_line": 33,
+      "end_line": 68
+    },
+    "symbols": [
+      "_trigger"
+    ],
+    "hash": "5b2a3260b231e9c29a95f1953ec5c7172d77d9b556e3132b51bc623de8bb492d"
+  },
+  {
+    "id": "chunk-8106a24c66ab918a",
+    "file": "organisms/acid-synth/acid-synth.engine.js",
+    "range": {
+      "start_line": 69,
+      "end_line": 105
+    },
+    "symbols": [
+      "_syncUI"
+    ],
+    "hash": "04045f85dd95409a8b7e4bdd774f44d9ab635bf1a25657a893c24422cd62b0d5"
+  },
+  {
+    "id": "chunk-6eb93dc7f60adbbe",
+    "file": "organisms/sidechain-compressor/schema/schema.json",
+    "range": {
+      "start_line": 1,
+      "end_line": 28
+    },
+    "symbols": [],
+    "hash": "9e70f95ef54fdf85508863e525b7e1b023c01da92a2f790dac1625441c1a6344"
+  },
+  {
+    "id": "chunk-9edcca574d6f30fa",
+    "file": "organisms/sidechain-compressor/sidechain-compressor.engine.js",
+    "range": {
+      "start_line": 1,
+      "end_line": 13
+    },
+    "symbols": [],
+    "hash": "3db433c584b198f35131df0ee693f3345b5c4646a6493f5d5b83f418713b2f2d"
+  },
+  {
+    "id": "chunk-b59d91cae30d5b99",
+    "file": "organisms/sidechain-compressor/sidechain-compressor.engine.js",
+    "range": {
+      "start_line": 14,
+      "end_line": 26
+    },
+    "symbols": [
+      "mount"
+    ],
+    "hash": "32c89ffc526b395194496e10905f1fb7c7547d74e901d17a5324af5138f15107"
+  },
+  {
+    "id": "chunk-a9d65126768c5164",
+    "file": "organisms/sidechain-compressor/sidechain-compressor.engine.js",
+    "range": {
+      "start_line": 27,
+      "end_line": 44
+    },
+    "symbols": [
+      "_duck"
+    ],
+    "hash": "5a60e1a092a2712cdf18b2821a69ca34a80503c59b49a3048b349675c558f60a"
+  },
+  {
+    "id": "chunk-73b91adb4701523a",
+    "file": "organisms/sidechain-compressor/sidechain-compressor.engine.js",
+    "range": {
+      "start_line": 45,
+      "end_line": 48
+    },
+    "symbols": [
+      "_updateParam"
+    ],
+    "hash": "f660eb7cba35b8de9b120b827b4b196286ee8477c9f40d5c7b1a31536a31519b"
+  },
+  {
+    "id": "chunk-492bb6c771783ae5",
+    "file": "organisms/sidechain-compressor/sidechain-compressor.engine.js",
+    "range": {
+      "start_line": 49,
+      "end_line": 82
+    },
+    "symbols": [
+      "_syncUI"
+    ],
+    "hash": "2ba20fb3614e4ebbc244be301c22dfe48b233699b862ccca51586e6304c3287b"
+  },
+  {
+    "id": "chunk-0ce52db7d5c6d116",
+    "file": "organisms/pads/schema/schema.json",
+    "range": {
+      "start_line": 1,
+      "end_line": 81
+    },
+    "symbols": [],
+    "hash": "4d4a3c6b56f32b415425490ba6978f699510e7db0b6c631d7454fe7c874609e7"
+  },
+  {
+    "id": "chunk-ac5b59260e5ce1fc",
+    "file": "organisms/pads/pads.engine.js",
+    "range": {
+      "start_line": 1,
+      "end_line": 64
+    },
+    "symbols": [],
+    "hash": "dc43bb53aaf4ef99ae214a07862bbb72639391e8fe554a474aaf4e1a4753620d"
+  },
+  {
+    "id": "chunk-7e00cfc71551b817",
+    "file": "organisms/pads/pads.engine.js",
+    "range": {
+      "start_line": 65,
+      "end_line": 73
+    },
+    "symbols": [
+      "mount"
+    ],
+    "hash": "bf2a7765ae9b6b79f656cdd987fe053899d6eae5456c57bca40412ab239060a2"
+  },
+  {
+    "id": "chunk-e244e6840603d3ac",
+    "file": "organisms/pads/pads.engine.js",
+    "range": {
+      "start_line": 74,
+      "end_line": 75
+    },
+    "symbols": [
+      "banks"
+    ],
+    "hash": "0f1334ade066ddc8cf01cfa528954284e40d4ae32290d900103a10149fef7f05"
+  },
+  {
+    "id": "chunk-a4629b7f8cf33b93",
+    "file": "organisms/pads/pads.engine.js",
+    "range": {
+      "start_line": 76,
+      "end_line": 88
+    },
+    "symbols": [
+      "_fire"
+    ],
+    "hash": "c8fb582ca656a8cc887d66c8bad62b2e46a9b3f17e5317b1973e0729f03975cc"
+  },
+  {
+    "id": "chunk-a9c8a052e0639da1",
+    "file": "organisms/pads/pads.engine.js",
+    "range": {
+      "start_line": 89,
+      "end_line": 94
+    },
+    "symbols": [
+      "_setBank"
+    ],
+    "hash": "293500ddaa0e8bacb8ff9823461e2e785689e5dc7712f4432417633eda2b8dad"
+  },
+  {
+    "id": "chunk-e9c26fefd27286b8",
+    "file": "organisms/pads/pads.engine.js",
+    "range": {
+      "start_line": 95,
+      "end_line": 129
+    },
+    "symbols": [
+      "_syncUI"
+    ],
+    "hash": "c67ae73c7163215f756593b7c219e0c1c667731c6bf446920764c0ace797a948"
+  },
+  {
+    "id": "chunk-c7f1acfbbd77a791",
+    "file": "organisms/pads/pads.engine.js",
+    "range": {
+      "start_line": 130,
+      "end_line": 165
+    },
+    "symbols": [
+      "_keyHandler"
+    ],
+    "hash": "6f2dfeb5cb4a945a358f2fa80c7cc4aaf3b92a2cd823c61addef9d4431837a8d"
+  },
+  {
+    "id": "chunk-5ac135f0bc6fe390",
+    "file": "kernel/kernel.js",
+    "range": {
+      "start_line": 1,
+      "end_line": 43
+    },
+    "symbols": [],
+    "hash": "840b39f033c08b0af9b550ee168aaa79fa57d585eb268ef5860d9162ae645b21"
+  },
+  {
+    "id": "chunk-5fa7e58a56e260a0",
+    "file": "kernel/kernel.js",
+    "range": {
+      "start_line": 44,
+      "end_line": 51
+    },
+    "symbols": [
+      "unsub"
+    ],
+    "hash": "a0817d5ce3e85c98fdc6667849316e3533cb8fbc6eb96bc8dde66562595fdcbc"
+  },
+  {
+    "id": "chunk-8e21f79da2d76ca9",
+    "file": "kernel/kernel.js",
+    "range": {
+      "start_line": 52,
+      "end_line": 146
+    },
+    "symbols": [
+      "_fault"
+    ],
+    "hash": "5aa6fbeb44b8441cae4693a7f2618ef07b35f7a29e611389de2de21726482837"
+  },
+  {
+    "id": "chunk-93154fd564556da1",
+    "file": "kernel/kernel.js",
+    "range": {
+      "start_line": 147,
+      "end_line": 176
+    },
+    "symbols": [
+      "missing"
+    ],
+    "hash": "2338f339761aa2825bbd03ae0fb38a4fdb72643c6495eb25e064ee8466cfe5ce"
+  },
+  {
+    "id": "chunk-c2b4e4481b6d922a",
+    "file": "kernel/kernel.js",
+    "range": {
+      "start_line": 177,
+      "end_line": 177
+    },
+    "symbols": [
+      "srcHook"
+    ],
+    "hash": "54ffd6d9521e5a7248d40f6718f5644d8f7ae9cbca1136c0703082d93a244292"
+  },
+  {
+    "id": "chunk-c748184ea69d7229",
+    "file": "kernel/kernel.js",
+    "range": {
+      "start_line": 178,
+      "end_line": 245
+    },
+    "symbols": [
+      "tgtHook"
+    ],
+    "hash": "be46f3e809158cd73cae2a8bdf7a6b94f1a44d5e9386671b6cd0fcb877e20d3e"
+  },
+  {
+    "id": "chunk-1c2102d4dcd41e1b",
+    "file": "kernel/kernel.js",
+    "range": {
+      "start_line": 246,
+      "end_line": 382
+    },
+    "symbols": [
+      "_buildImpulse"
+    ],
+    "hash": "c43c6b055195e5e139c8a7c7aa375a87a00648f7d2bc375a749ac687820d2424"
+  },
+  {
+    "id": "chunk-5bee621902bfe14a",
+    "file": "kernel/kernel.js",
+    "range": {
+      "start_line": 383,
+      "end_line": 503
+    },
+    "symbols": [
+      "missing"
+    ],
+    "hash": "3ff004b5887195480e67995f5a6532001607c07a380d142dafd2ec0bd98ae9d9"
+  },
+  {
+    "id": "chunk-7c5a2874793b3680",
+    "file": "kernel/kernel.js",
+    "range": {
+      "start_line": 504,
+      "end_line": 544
+    },
+    "symbols": [
+      "_uuid"
+    ],
+    "hash": "4751bca1617f658778c7d6ea6d0aaf95061ce74fb0e4458389c39f9d629cfcbc"
+  },
+  {
+    "id": "chunk-666b6a8a1190c5e6",
+    "file": "kernel/intake.js",
+    "range": {
+      "start_line": 1,
+      "end_line": 33
+    },
+    "symbols": [],
+    "hash": "72619e117ac19b77643b4e949e22f192709dbbb46729829a2fcfe47efd24a09b"
+  },
+  {
+    "id": "chunk-2349d3a047417988",
+    "file": "kernel/intake.js",
+    "range": {
+      "start_line": 34,
+      "end_line": 41
+    },
+    "symbols": [
+      "_fnv32"
+    ],
+    "hash": "a659f9dc02fa5ae4e0d12f4c02414f2d63ae5f3f25c9bda353e2afeabdc21bf9"
+  },
+  {
+    "id": "chunk-4c15b29399032a46",
+    "file": "kernel/intake.js",
+    "range": {
+      "start_line": 42,
+      "end_line": 47
+    },
+    "symbols": [
+      "_matchMagic"
+    ],
+    "hash": "6692e416a73c2564bbadcf5cde44bfa24c42d5fbea8b66f8bb34b6f83a5e94b1"
+  },
+  {
+    "id": "chunk-271a4af7530d01ed",
+    "file": "kernel/intake.js",
+    "range": {
+      "start_line": 48,
+      "end_line": 84
+    },
+    "symbols": [
+      "_identify"
+    ],
+    "hash": "33d00044a576a202c296640500e832baf57fef62c2c56bf93e07c668327c6b6d"
+  },
+  {
+    "id": "chunk-16b5b5250ea2b8d4",
+    "file": "kernel/intake.js",
+    "range": {
+      "start_line": 85,
+      "end_line": 94
+    },
+    "symbols": [
+      "ingestAll"
+    ],
+    "hash": "2d99b7f159b3f62d10143f2f55faf761d99d69a9454d306604a5328da1403550"
+  },
+  {
+    "id": "chunk-f61375592b65092c",
+    "file": "kernel/intake.js",
+    "range": {
+      "start_line": 95,
+      "end_line": 100
+    },
+    "symbols": [
+      "ingestOne"
+    ],
+    "hash": "0f18cf3f35133d48b068936e934946399ab6a8b0d657fee406dd2b92feda8dd0"
+  },
+  {
+    "id": "chunk-0e0bf163a468a81c",
+    "file": "kernel/intake.js",
+    "range": {
+      "start_line": 101,
+      "end_line": 105
+    },
+    "symbols": [
+      "types"
+    ],
+    "hash": "72b1fdff3a26dd4dde02568f91328db6d6cbc185d4b714bb25ca0d10ac2e0372"
+  },
+  {
+    "id": "chunk-6a51aa5ddc8be4f1",
+    "file": "index.html",
+    "range": {
+      "start_line": 1,
+      "end_line": 992
+    },
+    "symbols": [],
+    "hash": "184c1bfdbfe14c0b9d13bb67f5f52324ed1c180b2ccc66496bc4d293fc07c8dd"
+  },
+  {
+    "id": "chunk-9f03a2055c381473",
+    "file": "manifest.json",
+    "range": {
+      "start_line": 1,
+      "end_line": 14
+    },
+    "symbols": [],
+    "hash": "bfccd03f81f4e119d1d2a6f0d804d467ebeed61c81b66fe53447cc85944fa62a"
+  }
+]

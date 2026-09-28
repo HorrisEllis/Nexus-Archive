@@ -1,0 +1,23 @@
+{
+  "id": "chunk-6f3750d97777245e",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/edm-lab/edm-lab.engine.js",
+  "range": {
+    "start_line": 32,
+    "end_line": 38
+  },
+  "symbols": [
+    "BassEngine"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "9808e39c1133d7b10537c98122031a0ac502d10c505e1ca07f0e26570e0790a4"
+  },
+  "status": "complete",
+  "content": "function BassEngine(AC, masterOut) {\n  let _running = false;\n  let _nodes = {};\n  let _params = { freq:55, cutoff:600, res:8, lfoRate:4, lfoDepth:800, drive:0.5, wave:'sawtooth', subLevel:0.6 };\n  let _filterPos = 0.5; /* 0-1 for UI */\n  let _rafId = null;\n"
+}

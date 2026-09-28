@@ -1,0 +1,23 @@
+{
+  "id": "chunk-c1b2715754f322e9",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "runtime/organism-factory.js",
+  "range": {
+    "start_line": 345,
+    "end_line": 345
+  },
+  "symbols": [
+    "addLaneBtn"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "688614229245438d93acf26a44e0e0afd51edbd62e3f601dad1fb17da9a86b11"
+  },
+  "status": "complete",
+  "content": "    const addLaneBtn=mkBtn(null,'+ LANE',()=>_pub('ui:lane_add',{name:'Track',icon:'♪',color:'#00d4ff'}));"
+}

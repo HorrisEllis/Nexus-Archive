@@ -137,7 +137,7 @@ function setIdentityName(name) {
 // 'agent'. Governed exactly like switchAgent — changing the hat is a real
 // action, RAID sees it.
 const AGENT_ROW_ID = 'agent';
-const VALID_AGENTS = new Set(['ollama', 'claude', 'chatgpt', 'gemini', 'mistral', 'perplexity', 'deepseek', 'auto']);   // deepseek: 0.39.265, a real NCP provider tab now
+const VALID_AGENTS = new Set(['ollama', 'claude', 'chatgpt', 'gemini', 'mistral', 'perplexity', 'auto']);
 
 /**
  * getCurrentAgent() — the provider copilot currently defaults to. 'auto'

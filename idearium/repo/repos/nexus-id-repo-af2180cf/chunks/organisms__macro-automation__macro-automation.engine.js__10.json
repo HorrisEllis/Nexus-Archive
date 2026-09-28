@@ -1,0 +1,23 @@
+{
+  "id": "chunk-b38d7656d5d9abc1",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/macro-automation/macro-automation.engine.js",
+  "range": {
+    "start_line": 92,
+    "end_line": 131
+  },
+  "symbols": [
+    "_updateParam"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "09f309f8ddb5d3079cf7f64e9a0286bdba24020a64f48aab83f0b2f766e3cb70"
+  },
+  "status": "complete",
+  "content": "  function _updateParam(key, val) {\n    if (key === 'targetInstanceId') { setTarget(val); return; }\n    if (key in _params) _params[key] = val;\n  }\n\n  const _unsubs = [\n    gBus.subscribe('ui:macro_arm:'    + instanceId, arm),\n    gBus.subscribe('ui:macro_stop_rec:' + instanceId, stopRecording),\n    gBus.subscribe('ui:macro_play:'   + instanceId, play),\n    gBus.subscribe('ui:macro_stop:'   + instanceId, stopPlayback),\n    gBus.subscribe('ui:macro_clear:'  + instanceId, clearMacro),\n    gBus.subscribe('ui:config_change:' + instanceId, ({ key, value }) => _updateParam(key, value)),\n  ];\n\n  if (_params.targetInstanceId) setTarget(_params.targetInstanceId);\n  sBus.publish('org:state_sync', { recording: false, playing: false, count: 0 });\n\n  KERNEL.registry.register({\n    instanceId,\n    id:       'eravos.macro-automation',\n    label:    'Macro Automation',\n    provides: ['capability.automation_record', 'capability.automation_playback'],\n    requires: [],\n    permissions: ['bus_publish', 'bus_subscribe'],\n    hooks: [\n      { hook_id: 'macro.hook.drive_out', direction: 'out', event_type: 'ui:config_change', contract_version: '1.0.0' },\n    ],\n  });\n\n  return {\n    unmount() { _clearPlayTimers(); _clearTargetSub(); _unsubs.forEach(u => u()); KERNEL.registry.unregister(instanceId); },\n    setTarget, arm, stopRecording, play, stopPlayback, clearMacro,\n    get events() { return _events.slice(); },\n    get params() { return { ..._params }; },\n  };\n}\n\nreturn { mount };\n})();\n"
+}

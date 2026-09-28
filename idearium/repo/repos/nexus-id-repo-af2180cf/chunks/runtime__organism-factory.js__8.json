@@ -1,0 +1,23 @@
+{
+  "id": "chunk-e09eb33ceb348909",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "runtime/organism-factory.js",
+  "range": {
+    "start_line": 132,
+    "end_line": 136
+  },
+  "symbols": [
+    "_fmt"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "449f57b2fb7b2ff2295974c7a0dd5e99027146ffa8c936809f77c954c2d59a84"
+  },
+  "status": "complete",
+  "content": "function _fmt(v, unit, step) {\n  const n = step >= 1 ? Math.round(v) : +v.toFixed(2);\n  return unit ? `${n}${unit}` : `${n}`;\n}\n"
+}

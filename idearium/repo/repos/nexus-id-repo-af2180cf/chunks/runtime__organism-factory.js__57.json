@@ -1,0 +1,23 @@
+{
+  "id": "chunk-c10648ad1d72af0a",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "runtime/organism-factory.js",
+  "range": {
+    "start_line": 1344,
+    "end_line": 1367
+  },
+  "symbols": [
+    "driveSlider"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "e7fb6d530102f05f4802f19afc4596b224de27ae4ee56c08412e543378203557"
+  },
+  "status": "complete",
+  "content": "    const driveSlider = mkParamRow('DRIVE',  0,   1,   0.5, 0.01,'',  '#ff2266', v => _pub('ui:bass-param', { key:'drive',    val:v }));\n\n    /* Waveform selector */\n    const waveRow = document.createElement('div');\n    waveRow.style.cssText = 'display:flex;gap:3px;';\n    ['sawtooth','square','triangle','sine'].forEach(w => {\n      const btn = document.createElement('button');\n      btn.textContent = w.slice(0,3).toUpperCase();\n      btn.style.cssText = `flex:1;height:18px;border-radius:2px;border:1px solid ${w==='sawtooth'?'#00ff88':'var(--b2)'};background:${w==='sawtooth'?'rgba(0,255,136,.1)':'transparent'};color:${w==='sawtooth'?'#00ff88':'var(--dim)'};font-family:var(--mono);font-size:6px;letter-spacing:.08em;cursor:pointer;transition:all .12s;outline:none;`;\n      btn.addEventListener('click', () => {\n        waveRow.querySelectorAll('button').forEach(b => { b.style.borderColor='var(--b2)'; b.style.color='var(--dim)'; b.style.background='transparent'; });\n        btn.style.borderColor='#00ff88'; btn.style.color='#00ff88'; btn.style.background='rgba(0,255,136,.1)';\n        _pub('ui:bass-param', { key:'wave', val:w });\n      });\n      waveRow.appendChild(btn);\n    });\n    bassParams.appendChild(waveRow);\n    bassWrap.appendChild(bassParams);\n\n    /* Filter canvas rendering */\n    let _bassFilterPos = 0.5;\n    let _draggingFilter = false;\n    let _bassParams = { cutoff:600, res:8, lfoDepth:800 };\n"
+}

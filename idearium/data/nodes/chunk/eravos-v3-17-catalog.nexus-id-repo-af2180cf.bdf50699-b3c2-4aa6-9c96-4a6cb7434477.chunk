@@ -1,0 +1,40 @@
+envelope: 1
+uuid: nexus-export-chunk-eravos-v3-17-catalog.nexus-id-repo-af2180cf.bdf50699-b3c2-4aa6-9c96-4a6cb7434477
+type: chunk
+id: eravos-v3-17-catalog.nexus-id-repo-af2180cf.bdf50699-b3c2-4aa6-9c96-4a6cb7434477
+context: idearium spec-engine chunk of spec ced8d1a8-ea48-4c70-88e9-ab5758ff3a3f
+intent: null
+summary: organisms-sidechain-compressor-sidechain-compressor-engine (complete)
+system: idearium
+tags:
+  - spec:ced8d1a8-ea48-4c70-88e9-ab5758ff3a3f
+  - status:complete
+  - section:organisms-sidechain-compressor-sidechain-compressor-engine
+  - specName:eravos-v3-17-catalog
+  - agent:ingest
+  - repo:nexus-id-repo-af2180cf
+exported_at: 1790367431566
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1790367431566
+lastSeenAt: 1790367431566
+fingerprint: null
+payload:
+  uuid: bdf50699-b3c2-4aa6-9c96-4a6cb7434477
+  specUuid: ced8d1a8-ea48-4c70-88e9-ab5758ff3a3f
+  sectionId: organisms-sidechain-compressor-sidechain-compressor-engine
+  sectionTitle: organisms/sidechain-compressor/sidechain-compressor.engine.js
+  chunkIdx: 70
+  status: complete
+  realPath: organisms/sidechain-compressor/sidechain-compressor.engine.js
+  fileName: 70-organisms-sidechain-compressor-sidechain-compressor-engine.md
+  filePath: D:\Backups\Downloads\Nexus_v0_39_241\idearium\data\specs\ced8d1a8-ea48-4c70-88e9-ab5758ff3a3f\70-organisms-sidechain-compressor-sidechain-compressor-engine-bdf50699.md
+  agent: ingest
+  agentModel: ingest:drop
+  attempts: 1
+  failureMode: null
+  byteSize: 3397
+  contentHash: 092d3bd078f0bbe5e891a5a33793c4f3aa4befd560848e559256e3f9f13c2d8e
+  createdAt: 1790367431337
+  updatedAt: 1790367431377
+  completedAt: 1790367431377

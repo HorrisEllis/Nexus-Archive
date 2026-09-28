@@ -1,0 +1,23 @@
+{
+  "id": "chunk-49c1b593bf6c2a17",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "runtime/wire-system.js",
+  "range": {
+    "start_line": 277,
+    "end_line": 285
+  },
+  "symbols": [
+    "redrawAll"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "2635722895d4838f7f8958a4c294c4e7159cebd371d3de8abf8371785021f9f5"
+  },
+  "status": "complete",
+  "content": "function redrawAll() {\n  _wires.forEach(entry => _updateWirePath(entry));\n}\n\nwindow.addEventListener('resize', redrawAll);\n\nreturn { init, onSpawn, onClose, redrawAll };\n})();\n"
+}

@@ -11,8 +11,7 @@
  * plugin (src/plugins host) so it's actually consulted, not just built in
  * isolation — same discipline as every other plugin wiring this session.
  *
- * Storage (§JAA 2026-09-26): the Clear Glass JAA store, one row per origin.
- * Was: JSON file, same pattern as options/store.js (better-sqlite3
+ * Storage: JSON file, same pattern as options/store.js (better-sqlite3
  * confirmed NOT installed in this environment — checked directly before
  * picking a backend, not assumed) — appropriate for this data's real
  * volume (a handful of settings per origin a person has actually visited
@@ -29,7 +28,6 @@
 
 const path = require('path');
 const fs   = require('fs');
-const { JaaKV } = require('../storage/jaa');
 
 const STORE_PATH = path.join(
   process.env.APPDATA || process.env.HOME || '.', '.clear-glass', 'site-settings.json'
@@ -54,14 +52,14 @@ class SiteSettingsStore {
     this.data = {}; // origin -> { key: value, ... }
   }
 
-  // §JAA 2026-09-26 — James: "make it jaa. no json." One JAA row per origin
-  // (src/storage/jaa.js), value = that origin's settings; site-settings.json
-  // is imported once and left on disk.
-  _kv() { return this._jaa || (this._jaa = new JaaKV('cg_site_settings', { legacyFile: STORE_PATH })); }
-
   load() {
     try {
-      this.data = this._kv().load();
+      fs.mkdirSync(path.dirname(STORE_PATH), { recursive: true });
+      if (fs.existsSync(STORE_PATH)) {
+        this.data = JSON.parse(fs.readFileSync(STORE_PATH, 'utf8'));
+      } else {
+        this._persist();
+      }
     } catch (err) {
       console.warn('[SiteSettings] load error:', err.message);
     }
@@ -70,7 +68,8 @@ class SiteSettingsStore {
 
   _persist() {
     try {
-      this._kv().replaceAll(this.data);
+      fs.mkdirSync(path.dirname(STORE_PATH), { recursive: true });
+      fs.writeFileSync(STORE_PATH, JSON.stringify(this.data, null, 2));
     } catch (err) {
       console.warn('[SiteSettings] persist error:', err.message);
     }

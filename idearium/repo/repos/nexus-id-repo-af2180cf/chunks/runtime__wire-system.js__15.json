@@ -1,0 +1,23 @@
+{
+  "id": "chunk-10c386af9264bec1",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "runtime/wire-system.js",
+  "range": {
+    "start_line": 267,
+    "end_line": 276
+  },
+  "symbols": [
+    "onClose"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "18b765fc6fd850eb652427f7cdfe52cd4ad1850dd6b0c3e6e7a1c1f8f527dc18"
+  },
+  "status": "complete",
+  "content": "function onClose(instanceId) {\n  /* Remove all wires involving this organism */\n  _wires.forEach((entry, wireId) => {\n    if (entry.fromId === instanceId || entry.toId === instanceId) {\n      _removeWire(wireId);\n    }\n  });\n}\n\n/* Redraw all wires (e.g. after scroll/resize) */"
+}

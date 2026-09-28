@@ -1,0 +1,23 @@
+{
+  "id": "chunk-a3bbc456a68ce442",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/sample-player/sample-player.engine.js",
+  "range": {
+    "start_line": 14,
+    "end_line": 24
+  },
+  "symbols": [
+    "_load"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "edb1b5d462507902f485c906b356089a2a226882c10628639ea53ce5d5e73865"
+  },
+  "status": "complete",
+  "content": "  function _load(result) {\n    _name = result.name;\n    const AC = audio.boot();\n    AC.decodeAudioData(result.arrayBuffer.slice(0)).then(ab => {\n      _buf = ab;\n      const peaks = _buildPeaks(ab, 200);\n      sBus.publish('org:waveform_ready', { peaks, duration_sec: ab.duration, name: _name });\n      sBus.publish('org:state_sync', { name: _name, duration_sec: ab.duration });\n    }).catch(e => KERNEL.fault('ASSET_002', instanceId, `decode failed: ${e.message}`));\n  }\n"
+}

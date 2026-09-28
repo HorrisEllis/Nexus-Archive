@@ -1,0 +1,23 @@
+{
+  "id": "chunk-fbaf34a5d7a12401",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "runtime/organism-factory.js",
+  "range": {
+    "start_line": 2504,
+    "end_line": 2506
+  },
+  "symbols": [
+    "totalDur"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "3b5ce4cf5198435dbbcc6b5c1f1aa787c4b15241bcde72d468f649e0c12cefd6"
+  },
+  "status": "complete",
+  "content": "    function totalDur() { return STAGES.reduce((s,st)=>s+st.dur,0); }\n\n    /* Boundary x positions normalized 0-1 */"
+}

@@ -1,0 +1,23 @@
+{
+  "id": "chunk-42b413fa37f8e0fd",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/nexus-shared/nexus-node-core.js",
+  "range": {
+    "start_line": 76,
+    "end_line": 77
+  },
+  "symbols": [
+    "_sync"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "e10eabd28450a3292d8baf1b94218937ca569ddceb0a7dcb708079f6e645e39c"
+  },
+  "status": "complete",
+  "content": "  function _sync() { sBus.publish('org:state_sync', { ..._state }); }\n"
+}

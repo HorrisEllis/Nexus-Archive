@@ -1,0 +1,23 @@
+{
+  "id": "chunk-5f75d83b05ce3f09",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "runtime/canvas-cfr.js",
+  "range": {
+    "start_line": 125,
+    "end_line": 130
+  },
+  "symbols": [
+    "connectAnalyser"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "180dd3c2ddbbb78b62e701a970893be29f304e984243c107b54a5fb0a21da142"
+  },
+  "status": "complete",
+  "content": "function connectAnalyser(analyserNode) {\n  _analyser = analyserNode;\n  _fftData  = new Uint8Array(analyserNode.frequencyBinCount);\n}\n\n/* ── Organism → attractor bridge ───────────────────────── */"
+}

@@ -1,0 +1,21 @@
+{
+  "id": "chunk-6873d0b2bdde1551",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/lfo/schema/schema.json",
+  "range": {
+    "start_line": 1,
+    "end_line": 75
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "ce6d4bcb26dcddb36b0ab17eef82f6352c0248ba4ccf263b870db613a7126f47"
+  },
+  "status": "complete",
+  "content": "{\n  \"schema_version\": \"1.0.0\",\n  \"id\": \"eravos.lfo\",\n  \"label\": \"LFO\",\n  \"icon\": \"\\u3030\",\n  \"accent\": \"#aa44ff\",\n  \"domain\": [\n    \"music\",\n    \"modulation\",\n    \"control\"\n  ],\n  \"description\": \"Low-frequency oscillator. Publishes mod:signal globally. BPM sync mode.\",\n  \"permissions\": [\n    \"bus_publish\",\n    \"bus_subscribe\"\n  ],\n  \"provides\": [\n    \"capability.lfo\",\n    \"capability.mod_signal\"\n  ],\n  \"requires\": [],\n  \"hooks\": [\n    {\n      \"hook_id\": \"lfo.hook.mod_out\",\n      \"direction\": \"out\",\n      \"event_type\": \"mod:signal\",\n      \"contract_version\": \"1.0.0\"\n    }\n  ],\n  \"params\": {\n    \"shape\": {\n      \"type\": \"enum\",\n      \"values\": [\n        \"sine\",\n        \"triangle\",\n        \"square\",\n        \"sawtooth\",\n        \"S&H\"\n      ],\n      \"default\": \"sine\"\n    },\n    \"rate\": {\n      \"type\": \"float\",\n      \"min\": 0.01,\n      \"max\": 32,\n      \"default\": 4,\n      \"unit\": \"Hz\"\n    },\n    \"depth\": {\n      \"type\": \"float\",\n      \"min\": 0,\n      \"max\": 1,\n      \"default\": 0.5,\n      \"unit\": \"\"\n    },\n    \"phase\": {\n      \"type\": \"float\",\n      \"min\": 0,\n      \"max\": 360,\n      \"default\": 0,\n      \"unit\": \"degrees\"\n    },\n    \"bipolar\": {\n      \"type\": \"bool\",\n      \"default\": true\n    },\n    \"sync\": {\n      \"type\": \"bool\",\n      \"default\": false\n    }\n  },\n  \"ui\": {\n    \"type\": \"oscilloscope_interactive\"\n  }\n}"
+}

@@ -1,0 +1,23 @@
+{
+  "id": "chunk-a65c37211eb44733",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/photo-editor/photo-editor.engine.js",
+  "range": {
+    "start_line": 92,
+    "end_line": 95
+  },
+  "symbols": [
+    "_updateParam"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "5bfe59674ab595bf4143f718471cd3feab377bc5407e6514efb2bd0813082001"
+  },
+  "status": "complete",
+  "content": "  function _updateParam(key, val) {\n    if (key in _params) _params[key] = val;\n  }\n"
+}

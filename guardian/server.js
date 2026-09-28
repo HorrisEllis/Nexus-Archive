@@ -294,9 +294,9 @@ const path       = require('path');
 const os         = require('os');
 const { execSync } = require('child_process');
 
-// §0.39.261 — express and multer were loaded here "optionally" and never used
-// (uploads go through guardian/artifact-upload.js, routing through node:http);
-// removed with them from package.json.
+// ── Optional deps ─────────────────────────────────────────────────────────────
+let express, multer;
+try { express = require('express'); multer = require('multer'); } catch (_) {}
 
 // ── SISOStream — hoisted here so bus is available before any module code runs ─
 // §5.7 single event bus. Must be declared before NCP callbacks, gate registrations,
@@ -638,7 +638,6 @@ const { requestSync } = createChatSync({ bus, ncp });
 // module-scope semantics. cockpitBroadcast is a hoisted function declaration
 // (defined further down) so it's already a valid reference here.
 const pendingQueue = new Map(); // provider → job[] (legacy fallback for non-pool paths)
-let _chatTranscriptsRef = null;  // 0.39.259 — set once chat-transcripts is created (below); read by the dispatcher's chatFor
 // §BUILT 2026-09-19 — guardian owns the agent registry and the mesh-first escalation ladder.
 // Mesh -> archaeology/DOM-mapping repair -> userscript (NCP) -> user (picker). Default GUARDIAN_TRANSPORT=ncp-only.
 // §2026-09-23 — Clear Glass owns accounts (James: "yes clearglass"); the registry asks it instead of its own list.
@@ -665,13 +664,6 @@ const _ladder = require('./lib/dispatch-ladder').createLadder({
 // A mesh answer completes the job through the SAME handler an NCP GUARDIAN_COMPLETE goes through
 // (chat_log, response sink, bus events): no second completion implementation. Lazy: _handleNCPMessage is
 // defined further down and only referenced at call time.
-// §0.39.265 — the job retry module and the Eros typist (created below), and one way to complete a job from an
-// answer found on disk or in a transcript: the same handler a userscript's GUARDIAN_COMPLETE takes.
-let _jobRetryRef = null;
-const _erosTypist = require('./lib/eros-typist.js').createErosTypist({ selectorsFor: (p) => { try { const m = require('./lib/selector-map').mapFor(_agentRegistry, p); return m ? m.selectors : null; } catch (_) { return null; } } });
-function _completeJobWith(job, text, chatUrl, source) {
-  return _handleNCPMessage({ type: 'GUARDIAN_COMPLETE', jobId: job.id, provider: job.provider, text, chatUrl: chatUrl || undefined, source: source === 'transcript' ? 'transcript' : 'answer-first' });
-}
 const _completeFromMesh = (job, lr) => _handleNCPMessage({ type: 'GUARDIAN_COMPLETE', jobId: job.id, provider: job.provider,
   text: lr.text, chatUrl: lr.chatUrl, account: lr.accountId, agentId: lr.agentId });
 
@@ -681,13 +673,6 @@ const {
 } = wireGuardianCore({
   bus, ncp, pendingQueue, cockpitBroadcast, NEXUS_URL, postEvent: _postEvent,
   ladder: _ladder, completeFromMesh: _completeFromMesh,
-  // 0.39.259 — late-bound: _chatTranscripts is created below, after the job store exists; a job is only
-  // dispatched once boot has finished, by which time it is set.
-  chatFor: (job) => (_chatTranscriptsRef ? _chatTranscriptsRef.chatFor(job) : null),
-  // 0.39.265 — late-bound like chatFor: the retry module and the Eros typist are created further down
-  answerFirst: (job) => (_jobRetryRef ? _jobRetryRef.answerFirst(job) : null),
-  erosType: (job) => _erosTypist.type(job),
-  completeWith: (job, text, chatUrl, source) => _completeJobWith(job, text, chatUrl, source),
 });
 
 // §BUILT 2026-09-19 — agent-initiated wake for MESH-delivered jobs (the userscript path answers its own): when a mesh job's
@@ -712,20 +697,6 @@ require('./lib/gate-trail.js').attach({ bus, jobs });
 const _chatTranscripts = require('./lib/chat-transcripts.js').createChatTranscripts({ bus, jobs, ncp,
   complete: (job, text, chatUrl) => _handleNCPMessage({ type: 'GUARDIAN_COMPLETE', jobId: job.id, provider: job.provider, text, chatUrl, source: 'transcript' }) });
 _chatTranscripts.attach();
-_chatTranscriptsRef = _chatTranscripts;
-
-// §0.39.265 — James: "Guardian needs better retry logic. It got stuck earlier when I ran two jobs … the .jobs file
-// can link to the response. That way if it runs again can check for the response first." guardian/lib/job-retry.js:
-// a tab error that is about timing (busy, no composer, send failed, no reply) is tried again after a backoff, and a
-// re-send first looks for the job's answer (its .response node, then its chat transcript). The third attempt after
-// input/send failures goes through ErosmancerOS (guardian/lib/eros-typist.js) when Clear Glass has it connected.
-_jobRetryRef = require('./lib/job-retry.js').createJobRetry({
-  jobs, updateJob, bus, pool: require('./lib/dispatch-pool').pool, dispatchJob,
-  complete: (job, text, chatUrl, source) => _completeJobWith(job, text, chatUrl, source),
-  readResponse: (jobId) => require('./lib/response-sink').readNode(jobId),
-  replyFor: (job) => _chatTranscripts.replyFor(job),
-  erosAvailable: () => _erosTypist.available(),
-});
 
 // §BUILT 2026-09-11 — James: "persistent and doesn't leave until it's
 // delivered." createJobStore() (guardian/lib/jobs.js, this same pass)
@@ -835,16 +806,6 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(HTTP_PORT, '127.0.0.1', async () => {
-  // §0.39.271 X2 — Guardian hosts the node types (NODE-TAXONOMY.md): its hats and agents
-  // are regenerated from every forged hat, then its node registry (per-type folder watcher
-  // + _ledger.jsonl + JAA index) starts over guardian/data/nodes. Before this the registry
-  // was never booted and no .hat/.agent node existed. Off the request path; a failure is
-  // logged, never fatal.
-  setTimeout(() => {
-    try { const r = require('../lib/system-nodes.js').sync({ only: ['guardian'] }); console.log(`[guardian] nodes: ${JSON.stringify(r.systems.guardian ? { written: r.systems.guardian.written, commands: r.systems.guardian.commands } : {})} · hats/agents ${r.guardian ? r.guardian.written + ' written, ' + r.guardian.unchanged + ' unchanged' : 'skipped'}${r.errors.length ? ' · ' + r.errors.join('; ') : ''}`); }
-    catch (e) { console.warn(`[guardian] node sync failed (non-fatal): ${e.message}`); }
-    try { require('./lib/node-registry.js').start({}); } catch (e) { console.warn(`[guardian] node registry did not start (non-fatal): ${e.message}`); }
-  }, 3000);
   // Mesh subsystem relocated 2026-09-03 to clear-glass/src/network/
   // (James: "DNS/firewall/crypto/host-rotation/reverse-proxy maybe
   // recycle to clearglass" — moved as one whole unit, see that folder's
@@ -1016,14 +977,12 @@ server.listen(HTTP_PORT, '127.0.0.1', async () => {
       const gv  = readVer('userscript-chatgpt.js');
       const gmv = readVer('userscript-gemini.js');
       const ppv = readVer('userscript-perplexity.js');
-      const dsv = readVer('userscript-deepseek.js');
       if (!cv) return { ok:false, msg:'userscript-claude.js: @version missing' };
       if (!gv) return { ok:false, msg:'userscript-chatgpt.js: @version missing' };
       console.log('[guardian versions] claude=' + cv + ' chatgpt=' + gv +
         (gmv ? ' gemini=' + gmv : ' gemini=NOT_INSTALLED') +
-        (ppv ? ' perplexity=' + ppv : ' perplexity=NOT_INSTALLED') +
-        (dsv ? ' deepseek=' + dsv : ' deepseek=NOT_INSTALLED'));
-      return { ok: true, versions: { claude:cv, chatgpt:gv, gemini:gmv||null, perplexity:ppv||null, deepseek:dsv||null } };
+        (ppv ? ' perplexity=' + ppv : ' perplexity=NOT_INSTALLED'));
+      return { ok: true, versions: { claude:cv, chatgpt:gv, gemini:gmv||null, perplexity:ppv||null } };
     }
   });
 
@@ -1340,7 +1299,6 @@ const _handleNCPMessage = createNCPMessageHandler({
   activeQueues: _activeQueues, extractCodeBlocks,
   extractToolCallsFromDOM: _extractToolCallsFromDOM,
   findActiveSeamCompartment: _findActiveSeamCompartment,
-  retry: () => _jobRetryRef,   // 0.39.265 — guardian/lib/job-retry.js (late-bound)
 });
 
 // §BUILT 2026-09-08 — James: "the listener for the tools... from the
@@ -3048,9 +3006,6 @@ function handleExtendedRoutes(req, res, url, method) {
         // the request body. Forwarded now; askSync itself still needs
         // its own patch to pass this through to createJob (see ask.js).
         agentId:   body.agentId || undefined,
-        // 0.39.265 — the meaning, when `prompt` is copilot's reworded variant; and whether a finished twin may answer
-        canonical: typeof body.canonical === 'string' ? body.canonical : undefined,
-        reuse:     body.reuse === 'complete' ? 'complete' : undefined,
       }, {
         createJob,
         dispatchJob,
@@ -3423,12 +3378,10 @@ function handleExtendedRoutes(req, res, url, method) {
       // §LAW II — createJob writes to JAA
       const job = createJob({ command, provider, prompt, content, source: body.source || null,
         accountId: body.accountId, agentId: body.agentId, transport: body.transport === 'ncp' ? 'ncp' : undefined, wakeDepth: body.wakeDepth,
-        canonical: typeof body.canonical === 'string' ? body.canonical : undefined, reuse: body.reuse === 'complete' ? 'complete' : undefined,
         // §CODE-ARTIFACT 2026-09-19 — the file this job's code belongs in,
         // and the fence language to trust. Both optional: absent means the
         // completion listener captures nothing, exactly as before.
-        fileName: body.fileName, syntax: body.syntax,
-        hatInPrompt: typeof body.hatInPrompt === 'string' ? body.hatInPrompt : null });   // §0.39.269 — persona already in the prompt
+        fileName: body.fileName, syntax: body.syntax });
       dispatchJob(job);
       pRes(res, 200, { ok:true, jobId: job.id, status: job.status, provider });
 

@@ -1,0 +1,40 @@
+envelope: 1
+uuid: nexus-export-chunk-eravos-v3-17-catalog.nexus-id-repo-af2180cf.d355c4cc-f62b-45d1-887e-b4572c41596f
+type: chunk
+id: eravos-v3-17-catalog.nexus-id-repo-af2180cf.d355c4cc-f62b-45d1-887e-b4572c41596f
+context: idearium spec-engine chunk of spec ced8d1a8-ea48-4c70-88e9-ab5758ff3a3f
+intent: null
+summary: organisms-lfo-schema-schema (complete)
+system: idearium
+tags:
+  - spec:ced8d1a8-ea48-4c70-88e9-ab5758ff3a3f
+  - status:complete
+  - section:organisms-lfo-schema-schema
+  - specName:eravos-v3-17-catalog
+  - agent:ingest
+  - repo:nexus-id-repo-af2180cf
+exported_at: 1790367431551
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1790367431551
+lastSeenAt: 1790367431551
+fingerprint: null
+payload:
+  uuid: d355c4cc-f62b-45d1-887e-b4572c41596f
+  specUuid: ced8d1a8-ea48-4c70-88e9-ab5758ff3a3f
+  sectionId: organisms-lfo-schema-schema
+  sectionTitle: organisms/lfo/schema/schema.json
+  chunkIdx: 57
+  status: complete
+  realPath: organisms/lfo/schema/schema.json
+  fileName: 57-organisms-lfo-schema-schema.md
+  filePath: D:\Backups\Downloads\Nexus_v0_39_241\idearium\data\specs\ced8d1a8-ea48-4c70-88e9-ab5758ff3a3f\57-organisms-lfo-schema-schema-d355c4cc.md
+  agent: ingest
+  agentModel: ingest:drop
+  attempts: 1
+  failureMode: null
+  byteSize: 1781
+  contentHash: ce6d4bcb26dcddb36b0ab17eef82f6352c0248ba4ccf263b870db613a7126f47
+  createdAt: 1790367431337
+  updatedAt: 1790367431372
+  completedAt: 1790367431372

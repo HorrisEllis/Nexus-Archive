@@ -1,0 +1,23 @@
+{
+  "id": "chunk-38940e55b27f42cc",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/macro-automation/macro-automation.engine.js",
+  "range": {
+    "start_line": 34,
+    "end_line": 43
+  },
+  "symbols": [
+    "setTarget"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "5c7e8eef8a4432c1f248f5cbf46205f221cac8b6d3d4e0664696ed599a2eda08"
+  },
+  "status": "complete",
+  "content": "  function setTarget(id) {\n    _params.targetInstanceId = id;\n    _clearTargetSub();\n    if (!id) return;\n    _targetSub = gBus.subscribe('ui:config_change:' + id, ({ key, value }) => {\n      if (!_recording) return;\n      _events.push({ key, value, tMs: performance.now() - _recStartAt });\n    });\n  }\n"
+}

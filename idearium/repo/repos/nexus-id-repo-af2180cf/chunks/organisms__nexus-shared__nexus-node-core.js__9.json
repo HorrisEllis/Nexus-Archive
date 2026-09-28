@@ -1,0 +1,23 @@
+{
+  "id": "chunk-fcd49aa471c37210",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/nexus-shared/nexus-node-core.js",
+  "range": {
+    "start_line": 140,
+    "end_line": 185
+  },
+  "symbols": [
+    "_stopPolling"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "922a8c0da280ec5e33917862e134cbf08b3ecdc464cd7b696bbc70a11853b2a0"
+  },
+  "status": "complete",
+  "content": "  function _stopPolling() {\n    if (_interval) { clearInterval(_interval); _interval = null; }\n    _state = { ..._state, playing: false }; _sync();\n  }\n\n  const _unsubs = [\n    gBus.subscribe('transport:play',         () => _startPolling()),\n    gBus.subscribe('transport:stop',         () => _stopPolling()),\n    gBus.subscribe('transport:record-start', () => { _state = { ..._state, recording: true };  _sync(); }),\n    gBus.subscribe('transport:record-stop',  () => { _state = { ..._state, recording: false }; _sync(); }),\n    gBus.subscribe('ui:diagnose:'      + instanceId, () => _diagnose()),\n    gBus.subscribe('ui:open-snapshots:' + instanceId, () => _openSnapshots()),\n    gBus.subscribe('ui:open-idearium:'  + instanceId, () => _openIdearium()),\n  ];\n\n  /* One check immediately on mount so the card isn't blank\n     before anyone presses play — doesn't start the interval. */\n  _pollOnce();\n  if (window.MasterTransport?.playing) _startPolling();\n\n  KERNEL.registry.register({\n    instanceId,\n    id:       'eravos.nexus-' + cfg.key,\n    label:    cfg.label,\n    provides: ['capability.nexus_diagnostic'],\n    requires: [],\n    permissions: ['network_fetch', 'bus_publish', 'bus_subscribe'],\n    hooks: [\n      { hook_id: 'nn.hook.bus_out', direction: 'out', event_type: 'org:state_sync', contract_version: '1.0.0' },\n    ],\n  });\n\n  return {\n    unmount() {\n      _stopPolling();\n      _unsubs.forEach(u => u());\n      KERNEL.registry.unregister(instanceId);\n    },\n    get state() { return { ..._state }; },\n    diagnose: _diagnose,\n  };\n}\n\nreturn { mount };\n})();\n"
+}

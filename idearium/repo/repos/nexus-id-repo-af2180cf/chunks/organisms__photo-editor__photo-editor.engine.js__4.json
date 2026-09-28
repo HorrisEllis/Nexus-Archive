@@ -1,0 +1,23 @@
+{
+  "id": "chunk-cc78e68a630a1daf",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/photo-editor/photo-editor.engine.js",
+  "range": {
+    "start_line": 47,
+    "end_line": 57
+  },
+  "symbols": [
+    "draw"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "f9f1fa79d31989625eddecebeea67c2f5a0eb21e26cc25e00970fc700f77b012"
+  },
+  "status": "complete",
+  "content": "  function draw(canvas) {\n    if (!_image) return;\n    const ctx = canvas.getContext('2d');\n    canvas.width  = _image.naturalWidth;\n    canvas.height = _image.naturalHeight;\n    ctx.filter = filterString();\n    ctx.drawImage(_image, 0, 0);\n    ctx.filter = 'none';\n  }\n\n  /* Crop to a rect given in canvas pixel coords, replacing the working image */"
+}

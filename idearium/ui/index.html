@@ -120,30 +120,26 @@ body{display:flex;flex-direction:column;position:relative}
    WELCOME VIEW
    ════════════════════════════════════════════════════ */
 .welcome{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px;overflow-y:auto}
-.welcome-mark{font-family:var(--mono);font-size:clamp(11px,.8vw,14px);letter-spacing:.3em;color:var(--text3);margin-bottom:14px}
-.welcome-title{font-family:var(--mono);font-size:clamp(34px,3.4vw,60px);font-weight:600;letter-spacing:.12em;color:var(--sky);text-shadow:0 0 30px rgba(56,189,248,.25);margin-bottom:8px}
+.welcome-mark{font-family:var(--mono);font-size:11px;letter-spacing:.3em;color:var(--text3);margin-bottom:14px}
+.welcome-title{font-family:var(--mono);font-size:34px;font-weight:600;letter-spacing:.12em;color:var(--sky);text-shadow:0 0 30px rgba(56,189,248,.25);margin-bottom:8px}
 .welcome-title span{color:var(--text)}
-.welcome-sub{font-size:clamp(13px,1.05vw,18px);color:var(--text2);max-width:min(900px,70vw);text-align:center;line-height:1.7;margin-bottom:24px}
+.welcome-sub{font-size:13px;color:var(--text2);max-width:520px;text-align:center;line-height:1.7;margin-bottom:24px}
 .welcome-actions{display:flex;gap:12px;margin-bottom:36px}
-.welcome-action-btn{font-family:var(--mono);font-size:clamp(12px,.95vw,16px);letter-spacing:.04em;padding:clamp(10px,.9vw,15px) clamp(22px,2vw,36px);border-radius:6px;cursor:pointer;transition:all .15s;background:none}
+.welcome-action-btn{font-family:var(--mono);font-size:12px;letter-spacing:.04em;padding:10px 22px;border-radius:6px;cursor:pointer;transition:all .15s;background:none}
 .welcome-action-btn.primary{border:1px solid var(--sky);color:var(--sky);background:rgba(56,189,248,.08)}
 .welcome-action-btn.primary:hover{background:rgba(56,189,248,.16)}
 .welcome-action-btn.secondary{border:1px solid var(--b1);color:var(--text2)}
 .welcome-action-btn.secondary:hover{border-color:var(--sky);color:var(--sky)}
-.pillars{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(280px,100%),1fr));gap:clamp(14px,1.4vw,26px);max-width:min(1500px,92vw);width:100%}
-.pillar{background:rgba(13,18,25,.7);border:1px solid var(--b0);border-radius:10px;padding:clamp(18px,1.7vw,32px);cursor:pointer;transition:all .2s;text-align:left;position:relative;overflow:hidden}
+.pillars{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;max-width:920px;width:100%}
+.pillar{background:rgba(13,18,25,.7);border:1px solid var(--b0);border-radius:10px;padding:18px;cursor:pointer;transition:all .2s;text-align:left;position:relative;overflow:hidden}
 .pillar:hover{border-color:var(--b2);background:rgba(56,189,248,.04);transform:translateY(-2px)}
-.pillar-step{font-family:var(--mono);font-size:clamp(9px,.7vw,12px);color:var(--text3);letter-spacing:.1em}
-.pillar-icon{font-size:clamp(20px,1.7vw,30px);margin:8px 0 10px}
-.pillar-name{font-size:clamp(14px,1.15vw,20px);font-weight:500;color:var(--text);margin-bottom:5px}
-.pillar-desc{font-size:clamp(11px,.9vw,15px);color:var(--text2);line-height:1.55}
+.pillar-step{font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:.1em}
+.pillar-icon{font-size:20px;margin:8px 0 10px}
+.pillar-name{font-size:14px;font-weight:500;color:var(--text);margin-bottom:5px}
+.pillar-desc{font-size:11px;color:var(--text2);line-height:1.55}
 .pillar.flow::after{content:'→';position:absolute;right:-9px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:16px;z-index:5}
 .pillar:nth-child(3)::after,.pillar:nth-child(6)::after{display:none}
-/* §0.39.265 — James: "its small on the homepage". The grid now fits however many cards are showing (2 in the
-   nested view, 5 standalone) across the width and the text scales with the window, so the flow arrows
-   no longer land on a fixed third column — they are dropped rather than pointing at nothing. */
-.pillars .pillar.flow::after{display:none}
-.welcome-foot{margin-top:30px;font-family:var(--mono);font-size:clamp(9px,.7vw,12px);color:var(--text3);letter-spacing:.08em}
+.welcome-foot{margin-top:30px;font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:.08em}
 
 /* ════════════════════════════════════════════════════
    SHARED panel/list/detail primitives (Ideas view baseline)
@@ -398,98 +394,6 @@ body{display:flex;flex-direction:column;position:relative}
 .repo-wrap.repo-open .repo-rail{display:none}
 .repo-detail-body{display:flex;flex-direction:column;overflow:hidden}
 .repo-subnav{display:flex;gap:4px;padding:8px 10px;border-bottom:1px solid var(--b0);flex-shrink:0}
-/* ── §0.39.271 S2 — living spec (js/living-spec.js) ── */
-.ls-wrap{display:grid;grid-template-columns:230px minmax(0,1fr);gap:12px;align-items:start;margin-bottom:10px}
-.ls-files{display:flex;flex-direction:column;gap:3px;position:sticky;top:0;max-height:calc(100vh - 230px);overflow:auto}
-.ls-file{font-family:var(--mono);font-size:10.5px;color:var(--text2);padding:6px 8px;border:1px solid transparent;border-radius:6px;cursor:pointer;word-break:break-all}
-.ls-file:hover{border-color:var(--b1);color:var(--text)}
-.ls-file.on{border-color:var(--sky);color:var(--sky);background:rgba(56,189,248,.07)}
-.ls-file small{display:block;color:var(--text3);font-size:9px;margin-top:2px}
-.ls-head{display:flex;flex-direction:column;gap:4px;margin-bottom:8px}
-.ls-name{font-family:var(--mono);font-size:14px;color:var(--text)}
-.ls-kv{display:grid;grid-template-columns:110px minmax(0,1fr);gap:3px 10px;font-family:var(--mono);font-size:10.5px}
-.ls-kv>div:nth-child(odd){color:var(--text3)}
-.ls-kv>div:nth-child(even){color:var(--text2);white-space:pre-wrap;word-break:break-word}
-.ls-tabs{display:flex;gap:4px;flex-wrap:wrap;margin:8px 0}
-.ls-tab{background:none;border:1px solid var(--b1);color:var(--text3);font-family:var(--mono);font-size:10px;padding:3px 9px;border-radius:10px;cursor:pointer}
-.ls-tab.on{color:var(--sky);border-color:var(--sky)}
-.ls-sec{border:1px solid var(--b0);border-radius:7px;margin-bottom:6px;background:rgba(15,21,32,.5)}
-.ls-sec>summary{font-family:var(--mono);font-size:11px;color:var(--text);padding:7px 10px;cursor:pointer}
-.ls-sec>summary span{color:var(--text3);margin-left:8px;font-size:9.5px}
-.ls-tree{font-family:var(--mono);font-size:10.5px;color:var(--text2);padding:4px 12px 10px;line-height:1.55}
-.ls-tree .k{color:var(--sky2)}.ls-tree .n{color:var(--amber)}.ls-tree .s{color:var(--text2);white-space:pre-wrap}
-.ls-tree .i{padding-left:14px;border-left:1px solid var(--b0)}
-.ls-ver{display:grid;grid-template-columns:90px minmax(0,1fr);gap:4px 10px;font-family:var(--mono);font-size:10.5px;padding:6px 0;border-bottom:1px solid var(--b0)}
-.ls-ver b{color:var(--mint);font-weight:500}
-.ls-raw{white-space:pre;overflow:auto;max-height:70vh;font-family:var(--mono);font-size:10.5px;color:var(--text2);background:var(--b0);padding:10px;border-radius:6px}
-.ls-err{font-family:var(--mono);font-size:10.5px;color:var(--amber);margin:4px 0}
-@media (max-width:1000px){.ls-wrap{grid-template-columns:1fr}.ls-files{position:static;max-height:none;flex-direction:row;flex-wrap:wrap}}
-/* ── §0.39.271 P4 — Phases manager (js/phases.js) ── */
-#repo-subtab-phases{overflow:auto}
-.ph-wrap{display:flex;flex-direction:column;gap:10px;padding:2px}
-.ph-head{display:flex;flex-direction:column;gap:6px}
-.ph-title{font-family:var(--mono);font-size:12px;color:var(--text);letter-spacing:.04em}
-.ph-title span{color:var(--text3);margin-left:8px;font-size:10.5px}
-.ph-bar{height:5px;background:var(--b0);border-radius:3px;overflow:hidden}.ph-bar>div{height:100%;background:linear-gradient(90deg,var(--mint),var(--sky))}
-.ph-bar.small{height:3px;margin:6px 0}
-.ph-chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-.ph-chip{font-family:var(--mono);font-size:10px;border:1px solid var(--b1);border-radius:10px;padding:2px 8px;color:var(--text2)}
-.ph-chip b{font-weight:600;margin-left:3px}
-.ph-via{font-family:var(--mono);font-size:9.5px;color:var(--text3);margin-left:auto}
-.ph-tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-family:var(--mono);font-size:10.5px;color:var(--text2)}
-.ph-tools input[type=text]{flex:1;min-width:180px}
-.ph-tools input[type=text],.ph-tools select,.ph-add input,.ph-add textarea,.ph-add select,.ph-detail select,.ph-detail textarea{background:var(--b0);border:1px solid var(--b1);color:var(--text);font-family:var(--mono);font-size:10.5px;padding:5px 7px;border-radius:5px}
-.ph-views{display:flex;border:1px solid var(--b1);border-radius:6px;overflow:hidden}
-.ph-view{background:none;border:none;color:var(--text3);font-family:var(--mono);font-size:10.5px;padding:5px 10px;cursor:pointer}
-.ph-view.on{background:rgba(56,189,248,.12);color:var(--sky)}
-.ph-main{display:grid;grid-template-columns:1fr;gap:10px;align-items:start}
-.ph-main.with-detail{grid-template-columns:minmax(0,1fr) 360px}
-.ph-board{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
-.ph-col{background:rgba(15,21,32,.55);border:1px solid var(--b0);border-radius:8px;padding:6px;display:flex;flex-direction:column;gap:6px;min-height:80px}
-.ph-col-head{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;padding:2px 4px}
-.ph-col-head span{color:var(--text3);margin-left:4px}
-.ph-card,.ph-mapcard{background:var(--bg2);border:1px solid var(--b0);border-radius:7px;padding:7px 8px;cursor:pointer;transition:border-color .12s}
-.ph-card:hover,.ph-mapcard:hover{border-color:var(--b2)}
-.ph-card.open{border-color:var(--sky);box-shadow:0 0 0 1px rgba(56,189,248,.25)}
-.ph-card-top{display:flex;justify-content:space-between;gap:8px;font-family:var(--mono);font-size:10px}
-.ph-key{font-family:var(--mono);font-weight:600}
-.ph-map{color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60%}
-.ph-card-title{font-size:11.5px;color:var(--text);margin:4px 0;line-height:1.35;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
-.ph-card-foot{display:flex;flex-wrap:wrap;gap:8px;font-family:var(--mono);font-size:9.5px;color:var(--text3)}
-.ph-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px}
-.ph-maps{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px}
-.ph-mappath{font-family:var(--mono);font-size:9px;color:var(--text3);margin-top:4px;word-break:break-all}
-.ph-table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:10.5px}
-.ph-table th{text-align:left;color:var(--text3);font-weight:500;padding:5px 6px;border-bottom:1px solid var(--b1);cursor:pointer;white-space:nowrap;position:sticky;top:0;background:var(--bg1)}
-.ph-table td{padding:5px 6px;border-bottom:1px solid var(--b0);color:var(--text2);vertical-align:top}
-.ph-table tr{cursor:pointer}.ph-table tr:hover td,.ph-table tr.open td{background:var(--b0)}
-.ph-empty{font-family:var(--mono);font-size:10px;color:var(--text3);padding:4px}
-.ph-count{font-family:var(--mono);font-size:9.5px;color:var(--text3);margin:6px 2px}
-.ph-detail{position:sticky;top:0;background:var(--bg2);border:1px solid var(--b1);border-radius:9px;padding:10px 12px;display:flex;flex-direction:column;gap:7px;max-height:calc(100vh - 220px);overflow:auto}
-.ph-d-head{display:flex;justify-content:space-between;align-items:center}
-.ph-x{background:none;border:none;color:var(--text3);font-size:16px;cursor:pointer}
-.ph-d-title{font-size:13px;color:var(--text);line-height:1.4}
-.ph-d-meta{font-family:var(--mono);font-size:9.5px;color:var(--text3);word-break:break-all}
-.ph-d-row{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;font-family:var(--mono);font-size:10.5px;color:var(--text2)}
-.ph-d-row>label{color:var(--text3);min-width:74px}
-.ph-files code,.ph-run code{font-size:9.5px;background:var(--b0);padding:1px 4px;border-radius:3px;word-break:break-all}
-.ph-link{cursor:pointer;text-decoration:underline dotted}
-.ph-d-sec{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);border-top:1px solid var(--b0);padding-top:7px;margin-top:3px}
-.ph-d-note{font-family:var(--mono);font-size:9.5px;color:var(--text3);line-height:1.6}
-.ph-run{font-family:var(--mono);font-size:10px;color:var(--text2);display:flex;flex-direction:column;gap:4px}
-.ph-run pre{white-space:pre-wrap;max-height:240px;overflow:auto;font-size:9.5px;color:var(--text2);background:var(--b0);padding:6px;border-radius:4px}
-.ph-add{display:flex;flex-direction:column;gap:6px}
-@media (max-width:1100px){.ph-board{grid-template-columns:repeat(2,minmax(0,1fr))}.ph-main.with-detail{grid-template-columns:1fr}.ph-detail{position:static;max-height:none}}
-/* §0.39.271 N1 — Create/Build live in the repo's own tab row; the nest-ctx bar leads back from their views */
-.repo-subnav-sep{width:1px;background:var(--b1);margin:4px 6px;align-self:stretch}
-.repo-subnav .tab-group-inrepo .tab-dropdown{top:calc(100% + 2px);border-top:1px solid var(--b1);border-radius:8px}
-.repo-subgroup-btn{background:none;border:1px solid transparent;color:var(--text3);font-family:var(--mono);font-size:11px;letter-spacing:.03em;padding:6px 13px;border-radius:5px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:6px}
-.repo-subgroup-btn:hover{color:var(--text)}
-.repo-subnav .tab-group-btn.active{color:var(--sky);border-color:var(--b1);background:rgba(56,189,248,.07)}
-#nest-ctx{display:none;align-items:center;gap:10px;padding:6px 14px;border-bottom:1px solid var(--b0);font-family:var(--mono);font-size:11px;color:var(--text3);background:var(--bg2)}
-#nest-ctx.show{display:flex}
-#nest-ctx button{background:none;border:1px solid var(--b1);color:var(--text2);font-family:var(--mono);font-size:11px;padding:3px 10px;border-radius:5px;cursor:pointer}
-#nest-ctx button:hover{color:var(--text);border-color:var(--sky)}
 .repo-subtab-btn{background:none;border:1px solid transparent;color:var(--text3);font-family:var(--mono);font-size:11px;letter-spacing:.03em;padding:6px 13px;border-radius:5px;cursor:pointer;transition:all .15s}
 .repo-subtab-btn:hover{color:var(--text);background:rgba(255,255,255,.04)}
 .repo-subtab-btn.active{color:var(--text);background:var(--b0);border-color:var(--b1)}
@@ -503,7 +407,7 @@ body{display:flex;flex-direction:column;position:relative}
    grid-template-columns override that used to live here is gone — as of
    §NO-SIDEBAR above, .repo-wrap is single-column in BOTH states.) */
 .repo-back-btn{margin-right:10px}
-.repo-rail-body.block-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;padding:16px;align-content:start}
+.repo-rail-body.block-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;padding:16px}
 .repo-block{background:rgba(255,255,255,.02);border:1px solid var(--b1);border-radius:8px;padding:14px 16px;cursor:pointer;transition:all .15s;display:flex;flex-direction:column;gap:8px}
 .repo-block:hover{border-color:var(--sky);background:rgba(56,189,248,.05);transform:translateY(-1px)}
 .repo-block-head{display:flex;align-items:center;gap:8px}
@@ -515,14 +419,6 @@ body{display:flex;flex-direction:column;position:relative}
 .repo-block-meta .dot.done{background:var(--mint)}
 .repo-block-meta .dot.building{background:var(--sky);animation:pulse-dot 1.6s ease-in-out infinite}
 .repo-block-compartment{font-family:var(--mono);font-size:9px;color:var(--text3);background:var(--b0);border-radius:20px;padding:2px 8px;align-self:flex-start}
-/* §0.39.265 — nexus + nexus/core are the main repo; RAID's contract repos fold away at the end */
-.repo-block.main{border-color:color-mix(in srgb,var(--sky) 45%,var(--b1));background:rgba(56,189,248,.04)}
-.repo-grid-raid{grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
-.repo-grid-raid>summary{cursor:pointer;list-style:none;opacity:.75}
-.repo-grid-raid>summary::-webkit-details-marker{display:none}
-.repo-grid-raid>summary::before{content:'▸ ';}
-.repo-grid-raid[open]>summary::before{content:'▾ ';}
-.repo-block.raid{padding:8px 12px;opacity:.8}
 .repo-grid-group-label{grid-column:1/-1;font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text2);padding:8px 4px 0;margin-top:4px}
 .repo-grid-group-label:first-child{margin-top:0}
 
@@ -656,114 +552,6 @@ body{display:flex;flex-direction:column;position:relative}
     border-radius:var(--radius);padding:5px 10px;cursor:pointer;font-size:12px;color:var(--text2);transition:all 0.15s}#view-spec-wizard .checkbox-item:hover{border-color:var(--accent);color:var(--text)}#view-spec-wizard .checkbox-item.checked{border-color:var(--accent);background:var(--accent-glow);color:var(--accent)}#view-spec-wizard .checkbox-item input{display:none}#view-spec-wizard .list-editor{border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}#view-spec-wizard .list-item{display:flex;align-items:stretch;border-bottom:1px solid var(--border)}#view-spec-wizard .list-item:last-child{border-bottom:none}#view-spec-wizard .list-item input, #view-spec-wizard .list-item textarea{border:none;border-radius:0;flex:1;background:transparent;padding:6px 10px;font-size:12px}#view-spec-wizard .list-item-num{display:flex;align-items:center;padding:0 8px;font-size:11px;color:var(--text3);background:var(--bg2);border-right:1px solid var(--border);min-width:30px;justify-content:center}#view-spec-wizard .list-item-del{display:flex;align-items:center;padding:0 8px;cursor:pointer;color:var(--text3);border-left:1px solid var(--border);font-size:16px;background:var(--bg2)}#view-spec-wizard .list-item-del:hover{color:var(--red)}#view-spec-wizard .add-btn{display:flex;align-items:center;gap:6px;background:none;border:none;color:var(--accent);font-size:12px;font-family:inherit;cursor:pointer;padding:6px 10px;width:100%;border-top:1px solid var(--border)}#view-spec-wizard .add-btn:hover{background:var(--accent-glow)}#view-spec-wizard .module-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius2);margin-bottom:1rem;overflow:hidden}#view-spec-wizard .module-card-header{display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer;border-bottom:1px solid var(--border)}#view-spec-wizard .module-card-header:hover{background:rgba(255,255,255,0.02)}#view-spec-wizard .module-card-toggle{color:var(--text3);transition:transform 0.2s;font-size:14px}#view-spec-wizard .module-card.open .module-card-toggle{transform:rotate(90deg)}#view-spec-wizard .module-id-badge{font-size:10px;background:var(--accent-glow);color:var(--accent);padding:2px 8px;border-radius:4px;border:1px solid var(--accent)}#view-spec-wizard .module-name-label{font-size:13px;color:var(--text);flex:1}#view-spec-wizard .module-card-del{color:var(--text3);cursor:pointer;font-size:14px;padding:4px}#view-spec-wizard .module-card-del:hover{color:var(--red)}#view-spec-wizard .module-card-body{padding:12px;display:none}#view-spec-wizard .module-card.open .module-card-body{display:block}#view-spec-wizard .module-field{margin-bottom:1rem}#view-spec-wizard .module-field-label{font-size:11px;color:var(--text3);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.08em}#view-spec-wizard .event-group{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:0.75rem;overflow:hidden}#view-spec-wizard .event-group-header{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border)}#view-spec-wizard .event-namespace{font-size:12px;color:var(--amber);flex:1}#view-spec-wizard .event-entries{padding:6px 12px}#view-spec-wizard .event-row{display:flex;align-items:center;gap:6px;padding:3px 0}#view-spec-wizard .event-row input{flex:1;background:transparent;border:none;border-bottom:1px solid var(--border);border-radius:0;font-size:12px;color:var(--text)}#view-spec-wizard .event-row input:focus{border-bottom-color:var(--accent);background:transparent;border-radius:0}#view-spec-wizard .event-del{color:var(--text3);cursor:pointer;font-size:12px}#view-spec-wizard .event-del:hover{color:var(--red)}#view-spec-wizard .constraint-row{display:grid;grid-template-columns:80px 1fr auto;gap:8px;margin-bottom:6px;align-items:start}#view-spec-wizard .type-badge{font-size:11px;padding:4px 8px;border-radius:4px;text-align:center;cursor:pointer;border:1px solid transparent}#view-spec-wizard .type-badge.hard{background:rgba(226,85,85,0.15);color:var(--red);border-color:var(--red)}#view-spec-wizard .type-badge.soft{background:rgba(74,158,237,0.15);color:var(--blue);border-color:var(--blue)}#view-spec-wizard .type-badge.warning{background:rgba(232,162,51,0.15);color:var(--amber);border-color:var(--amber)}#view-spec-wizard .gate-row{margin-bottom:6px}#view-spec-wizard .gate-row input{font-size:12px;font-family:inherit;color:var(--green)}#view-spec-wizard .schema-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:0.75rem;overflow:hidden}#view-spec-wizard .schema-header{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border)}#view-spec-wizard .schema-id{font-size:12px;color:var(--blue);font-weight:600;flex:1}#view-spec-wizard .schema-body{padding:8px 12px}#view-spec-wizard .field-row{display:flex;align-items:center;gap:6px;padding:3px 0}#view-spec-wizard .field-row input:first-child{width:140px;flex:none;color:var(--text);font-size:12px}#view-spec-wizard .field-row input:last-child{flex:1;color:var(--text2);font-size:12px}#view-spec-wizard .nav-btns{display:flex;gap:8px;margin-top:2rem;padding-top:1.5rem;border-top:1px solid var(--border)}#view-spec-wizard .btn{padding:7px 16px;border-radius:var(--radius);font-family:inherit;font-size:13px;cursor:pointer;border:1px solid;transition:all 0.15s}#view-spec-wizard .btn-primary{background:var(--accent);border-color:var(--accent2);color:#fff}#view-spec-wizard .btn-primary:hover{background:var(--accent2)}#view-spec-wizard .btn-secondary{background:var(--bg3);border-color:var(--border2);color:var(--text2)}#view-spec-wizard .btn-secondary:hover{border-color:var(--accent);color:var(--text)}#view-spec-wizard .btn-danger{background:rgba(226,85,85,0.1);border-color:var(--red);color:var(--red)}#view-spec-wizard .btn-danger:hover{background:var(--red);color:#fff}#view-spec-wizard /* ── OUTPUT ── */
   .output-pane{background:var(--bg2);border-left:1px solid var(--border);overflow-y:auto;display:flex;flex-direction:column}#view-spec-wizard .output-header{display:flex;align-items:center;gap:8px;padding:12px 1rem;border-bottom:1px solid var(--border);flex-shrink:0}#view-spec-wizard .output-header h2{font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);flex:1}#view-spec-wizard .output-controls{display:flex;gap:6px}#view-spec-wizard .output-btn{background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text2);font-family:inherit;font-size:11px;padding:4px 10px;cursor:pointer}#view-spec-wizard .output-btn:hover{border-color:var(--accent);color:var(--text)}#view-spec-wizard .output-body{flex:1;overflow:auto}#view-spec-wizard pre{font-family:inherit;font-size:11.5px;line-height:1.7;padding:1rem;color:var(--text);white-space:pre;overflow-x:auto}#view-spec-wizard .spec-key{color:#7c6af7}#view-spec-wizard .spec-string{color:#a8d8a8}#view-spec-wizard .spec-number{color:#f0c27a}#view-spec-wizard .spec-comment{color:#4a4a60}#view-spec-wizard .spec-event{color:#4a9eed}#view-spec-wizard .spec-gate{color:#3dba7a}#view-spec-wizard .spec-dash{color:#9090a8}#view-spec-wizard .stats-bar{display:flex;gap:12px;padding:8px 1rem;border-bottom:1px solid var(--border);flex-shrink:0}#view-spec-wizard .stat{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3)}#view-spec-wizard .stat-val{color:var(--text);font-weight:600}#view-spec-wizard .stat-dot{width:6px;height:6px;border-radius:50%}#view-spec-wizard .dep-row{display:grid;grid-template-columns:1fr 100px 80px auto;gap:6px;margin-bottom:6px;align-items:center}#view-spec-wizard .axiom-list textarea{min-height:60px;font-size:12px;line-height:1.6}#view-spec-wizard .empty-modules{display:flex;flex-direction:column;align-items:center;padding:2rem;color:var(--text3);text-align:center;gap:8px;border:1px dashed var(--border);border-radius:var(--radius2)}#view-spec-wizard .empty-modules p{font-size:12px}#view-spec-wizard .progress-bar{height:2px;background:var(--border);margin-top:1px}#view-spec-wizard .progress-fill{height:100%;background:var(--accent);transition:width 0.3s}#view-spec-wizard .spec-depth-indicator{display:flex;align-items:center;gap:6px;margin-top:6px}#view-spec-wizard .depth-bar{flex:1;height:4px;background:var(--border);border-radius:2px;overflow:hidden}#view-spec-wizard .depth-fill{height:100%;border-radius:2px;transition:width 0.3s}#view-spec-wizard .depth-label{font-size:10px;color:var(--text3);min-width:32px;text-align:right}#view-spec-wizard .tag-input{display:flex;flex-wrap:wrap;gap:5px;padding:5px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);min-height:38px;cursor:text}#view-spec-wizard .tag{display:inline-flex;align-items:center;gap:4px;background:var(--accent-glow);border:1px solid var(--accent);color:var(--accent);font-size:11px;padding:2px 8px;border-radius:4px}#view-spec-wizard .tag-x{cursor:pointer;color:var(--text3)}#view-spec-wizard .tag-x:hover{color:var(--red)}#view-spec-wizard .tag-input-field{background:transparent;border:none;color:var(--text);font-family:inherit;font-size:12px;outline:none;min-width:80px}
 
-/* §0.39.263 — the nexus repo's Home is the Nexus atlas (js/nexus-atlas.js) */
-.nx-sys-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px;margin:10px 0 16px}
-.nx-sys-grid .repo-block{padding:10px 12px;gap:5px}
-.nx-sys-grid .repo-block-desc{font-family:var(--mono);font-size:10px}
-.nx-unsynced{opacity:.5}
-.nx-doc{font-size:12.5px;line-height:1.6;color:var(--text);max-width:980px}
-.nx-doc .nx-h{margin:18px 0 6px;color:var(--text);font-weight:600}
-.nx-doc .nx-h1{font-size:20px}.nx-doc .nx-h2{font-size:16px;border-bottom:1px solid var(--b1);padding-bottom:4px}.nx-doc .nx-h3{font-size:14px}
-.nx-doc .nx-p{margin:6px 0}
-.nx-doc code{font-family:var(--mono);font-size:11px;background:rgba(255,255,255,.05);padding:1px 4px;border-radius:3px}
-.nx-pre{font-family:var(--mono);font-size:11px;background:rgba(0,0,0,.25);border:1px solid var(--b1);border-radius:6px;padding:10px;overflow:auto;white-space:pre}
-.nx-table{border-collapse:collapse;margin:8px 0;font-size:11.5px}.nx-table th,.nx-table td{border:1px solid var(--b1);padding:4px 8px;text-align:left;vertical-align:top}
-.nx-quote{border-left:3px solid var(--sky);margin:8px 0;padding:4px 10px;color:var(--text2)}
-.nx-list{margin:6px 0 6px 20px}.nx-hr{border:0;border-top:1px solid var(--b1);margin:16px 0}
-.nx-link{color:var(--sky);cursor:pointer;text-decoration:underline dotted}.nx-link:hover{text-decoration:underline}
-h3.nx-link{text-decoration:none}
-.nx-unres{opacity:.75;text-decoration:line-through dotted rgba(255,255,255,.25)}
-.nx-live{font-family:var(--mono);font-size:10px;color:var(--mint);margin:-2px 0 6px}
-body:not(.in-repo) .nest-only{display:none!important}
-.nx-toc{border:1px solid var(--b1);border-radius:6px;padding:8px 10px;margin:0 0 14px;columns:2 260px;font-size:11px;line-height:1.7}.nx-toc>div:first-child{column-span:all}.nx-toc-h2{font-weight:600}.nx-nested,.nx-nested-repo{color:var(--sky)}
-.nx-crumbs{font-size:12px;margin:0 0 10px}.nx-dim{color:var(--text3);font-size:10px}
-.nx-ops{margin-top:18px}.nx-ops>summary{cursor:pointer;font-family:var(--mono);font-size:11px;color:var(--text2)}
-.nx-sys-atlas>summary{cursor:pointer}
-.repo-card.nx-child{margin-left:14px;border-left:2px solid var(--sky)}
-
-/* ── §BUILT 2026-09-26 — recursive tabs + Compartment (js/compartment.js) ── */
-.tab-dropdown-deep{min-width:240px}
-.tab-nest{position:relative}
-.tab-nest>.tab-sub .tab-caret{margin-left:auto;opacity:.5}
-.tab-sub-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px}
-.tab-sub-n{margin-left:auto;font-size:10px;color:var(--text3)}
-.tab-flyout{position:absolute;left:100%;top:-5px;min-width:210px;background:var(--bg2);border:1px solid var(--b1);border-radius:10px;box-shadow:0 12px 28px rgba(0,0,0,.45);display:none;flex-direction:column;padding:5px;z-index:31}
-.tab-nest:hover>.tab-flyout,.tab-nest:focus-within>.tab-flyout{display:flex}
-.tab-sep{font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);padding:8px 10px 3px}
-.tab-tree{display:none}
-body.tab-tree-open .app-shell{display:grid;grid-template-columns:260px 1fr;grid-template-rows:auto 1fr}
-body.tab-tree-open .tabbar{grid-column:1/-1}
-body.tab-tree-open .tab-tree{display:block;grid-row:2;grid-column:1;min-height:0;overflow:auto;border-right:1px solid var(--b1);background:var(--bg1);padding:6px 4px 20px;font-family:var(--mono);font-size:12px}
-body.tab-tree-open .view-area{grid-row:2;grid-column:2;min-width:0}
-body.tab-tree-open #tab-tree-toggle{color:var(--sky)}
-.tt-top{display:flex;align-items:center;justify-content:space-between;font-size:9px;letter-spacing:.2em;color:var(--text3);padding:6px 8px}
-.tt-close{background:none;border:none;color:var(--text2);cursor:pointer;font-size:14px}
-.tt-leaf{display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:5px;cursor:pointer;color:var(--text2);white-space:nowrap;overflow:hidden}
-.tt-leaf:hover{background:var(--b0);color:var(--text)}
-.tt-head{color:var(--text)}
-.tt-caret{width:12px;color:var(--text3);flex-shrink:0}
-.tt-icon{width:14px;text-align:center;flex-shrink:0}
-.tt-label{overflow:hidden;text-overflow:ellipsis}
-.tt-n{margin-left:auto;font-size:10px;color:var(--text3)}
-.tt-kids{margin-left:12px;border-left:1px solid var(--b0);padding-left:2px}
-.tt-sep{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--text3);padding:6px 10px 2px}
-.tt-empty{color:var(--text3);font-size:11px;padding:3px 10px}
-.cmp-wrap{display:grid;grid-template-columns:300px 1fr;flex:1;min-height:0}
-.cmp-left{border-right:1px solid var(--b0);display:flex;flex-direction:column;min-height:0}
-.cmp-tree{overflow:auto;padding:6px}
-.cmp-node{display:flex;align-items:center;gap:6px;padding:6px 8px 6px calc(8px + var(--d) * 16px);border-radius:6px;cursor:pointer;font-size:12px}
-.cmp-node:hover{background:var(--b0)}
-.cmp-node.active{background:rgba(56,189,248,.09);color:var(--sky)}
-.cmp-node-branch{color:var(--text3);font-family:var(--mono);flex-shrink:0}
-.cmp-node-text{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.cmp-node-text.missing{color:var(--coral)}
-.cmp-node-lanes{display:flex;gap:4px;font-family:var(--mono);font-size:10px;color:var(--text3);flex-shrink:0}
-.cmp-open{color:var(--amber)}
-.cmp-detail{overflow:auto;min-width:0;padding:0 0 30px}
-.cmp-head{padding:14px 18px 6px}
-.cmp-crumbs{font-family:var(--mono);font-size:11px;color:var(--text3);display:flex;flex-wrap:wrap;gap:4px;align-items:center}
-.cmp-crumb{cursor:pointer}.cmp-crumb:hover{color:var(--sky)}.cmp-crumb.here{color:var(--text2);cursor:default}
-.cmp-crumb-sep{opacity:.5}
-.cmp-idea-text{font-size:15px;margin:8px 0;line-height:1.45}
-.cmp-idea-meta{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
-.cmp-linking{margin-top:10px;padding:8px 10px;border:1px dashed var(--sky);border-radius:6px;color:var(--sky);font-family:var(--mono);font-size:11px}
-.cmp-lane-bar{padding:0 18px;display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--b0);padding-bottom:8px}
-.cmp-tab-n{font-size:10px;color:var(--text3);margin-left:4px}
-.cmp-lanes{display:grid;gap:12px;padding:14px 18px}
-.cmp-lanes.cols-4{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
-.cmp-lanes.cols-1{grid-template-columns:1fr}
-.cmp-lane{background:var(--bg2);border:1px solid var(--b0);border-radius:10px;padding:10px;min-width:0}
-.cmp-lane[data-lane=brainstorm]{border-top:2px solid var(--sky)}
-.cmp-lane[data-lane=problem]{border-top:2px solid var(--coral)}
-.cmp-lane[data-lane=expand]{border-top:2px solid var(--violet)}
-.cmp-lane[data-lane=improve]{border-top:2px solid var(--mint)}
-.cmp-lane-head{display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px;letter-spacing:.06em;color:var(--text2);margin-bottom:8px}
-.cmp-add-row{display:flex;gap:6px;margin-bottom:8px}
-.cmp-add{flex:1;background:var(--bg);border:1px solid var(--b1);border-radius:6px;color:var(--text);font:12px var(--sans);padding:6px 8px;resize:vertical;min-height:30px}
-.cmp-empty{color:var(--text3);font-family:var(--mono);font-size:11px;padding:6px}
-.cmp-entry{position:relative;margin:4px 0 4px calc(var(--d) * 14px);padding:6px 8px;border-left:2px solid var(--b1);border-radius:0 6px 6px 0;background:rgba(255,255,255,.015)}
-.cmp-entry:hover{background:rgba(56,189,248,.04)}
-.cmp-entry.status-resolved{opacity:.55}.cmp-entry.status-resolved .cmp-entry-text{text-decoration:line-through}
-.cmp-entry.linkable{cursor:crosshair;outline:1px dashed var(--b2)}
-.cmp-entry-row{display:flex;gap:6px;align-items:flex-start}
-.cmp-fold{font-family:var(--mono);font-size:10px;color:var(--text3);cursor:pointer;min-width:14px}
-.cmp-fold.none{cursor:default}
-.cmp-entry-text{flex:1;font-size:12.5px;line-height:1.45;white-space:pre-wrap;word-break:break-word}
-.cmp-entry-meta{display:flex;flex-wrap:wrap;gap:4px;margin:3px 0 0 20px}
-.cmp-link{font-family:var(--mono);font-size:10px;padding:1px 6px;border-radius:9px;background:var(--b0);color:var(--sky2);cursor:pointer}
-.cmp-link.in{color:var(--amber);cursor:default}.cmp-link.idea{color:var(--mint)}.cmp-link.missing{color:var(--coral)}
-.cmp-unlink{margin-left:4px;opacity:.5}.cmp-unlink:hover{opacity:1;color:var(--coral)}
-.cmp-entry-actions{display:none;gap:3px;margin:4px 0 0 20px;flex-wrap:wrap}
-.cmp-entry:hover>.cmp-entry-actions,.cmp-entry:focus-within>.cmp-entry-actions{display:flex}
-.cmp-entry-actions button,.cmp-entry-actions select{background:var(--bg);border:1px solid var(--b1);color:var(--text2);border-radius:4px;font-size:11px;padding:1px 6px;cursor:pointer}
-.cmp-entry-actions button:hover{color:var(--text);border-color:var(--b2)}
-.cmp-entry-actions button.danger:hover{color:var(--coral)}
-.cmp-assist,.cmp-reply{margin:6px 0 0 20px;font-size:12px}
-.cmp-assist{background:var(--bg);border:1px solid var(--b1);border-radius:6px;padding:8px}
-.cmp-reply{display:flex;gap:6px}
-.cmp-sugg{display:flex;gap:6px;align-items:flex-start;padding:3px 0;cursor:pointer}
-.cmp-links{padding:14px 18px}
-@media (max-width:900px){.cmp-wrap{grid-template-columns:1fr}.cmp-left{max-height:30vh}body.tab-tree-open .app-shell{grid-template-columns:1fr}body.tab-tree-open .tab-tree{max-height:35vh;grid-row:2}body.tab-tree-open .view-area{grid-row:3;grid-column:1}}
 </style>
 </head>
 <body>
@@ -780,10 +568,8 @@ body.tab-tree-open #tab-tree-toggle{color:var(--sky)}
 <div class="topbar">
   <div class="logo" onclick="setView('welcome')">IDEA<span>RIUM</span></div>
   <div class="tb-sep"></div>
-  <!-- §0.39.264 — James: "this in idearium needs to only show in nested compartments/repos." The counters,
-       Create and Build show only inside a repo (body.in-repo, set by app.js _syncNestScope). -->
-  <div class="tb-stat nest-only">ideas <span class="v sky" id="stat-ideas">—</span></div>
-  <div class="tb-stat nest-only">specs <span class="v" id="stat-specs">—</span></div>
+  <div class="tb-stat">ideas <span class="v sky" id="stat-ideas">—</span></div>
+  <div class="tb-stat">specs <span class="v" id="stat-specs">—</span></div>
   <div class="tb-right">
     <div class="tb-conn offline" id="conn-indicator" onclick="nexusConnect(true)"><span class="dot"></span><span id="conn-label">connecting…</span></div>
   </div>
@@ -800,11 +586,14 @@ body.tab-tree-open #tab-tree-toggle{color:var(--sky)}
   <nav class="tabbar" id="tabbar">
     <button class="tab-btn active" data-view="welcome" onclick="setView('welcome')"><span class="tab-icon">⌂</span>Welcome</button>
 
+    <div class="tab-group" data-group="create">
+      <button class="tab-btn tab-group-btn" data-views="brainstorm,ideas" onclick="toggleTabGroup(event,this)"><span class="tab-icon">✎</span>Create<span class="tab-caret">▾</span></button>
+      <div class="tab-dropdown">
+        <button class="tab-sub" data-view="brainstorm" onclick="setView('brainstorm')"><span class="tab-icon">✎</span>Brainstorm</button>
+        <button class="tab-sub" data-view="ideas" onclick="setView('ideas')"><span class="tab-icon">◇</span>Ideas</button>
+      </div>
+    </div>
 
-    <!-- §0.39.263 — James: "should not be a compartments tab, repos are compartments."
-         The Compartment tab (main's 0.39.262) is gone: an idea worked in the four
-         lanes lives in its own repo (a COS compartment), and the lanes are that
-         repo's Idea tab. js/compartment.js renders them there. -->
     <!-- §UI 2026-09-20 — James: "Move eravos, architect, and spec builder to
          build tab. Eravos the organism canvas. Architect the block building
          canvas for architecture."
@@ -817,21 +606,21 @@ body.tab-tree-open #tab-tree-toggle{color:var(--sky)}
          a repo is adopted into one at boot (_reconcileSpecRepos in
          api/index.js). The read-only blueprint viewer stays a per-repo
          Architect subtab. -->
-    <!-- §0.39.271 N1 — James: "its like there are two ideariums or something. like it only has
-         those options, and then when i clikc on the repos it shows all 4 tabs at the top."
-         Create and Build still belong only to a repo (0.39.264), but they no longer appear in
-         THIS bar when a repo opens: they are the last two entries of the open repo's own tab
-         row (#repo-subnav). This bar is always Welcome + Repos. -->
+    <div class="tab-group" data-group="build">
+      <button class="tab-btn tab-group-btn" data-views="eravos,architect-build,spec-wizard" onclick="toggleTabGroup(event,this)"><span class="tab-icon">▦</span>Build<span class="tab-caret">▾</span></button>
+      <div class="tab-dropdown">
+        <button class="tab-sub" data-view="eravos" onclick="setView('eravos')"><span class="tab-icon">◈</span>Eravos — organism canvas</button>
+        <button class="tab-sub" data-view="architect-build" onclick="setView('architect-build')"><span class="tab-icon">⌘</span>Architect — block canvas</button>
+        <button class="tab-sub" data-view="spec-wizard" onclick="setView('spec-wizard')"><span class="tab-icon">▤</span>Spec Builder</button>
+      </div>
+    </div>
 
     <button class="tab-btn" data-view="repo" onclick="setView('repo')"><span class="tab-icon">🗂</span>Repos<span class="tab-badge" id="repo-count-badge"></span></button>
 
     <div class="tab-spacer"></div>
-    <button class="tab-btn" id="tab-tree-toggle" title="expand every tab into a full navigator tree" onclick="toggleTabTree()"><span class="tab-icon">⊞</span>Expand all</button>
   </nav>
-  <aside class="tab-tree" id="tab-tree"></aside>
 
   <main class="view-area">
-    <div id="nest-ctx"><button onclick="backToRepo()">← back to the repo</button><span id="nest-ctx-text"></span></div>
 
     <!-- ══════════ WELCOME ══════════ -->
     <section class="view active" id="view-welcome">
@@ -841,12 +630,10 @@ body.tab-tree-open #tab-tree-toggle{color:var(--sky)}
         <div class="welcome-sub">Log ideas, brainstorm, visit repository or idea, spec and library builder, then architect.</div>
         <div class="welcome-actions">
           <button class="welcome-action-btn secondary" onclick="openUploadProjectModal()">Import project</button>
-          <button class="welcome-action-btn secondary" onclick="openGitCloneModal()">Clone from git</button>
-          <button class="welcome-action-btn secondary" onclick="openCosRemoteBrowse()">Compartments · push / pull</button>
           <button class="welcome-action-btn primary" onclick="newSpecPrompt()">Start new project</button>
         </div>
         <div class="pillars">
-          <div class="pillar flow nest-only" onclick="setView('brainstorm')">
+          <div class="pillar flow" onclick="setView('brainstorm')">
             <div class="pillar-step">01 · CAPTURE</div>
             <div class="pillar-icon">✎</div>
             <div class="pillar-name">Brainstorm</div>
@@ -858,7 +645,7 @@ body.tab-tree-open #tab-tree-toggle{color:var(--sky)}
             <div class="pillar-name">Log an Idea</div>
             <div class="pillar-desc">Promote a thought into a tracked node with phase, tension, and causal ancestry.</div>
           </div>
-          <div class="pillar nest-only" onclick="setView('ideas')">
+          <div class="pillar" onclick="setView('ideas')">
             <div class="pillar-step">03 · VISIT</div>
             <div class="pillar-icon">⌥</div>
             <div class="pillar-name">Ideas → Repository</div>
@@ -870,7 +657,7 @@ body.tab-tree-open #tab-tree-toggle{color:var(--sky)}
             <div class="pillar-name">Spec &amp; Library Builder</div>
             <div class="pillar-desc">SEAM-chunked sections, compiled with confidence scoring and gap analysis.</div>
           </div>
-          <div class="pillar nest-only" onclick="setView('architect-build')">
+          <div class="pillar" onclick="setView('architect-build')">
             <div class="pillar-step">05 · ARCHITECT</div>
             <div class="pillar-icon">⌘</div>
             <div class="pillar-name">Architect — block canvas</div>
@@ -939,9 +726,6 @@ body.tab-tree-open #tab-tree-toggle{color:var(--sky)}
       </div>
     </section>
 
-    <!-- ══════════ COMPARTMENT — promoted ideas, worked in four recursive lanes ══════════ -->
-    <!-- §0.39.263 — #view-compartment removed: the lanes are each repo's Idea tab (js/compartment.js) -->
-
     <!-- ══════════ SPEC LIBRARY — REMOVED 2026-09-21 ══════════
          James: "specs are supposed to use the same repo compartments...
          remove the spec library from the build tab." Specs are repos: list
@@ -957,16 +741,14 @@ body.tab-tree-open #tab-tree-toggle{color:var(--sky)}
 
     <!-- ══════════ ERAVOS (own system, own port — sovereign iframe) ══════════ -->
     <section class="view" id="view-eravos">
-      <!-- 0.39.263 — eravos's UI is served at /ui/eravos/ (was ../../eravos/ui/index.html → /eravos/ui/index.html, a 404
-           under the orchestrator and on idearium's own :4800). Standalone, app.js points it at the orchestrator's /ui/eravos/. -->
-      <iframe class="system-frame" id="eravos-frame" src="about:blank" data-src="../eravos/" title="Eravos"></iframe>
+      <iframe class="system-frame" src="../../eravos/ui/index.html" title="Eravos"></iframe>
     </section>
 
     <!-- ══════════ ARCHITECT BUILD UI (architect/'s own build surface — distinct
          from the "Architect" blueprint viewer under Build, which reads
          compiled-spec output; this is the architect system's own real UI) ══════════ -->
     <section class="view" id="view-architect-build">
-      <iframe class="system-frame" id="architect-frame" src="about:blank" data-src="../architect/arch-builder.html" title="Architect Build"></iframe>
+      <iframe class="system-frame" src="../../architect/src/ui/arch-builder.html" title="Architect Build"></iframe>
     </section>
 
     <!-- ══════════ REPOSITORY LIBRARY / FILE BROWSER / IDE ══════════ -->
@@ -1001,7 +783,7 @@ body.tab-tree-open #tab-tree-toggle{color:var(--sky)}
           <!-- §RUN 2026-09-21 — Run executes in a COS test environment
                (lib/repo-run.js): a branch of the repo's compartment, run in
                COS's sandbox. Shift+click runs the tests instead. -->
-          <button class="tb-btn" id="repo-tb-run" title="COS run menu — run, boot + probe, test, syntax check, resolve dependencies · shift+click: preselect all tests" onclick="repoRun(event && event.shiftKey ? 'test' : 'run')">Run</button>
+          <button class="tb-btn" id="repo-tb-run" title="run in a COS test environment · shift+click: run tests" onclick="repoRun(event && event.shiftKey ? 'test' : 'run')">Run</button>
           <button class="tb-btn" style="margin-left:6px" onclick="repoBranch()">Branch</button>
           <button class="tb-btn" style="margin-left:6px" onclick="repoDiagnose()">Diagnose</button>
         </span>
@@ -1022,47 +804,19 @@ body.tab-tree-open #tab-tree-toggle{color:var(--sky)}
         <div class="repo-detail-body" id="repo-detail-body">
           <nav class="repo-subnav" id="repo-subnav">
             <button class="repo-subtab-btn active" data-subtab="home" onclick="setRepoSubtab('home')">Home</button>
-            <button class="repo-subtab-btn" data-subtab="idea" onclick="setRepoSubtab('idea')">Idea</button>
             <button class="repo-subtab-btn" data-subtab="files" onclick="setRepoSubtab('files')">Files</button>
             <button class="repo-subtab-btn" data-subtab="architect" onclick="setRepoSubtab('architect')">Architect</button>
             <button class="repo-subtab-btn" data-subtab="spec" onclick="setRepoSubtab('spec')">Spec</button>
-            <!-- §0.39.271 P4 — James: "i want the roadmap and phases combined into a fully enterprise
-                 grade manager." Phasemap + Roadmap are one tab. Their panels stay below (renderers
-                 kept); Phasemap's verification/graphs now show in Intelligence. -->
-            <button class="repo-subtab-btn" data-subtab="phases" onclick="setRepoSubtab('phases')">Phases</button>
+            <button class="repo-subtab-btn" data-subtab="phasemap" onclick="setRepoSubtab('phasemap')">Phasemap</button>
+            <button class="repo-subtab-btn" data-subtab="roadmap" onclick="setRepoSubtab('roadmap')">Roadmap</button>
             <button class="repo-subtab-btn" data-subtab="intelligence" onclick="setRepoSubtab('intelligence')">Intelligence</button>
             <button class="repo-subtab-btn" data-subtab="agent" onclick="setRepoSubtab('agent')">Agent</button>
-            <button class="repo-subtab-btn" data-subtab="debug" onclick="setRepoSubtab('debug')">Debug</button>
             <button class="repo-subtab-btn" data-subtab="versionium" onclick="setRepoSubtab('versionium')">Versionium</button>
-            <button class="repo-subtab-btn" data-subtab="git" onclick="setRepoSubtab('git')">Sync &amp; CI</button>
             <button class="repo-subtab-btn" data-subtab="settings" onclick="setRepoSubtab('settings')">Settings</button>
-            <span class="repo-subnav-sep" title="this repo's canvases — they open as views of their own"></span>
-          <div class="tab-group tab-group-inrepo" data-group="create">
-            <button class="repo-subgroup-btn tab-group-btn" data-views="brainstorm,ideas" onclick="toggleTabGroup(event,this)"><span class="tab-icon">✎</span>Create<span class="tab-caret">▾</span></button>
-            <div class="tab-dropdown">
-              <button class="tab-sub" data-view="brainstorm" onclick="setView('brainstorm')"><span class="tab-icon">✎</span>Brainstorm</button>
-              <button class="tab-sub" data-view="ideas" onclick="setView('ideas')"><span class="tab-icon">◇</span>Ideas</button>
-            </div>
-          </div>
-          <div class="tab-group tab-group-inrepo" data-group="build">
-            <button class="repo-subgroup-btn tab-group-btn" data-views="eravos,architect-build,spec-wizard" onclick="toggleTabGroup(event,this)"><span class="tab-icon">▦</span>Build<span class="tab-caret">▾</span></button>
-            <div class="tab-dropdown">
-              <button class="tab-sub" data-view="eravos" onclick="setView('eravos')"><span class="tab-icon">◈</span>Eravos — organism canvas</button>
-              <button class="tab-sub" data-view="architect-build" onclick="setView('architect-build')"><span class="tab-icon">⌘</span>Architect — block canvas</button>
-              <button class="tab-sub" data-view="spec-wizard" onclick="setView('spec-wizard')"><span class="tab-icon">▤</span>Spec Builder</button>
-            </div>
-          </div>
           </nav>
 
           <!-- HOME — the repo's own README/.spec, or basic identity if neither exists -->
           <div class="repo-subtab-panel active" id="repo-subtab-home">
-            <div class="detail-empty">← select a repo</div>
-          </div>
-
-          <!-- IDEA — §0.39.261: the idea this repo came from, and every way it grows
-               (improve · iterate · expand). Iterations are real IdeaOS ideas linked to
-               it; each can go to the agent or onto the roadmap. js/app.js §IDEA TAB. -->
-          <div class="repo-subtab-panel" id="repo-subtab-idea">
             <div class="detail-empty">← select a repo</div>
           </div>
 
@@ -1090,27 +844,14 @@ body.tab-tree-open #tab-tree-toggle{color:var(--sky)}
                renderSpecBuilder()/renderSpecEngineBuilder() caller keeps working.
                renderRepoSpec() toggles the two children — it must never replace
                this panel's innerHTML, or #spec-builder disappears. -->
-          <!-- SPEC — §0.39.271 S2, James: "the spec tab is for the .spec in the spec folder, the
-               living model." The living spec comes first (GET /api/repos/:uuid/living-spec,
-               js/living-spec.js); the spec-engine chunk builder that was this tab is kept below it
-               as the build manifest. -->
           <div class="repo-subtab-panel" id="repo-subtab-spec">
-            <div id="repo-living-spec"></div>
-            <details class="ds" id="repo-build-manifest">
-              <summary class="ds-label" style="cursor:pointer">build manifest — the spec-engine chunks this repo is built from</summary>
-              <div class="detail-empty" id="repo-spec-empty">← select a repo</div>
-              <div class="spec-builder" id="spec-builder" style="display:none"></div>
-            </details>
+            <div class="detail-empty" id="repo-spec-empty">← select a repo</div>
+            <div class="spec-builder" id="spec-builder" style="display:none"></div>
           </div>
 
           <!-- PHASEMAP — real data: MCO2's verification tiers (L0-L8,
                merged sync+lazy) and MCO1's dependency graph summary.
                GET /api/repos/:uuid/verification, GET .../graph. -->
-          <!-- PHASES — every phasemap of this repo (a nexus repo: of NEXUS) as one manager:
-               summary, map cards, Board / Layers / Table, a detail pane, status, add, build
-               (Versionium snapshot first, then the repo's agent). GET /api/repos/:uuid/phases,
-               POST .../phases/{status,add,build}. js/app.js §PHASES. -->
-          <div class="repo-subtab-panel" id="repo-subtab-phases"></div>
           <div class="repo-subtab-panel" id="repo-subtab-phasemap">
             <div class="detail-empty">← select a repo</div>
           </div>
@@ -1130,13 +871,6 @@ body.tab-tree-open #tab-tree-toggle{color:var(--sky)}
                repo's own real atlas/graph/verification artifacts — see
                GET /api/repos/:uuid/scan. -->
           <div class="repo-subtab-panel" id="repo-subtab-intelligence">
-            <div class="detail-empty">← select a repo</div>
-          </div>
-
-          <!-- DEBUG — §0.39.261: what is wrong, in one place — failed verification
-               tiers, parse failures, COS run failures, agent errors, live syntax and
-               dependency checks. GET /api/repos/:uuid/debug. js/app.js §DEBUG TAB. -->
-          <div class="repo-subtab-panel" id="repo-subtab-debug">
             <div class="detail-empty">← select a repo</div>
           </div>
 
@@ -1163,12 +897,6 @@ body.tab-tree-open #tab-tree-toggle{color:var(--sky)}
                fork, export, archive) moved here from the old file-tree
                toolbar strip — this is the "repo settings" surface, not
                a file-tree control. -->
-          <!-- GIT & CI — §0.39.265: real git on this repo's folder (remote, commit, pull, push,
-               an SSH key or token to do it with) and its CI/CD pipeline. js/app.js §GIT TAB. -->
-          <div class="repo-subtab-panel" id="repo-subtab-git">
-            <div class="detail-empty">← select a repo</div>
-          </div>
-
           <div class="repo-subtab-panel" id="repo-subtab-settings">
             <div class="detail-empty">← select a repo</div>
           </div>
@@ -2243,8 +1971,6 @@ async function saveToIdearium(){
   <div class="modal" style="max-width:900px;width:90vw">
     <div class="modal-title" id="inj-ed-title">inject</div>
     <div id="inj-ed-meta" style="font-size:9px;opacity:.6;margin-bottom:6px"></div>
-    <!-- §0.39.266 — approval prompt for agent code on a Nexus repo: what approving writes into the live tree -->
-    <div id="inj-ed-gate" style="display:none;margin-bottom:6px"></div>
     <textarea id="inj-ed-content" spellcheck="false" style="width:100%;height:46vh;font-family:var(--mono,monospace);font-size:11px;line-height:1.5;tab-size:2;white-space:pre;background:var(--bg2,#0b1220);color:inherit;border:1px solid var(--b1);border-radius:3px;padding:8px;box-sizing:border-box"></textarea>
     <pre id="inj-ed-current" style="display:none;max-height:28vh;overflow:auto;font-size:10px;opacity:.75;border:1px dashed var(--b1);border-radius:3px;padding:8px;margin-top:6px;white-space:pre"></pre>
     <div class="modal-actions">
@@ -2278,10 +2004,6 @@ async function saveToIdearium(){
 
 <link rel="stylesheet" href="css/agent-blocks.css">
 <script src="js/app.js"></script>
-<script src="js/compartment.js"></script>
 <script src="js/agent-blocks.js"></script>
-<script src="js/nexus-atlas.js"></script>
-<script src="js/phases.js"></script>
-<script src="js/living-spec.js"></script>
 </body>
 </html>

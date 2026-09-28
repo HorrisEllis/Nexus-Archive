@@ -1,0 +1,23 @@
+{
+  "id": "chunk-4ac9aec8c681323f",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "runtime/organism-factory.js",
+  "range": {
+    "start_line": 1230,
+    "end_line": 1265
+  },
+  "symbols": [
+    "defs"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "4a79153fe86ac68dceefd23ba8a8b7849f49d9a5e96dffd1e2695cae3921359e"
+  },
+  "status": "complete",
+  "content": "function defs() { return Object.values(DEFS); }\n\n/* ═══════════════════════════════════════════════════════\n   EDM LAB — Tranki / dubstep / wubs / bass drop studio\n═══════════════════════════════════════════════════════ */\n\n/* ═══════════════════════════════════════════════════════\n   EDM LAB  — full production environment\n   Three concurrent engines, each with its own unique interface:\n     BASS ENGINE   — filter visualiser you interact with directly\n     RHYTHM ENGINE — density-paint canvas (not a step grid)\n     TENSION ENGINE — harmonic dissonance wheel + overtone display\n   Drop trigger at the bottom fires everything simultaneously.\n═══════════════════════════════════════════════════════ */\nreg('edm-lab', {\n  category:'Audio — Production', summary:'Full EDM build studio: bass, rhythm-density, and tension engines.', needs:[],\n  label:'EDM Lab', icon:'⚡', accent:'#ff2266',\n  width:860, height:620, minWidth:680, minHeight:500,\n  mountEngine(instanceId, intakeResult, sBus) {\n    EDMLabEngine.mount(instanceId, sBus, KERNEL.audio, {});\n  },\n  buildUI(content, intakeResult, instanceId, sBus, _pub) {\n\n    /* ─────────────────────────────────────────────────────\n       ROOT LAYOUT\n       Three columns side by side + drop bar at bottom.\n    ───────────────────────────────────────────────────── */\n    const root = document.createElement('div');\n    root.style.cssText = 'display:flex;flex-direction:column;height:100%;background:var(--bg0);';\n\n    const cols = document.createElement('div');\n    cols.style.cssText = 'display:flex;flex:1;min-height:0;gap:1px;background:var(--b1);';\n\n    /* ─────────────────────────────────────────────────────\n       SHARED SECTION HEADER HELPER\n    ───────────────────────────────────────────────────── */"
+}

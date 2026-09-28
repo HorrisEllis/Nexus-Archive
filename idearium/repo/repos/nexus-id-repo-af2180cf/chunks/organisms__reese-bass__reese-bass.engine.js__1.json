@@ -1,0 +1,23 @@
+{
+  "id": "chunk-36f908350ea037c9",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/reese-bass/reese-bass.engine.js",
+  "range": {
+    "start_line": 14,
+    "end_line": 28
+  },
+  "symbols": [
+    "mount"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "4a60847c457a900c0dc4fdf93f2a3a1d21682f3b03c63ccaf6c19ed4008f47b7"
+  },
+  "status": "complete",
+  "content": "function mount(instanceId, sBus, audio, config = {}) {\n  const gBus = KERNEL.bus;\n\n  let _params = {\n    pitch:  config.pitch  || 55,   /* Hz */\n    detune: config.detune || 10,   /* cents */\n    cutoff: config.cutoff || 400,\n    sweep:  config.sweep  || 0.9,  /* filter sweep duration */\n    gain:   config.gain   || 0.85,\n    sub:    config.sub !== false,\n    active: false,\n  };\n\n  let _nodes = null;\n"
+}

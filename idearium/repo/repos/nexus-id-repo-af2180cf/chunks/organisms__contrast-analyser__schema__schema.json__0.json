@@ -1,0 +1,21 @@
+{
+  "id": "chunk-c1e47decfe4a1c45",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/contrast-analyser/schema/schema.json",
+  "range": {
+    "start_line": 1,
+    "end_line": 72
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "e2b11614cda6059b46218805aa795e304ef0fe0c7a883086962ed18a0e0291c3"
+  },
+  "status": "complete",
+  "content": "{\n  \"schema_version\": \"1.0.0\",\n  \"id\": \"eravos.contrast-analyser\",\n  \"label\": \"Contrast Analyser\",\n  \"icon\": \"\\u27fa\",\n  \"accent\": \"#00d4ff\",\n  \"domain\": [\n    \"music\",\n    \"analysis\",\n    \"mixing\"\n  ],\n  \"description\": \"Three-mode audio contrast analyser. FREQUENCY: clash score. DYNAMIC: RMS comparison. RHYTHMIC: transient grid with tension arcs.\",\n  \"permissions\": [\n    \"audio_in\",\n    \"bus_publish\",\n    \"bus_subscribe\"\n  ],\n  \"provides\": [\n    \"capability.audio_analysis\"\n  ],\n  \"requires\": [],\n  \"hooks\": [\n    {\n      \"hook_id\": \"ca.hook.slot_a_in\",\n      \"direction\": \"in\",\n      \"event_type\": \"audio:buffer\",\n      \"contract_version\": \"1.0.0\"\n    },\n    {\n      \"hook_id\": \"ca.hook.slot_b_in\",\n      \"direction\": \"in\",\n      \"event_type\": \"audio:buffer\",\n      \"contract_version\": \"1.0.0\"\n    },\n    {\n      \"hook_id\": \"ca.hook.analysis_out\",\n      \"direction\": \"out\",\n      \"event_type\": \"contrast:analysis\",\n      \"contract_version\": \"1.0.0\"\n    }\n  ],\n  \"params\": {\n    \"mode\": {\n      \"type\": \"enum\",\n      \"values\": [\n        \"frequency\",\n        \"dynamic\",\n        \"rhythmic\"\n      ],\n      \"default\": \"frequency\"\n    },\n    \"bpm\": {\n      \"type\": \"int\",\n      \"min\": 60,\n      \"max\": 220,\n      \"default\": 128,\n      \"unit\": \"BPM\"\n    },\n    \"sensitivity\": {\n      \"type\": \"float\",\n      \"min\": 0,\n      \"max\": 1,\n      \"default\": 0.3,\n      \"unit\": \"\"\n    }\n  },\n  \"ui\": {\n    \"type\": \"dual_slot_analyser\",\n    \"modes\": 3,\n    \"canvas_driven\": true\n  }\n}"
+}

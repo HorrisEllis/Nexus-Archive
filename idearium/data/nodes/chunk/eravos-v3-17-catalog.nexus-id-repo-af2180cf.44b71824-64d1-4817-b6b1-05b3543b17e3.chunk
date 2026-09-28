@@ -1,0 +1,40 @@
+envelope: 1
+uuid: nexus-export-chunk-eravos-v3-17-catalog.nexus-id-repo-af2180cf.44b71824-64d1-4817-b6b1-05b3543b17e3
+type: chunk
+id: eravos-v3-17-catalog.nexus-id-repo-af2180cf.44b71824-64d1-4817-b6b1-05b3543b17e3
+context: idearium spec-engine chunk of spec ced8d1a8-ea48-4c70-88e9-ab5758ff3a3f
+intent: null
+summary: organisms-acid-synth-acid-synth-engine (complete)
+system: idearium
+tags:
+  - spec:ced8d1a8-ea48-4c70-88e9-ab5758ff3a3f
+  - status:complete
+  - section:organisms-acid-synth-acid-synth-engine
+  - specName:eravos-v3-17-catalog
+  - agent:ingest
+  - repo:nexus-id-repo-af2180cf
+exported_at: 1790367431563
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1790367431563
+lastSeenAt: 1790367431563
+fingerprint: null
+payload:
+  uuid: 44b71824-64d1-4817-b6b1-05b3543b17e3
+  specUuid: ced8d1a8-ea48-4c70-88e9-ab5758ff3a3f
+  sectionId: organisms-acid-synth-acid-synth-engine
+  sectionTitle: organisms/acid-synth/acid-synth.engine.js
+  chunkIdx: 68
+  status: complete
+  realPath: organisms/acid-synth/acid-synth.engine.js
+  fileName: 68-organisms-acid-synth-acid-synth-engine.md
+  filePath: D:\Backups\Downloads\Nexus_v0_39_241\idearium\data\specs\ced8d1a8-ea48-4c70-88e9-ab5758ff3a3f\68-organisms-acid-synth-acid-synth-engine-44b71824.md
+  agent: ingest
+  agentModel: ingest:drop
+  attempts: 1
+  failureMode: null
+  byteSize: 4166
+  contentHash: 8d07ae8e3dd6553cbfaf9459d0347883fa783f9614795a23ad443a35a04ead75
+  createdAt: 1790367431337
+  updatedAt: 1790367431376
+  completedAt: 1790367431376

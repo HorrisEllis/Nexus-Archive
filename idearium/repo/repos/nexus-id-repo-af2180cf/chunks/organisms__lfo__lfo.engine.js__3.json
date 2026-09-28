@@ -1,0 +1,23 @@
+{
+  "id": "chunk-f3bbe35249fb553b",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/lfo/lfo.engine.js",
+  "range": {
+    "start_line": 64,
+    "end_line": 84
+  },
+  "symbols": [
+    "_tick"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "fd85b9348adc44363996c24e6b05b462fc68047e749fbe0fa7fe34e97d0720c6"
+  },
+  "status": "complete",
+  "content": "  function _tick(timestamp) {\n    if (!_running) return;\n    const dt = _lastTime ? Math.min((timestamp - _lastTime) / 1000, 0.05) : 0;\n    _lastTime = timestamp;\n\n    const { value, phase, raw } = _compute(dt);\n\n    /* Publish scoped — for UI visualisation */\n    sBus.publish('org:lfo_tick', { value, phase, raw, shape: _params.shape, depth: _params.depth });\n\n    /* Publish global — for other organisms to modulate */\n    gBus.publish('mod:signal', {\n      instanceId,\n      value,\n      xDest: _params.xDest,\n      yDest: _params.yDest,\n    });\n\n    _rafId = requestAnimationFrame(_tick);\n  }\n"
+}

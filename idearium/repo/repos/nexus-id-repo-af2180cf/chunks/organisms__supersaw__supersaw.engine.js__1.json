@@ -1,0 +1,23 @@
+{
+  "id": "chunk-f52b4b178607e3fe",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/supersaw/supersaw.engine.js",
+  "range": {
+    "start_line": 14,
+    "end_line": 29
+  },
+  "symbols": [
+    "mount"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "3711782fe86960e16d1542f04258fed7572349fab39c1cd0451dc9270d2dbf9c"
+  },
+  "status": "complete",
+  "content": "function mount(instanceId, sBus, audio, config = {}) {\n  const gBus = KERNEL.bus;\n\n  let _params = {\n    pitch:  config.pitch  || 60,\n    voices: config.voices || 7,\n    detune: config.detune != null ? config.detune : 18,\n    spread: config.spread != null ? config.spread : 0.6,\n    cutoff: config.cutoff || 5000,\n    attack: config.attack != null ? config.attack : 0.01,\n    decay:  config.decay  || 0.6,\n    active: false,\n  };\n\n  let _nodes = null; /* sustained voice set, when active */\n"
+}

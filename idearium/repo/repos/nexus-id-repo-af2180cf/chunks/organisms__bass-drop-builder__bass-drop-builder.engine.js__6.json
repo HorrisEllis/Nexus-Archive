@@ -1,0 +1,23 @@
+{
+  "id": "chunk-2cdf5d6693efa22a",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/bass-drop-builder/bass-drop-builder.engine.js",
+  "range": {
+    "start_line": 260,
+    "end_line": 272
+  },
+  "symbols": [
+    "_triggerVocal"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "b5ac882917e082fce895f692482bfc41b0a6ec1a9e0cf7a3bca44d5794b81254"
+  },
+  "status": "complete",
+  "content": "function _triggerVocal(AC, t, audioBuffer, params, masterGain) {\n  if (!audioBuffer) return [];\n  const { gain = 0.9, pitch = 0, reverse = false } = params;\n  const src = AC.createBufferSource();\n  src.buffer = audioBuffer;\n  src.playbackRate.value = Math.pow(2, pitch / 12) * (reverse ? -1 : 1);\n  const g = AC.createGain(); g.gain.value = gain;\n  src.connect(g); g.connect(masterGain);\n  src.start(t);\n  return [src, g];\n}\n\n/* ── MOUNT ──────────────────────────────────────────────── */"
+}

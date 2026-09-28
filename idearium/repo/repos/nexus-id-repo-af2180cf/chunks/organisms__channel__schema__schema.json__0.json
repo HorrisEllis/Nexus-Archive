@@ -1,0 +1,21 @@
+{
+  "id": "chunk-dfde0a62f730bf95",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/channel/schema/schema.json",
+  "range": {
+    "start_line": 1,
+    "end_line": 79
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "3d2cd91d63e1f75e0c1e3e8dc0b8c76a8cf02989adb9113268e0ba69c84fef15"
+  },
+  "status": "complete",
+  "content": "{\n  \"schema_version\": \"1.0.0\",\n  \"id\": \"eravos.channel\",\n  \"label\": \"Channel Strip\",\n  \"icon\": \"\\ud83c\\udf9a\",\n  \"accent\": \"#6a88a8\",\n  \"domain\": [\n    \"music\",\n    \"mixing\",\n    \"routing\"\n  ],\n  \"description\": \"Audio channel strip. Gain, pan, mute, solo. VU metering. Receives audio:signal from any organism.\",\n  \"permissions\": [\n    \"audio_out\",\n    \"audio_in\",\n    \"bus_publish\",\n    \"bus_subscribe\"\n  ],\n  \"provides\": [\n    \"capability.channel_strip\"\n  ],\n  \"requires\": [],\n  \"hooks\": [\n    {\n      \"hook_id\": \"ch.hook.audio_in\",\n      \"direction\": \"in\",\n      \"event_type\": \"audio:signal\",\n      \"contract_version\": \"1.0.0\"\n    },\n    {\n      \"hook_id\": \"ch.hook.bus_out\",\n      \"direction\": \"out\",\n      \"event_type\": \"bus:send\",\n      \"contract_version\": \"1.0.0\"\n    }\n  ],\n  \"params\": {\n    \"gain\": {\n      \"type\": \"float\",\n      \"min\": 0,\n      \"max\": 2,\n      \"default\": 1.0,\n      \"unit\": \"\"\n    },\n    \"pan\": {\n      \"type\": \"float\",\n      \"min\": -1,\n      \"max\": 1,\n      \"default\": 0,\n      \"unit\": \"\"\n    },\n    \"send_rev\": {\n      \"type\": \"float\",\n      \"min\": 0,\n      \"max\": 1,\n      \"default\": 0.2,\n      \"unit\": \"\"\n    },\n    \"send_del\": {\n      \"type\": \"float\",\n      \"min\": 0,\n      \"max\": 1,\n      \"default\": 0,\n      \"unit\": \"\"\n    },\n    \"mute\": {\n      \"type\": \"bool\",\n      \"default\": false\n    },\n    \"solo\": {\n      \"type\": \"bool\",\n      \"default\": false\n    }\n  },\n  \"ui\": {\n    \"type\": \"channel_strip_vertical\",\n    \"vu_meter\": true\n  }\n}"
+}

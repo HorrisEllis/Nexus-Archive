@@ -141,19 +141,12 @@ async function run(stream = []) {
   const runId    = crypto.randomUUID();
   const results  = { runId, ts: Date.now(), hostile: [], known_good: [], ping_both: [], violations: 0 };
 
-  try {
-  // Test hostile inputs — intuition must not crash on them.
-  // §0.39.267 — was pingBoth() per input: 5 Ollama generations every run that
-  // could never fail. analysis.answer() -> _callOllama() catches every error
-  // and returns a fallback text, so r.analysis.error is always undefined and
-  // `safe` was always true for the analysis side. The contradiction check on
-  // these prompts is also moot: neither side's answer is a status claim.
-  // The one real cross-check (system status, below) still hits Ollama.
-  for (const { prompt } of HOSTILE_INPUTS) {
-    const r = await pingIntuition(prompt, stream);
-    const safe = !r.error;
+  // Test hostile inputs — both faculties should not crash or leak
+  for (const { prompt, expect } of HOSTILE_INPUTS) {
+    const r = await pingBoth(prompt, stream);
+    const safe = !r.intuition?.error && !r.analysis?.error;
     if (!safe) results.violations++;
-    results.hostile.push({ prompt: prompt.slice(0,50), safe });
+    results.hostile.push({ prompt: prompt.slice(0,50), safe, contradiction: r.contradiction });
   }
 
   // Test known-good inputs — intuition should handle these fast
@@ -194,33 +187,16 @@ async function run(stream = []) {
     await _writeToCortex('adversarial.violation.detected', { runId, count: results.violations, results }, runId);
   }
 
+  _running = false;
   return results;
-  } finally {
-    // §0.39.267 — was reset only on the success path; any throw left
-    // _running true and silently disabled every later run.
-    _running = false;
-  }
 }
 
 // ── Schedule ──────────────────────────────────────────────────────────────────
-// §0.39.267 — was a fixed 60 s. With 6 Ollama generations per run that kept
-// the GPU busy ~1/3 of the time and the model permanently resident (Ollama
-// unloads after 5 min idle; it never got 5 min). Default is now 10 min, one
-// generation per run. NEXUS_ADVERSARIAL_INTERVAL_MS overrides; 0 disables.
-const INTERVAL_MS = (() => {
-  const v = parseInt(process.env.NEXUS_ADVERSARIAL_INTERVAL_MS, 10);
-  return Number.isFinite(v) && v >= 0 ? v : 600000;
-})();
-
 function start(getStream) {
   if (_timer) return;
-  if (INTERVAL_MS === 0) {
-    console.log('[copilot/adversarial] disabled (NEXUS_ADVERSARIAL_INTERVAL_MS=0)');
-    return;
-  }
-  _timer = setInterval(() => run(getStream ? getStream() : []), INTERVAL_MS);
+  _timer = setInterval(() => run(getStream ? getStream() : []), 60000);
   if (_timer.unref) _timer.unref();
-  console.log(`[copilot/adversarial] started — probing every ${Math.round(INTERVAL_MS / 1000)}s (1 Ollama call per run)`);
+  console.log('[copilot/adversarial] started — probing every 60s');
 }
 
 function stop() {
@@ -229,4 +205,4 @@ function stop() {
 
 function lastResults() { return _results.slice(0, 5); }
 
-module.exports = { run, pingIntuition, pingAnalysis, pingBoth, start, stop, lastResults, _normalizeCopilotAnswer, INTERVAL_MS };
+module.exports = { run, pingIntuition, pingAnalysis, pingBoth, start, stop, lastResults, _normalizeCopilotAnswer };

@@ -1,0 +1,21 @@
+{
+  "id": "chunk-356ed31599512ded",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/supersaw/schema/schema.json",
+  "range": {
+    "start_line": 1,
+    "end_line": 32
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "d559ad98a6ed038fb862a4a479c72a5cd5b6aa64a3579ba667d5dddbc19b57fb"
+  },
+  "status": "complete",
+  "content": "{\n  \"schema_version\": \"1.0.0\",\n  \"id\": \"eravos.supersaw\",\n  \"label\": \"Supersaw\",\n  \"icon\": \"🌟\",\n  \"accent\": \"#ffd400\",\n  \"domain\": [\"music\", \"synthesis\", \"lead\", \"edm\"],\n  \"description\": \"7-voice detuned sawtooth unison lead/pluck synth. The classic EDM supersaw stack — wide, bright, festival-lead sound. One-shot trigger or sustained hold.\",\n  \"permissions\": [\"audio_out\", \"midi_in\", \"bus_publish\", \"bus_subscribe\"],\n  \"provides\": [\"capability.audio_out\", \"capability.lead_voice\"],\n  \"requires\": [\"capability.audio_context\"],\n  \"dependencies\": {\n    \"runtime\": [\"kernel/kernel.js\"],\n    \"browser_apis\": [\"Web Audio API (OscillatorNode, GainNode, BiquadFilterNode)\"],\n    \"external_libs\": []\n  },\n  \"hooks\": [\n    { \"hook_id\": \"supersaw.hook.trig_in\",   \"direction\": \"in\",  \"event_type\": \"pad:trigger\",  \"contract_version\": \"1.0.0\" },\n    { \"hook_id\": \"supersaw.hook.midi_in\",   \"direction\": \"in\",  \"event_type\": \"midi:note\",    \"contract_version\": \"1.0.0\" },\n    { \"hook_id\": \"supersaw.hook.audio_out\", \"direction\": \"out\", \"event_type\": \"audio:signal\", \"contract_version\": \"1.0.0\" }\n  ],\n  \"params\": {\n    \"pitch\":    { \"type\": \"int\",   \"min\": 24,  \"max\": 96,   \"default\": 60,   \"unit\": \"MIDI note\" },\n    \"voices\":   { \"type\": \"int\",   \"min\": 3,   \"max\": 7,    \"default\": 7,    \"unit\": \"\" },\n    \"detune\":   { \"type\": \"float\", \"min\": 0,   \"max\": 50,   \"default\": 18,   \"unit\": \"cents\" },\n    \"spread\":   { \"type\": \"float\", \"min\": 0,   \"max\": 1,    \"default\": 0.6,  \"unit\": \"\" },\n    \"cutoff\":   { \"type\": \"float\", \"min\": 200, \"max\": 12000,\"default\": 5000, \"unit\": \"Hz\" },\n    \"attack\":   { \"type\": \"float\", \"min\": 0,   \"max\": 1,    \"default\": 0.01, \"unit\": \"s\" },\n    \"decay\":    { \"type\": \"float\", \"min\": 0.05,\"max\": 3,    \"default\": 0.6,  \"unit\": \"s\" }\n  }\n}\n"
+}

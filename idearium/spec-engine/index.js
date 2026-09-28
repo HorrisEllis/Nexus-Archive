@@ -706,29 +706,6 @@ export function loadSpec(specUuid) {
   return JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 }
 
-// §0.39.265 — James: "its really unstable. idearium." loadSpec() parses the whole
-// manifest, and a manifest carries every chunk's full content (nexus/core's is
-// ~20 MB). RepoLayer._enrich() called it for EVERY repo on EVERY list — the
-// library view, the 10-minute nexus-self sync, the build loop — so a plain repo
-// list parsed tens of MB synchronously and /health stopped answering. The list
-// needs chunk metadata, never content: loadSpecMeta() returns the manifest with
-// chunk content stripped, cached against the manifest file's mtime+size (and
-// dropped by saveSpec), so it is re-read only when the spec actually changed.
-// READ-ONLY by contract — the object is shared between callers; anything that
-// mutates and saves must use loadSpec().
-const _metaCache = new Map();   // specUuid -> { mtimeMs, size, meta }
-export function loadSpecMeta(specUuid) {
-  const manifestPath = path.join(SPECS_ROOT, specUuid, 'manifest.json');
-  let st;
-  try { st = fs.statSync(manifestPath); } catch (_) { throw new Error(`spec ${specUuid} not found`); }
-  const hit = _metaCache.get(specUuid);
-  if (hit && hit.mtimeMs === st.mtimeMs && hit.size === st.size) return hit.meta;
-  const m = loadSpec(specUuid);
-  const meta = { ...m, chunks: (m.chunks || []).map(({ content, ...c }) => c) };
-  _metaCache.set(specUuid, { mtimeMs: st.mtimeMs, size: st.size, meta });
-  return meta;
-}
-
 // §EXPORT 2026-07-18 — real reconstruction of the original .spec text, for
 // export. For an IMPORTED spec this is byte-exact: strips the
 // `<!-- imported: ... -->\n\n` tag importSpec() prepends to every chunk
@@ -754,7 +731,6 @@ export function saveSpec(manifest) {
   const specDir = path.join(SPECS_ROOT, manifest.uuid);
   fs.mkdirSync(specDir, { recursive: true });
   manifest.updatedAt = Date.now();
-  _metaCache.delete(manifest.uuid);   // loadSpecMeta re-reads it next time
   // §2.1 disk before behavior — the write cortex mirrors below can lag or
   // fail without losing anything; this line is the one that must not.
   fs.writeFileSync(path.join(specDir, 'manifest.json'), JSON.stringify(manifest, null, 2));
@@ -800,10 +776,6 @@ function _summarize(manifest) {
       // flagged after a restart is an interrupted import (see ingestFilesAsSpec); the
       // build queue must never AI-"generate" its files.
       ingesting:   !!manifest.ingesting,
-      // §0.39.265 — the document spec ↔ its generated code spec ("Generate code")
-      codeSpecUuid: manifest.codeSpecUuid || null,
-      codeFor:      manifest.codeFor || null,
-      fileTree:     !!manifest.fileTree,
       // §2026-07-10 — lightweight per-section status for the UI's Spec Library
       // chips. Id/title/done only, NOT content: the list must stay small even
       // with many specs. The detail view loads full chunk content on demand.
@@ -933,32 +905,14 @@ export function recoverOrphanedChunks() {
 // for content that agent never touched — §1.2, loud refusal, not a silent
 // no-op or an overwrite that makes the record lie.
 export function setChunkAgent(specUuid, chunkUuid, agent) {
-  // §0.39.267 — '' / null un-pins: the chunk goes back to the default (the repo's Agent-tab switch, else its own agent).
-  if (agent === '' || agent === null) {
-    const m = loadSpec(specUuid);
-    const c = m.chunks.find(x => x.uuid === chunkUuid);
-    if (!c) throw new Error(`chunk ${chunkUuid} not found in spec ${specUuid}`);
-    if (c.status !== CHUNK_STATES.PENDING) throw new Error(`cannot reassign agent on a '${c.status}' chunk — only PENDING chunks can be reassigned before dispatch`);
-    c.agentPinned = false; c.updatedAt = Date.now(); saveSpec(m);
-    return c;
-  }
-  if (typeof agent !== 'string') throw new Error('agent required (non-empty string)');
+  if (!agent || typeof agent !== 'string') throw new Error('agent required (non-empty string)');
   const manifest = loadSpec(specUuid);
   const chunk = manifest.chunks.find(c => c.uuid === chunkUuid);
   if (!chunk) throw new Error(`chunk ${chunkUuid} not found in spec ${specUuid}`);
   if (chunk.status !== CHUNK_STATES.PENDING) {
     throw new Error(`cannot reassign agent on a '${chunk.status}' chunk — only PENDING chunks can be reassigned before dispatch`);
   }
-  // §0.39.267 — a hand-picked agent is pinned: it wins over the repo's Agent-tab switch at build time
-  // (idearium/api speceng.build). Names are checked against lib/agent-providers.js, the one list.
-  let norm = agent;
-  try {
-    const P = _require('../../lib/agent-providers.js');
-    norm = P.normalize(agent);
-    if (!P.isKnown(norm)) throw new Error(`unknown agent "${agent}" — one of: ${P.all().join(', ')}`);
-  } catch (e) { if (/unknown agent/.test(e.message)) throw e; }
-  chunk.agent = norm;
-  chunk.agentPinned = true;
+  chunk.agent = agent;
   chunk.updatedAt = Date.now();
   saveSpec(manifest);
   return chunk;
@@ -1199,32 +1153,6 @@ export function deleteSpec(specUuid) {
   return manifest;
 }
 
-/**
- * purgeSpec(specUuid) -> { purged, chunkNodes, mirrorRows } — §0.39.266. James: "delete old specs,
- * idearium is supposed to do that when removing them from the list." Removes the spec for real: its
- * directory (manifest, .spec, chunk files), its .chunk nodes, its cortex mirror rows, and the caches.
- * Supersedes §7.4 "archived, not deleted" for specs, by James's decision (docs/2026-09-27-registry-
- * harness-and-stability-phasemap.spec D2). Callers decide WHETHER a spec may go (a spec that is a live
- * repo's content is that repo's files) — this only decides HOW.
- */
-export function purgeSpec(specUuid) {
-  if (!specUuid || !/^[\w-]+$/.test(specUuid)) throw new Error(`invalid spec uuid: ${specUuid}`);
-  const specDir = path.join(SPECS_ROOT, specUuid);
-  if (!fs.existsSync(specDir)) return { purged: false, reason: 'not on disk' };
-  let chunkUuids = [];
-  try { chunkUuids = (loadSpecMeta(specUuid).chunks || []).map(c => c.uuid); } catch (_) { /* unreadable manifest — the directory still goes */ }
-  fs.rmSync(specDir, { recursive: true, force: true });
-  _metaCache.delete(specUuid); _summaryCache.delete(specUuid);
-  const chunkNodesRemoved = chunkNodes.removeChunkNodes(chunkUuids);
-  let mirrorRows = 0;
-  try {
-    mirrorRows += jaaDB.delete(MANIFEST_TABLE, r => r.uuid === specUuid) || 0;
-    mirrorRows += jaaDB.delete(CHUNK_TABLE, r => r.specUuid === specUuid) || 0;
-    for (const k of [..._mirrorSig.keys()]) if (k === MANIFEST_TABLE + specUuid || chunkUuids.some(u => k === CHUNK_TABLE + u)) _mirrorSig.delete(k);
-  } catch (e) { console.warn(`[${MODULE_ID}] §1.2 cortex mirror purge failed for ${specUuid} (non-fatal): ${e.message}`); }
-  return { purged: true, chunkNodes: chunkNodesRemoved, mirrorRows };
-}
-
 export function restoreSpec(specUuid) {
   const manifest = loadSpec(specUuid);
   manifest.deleted = false;
@@ -1413,10 +1341,10 @@ export default {
   // live endpoint, not by reading the file.
   listTemplates, getTemplate, readSeed,
   findByDedupKey, findPriorSection, importSpec,
-  createSpec, createFileTreeSpec, loadSpec, loadSpecMeta, saveSpec, listSpecs,
+  createSpec, createFileTreeSpec, loadSpec, saveSpec, listSpecs,
   nextPendingChunk, markChunkBuilding, completeChunk, failChunk, setChunkAgent, recordDispatchJob, setWarpPrimitives,
   recoverOrphanedChunks,
-  buildChunkPrompt, archiveSpec, expandSpec, deleteSpec, restoreSpec, purgeSpec,   // purgeSpec: 0.39.266 (D2)
+  buildChunkPrompt, archiveSpec, expandSpec, deleteSpec, restoreSpec,
   computeRootHash, findByRootHash, ingestFilesAsSpec, addChunk, removeChunk,
   reconstructSpecText,
   SPEC_SECTIONS, CHUNK_STATES, WARP_PRIMITIVES: [...WARP_PRIMITIVES],

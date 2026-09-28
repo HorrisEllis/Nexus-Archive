@@ -1,0 +1,21 @@
+{
+  "id": "chunk-f36ba6e66f952b5e",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "runtime/precision-clock.worklet.js",
+  "range": {
+    "start_line": 1,
+    "end_line": 14
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "3b5e14b8a7c94e99ec1c93cc8446f288508082659858340711c6f642867257fa"
+  },
+  "status": "complete",
+  "content": "/* ═══════════════════════════════════════════════════════════\n   PRECISION CLOCK WORKLET  v1.0.0\n   runtime/precision-clock.worklet.js\n\n   Runs on the audio thread — completely isolated from the\n   JavaScript main thread, GC, rendering, and event loop.\n\n   Fires a tick message to the main thread every process()\n   call (~2.9ms at 44.1kHz / 128 samples). Main thread\n   uses these ticks to drive the lookahead scheduler.\n\n   This file is loaded via AudioContext.audioWorklet.addModule()\n   ═══════════════════════════════════════════════════════════ */\n"
+}

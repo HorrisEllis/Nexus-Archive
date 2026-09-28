@@ -1,0 +1,23 @@
+{
+  "id": "chunk-407e36a922e1c736",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "runtime/organism-factory.js",
+  "range": {
+    "start_line": 2000,
+    "end_line": 2017
+  },
+  "symbols": [
+    "draw"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "92cf9bb05fa48e003f5c360e2d9ede67afe9161eea5f5fc97c7c1bab0136f21a"
+  },
+  "status": "complete",
+  "content": "    function draw() {\n      requestAnimationFrame(draw);\n      const W = cvs.offsetWidth, H = cvs.offsetHeight;\n      if (!W || !H) return;\n      if (cvs.width !== W || cvs.height !== H) { cvs.width = W; cvs.height = H; }\n      const ctx = cvs.getContext('2d');\n      ctx.clearRect(0, 0, W, H);\n      ctx.fillStyle = '#010308'; ctx.fillRect(0, 0, W, H);\n\n      if (activeMode === 'frequency') _drawFreq(ctx, W, H);\n      if (activeMode === 'dynamic')   _drawDyn(ctx, W, H);\n      if (activeMode === 'rhythmic')  _drawRhythmic(ctx, W, H);\n    }\n\n    /* ─ FREQUENCY MODE ─\n       Hardware spectrum analyser aesthetic.\n       Vertical bars, log scale, A cyan B purple, clash region white.\n       LED-style horizontal lines across background. */"
+}

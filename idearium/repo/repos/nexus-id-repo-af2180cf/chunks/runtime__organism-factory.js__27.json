@@ -1,0 +1,23 @@
+{
+  "id": "chunk-1f1f9328e3bff46e",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "runtime/organism-factory.js",
+  "range": {
+    "start_line": 463,
+    "end_line": 468
+  },
+  "symbols": [
+    "posClip"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "c1babba232121c5f2edf2e8e421044652d43b31d5572944687777bca6ff452c1"
+  },
+  "status": "complete",
+  "content": "    function posClip(el) {\n      const s=parseFloat(el.dataset.start),d=parseFloat(el.dataset.dur)||4;\n      el.style.left=(s-_offset)*_pxPerSec+'px';\n      el.style.width=Math.max(16,d*_pxPerSec)+'px';\n    }\n"
+}

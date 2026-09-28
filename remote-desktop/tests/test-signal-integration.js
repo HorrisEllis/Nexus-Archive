@@ -4,13 +4,7 @@
 // and checks the gate actually gates.
 
 const { spawn } = require('child_process');
-// §0.39.261 — Node's own WebSocket client (global since Node 22) instead of the
-// ws package; wrapped to the .on('open'|'message'|'error') shape this test uses.
-function WebSocket(url) {
-  const sock = new globalThis.WebSocket(url);
-  const on = (ev, fn) => sock.addEventListener(ev, ev === 'message' ? (e) => fn(typeof e.data === 'string' ? e.data : Buffer.from(e.data)) : fn);
-  return { on, send: (d) => sock.send(d), close: () => sock.close(), get readyState() { return sock.readyState; } };
-}
+const WebSocket = require('ws');
 const path = require('path');
 
 const PORT = 8099;

@@ -1,0 +1,23 @@
+{
+  "id": "chunk-8e6cd92257326d6a",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/serial-bridge/serial-bridge.engine.js",
+  "range": {
+    "start_line": 21,
+    "end_line": 36
+  },
+  "symbols": [
+    "mount"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "6d6ccb48cc8bb95c28d87375d4352c517c5fb5a1407b0e205c1f40e0488caf2c"
+  },
+  "status": "complete",
+  "content": "function mount(instanceId, sBus, config = {}) {\n  const gBus = KERNEL.bus;\n\n  let _params = {\n    baudRate:   config.baudRate   || 115200,\n    lineEnding: config.lineEnding || '\\n',\n    mapMode:    config.mapMode    || 'off',\n  };\n\n  let _port      = null;\n  let _writer    = null;\n  let _reader    = null;\n  let _connected = false;\n  let _rxBuf     = '';\n  let _readLoopStop = false;\n"
+}

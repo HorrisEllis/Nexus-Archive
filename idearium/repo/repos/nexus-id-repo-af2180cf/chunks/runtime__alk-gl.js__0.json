@@ -1,0 +1,21 @@
+{
+  "id": "chunk-fbd0f2b5f1e9fd62",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "runtime/alk-gl.js",
+  "range": {
+    "start_line": 1,
+    "end_line": 55
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "61c953035173c129fca0b2a4e7b5867ec6c73c97e18fff5142b0b2ce7880f77b"
+  },
+  "status": "complete",
+  "content": "/* ═══════════════════════════════════════════════════════════\n   ALK-GL — WebGL2 Particle Field Engine  v1.9.0\n   Adapted for ERAVOS: ES6 exports → window.ALKGL\n   Original: ES6 module with MediaPipe blendshape support.\n   ERAVOS usage: organisms are attractors, audio drives field.\n   ═══════════════════════════════════════════════════════════ */\nwindow.ALKGL = (() => {\n'use strict';\n/**\n * @module       alk-gl\n * @uuid         f9e8d7c6-b5a4-4321-9876-543210fedcba\n * @version      1.0.0\n *\n * ALK-GL — Custom WebGL2 Particle Field Engine\n *\n * Architecture: ping-pong RGBA32F textures. No transform feedback.\n * Each texel = one particle. Texture sampling enables spatial coherence —\n * particles can read their neighbors' state, enabling field dynamics\n * impossible with buffer-based systems.\n *\n * Pass 1 COMPUTE: full-screen quad GLSL integrates curl noise + attractor\n *   gravity + blendshape potential deformation + spatial coherence + entropy.\n *   Writes to output ping-pong textures.\n *\n * Pass 2 RENDER: instanced points, each reads position from state texture\n *   via gl_VertexID. Additive blending. Color = f(entropy, structure, speed).\n *\n * Blendshape deformer: 29 MediaPipe blendshapes → GLSL uniforms →\n *   per-particle potential offset. Eye blink fires collapse+shockwave at iris.\n *   Jaw open expands mouth well. Smile deepens corner wells. Nose sneer\n *   injects rotational turbulence. Cheek puff radial expansion. Gaze direction\n *   biases particles near iris along look vector.\n */\n'use strict';\n\nconst ALKGL_UUID    = 'f9e8d7c6-b5a4-4321-9876-543210fedcba';\nconst ALKGL_VERSION = '1.9.0';\n\nconst MAX_ATT = 64;\nconst MAX_STR = 8;\n\n// ── GLSL common ────────────────────────────────────────────────────────────────\nconst GLSL_COMMON = `\nprecision highp float;\nprecision highp sampler2D;\nfloat hash21(vec2 p){p=fract(p*vec2(127.1,311.7));p+=dot(p,p+19.19);return fract(p.x*p.y);}\nfloat valueNoise(vec2 p){vec2 i=floor(p),f=fract(p),u=f*f*(3.0-2.0*f);float a=hash21(i),b=hash21(i+vec2(1,0)),c=hash21(i+vec2(0,1)),d=hash21(i+vec2(1,1));return mix(mix(a,b,u.x),mix(c,d,u.x),u.y);}\nvec2 curlNoise2D(vec2 p,float z,float t){float e=0.06,px=p.x+z*.18+t*.04,py=p.y+z*.22+t*.05;return vec2((valueNoise(vec2(px,py+e))-valueNoise(vec2(px,py-e)))/(2.0*e),-(valueNoise(vec2(px+e,py))-valueNoise(vec2(px-e,py)))/(2.0*e));}\n`;\n\n// ── Compute shaders ────────────────────────────────────────────────────────────\nconst COMP_VERT = `#version 300 es\nin vec2 a_quad; out vec2 v_uv;\nvoid main(){v_uv=a_quad*.5+.5;gl_Position=vec4(a_quad,0,1);}`;\n"
+}

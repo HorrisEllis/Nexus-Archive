@@ -1,0 +1,23 @@
+{
+  "id": "chunk-fd059a4bf4618639",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/master-fx/master-fx.engine.js",
+  "range": {
+    "start_line": 50,
+    "end_line": 79
+  },
+  "symbols": [
+    "_syncUI"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "45eff20634d1df715a97cd7764c44cba20bc83f0138da0b1848b0587b6ba4a0f"
+  },
+  "status": "complete",
+  "content": "  function _syncUI() {\n    sBus.publish('org:state_sync', { params: { ..._params } });\n  }\n\n  const _unsubs = [\n    gBus.subscribe('ui:config_change:' + instanceId, ({ key, value }) => _apply(key, value)),\n  ];\n\n  _applyAll();\n  _syncUI();\n\n  KERNEL.registry.register({\n    instanceId,\n    id:       'eravos.master-fx',\n    label:    'Master FX',\n    provides: ['capability.master_fx_control'],\n    requires: ['capability.audio_context'],\n    permissions: ['audio_out', 'bus_publish', 'bus_subscribe'],\n    hooks: [],\n  });\n\n  return {\n    unmount() { _unsubs.forEach(u => u()); KERNEL.registry.unregister(instanceId); },\n    get params() { return { ..._params }; },\n  };\n}\n\nreturn { mount };\n})();\n"
+}

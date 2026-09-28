@@ -1,0 +1,40 @@
+envelope: 1
+uuid: nexus-export-chunk-eravos-v3-17-catalog.nexus-id-repo-af2180cf.212d40b2-f2c1-4a7f-b43e-4b6e9ede05d5
+type: chunk
+id: eravos-v3-17-catalog.nexus-id-repo-af2180cf.212d40b2-f2c1-4a7f-b43e-4b6e9ede05d5
+context: idearium spec-engine chunk of spec ced8d1a8-ea48-4c70-88e9-ab5758ff3a3f
+intent: null
+summary: organisms-serial-bridge-serial-bridge-engine (complete)
+system: idearium
+tags:
+  - spec:ced8d1a8-ea48-4c70-88e9-ab5758ff3a3f
+  - status:complete
+  - section:organisms-serial-bridge-serial-bridge-engine
+  - specName:eravos-v3-17-catalog
+  - agent:ingest
+  - repo:nexus-id-repo-af2180cf
+exported_at: 1790367431517
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1790367431517
+lastSeenAt: 1790367431517
+fingerprint: null
+payload:
+  uuid: 212d40b2-f2c1-4a7f-b43e-4b6e9ede05d5
+  specUuid: ced8d1a8-ea48-4c70-88e9-ab5758ff3a3f
+  sectionId: organisms-serial-bridge-serial-bridge-engine
+  sectionTitle: organisms/serial-bridge/serial-bridge.engine.js
+  chunkIdx: 27
+  status: complete
+  realPath: organisms/serial-bridge/serial-bridge.engine.js
+  fileName: 27-organisms-serial-bridge-serial-bridge-engine.md
+  filePath: D:\Backups\Downloads\Nexus_v0_39_241\idearium\data\specs\ced8d1a8-ea48-4c70-88e9-ab5758ff3a3f\27-organisms-serial-bridge-serial-bridge-engine-212d40b2.md
+  agent: ingest
+  agentModel: ingest:drop
+  attempts: 1
+  failureMode: null
+  byteSize: 6492
+  contentHash: 015de5fc9cfd72dd72de0c512fbb9b8d88998c58c8762338154a1cab7d6ae906
+  createdAt: 1790367431337
+  updatedAt: 1790367431362
+  completedAt: 1790367431362

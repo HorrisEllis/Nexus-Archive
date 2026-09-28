@@ -1,0 +1,23 @@
+{
+  "id": "chunk-c1a59c16c2e7aeb1",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "runtime/canvas-cfr.js",
+  "range": {
+    "start_line": 90,
+    "end_line": 124
+  },
+  "symbols": [
+    "_loop"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "baf545ad57d0129b91fb638754b8a72ee13f496955a1b854dbe0795352219ee6"
+  },
+  "status": "complete",
+  "content": "function _loop() {\n  if (!_running || !_engine) return;\n  _rafId = requestAnimationFrame(_loop);\n\n  /* Audio-driven field update */\n  if (_analyser && _fftData) {\n    _analyser.getByteFrequencyData(_fftData);\n\n    /* RMS → structure */\n    let rms = 0;\n    for (let i = 0; i < _fftData.length; i++) rms += (_fftData[i]/255) ** 2;\n    rms = Math.sqrt(rms / _fftData.length);\n\n    /* Sub bass energy (bins 0-3) → entropy */\n    let subEnergy = 0;\n    for (let i = 0; i < 4; i++) subEnergy += _fftData[i] / 255;\n    subEnergy /= 4;\n\n    /* High frequency (upper third) → curl */\n    let hiEnergy = 0;\n    const hiStart = Math.floor(_fftData.length * 0.66);\n    for (let i = hiStart; i < _fftData.length; i++) hiEnergy += _fftData[i] / 255;\n    hiEnergy /= (_fftData.length - hiStart);\n\n    /* Smooth field towards audio state */\n    const EMA = 0.06;\n    _engine.field.structure = _engine.field.structure * (1-EMA) + (0.4 + rms * 0.5) * EMA;\n    _engine.field.entropy   = _engine.field.entropy   * (1-EMA) + (0.05 + subEnergy * 0.4) * EMA;\n    _engine.field.curl      = _engine.field.curl      * (1-EMA) + (0.2 + hiEnergy * 0.5) * EMA;\n  }\n\n  _engine.step(1/60);\n}\n\n/* ── Analyser hookup ────────────────────────────────────── */"
+}

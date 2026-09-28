@@ -1,0 +1,23 @@
+{
+  "id": "chunk-35ae3bd823657875",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/nexus-diagnostic/nexus-diagnostic.engine.js",
+  "range": {
+    "start_line": 14,
+    "end_line": 33
+  },
+  "symbols": [
+    "mount"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "c45ab6b87e56b54e9fba6e40576f88864671be3ef884eaf65ae6b41d76e050ff"
+  },
+  "status": "complete",
+  "content": "function mount(instanceId, sBus, audio, config = {}) {\n  return NexusNodeCore.mount(instanceId, sBus, {\n    key: 'diagnostic',\n    label: 'DIAGNOSTIC',\n    icon: '🩹',\n    accent: '#aa44ff',\n    base: 'http://127.0.0.1:7825',\n    statusPath: '/api/status',\n    snapshotsPath: '/snapshots',\n    orchestratorBase: 'http://127.0.0.1:9000',\n    diagnosePath: '/diagnose',\n    idLink: 'http://127.0.0.1:4800',\n    isOrchestrator: false,\n    ...config,\n  });\n}\n\nreturn { mount };\n})();\n"
+}

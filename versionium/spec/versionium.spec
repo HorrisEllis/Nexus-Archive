@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        versionium
-    version:     3.3.0
+    version:     3.2.0
     status:      active
     canonical_implementation: versionium/lib/engine.js
     canonical_http_surface:
@@ -369,26 +369,3 @@ spec:
         docs/2026-09-19-versionium-snapshot-and-ledger-decision.md
         (D8-D12).
       versioniumCommitId: null
-
-    - version: 3.3.0
-      date: 2026-09-26
-      summary: >
-        v0.39.263 — James: "loom depends on the .git i want versionium to
-        hold the history for each repo." Two routes: POST /api/versionium/
-        files/stage (content into the blob store ahead of record(), in
-        batches under FILE_MAX_RECORD_BYTES, sha256 computed here) so a
-        repo's first version can be any size — core's was 98 MB against a
-        32 MB request cap; and GET /api/versionium/files/versions?path=
-        (every commit that wrote a path, newest first, with the file's
-        sha256 as of each), which loom's phasemap history now reads
-        instead of `git log`. idearium commits every nexus/<system> repo
-        (and the nexus index) on each sync, and a repo snapshot's §33
-        commit field is versionium's chain (versionCommit), not a .git.
-        config.VERSION and registry-components V brought from 3.0.0 to
-        this version (they had never followed 3.1.0 / 3.2.0).
-      versioniumCommitId: null
-
-# ── ADDENDUM 2026-09-27 (0.39.271) — docs/2026-09-27-one-idearium-phases-living-spec-nodes-phasemap.spec ──
-# GET /api/versionium/history takes ?branch= and ?n= (with n: the NEWEST n, newest first; without: unchanged).
-# Every repo list now asks for its own branch — the first-200-in-store-order answer hid every repo's new
-# snapshots once 200 repo commits existed in total. Idearium's nexus repo shows all of NEXUS's versions.

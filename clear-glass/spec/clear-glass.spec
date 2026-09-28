@@ -1,7 +1,7 @@
 spec:
   meta:
     name:        clear-glass
-    version:     3.17.0
+    version:     3.16.0
     foundation:  nexus-system-foundation@1.1.0
     port:        7702
     uuid:        nexus-clear-glass-v1-0000-2026-0901-jamesbrooks-001
@@ -86,20 +86,28 @@ spec:
       HTTP method/path pairs for these would misrepresent the transport.
 
   modules:
-    - id: glass-driver
-      path: clear-glass/src/driver/glass.js · clear-glass/src/driver/glass-host/main.js
+    - id: agent-surface
+      path: clear-glass/src/ipc/agent-routes.js · src/page/reader.js · src/driver/index.js (readPage/select/check/setValue/pressKey/upload) · src/copilot/bridge.js
       description: >
-        NEW 0.39.263 (clear-glass 3.17.0) — James: "playright? no what is that for? litterally have clearglas".
-        Drive a real page in Clear Glass's own engine from Node. glass.js spawns Electron on
-        glass-host/main.js; the host opens a BrowserWindow per page and speaks the DevTools
-        protocol in-process (webContents.debugger), relaying replies and events over stdio
-        lines prefixed "§G ". Without a display it runs --ozone-platform=headless with
-        offscreen windows. Machines without the Electron binary fall back to any Chromium
-        (GLASS_CHROMIUM) over its DevTools websocket. API: chromium.launch() → newPage({viewport})
-        → goto/evaluate/click/fill/selectOption/keyboard.press/locator/$/$$/$eval/$$eval/
-        waitForSelector/waitForFunction/route/exposeFunction/addInitScript/cdp/screenshot;
-        selectors CSS + text= + :has-text() + a >> b. Proven: tests/modules/test-nexus-atlas-and-glass
-        CG-002 (a wrapped inline element is clicked on its first line box) and every tests/probe/*.js.
+        NEW 0.39.259 — James: "i want copilot completely aware of clearglass, hooked in completely. all of it,
+        copilot can use it." The synchronous agent surface on :7702: POST /cli/driver awaits the real ClearDriver and
+        returns its result (driver.exec over /cmd only ever answered {emitted}; the result went to SSE); POST
+        /cli/page/read runs page/reader.js in the page (url, title, budgeted text, headings, links, every field with its
+        label + a selector the driver accepts, radios with their group question, every button, unfilledRequired);
+        GET /cli/state is one snapshot (tabs with url/title, providers, contexts, mesh, accounts, autofill profiles,
+        macros, userscripts, recent downloads) where a failing source is named in `blind`, never shown empty. The
+        driver gains setValue (native setter + input/change, for long answers and framework inputs), select (by
+        value or visible text), check (to a definite state), pressKey, and upload (CDP DOM.setFileInputFiles via
+        webContents.debugger; paths on this machine; refuses when another client holds the debugger). The in-browser
+        co-pilot (copilot/bridge.js) now sends each round's tool results back, up to settings.copilotToolRounds
+        (default 3; 0 = the old fire-and-forget), runs driver actions on the driver with results, and runs any NEXUS
+        agent tool from a ```tool {name, arguments} block through copilot's /api/tools/run.
+    - id: capture-opportunity
+      path: clear-glass/src/toolbar/commands.js (capture-opportunity) · renderer/browser.js
+      description: >
+        NEW 0.39.259 — palette command "Capture job / gig / lead to NEXUS": POSTs this tab's agentId to copilot
+        :3750 /api/opportunity/capture, which reads the tab through /cli/page/read and scores it into the opportunity
+        pipeline (lib/opportunity). Toast + panel message say where it landed.
     - id: chat-transcripts-index
       path: clear-glass/src/downloads/artifact-chat-index.js · src/ipc/bridge.js /cli/downloads/responses · renderer/library/sections/responses.{js,css}
       description: >
@@ -341,39 +349,15 @@ spec:
         opened: 2026-09-25
 
   version_history:
-    - version: 3.17.0
-      date: 2026-09-26
-      summary: >-
-        MINOR (v0.39.263) — James: "playright? no what is that for? litterally have clearglas". Playwright was a
-        root devDependency for three probe scripts, and python playwright stood behind four more (never installed,
-        so TX-20, GS-20, SA-09 and SA-10 always reported SKIPPED). Clear Glass is already a Chromium: module
-        glass-driver (src/driver/glass.js + src/driver/glass-host/) runs Clear Glass's own Electron as a page host
-        and drives each page through its webContents.debugger — no remote-debugging port, no Playwright, the
-        subset of Playwright's page API the probes used under the same names. Headless on Linux via the ozone
-        headless platform with offscreen windows (a shown window there segfaults Electron 42). All nine real-page
-        probes now run on it; the four skipped suite cases pass (transcript-push 10/10, live-stream 8/8,
-        selector-check 10/10, selector-assign-ui 9/9), agent-blocks 13/13, library window 29/29, menu-library 4/4.
-      versioniumCommitId: null
     - version: 3.16.0
-      date: 2026-09-26
+      date: 2026-09-27
       summary: >-
-        MINOR (v0.39.262) — James: "fix [renderer] unhandledrejection GUEST_VIEW_MANAGER_CALL ERR_CONNECTION_REFUSED
-        127.0.0.1:900 … make the macros way more user friendly … expand the copilot settings … add new button to the
-        plugins section with webextension support … expand per site settings … make a clearglass hat for the copilot
-        cli … make it jaa. no json … expand the autofill section, agent mesh and brainos." (1) renderer/browser.js: every
-        <webview>.loadURL() Promise was dropped; navigation now goes through navigate(), failures render one in-view page
-        with a NEXUS port-typo hint (:900 → :9000), ERR_ABORTED (-3) is not an error. (2) cg.storage.jaa
-        (src/storage/jaa.js): options, API settings, site settings, history, downloads, bookmarks, autofill,
-        fingerprints and passwords move to JAA tables (JaaKV / JaaRows); legacy JSON imported once, left on disk.
-        (3) cg.copilot.hat (src/copilot/hat.js) — the clear_glass hat in lib/hat-forge, composed per call; cg.renderer.
-        copilot-cli — route bar + slash commands; fix: driver commands from a reply executed twice; /build /diagnose had
-        no preload path. (4) Macros: recorder → cg.macros.recording, templates, sentence steps, edit/duplicate.
-        (5) cg.plugins.webextensions — Chrome extensions from folder/.zip/.crx into every persistent session.
-        (6) Site settings area; contentFilter='off' enforced in webrequest-adapter. (7) Autofill, Agent mesh expanded;
-        BrainOS Float gains NODES / MESH JOBS / MACROS / AUTOFILL / SITES via registerTab. Tests: storage-jaa 5,
-        copilot-cli 10, webextensions 7, content-filter-exempt 1, brainos-float-cg 6; settings suite 38/38.
-      components_added: [cg.storage.jaa, cg.copilot.hat, cg.renderer.copilot-cli, cg.macros.recording, cg.plugins.webextensions]
-      versioniumCommitId: null
+        MINOR (v0.39.259) — James: "i want copilot completely aware of clearglass, hooked in completely." New routes
+        POST /cli/driver, POST /cli/page/read, GET /cli/state (module agent-surface above); driver actions readPage,
+        setValue, select, check, pressKey, upload; the in-browser co-pilot's tool results go back to it; palette
+        command capture-opportunity. Proven: clear-glass-agent-surface 16/16 (the reader runs in jsdom against a real
+        application form; routes on a real express port; the tool loop against a stub copilot). Not proven: a live
+        Electron window, CDP upload.
     - version: 3.15.0
       date: 2026-09-26
       summary: >-
@@ -588,20 +572,3 @@ spec:
         (7), /cli/downloads/clear-completed, /cli/screen-qa/* (3 REST + 5 IPC). Full detail in
         lib/version.js's own 0.39.204–0.39.210 changelog entries.
       versioniumCommitId: null
-
-  # ## ADDENDUM 2026-09-26 (0.39.264) — ErosmancerOS runs with Clear Glass
-  # src/eros/supervisor.js (new): bootstrap step 14.4 starts ErosmancerOS (unless EROS_AUTOSTART=0)
-  # before the wire, connects it to CG_CDP_PORT when it answers, restarts it with backoff, and
-  # shutdown() stops it. Wire routes: GET /eros-supervisor (state, pid, port, cdpPort, restarts,
-  # last error, recent output) and POST /eros-supervisor/start (start, or reconnect if running).
-  # Settings → ErosmancerOS shows who started it, offers Start/Reconnect, and its DevTools port
-  # field defaults to Clear Glass's real port (was a hard-coded 9222; Clear Glass opens 9333).
-
-  # ## ADDENDUM 2026-09-27 (0.39.269) — the download manager is agent memory
-  # docs/2026-09-27-agent-hat-memory-download-manager-phasemap.spec (M1–M5). No Clear Glass code changed.
-  # James: "everything is supposed to persist with agents. using the download manager." The downloads list
-  # (src/downloads/store.js) and the chat/artifact index (src/downloads/artifact-chat-index.js) now receive every
-  # backend's exchanges, not only Guardian's: lib/agent-memory.js record() writes Ollama and copilot exchanges through
-  # guardian/lib/response-sink.js (downloads entry, pending queue when Clear Glass is closed) and recordResponse() (same
-  # raw shape as guardian/lib/code-artifact.js). recall() reads the index back (queryItems by agentId, readItem) as the
-  # agent's memory. The Library's Responses tab therefore shows Ollama replies too, filed by agent.

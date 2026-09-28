@@ -1,0 +1,23 @@
+{
+  "id": "chunk-235aff49390b99ed",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/contrast-analyser/contrast-analyser.engine.js",
+  "range": {
+    "start_line": 190,
+    "end_line": 206
+  },
+  "symbols": [
+    "mount"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "885ea1b849e9e92672bfcd11266adbab3861019fafd7633d1b6cda6f4a3093e7"
+  },
+  "status": "complete",
+  "content": "function mount(instanceId, sBus, audio, config = {}) {\n  const gBus = KERNEL.bus;\n\n  let mode   = config.mode || 'frequency';\n  let bpm    = config.bpm  || KERNEL.clock.BPM;\n  let sensitivity = config.sensitivity || 0.3;\n\n  /* Slot state */\n  const slots = {\n    A: { buffer: null, name: null, peaks: [], transients: [], peakDb: 0 },\n    B: { buffer: null, name: null, peaks: [], transients: [], peakDb: 0 },\n  };\n\n  /* Live FFT analysers */\n  let analyserA = null, analyserB = null;\n  const fftSize = 2048;\n"
+}

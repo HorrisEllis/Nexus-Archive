@@ -1,0 +1,21 @@
+{
+  "id": "chunk-12347cffd3f8c982",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/nexus-shared/nexus-node-core.js",
+  "range": {
+    "start_line": 1,
+    "end_line": 45
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "7ee4b981d9b2c97d753bd6b5cd2c5c04a7bd837f41adb0dab2378476398de500"
+  },
+  "status": "complete",
+  "content": "/* ═══════════════════════════════════════════════════════════\n   NEXUS NODE CORE  v1.0.0\n   organisms/nexus-shared/nexus-node-core.js\n\n   Shared engine logic for the 7 separate NEXUS diagnostic\n   organisms (cortex, guardian, bridge, orchestrator,\n   diagnostic, architect, idearium). Each organism is a thin\n   per-system wrapper (its own engine.js + schema.json, its\n   own window) that calls into this core with its own config —\n   same pattern pads/wobble-bass/acid-synth/reese-bass share\n   VOICES from pads.engine.js.\n\n   AGNOSTIC BY DESIGN — no own clock/interval:\n   Status polling is driven entirely by the existing global\n   MasterTransport (the ▶ ⏺ bar already wired for audio):\n     transport:play         -> start polling this node\n     transport:stop         -> stop polling this node\n     transport:record-start -> also write every poll result\n                                into KERNEL.ledger, tagged\n                                'nexus_diagnostic_snapshot'\n     transport:record-stop  -> stop writing to ledger\n                                (polling keeps going if still\n                                playing)\n   A node never owns its own timer. It just reacts to the same\n   wires every other organism already reacts to.\n\n   REPLAY — not fully built yet. The ledger entries written\n   during record are real, queryable history\n   (KERNEL.ledger.entries().filter(e=>e.type==='nexus_diagnostic_snapshot')),\n   which is the data a future scrub/replay UI (e.g. feeding the\n   existing Timeline organism) would consume. No playback UI\n   exists yet — this just lays the ledger groundwork honestly.\n\n   DIAGNOSE — every node's Diagnose button POSTs to the\n   Orchestrator (not directly to the target system), since the\n   Orchestrator is the existing interconnect/verifier for the\n   other subsystems. The Orchestrator's own card diagnoses\n   itself directly. Endpoint paths are config, not guesses —\n   they default to placeholders and should be set to whatever\n   NEXUS actually exposes.\n   ═══════════════════════════════════════════════════════════ */\n\nwindow.NexusNodeCore = (() => {\n'use strict';\n"
+}

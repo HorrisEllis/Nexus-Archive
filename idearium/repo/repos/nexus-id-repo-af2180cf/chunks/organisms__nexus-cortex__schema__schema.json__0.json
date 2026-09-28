@@ -1,0 +1,21 @@
+{
+  "id": "chunk-0aa62fadfc37286a",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/nexus-cortex/schema/schema.json",
+  "range": {
+    "start_line": 1,
+    "end_line": 22
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "e48d7ade8e7f04312217150af320037e621f40f6061124c6d1fe6120be947cf4"
+  },
+  "status": "complete",
+  "content": "{\n  \"schema_version\": \"1.0.0\",\n  \"id\": \"eravos.nexus-cortex\",\n  \"label\": \"NEXUS_CORTEX\",\n  \"icon\": \"🧠\",\n  \"accent\": \"#00ff88\",\n  \"domain\": [\"diagnostic\", \"monitoring\", \"nexus\"],\n  \"description\": \"Live status card for NEXUS NEXUS_CORTEX (port 3748). Polling is driven by the global transport (play/stop), not its own clock. Diagnose routes through the Orchestrator.\",\n  \"permissions\": [\"network_fetch\", \"bus_publish\", \"bus_subscribe\"],\n  \"provides\": [\"capability.nexus_diagnostic\"],\n  \"requires\": [],\n  \"hooks\": [\n    { \"hook_id\": \"nn.hook.bus_out\", \"direction\": \"out\", \"event_type\": \"org:state_sync\", \"contract_version\": \"1.0.0\" }\n  ],\n  \"params\": {\n    \"statusPath\":    { \"type\": \"string\", \"default\": \"/api/status\" },\n    \"snapshotsPath\": { \"type\": \"string\", \"default\": \"/snapshots\" },\n    \"diagnosePath\":  { \"type\": \"string\", \"default\": \"/diagnose\" }\n  },\n  \"ui\": { \"type\": \"nexus_diagnostic_card\" }\n}\n"
+}

@@ -1,0 +1,23 @@
+{
+  "id": "chunk-19e709626c2017ce",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/sample-player/sample-player.engine.js",
+  "range": {
+    "start_line": 25,
+    "end_line": 49
+  },
+  "symbols": [
+    "_play"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "cfbeea6640cf277fefbc2ec5e92e5eda5b42f90fb4d37ec9ac71a95095cd6635"
+  },
+  "status": "complete",
+  "content": "  function _play() {\n    if (!_buf) return;\n    _stop();\n    const AC = audio.AC;\n    _src = AC.createBufferSource();\n    _src.buffer = _buf;\n    _src.loop   = _looping;\n    _src.playbackRate.value = Math.pow(2, pitch/12) * (_reverse ? -1 : 1);\n    const g = AC.createGain(); g.gain.value = gain;\n    _src.connect(g); audio.send(g);\n    const s = start * _buf.duration, dur = (end - start) * _buf.duration;\n    _src.start(0, s, _looping ? undefined : dur);\n    _playing = true;\n    sBus.publish('org:state_sync', { playing: true });\n    const startedAt = AC.currentTime;\n    let frame;\n    (function track() {\n      if (!_playing) return;\n      const pos = (AC.currentTime - startedAt) / _buf.duration;\n      sBus.publish('org:playhead_update', { position_normalized: Math.min(1, Math.max(0, pos)) });\n      frame = requestAnimationFrame(track);\n    })();\n    _src.onended = () => { _playing=false; cancelAnimationFrame(frame); sBus.publish('org:state_sync',{playing:false}); };\n  }\n"
+}

@@ -1,0 +1,23 @@
+{
+  "id": "chunk-0ac011f6934d4fd5",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/nexus-bridge/nexus-bridge.engine.js",
+  "range": {
+    "start_line": 14,
+    "end_line": 33
+  },
+  "symbols": [
+    "mount"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "c95c9f5f9ac34238e7d753dfd61154f229f8158776581de21adb5232d3df5928"
+  },
+  "status": "complete",
+  "content": "function mount(instanceId, sBus, audio, config = {}) {\n  return NexusNodeCore.mount(instanceId, sBus, {\n    key: 'bridge',\n    label: 'NEXUS_BRIDGE',\n    icon: '⬡',\n    accent: '#00d4ff',\n    base: 'http://127.0.0.1:9999',\n    statusPath: '/api/status',\n    snapshotsPath: '/snapshots',\n    orchestratorBase: 'http://127.0.0.1:9000',\n    diagnosePath: '/diagnose',\n    idLink: 'http://127.0.0.1:4800',\n    isOrchestrator: false,\n    ...config,\n  });\n}\n\nreturn { mount };\n})();\n"
+}

@@ -1,0 +1,23 @@
+{
+  "id": "chunk-e1f98a899c1a3fc3",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "runtime/organism-factory.js",
+  "range": {
+    "start_line": 646,
+    "end_line": 754
+  },
+  "symbols": [
+    "draw"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "2d2da5f0dc5d73c736d7ffe55f823b3f8cd532a62909af20e38553096e5eb182"
+  },
+  "status": "complete",
+  "content": "    function draw() {\n      requestAnimationFrame(draw);\n      const W = cvs.offsetWidth, H = cvs.offsetHeight;\n      if (!W || !H) return;\n      if (cvs.width !== W || cvs.height !== H) { cvs.width = W; cvs.height = H; }\n      const ctx = cvs.getContext('2d');\n      ctx.clearRect(0, 0, W, H);\n\n      /* Background */\n      ctx.fillStyle = '#060a12';\n      ctx.fillRect(0, 0, W, H);\n\n      if (!_peaks.length) {\n        /* Empty state — drop zone */\n        ctx.strokeStyle = 'rgba(170,68,255,.2)';\n        ctx.setLineDash([6,6]); ctx.lineWidth = 1;\n        ctx.strokeRect(8, 8, W-16, H-16);\n        ctx.setLineDash([]);\n        ctx.fillStyle = 'rgba(170,68,255,.3)';\n        ctx.font = '8px \"Share Tech Mono\",monospace'; ctx.textAlign='center';\n        ctx.fillText('DROP AUDIO', W/2, H/2-8);\n        ctx.fillStyle = 'rgba(170,68,255,.15)';\n        ctx.font = '24px sans-serif';\n        ctx.fillText('⬇', W/2, H/2+16);\n        return;\n      }\n\n      const startX = _start * W;\n      const endX   = _end   * W;\n\n      /* Dimmed regions outside start/end */\n      ctx.fillStyle = 'rgba(0,0,0,.55)';\n      ctx.fillRect(0, 0, startX, H);\n      ctx.fillRect(endX, 0, W-endX, H);\n\n      /* Waveform — full width */\n      const mid = H / 2;\n      ctx.beginPath(); ctx.strokeStyle = 'rgba(170,68,255,.25)'; ctx.lineWidth = 1;\n      _peaks.forEach((p, i) => {\n        const x = (i / _peaks.length) * W;\n        const h = p * mid * 0.85;\n        ctx.moveTo(x, mid - h); ctx.lineTo(x, mid + h);\n      }); ctx.stroke();\n\n      /* Active region waveform — bright */\n      ctx.beginPath(); ctx.strokeStyle = '#aa44ff'; ctx.lineWidth = 1.5;\n      _peaks.forEach((p, i) => {\n        const x = (i / _peaks.length) * W;\n        if (x < startX || x > endX) return;\n        const h = p * mid * 0.9;\n        ctx.moveTo(x, mid - h); ctx.lineTo(x, mid + h);\n      }); ctx.stroke();\n\n      /* Glow on active region */\n      if (_playing) {\n        ctx.save();\n        ctx.shadowColor = '#aa44ff'; ctx.shadowBlur = 10;\n        ctx.beginPath(); ctx.strokeStyle = 'rgba(170,68,255,.15)'; ctx.lineWidth = 3;\n        _peaks.forEach((p, i) => {\n          const x = (i / _peaks.length) * W;\n          if (x < startX || x > endX) return;\n          const h = p * mid * 0.9;\n          ctx.moveTo(x, mid - h); ctx.lineTo(x, mid + h);\n        }); ctx.stroke();\n        ctx.restore();\n      }\n\n      /* Center line */\n      ctx.strokeStyle = 'rgba(170,68,255,.15)'; ctx.lineWidth = .5;\n      ctx.beginPath(); ctx.moveTo(0, mid); ctx.lineTo(W, mid); ctx.stroke();\n\n      /* Start handle line */\n      ctx.strokeStyle = '#aa44ff'; ctx.lineWidth = 1.5;\n      ctx.beginPath(); ctx.moveTo(startX, 0); ctx.lineTo(startX, H); ctx.stroke();\n\n      /* End handle line */\n      ctx.strokeStyle = '#ff2266'; ctx.lineWidth = 1.5;\n      ctx.beginPath(); ctx.moveTo(endX, 0); ctx.lineTo(endX, H); ctx.stroke();\n\n      /* Handle caps */\n      ctx.fillStyle = '#aa44ff';\n      ctx.fillRect(startX, mid-12, 8, 24);\n      ctx.fillStyle = '#ff2266';\n      ctx.fillRect(endX-8, mid-12, 8, 24);\n\n      /* Handle labels */\n      ctx.fillStyle = '#aa44ff'; ctx.font = '6px \"Share Tech Mono\",monospace'; ctx.textAlign = 'left';\n      ctx.fillText(`${(_start*100).toFixed(0)}%`, startX+10, mid-4);\n      ctx.fillStyle = '#ff2266'; ctx.textAlign = 'right';\n      ctx.fillText(`${(_end*100).toFixed(0)}%`, endX-10, mid-4);\n\n      /* Playhead */\n      if (_playing || _playhead > 0) {\n        const phX = (_start + _playhead * (_end - _start)) * W;\n        ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5; ctx.globalAlpha = .8;\n        ctx.beginPath(); ctx.moveTo(phX, 0); ctx.lineTo(phX, H); ctx.stroke();\n        ctx.globalAlpha = 1;\n        /* Triangle cap */\n        ctx.fillStyle = '#ffffff';\n        ctx.beginPath(); ctx.moveTo(phX-4, 0); ctx.lineTo(phX+4, 0); ctx.lineTo(phX, 8); ctx.fill();\n      }\n\n      /* Position DOM handles */\n      startHandle.style.left = startX + 'px';\n      endHandle.style.left   = (endX - 3) + 'px';\n    }\n    draw();\n\n    /* ── Pointer interaction on canvas ── */"
+}

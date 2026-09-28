@@ -1,0 +1,40 @@
+envelope: 1
+uuid: nexus-export-chunk-eravos-v3-17-catalog.nexus-id-repo-af2180cf.ee58ab83-9f08-419f-9ac2-3f1139b999a6
+type: chunk
+id: eravos-v3-17-catalog.nexus-id-repo-af2180cf.ee58ab83-9f08-419f-9ac2-3f1139b999a6
+context: idearium spec-engine chunk of spec ced8d1a8-ea48-4c70-88e9-ab5758ff3a3f
+intent: null
+summary: runtime-canvas-wm (complete)
+system: idearium
+tags:
+  - spec:ced8d1a8-ea48-4c70-88e9-ab5758ff3a3f
+  - status:complete
+  - section:runtime-canvas-wm
+  - specName:eravos-v3-17-catalog
+  - agent:ingest
+  - repo:nexus-id-repo-af2180cf
+exported_at: 1790367431484
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1790367431484
+lastSeenAt: 1790367431484
+fingerprint: null
+payload:
+  uuid: ee58ab83-9f08-419f-9ac2-3f1139b999a6
+  specUuid: ced8d1a8-ea48-4c70-88e9-ab5758ff3a3f
+  sectionId: runtime-canvas-wm
+  sectionTitle: runtime/canvas-wm.js
+  chunkIdx: 2
+  status: complete
+  realPath: runtime/canvas-wm.js
+  fileName: 02-runtime-canvas-wm.md
+  filePath: D:\Backups\Downloads\Nexus_v0_39_241\idearium\data\specs\ced8d1a8-ea48-4c70-88e9-ab5758ff3a3f\02-runtime-canvas-wm-ee58ab83.md
+  agent: ingest
+  agentModel: ingest:drop
+  attempts: 1
+  failureMode: null
+  byteSize: 8141
+  contentHash: 85265726a9dbfd57442c7905adfefec9169c55a94082c8cd289d7c75a0985787
+  createdAt: 1790367431337
+  updatedAt: 1790367431351
+  completedAt: 1790367431351

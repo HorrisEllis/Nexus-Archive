@@ -1,0 +1,21 @@
+{
+  "id": "chunk-d581e8ea9d4ecfca",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/nexus-architect/nexus-architect.engine.js",
+  "range": {
+    "start_line": 1,
+    "end_line": 13
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "e142a2b98eed9c359591d1cd3c215a77a99942972d627af97f1e03e4c87c8ffe"
+  },
+  "status": "complete",
+  "content": "/* ═══════════════════════════════════════════════════════════\n   ORGANISM: ARCHITECT  v1.0.0\n   id: eravos.nexus-architect\n\n   Thin per-system wrapper around NexusNodeCore. All polling,\n   diagnose, snapshot, and idearium logic lives in the shared\n   core (organisms/nexus-shared/nexus-node-core.js) -- this file\n   only supplies this node's identity and endpoint.\n   ═══════════════════════════════════════════════════════════ */\n\nwindow.NexusArchitectEngine = (() => {\n'use strict';\n"
+}

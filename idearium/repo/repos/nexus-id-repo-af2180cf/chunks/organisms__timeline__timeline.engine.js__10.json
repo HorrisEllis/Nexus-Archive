@@ -1,0 +1,23 @@
+{
+  "id": "chunk-27c55a49c5716490",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/timeline/timeline.engine.js",
+  "range": {
+    "start_line": 58,
+    "end_line": 85
+  },
+  "symbols": [
+    "_syncUI"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "96b3a61f2d534290d8d9b53580f45a0ffc2548b97f5532dcd4f60e45a9cd02e9"
+  },
+  "status": "complete",
+  "content": "  function _syncUI() {\n    sBus.publish('org:clip_sync',{\n      lanes: _lanes.map(l=>({laneId:l.laneId,name:l.name,icon:l.icon,color:l.color})),\n      clips: _lanes.flatMap(l=>l.clips.map(c=>({...c,laneId:l.laneId}))),\n      pxPerSec, offset, cursor, bpm: clock.BPM,\n    });\n  }\n\n  const _unsubs = [\n    gBus.subscribe('ui:play_press:'+instanceId,  ()=>playing?_stop():_play()),\n    gBus.subscribe('ui:ruler_click:'+instanceId, ({position_sec})=>{cursor=Math.max(0,position_sec);cursorAtPlay=cursor;_emitPH();}),\n    gBus.subscribe('ui:zoom_change:'+instanceId, ({px_per_sec})=>{pxPerSec=Math.max(20,Math.min(400,px_per_sec));_syncUI();}),\n    gBus.subscribe('ui:clip_place:'+instanceId,  ({laneId,position_sec,assetId,name})=>_addClip(laneId,{startSec:position_sec,name,assetId})),\n    gBus.subscribe('ui:clip_move:'+instanceId,   ({clipId,position_sec})=>{_lanes.forEach(l=>{const c=l.clips.find(c=>c.clipId===clipId);if(c)c.startSec=Math.max(0,position_sec);});}),\n    gBus.subscribe('ui:clip_remove:'+instanceId, ({clipId})=>{_lanes.forEach(l=>{l.clips=l.clips.filter(c=>c.clipId!==clipId);});sBus.publish('org:clip_removed',{clipId});}),\n    gBus.subscribe('ui:lane_add:'+instanceId,    opts=>_addLane(opts)),\n    gBus.subscribe('ui:lane_remove:'+instanceId, ({laneId})=>{_lanes=_lanes.filter(l=>l.laneId!==laneId);_syncUI();}),\n    gBus.subscribe('intake:file', result=>{\n      if(result.id==='audio:sample'){\n        const laneId=_addLane({name:result.name,icon:'🎵',color:'#00d4ff'});\n        _addClip(laneId,{startSec:cursor,name:result.name,durSec:4,assetId:result.hash});\n        sBus.publish('org:asset_loaded',{laneId,assetId:result.hash,arrayBuffer:result.arrayBuffer,name:result.name});\n      }\n    }),\n    gBus.subscribe('seq:play',()=>{if(!playing)_play();}),\n    gBus.subscribe('seq:stop',()=>{if(playing)_stop();}),\n  ];\n"
+}

@@ -1,0 +1,21 @@
+{
+  "id": "chunk-e52fc478dadc4ce0",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/nexus-diagnostic/nexus-diagnostic.engine.js",
+  "range": {
+    "start_line": 1,
+    "end_line": 13
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "767725a0314fcef8a92292632f330f0544bd1d766ca3bacad798eef1a4754624"
+  },
+  "status": "complete",
+  "content": "/* ═══════════════════════════════════════════════════════════\n   ORGANISM: DIAGNOSTIC  v1.0.0\n   id: eravos.nexus-diagnostic\n\n   Thin per-system wrapper around NexusNodeCore. All polling,\n   diagnose, snapshot, and idearium logic lives in the shared\n   core (organisms/nexus-shared/nexus-node-core.js) -- this file\n   only supplies this node's identity and endpoint.\n   ═══════════════════════════════════════════════════════════ */\n\nwindow.NexusDiagnosticEngine = (() => {\n'use strict';\n"
+}

@@ -1,0 +1,23 @@
+{
+  "id": "chunk-70d4f32fa3b2d840",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "runtime/organism-factory.js",
+  "range": {
+    "start_line": 1777,
+    "end_line": 1838
+  },
+  "symbols": [
+    "mkPill"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "6b42ce3c961f41575bab420f400ee216a5c867e1d8edf5631a7a08f609228c8f"
+  },
+  "status": "complete",
+  "content": "    function mkPill(label, color) {\n      const p = document.createElement('div');\n      p.style.cssText = `padding:2px 7px;border-radius:10px;border:1px solid ${color}44;font-family:var(--mono);font-size:6.5px;color:${color}44;letter-spacing:.1em;transition:all .2s;`;\n      p.textContent = label;\n      return p;\n    }\n    const bassPill    = mkPill('BASS',    '#00ff88');\n    const rhythmPill  = mkPill('RHYTHM',  '#00d4ff');\n    const tensionPill = mkPill('TENSION', '#aa44ff');\n    pills.appendChild(bassPill); pills.appendChild(rhythmPill); pills.appendChild(tensionPill);\n\n    /* DROP button */\n    const dropBtn = document.createElement('button');\n    dropBtn.style.cssText = 'margin-left:auto;height:38px;padding:0 28px;border-radius:4px;border:2px solid #ff2266;background:rgba(255,34,102,.1);color:#ff2266;font-family:var(--orb);font-size:13px;font-weight:900;letter-spacing:.22em;cursor:pointer;transition:all .18s;outline:none;flex-shrink:0;';\n    dropBtn.textContent = '⚡ DROP';\n    dropBtn.addEventListener('mouseenter', () => { dropBtn.style.background='rgba(255,34,102,.25)'; dropBtn.style.boxShadow='0 0 22px rgba(255,34,102,.4)'; });\n    dropBtn.addEventListener('mouseleave', () => { dropBtn.style.background='rgba(255,34,102,.1)'; dropBtn.style.boxShadow=''; });\n    dropBtn.addEventListener('click', () => {\n      KERNEL.audio.boot(); _pub('ui:drop', {});\n      dropBtn.style.transform='scale(.95)';\n      setTimeout(()=>dropBtn.style.transform='',120);\n    });\n\n    bottomBar.appendChild(bpmBlock); bottomBar.appendChild(sep); bottomBar.appendChild(pills); bottomBar.appendChild(dropBtn);\n\n    /* ─── Assemble ─── */\n    cols.appendChild(bassWrap); cols.appendChild(rhythmWrap); cols.appendChild(tensionWrap);\n    root.appendChild(cols); root.appendChild(bottomBar);\n    content.appendChild(root);\n\n    /* ─── Engine state sync ─── */\n    sBus.subscribe('org:state-sync', state => {\n      if (state.bass) {\n        _bassFilterPos = state.bass.filterPos;\n        _bassParams = { ...state.bass.params };\n        bassPill.style.color       = state.bass.running ? '#00ff88' : '#00ff8844';\n        bassPill.style.borderColor = state.bass.running ? '#00ff88' : '#00ff8844';\n      }\n      if (state.rhythm) {\n        _rhythmStep = state.rhythm.step;\n        if (state.rhythm.densityMap) densityCache = state.rhythm.densityMap.map(row => new Float32Array(row));\n        rhythmPill.style.color       = state.rhythm.running ? '#00d4ff' : '#00d4ff44';\n        rhythmPill.style.borderColor = state.rhythm.running ? '#00d4ff' : '#00d4ff44';\n      }\n      if (state.tension) {\n        _overtones  = state.tension.overtones || [];\n        tensionPill.style.color       = state.tension.running ? '#aa44ff' : '#aa44ff44';\n        tensionPill.style.borderColor = state.tension.running ? '#aa44ff' : '#aa44ff44';\n      }\n    });\n\n    sBus.subscribe('org:density-reset', ({ densityMap }) => {\n      densityCache = densityMap.map(row => new Float32Array(row));\n    });\n\n    sBus.subscribe('org:drop-fired', () => {\n      dropBtn.style.transform='scale(.92)';\n      dropBtn.style.boxShadow='0 0 40px rgba(255,34,102,.8)';\n      setTimeout(()=>{ dropBtn.style.transform=''; dropBtn.style.boxShadow=''; }, 400);\n    });\n\n    /* ─── Render loop ─── */"
+}

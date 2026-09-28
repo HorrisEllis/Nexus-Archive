@@ -1,0 +1,40 @@
+envelope: 1
+uuid: nexus-export-chunk-eravos-v3-17-catalog.nexus-id-repo-af2180cf.d18a5f79-d59a-4951-b962-f79bdd1a2bbe
+type: chunk
+id: eravos-v3-17-catalog.nexus-id-repo-af2180cf.d18a5f79-d59a-4951-b962-f79bdd1a2bbe
+context: idearium spec-engine chunk of spec ced8d1a8-ea48-4c70-88e9-ab5758ff3a3f
+intent: null
+summary: organisms-nexus-bridge-schema-schema (complete)
+system: idearium
+tags:
+  - spec:ced8d1a8-ea48-4c70-88e9-ab5758ff3a3f
+  - status:complete
+  - section:organisms-nexus-bridge-schema-schema
+  - specName:eravos-v3-17-catalog
+  - agent:ingest
+  - repo:nexus-id-repo-af2180cf
+exported_at: 1790367431508
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1790367431508
+lastSeenAt: 1790367431508
+fingerprint: null
+payload:
+  uuid: d18a5f79-d59a-4951-b962-f79bdd1a2bbe
+  specUuid: ced8d1a8-ea48-4c70-88e9-ab5758ff3a3f
+  sectionId: organisms-nexus-bridge-schema-schema
+  sectionTitle: organisms/nexus-bridge/schema/schema.json
+  chunkIdx: 18
+  status: complete
+  realPath: organisms/nexus-bridge/schema/schema.json
+  fileName: 18-organisms-nexus-bridge-schema-schema.md
+  filePath: D:\Backups\Downloads\Nexus_v0_39_241\idearium\data\specs\ced8d1a8-ea48-4c70-88e9-ab5758ff3a3f\18-organisms-nexus-bridge-schema-schema-d18a5f79.md
+  agent: ingest
+  agentModel: ingest:drop
+  attempts: 1
+  failureMode: null
+  byteSize: 1392
+  contentHash: 3b60c3fc310fa11a37211e4929982fdf2eceb65048961c87f13df227e0422bf1
+  createdAt: 1790367431337
+  updatedAt: 1790367431359
+  completedAt: 1790367431359

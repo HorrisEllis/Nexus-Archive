@@ -1,0 +1,23 @@
+{
+  "id": "chunk-24a49a550776a78c",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/serial-bridge/serial-bridge.engine.js",
+  "range": {
+    "start_line": 109,
+    "end_line": 115
+  },
+  "symbols": [
+    "_xyToGcode"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "0c0e13efbfa43135e1ffb8b25e87b2c653237c95a1c3b291076aaa1882de1bd5"
+  },
+  "status": "complete",
+  "content": "  function _xyToGcode(x, y) {\n    const maxTravel = config.travelMM || 100;\n    const gx = (x * maxTravel).toFixed(2);\n    const gy = (y * maxTravel).toFixed(2);\n    return `G1 X${gx} Y${gy} F${config.feedRate || 3000}`;\n  }\n"
+}

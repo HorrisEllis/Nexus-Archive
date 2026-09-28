@@ -1,0 +1,23 @@
+{
+  "id": "chunk-b9913053beb6263a",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/edm-lab/edm-lab.engine.js",
+  "range": {
+    "start_line": 213,
+    "end_line": 223
+  },
+  "symbols": [
+    "paintBrush"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "cad18ef060065f36e129b5ef357f21887da193beecf269cd2ab1b8f377b367a6"
+  },
+  "status": "complete",
+  "content": "  function paintBrush(track, step, radius, val) {\n    /* Paint with falloff around (track, step) */\n    for (let ti = Math.max(0, track-1); ti <= Math.min(TRACKS-1, track+1); ti++) {\n      for (let si = Math.max(0, step-radius); si <= Math.min(STEPS-1, step+radius); si++) {\n        const dist = Math.hypot(ti-track, si-step);\n        const falloff = Math.max(0, 1 - dist / (radius + 1));\n        density[ti][si] = Math.max(0, Math.min(1, density[ti][si] + val * falloff * 0.8));\n      }\n    }\n  }\n"
+}

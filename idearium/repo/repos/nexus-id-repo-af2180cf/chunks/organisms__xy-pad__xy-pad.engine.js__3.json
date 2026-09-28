@@ -1,0 +1,23 @@
+{
+  "id": "chunk-127a2d0690787e2f",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/xy-pad/xy-pad.engine.js",
+  "range": {
+    "start_line": 53,
+    "end_line": 57
+  },
+  "symbols": [
+    "_release"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "faf72534adc323628f71df2d3a65680abf267af4e9e4e9956e61195ad950e634"
+  },
+  "status": "complete",
+  "content": "  function _release() {\n    if (!_params.snapCenter) return;\n    _move(0.5, 0.5);\n  }\n"
+}

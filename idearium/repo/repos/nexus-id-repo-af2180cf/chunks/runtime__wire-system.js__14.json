@@ -1,0 +1,23 @@
+{
+  "id": "chunk-22be0b812eaca179",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "runtime/wire-system.js",
+  "range": {
+    "start_line": 258,
+    "end_line": 266
+  },
+  "symbols": [
+    "onSpawn"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "46a04a415f8ac20e2c000d43535484e224c281737e43dc76f8fab7bfa9ef8d45"
+  },
+  "status": "complete",
+  "content": "function onSpawn(instanceId) {\n  /* Small delay for DOM to settle */\n  setTimeout(() => {\n    const win = _canvasEl?.querySelector(`[data-wm-id=\"${instanceId}\"]`);\n    if (!win) return;\n    _attachContextMenu(win, instanceId);\n  }, 50);\n}\n"
+}

@@ -1,0 +1,23 @@
+{
+  "id": "chunk-6d65f0001e60a633",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/timeline/timeline.engine.js",
+  "range": {
+    "start_line": 7,
+    "end_line": 11
+  },
+  "symbols": [
+    "mount"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "51ad33b75f5f1d0eb1647704ec99143093733c8b6e5dbf036afb6305ae1e044f"
+  },
+  "status": "complete",
+  "content": "function mount(instanceId, sBus, audio, clock, config = {}) {\n  const gBus = KERNEL.bus;\n  let pxPerSec = 80, offset = 0, cursor = 0;\n  let playing = false, startedAt = 0, cursorAtPlay = 0, _timer = null;\n  let _lanes = [], _clipCount = 0;"
+}

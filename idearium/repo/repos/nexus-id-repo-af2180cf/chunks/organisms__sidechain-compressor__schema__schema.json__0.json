@@ -1,0 +1,21 @@
+{
+  "id": "chunk-6eb93dc7f60adbbe",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/sidechain-compressor/schema/schema.json",
+  "range": {
+    "start_line": 1,
+    "end_line": 28
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "9e70f95ef54fdf85508863e525b7e1b023c01da92a2f790dac1625441c1a6344"
+  },
+  "status": "complete",
+  "content": "{\n  \"schema_version\": \"1.0.0\",\n  \"id\": \"eravos.sidechain-compressor\",\n  \"label\": \"Sidechain\",\n  \"icon\": \"🫀\",\n  \"accent\": \"#00d4ff\",\n  \"domain\": [\"music\", \"dynamics\", \"sidechain\", \"mixing\"],\n  \"description\": \"Ducks the master bus gain on every trigger from a chosen source sound (default: kick). Produces the classic EDM sidechain 'pump'. Real-time gain envelope, no external plugin.\",\n  \"permissions\": [\"audio_out\", \"bus_publish\", \"bus_subscribe\"],\n  \"provides\": [\"capability.sidechain_duck\"],\n  \"requires\": [\"capability.audio_context\"],\n  \"dependencies\": {\n    \"runtime\": [\"kernel/kernel.js\"],\n    \"browser_apis\": [\"Web Audio API (GainNode.gain automation)\"],\n    \"external_libs\": []\n  },\n  \"hooks\": [\n    { \"hook_id\": \"sidechain.hook.trig_in\", \"direction\": \"in\", \"event_type\": \"pad:trigger\", \"contract_version\": \"1.0.0\" }\n  ],\n  \"params\": {\n    \"source\":  { \"type\": \"enum\",  \"options\": [\"kick\", \"808\", \"snare\", \"clap\"], \"default\": \"kick\" },\n    \"amount\":  { \"type\": \"float\", \"min\": 0,    \"max\": 1,   \"default\": 0.7,  \"unit\": \"\" },\n    \"attack\":  { \"type\": \"float\", \"min\": 0.001,\"max\": 0.2, \"default\": 0.005,\"unit\": \"s\" },\n    \"release\": { \"type\": \"float\", \"min\": 0.02, \"max\": 1.5, \"default\": 0.28, \"unit\": \"s\" },\n    \"enabled\": { \"type\": \"bool\",  \"default\": true }\n  }\n}\n"
+}

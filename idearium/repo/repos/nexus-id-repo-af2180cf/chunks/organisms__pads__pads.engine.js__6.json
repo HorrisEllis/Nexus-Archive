@@ -1,0 +1,23 @@
+{
+  "id": "chunk-c7f1acfbbd77a791",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/pads/pads.engine.js",
+  "range": {
+    "start_line": 130,
+    "end_line": 165
+  },
+  "symbols": [
+    "_keyHandler"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "6f2dfeb5cb4a945a358f2fa80c7cc4aaf3b92a2cd823c61addef9d4431837a8d"
+  },
+  "status": "complete",
+  "content": "  const _keyHandler = ev => {\n    if (ev.target.tagName === 'SELECT' || ev.target.tagName === 'INPUT') return;\n    const i = KEY_MAP[ev.key?.toLowerCase()];\n    if (i !== undefined) { KERNEL.audio.boot(); _fire(i, 0.9); }\n  };\n  document.addEventListener('keydown', _keyHandler);\n\n  /* Push initial state — UI is already subscribed at this point */\n  _syncUI();\n\n  KERNEL.registry.register({\n    instanceId, id: 'eravos.pads', label: 'Drum Machine',\n    provides: ['capability.pad_trigger', 'capability.audio_out', 'capability.bank_select'],\n    requires: ['capability.audio_context'],\n    permissions: ['audio_out', 'midi_in', 'bus_publish', 'bus_subscribe'],\n    hooks: [\n      { hook_id: 'pads.hook.pad_trigger_out',  direction: 'out', event_type: 'pad:trigger',     contract_version: '1.0.0' },\n      { hook_id: 'pads.hook.seq_fire_in',      direction: 'in',  event_type: 'seq:fire',        contract_version: '1.0.0' },\n      { hook_id: 'pads.hook.midi_in',          direction: 'in',  event_type: 'midi:note',       contract_version: '1.0.0' },\n      { hook_id: 'pads.hook.bank_change_out',  direction: 'out', event_type: 'pad:bank-change', contract_version: '1.0.0' },\n    ],\n  });\n\n  return {\n    unmount() {\n      _unsubs.forEach(u => u());\n      document.removeEventListener('keydown', _keyHandler);\n      KERNEL.registry.unregister(instanceId);\n    },\n    fire: _fire, setBank: _setBank, syncUI: _syncUI,\n  };\n}\n\nreturn { mount, BANKS, VOICES };\n})();\n"
+}

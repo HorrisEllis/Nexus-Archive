@@ -1,0 +1,23 @@
+{
+  "id": "chunk-13f75424374fe44a",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/acid-synth/acid-synth.engine.js",
+  "range": {
+    "start_line": 29,
+    "end_line": 32
+  },
+  "symbols": [
+    "_midiToHz"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "214235fc8d4318b3e227b0101f4e45bcaef65f8d0becce9a361041ff15ef527e"
+  },
+  "status": "complete",
+  "content": "  function _midiToHz(note) {\n    return 440 * Math.pow(2, (note - 69) / 12);\n  }\n"
+}

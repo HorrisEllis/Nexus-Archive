@@ -1,0 +1,21 @@
+{
+  "id": "chunk-cd848cd0d0dfacd4",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/nexus-guardian/nexus-guardian.engine.js",
+  "range": {
+    "start_line": 1,
+    "end_line": 13
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "9f455357936d25f4d6f00d44d023c7e59e2ec4f69d8b231b3b673d7dda78440d"
+  },
+  "status": "complete",
+  "content": "/* ═══════════════════════════════════════════════════════════\n   ORGANISM: NEXUS_GUARDIAN  v1.0.0\n   id: eravos.nexus-guardian\n\n   Thin per-system wrapper around NexusNodeCore. All polling,\n   diagnose, snapshot, and idearium logic lives in the shared\n   core (organisms/nexus-shared/nexus-node-core.js) -- this file\n   only supplies this node's identity and endpoint.\n   ═══════════════════════════════════════════════════════════ */\n\nwindow.NexusGuardianEngine = (() => {\n'use strict';\n"
+}

@@ -1,0 +1,21 @@
+{
+  "id": "chunk-69786d4ee679b345",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "runtime/organism-factory.js",
+  "range": {
+    "start_line": 1,
+    "end_line": 20
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "23da4babfd47a57e650a3fba2d59121b14912f6fe744566c51f76901f4838a53"
+  },
+  "status": "complete",
+  "content": "/* ═══════════════════════════════════════════════════════════\n   ERAVOS ORGANISM FACTORY  v3.0.0\n   Spawns any registered organism with its UI projection.\n   Engine first — UI last.\n   ═══════════════════════════════════════════════════════════ */\n\nwindow.OrganismFactory = (() => {\n'use strict';\n\n/* ── Scoped publish ─────────────────────────────────────────\n   _pub is a module-level stub. The real scoped version is\n   passed into each buildUI as scopedPub and captured in\n   event handler closures at build time.\n   We override the module-level _pub during buildUI execution\n   so the shared helpers (mkKnob etc) also use the right scope.\n   Event handlers close over the scoped version permanently.  */\nlet _pub = (topic, payload) => KERNEL.bus.publish(topic, payload);\n\n\n/* ── Shared control helpers ─────────────────────────────── */"
+}

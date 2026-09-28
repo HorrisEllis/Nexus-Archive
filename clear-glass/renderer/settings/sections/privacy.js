@@ -26,15 +26,12 @@
       return [
         pane({ title: 'Saved passwords', sub: 'Includes sign-ins saved for provider accounts.', flush: true, body: pw.error ? h('div', { class: 'err-box', text: pw.error }) : pw.length ? pw.map(p => row(p.username, `${p.origin} \u00B7 updated ${ago(p.updatedAt)}`,
           btn('Delete', async () => { if (await confirmDo('Delete saved password?', `${p.username} on ${p.origin}.`, 'Delete')) { await busy(null, () => cg.passwords.delete(p.id)); rerender(); } }, 'sm danger'))) : empty('No saved passwords.') }),
-        // §2026-09-26 — per-site choices have their own area now (sections/sites.js).
-        pane({ title: 'Site settings', flush: true, body: origins.error ? h('div', { class: 'err-box', text: origins.error }) : row(
-          `${origins.length} site${origins.length === 1 ? '' : 's'} with their own settings`, 'Permissions, zoom and content blocking per site.',
-          btn('Open Site settings', () => window.CGS.show('sites'), 'sm primary')) }),
+        pane({ title: 'Site permissions', flush: true, body: origins.error ? h('div', { class: 'err-box', text: origins.error }) : origins.length ? origins.map(o => row(o, null,
+          btn('Show', async () => { const all = await cg.siteSettings.getAll(o).catch(e => ({ error: e.message })); modal({ title: o, body: [h('pre', { class: 'out', text: JSON.stringify(all, null, 2) })] }); }, 'sm'),
+          btn('Reset', () => busy(null, async () => { await cg.siteSettings.clear(o); toast(`Reset ${o}`); rerender(); }), 'sm danger'))) : empty('No site has custom permissions.') }),
         pane({ title: 'Clear data', flush: true, body: [
           row('Browsing history', 'Every tab\u2019s history.', btn('Clear history', async () => { if (await confirmDo('Clear all history?', 'This can\u2019t be undone.', 'Clear history')) await busy(null, async () => { await cg.history.clear(); toast('History cleared'); }); }, 'sm danger')),
           row('Finished downloads', 'Removes them from the list; files stay on disk.', btn('Clear list', () => busy(null, async () => { await cg.downloads.clearCompleted(); toast('Download list cleared'); }), 'sm')),
-          // §0.39.265 — moved here from the retired Nexus Options panel.
-          row('Rewind history', 'Saved page snapshots for the main window.', btn('Clear rewind', async () => { if (await confirmDo('Clear rewind history?', 'Saved snapshots for the main window are deleted.', 'Clear rewind')) await busy(null, async () => { await cg.rewind.clear('default'); toast('Rewind history cleared'); }); }, 'sm danger')),
           row('All site permissions', null, btn('Reset all', async () => { if (await confirmDo('Reset every site\u2019s permissions?', 'Sites will ask again.', 'Reset all')) await busy(null, async () => { await cg.siteSettings.clearAll(); rerender(); }); }, 'sm danger')),
         ] }),
       ];

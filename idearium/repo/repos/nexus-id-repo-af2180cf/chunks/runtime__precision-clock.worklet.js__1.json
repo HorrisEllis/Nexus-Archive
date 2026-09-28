@@ -1,0 +1,23 @@
+{
+  "id": "chunk-c0f12caf24621ee5",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "runtime/precision-clock.worklet.js",
+  "range": {
+    "start_line": 15,
+    "end_line": 58
+  },
+  "symbols": [
+    "PrecisionClockProcessor"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "9f22020cb0eccaae2a170843266bff7ad62b763f33e7ec512a0f622d071a2d7d"
+  },
+  "status": "complete",
+  "content": "class PrecisionClockProcessor extends AudioWorkletProcessor {\n  constructor() {\n    super();\n    this._running    = false;\n    this._interval   = 0;      /* samples between ticks */\n    this._phase      = 0;      /* sample counter */\n    this._sampleRate = sampleRate;\n\n    this.port.onmessage = ({ data }) => {\n      if (data.type === 'start') {\n        this._running  = true;\n        this._interval = Math.round(this._sampleRate * data.intervalSec);\n        this._phase    = 0;\n      }\n      if (data.type === 'stop') {\n        this._running = false;\n        this._phase   = 0;\n      }\n      if (data.type === 'set-interval') {\n        this._interval = Math.round(this._sampleRate * data.intervalSec);\n      }\n    };\n  }\n\n  process() {\n    if (!this._running || this._interval <= 0) return true;\n\n    const blockSize = 128;\n    for (let i = 0; i < blockSize; i++) {\n      this._phase++;\n      if (this._phase >= this._interval) {\n        this._phase = 0;\n        /* currentTime is the time of the FIRST sample in this block.\n           The tick fires at sample i within the block.              */\n        const tickTime = currentTime + i / this._sampleRate;\n        this.port.postMessage({ type: 'tick', time: tickTime });\n      }\n    }\n    return true; /* keep alive */\n  }\n}\n\nregisterProcessor('precision-clock', PrecisionClockProcessor);\n"
+}

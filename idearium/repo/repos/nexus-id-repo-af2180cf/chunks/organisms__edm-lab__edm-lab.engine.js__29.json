@@ -1,0 +1,23 @@
+{
+  "id": "chunk-c487455f1d82db7e",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/edm-lab/edm-lab.engine.js",
+  "range": {
+    "start_line": 321,
+    "end_line": 359
+  },
+  "symbols": [
+    "mount"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "8ff3270cf0626abbf3e0644c52eb92cb6bf3021db5b749ca5c092a3816d37555"
+  },
+  "status": "complete",
+  "content": "function mount(instanceId, sBus, audio, config = {}) {\n  const gBus = KERNEL.bus;\n\n  const AC = audio.boot();\n\n  /* Shared master gain for all three engines */\n  const masterGain = AC.createGain(); masterGain.gain.value = 0.85;\n  audio.send(masterGain, false, false, true);\n\n  const bass    = BassEngine(AC, masterGain);\n  const rhythm  = RhythmEngine(AC, masterGain, gBus);\n  const tension = TensionEngine(AC, masterGain);\n\n  let _bpm = KERNEL.clock.BPM;\n  rhythm.setBPM(_bpm);\n\n  /* State sync loop — 30fps */\n  let _syncTimer = setInterval(() => {\n    sBus.publish('org:state-sync', {\n      bass: {\n        running:   bass.running,\n        filterPos: bass.filterPos,\n        params:    { ...bass.params },\n      },\n      rhythm: {\n        running:    rhythm.running,\n        step:       rhythm.step,\n        densityMap: rhythm.getDensityMap(),\n      },\n      tension: {\n        running:   tension.running,\n        value:     tension.tension,\n        overtones: tension.getOvertones(),\n      },\n      bpm: _bpm,\n    });\n  }, 33);\n\n  /* ── Drop trigger ── */"
+}

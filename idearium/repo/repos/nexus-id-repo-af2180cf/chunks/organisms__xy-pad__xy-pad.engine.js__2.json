@@ -1,0 +1,23 @@
+{
+  "id": "chunk-da701272fd775892",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/xy-pad/xy-pad.engine.js",
+  "range": {
+    "start_line": 30,
+    "end_line": 52
+  },
+  "symbols": [
+    "_move"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "f98e2e8dc9f6d70a74b715e27f14f7e58df81480f2e4f4aae839c83a9a08b41f"
+  },
+  "status": "complete",
+  "content": "  function _move(x, y) {\n    _params.x = Math.max(0, Math.min(1, x));\n    _params.y = Math.max(0, Math.min(1, y));\n\n    _trail.push({ x: _params.x, y: _params.y, t: Date.now() });\n    if (_trail.length > TRAIL_MAX) _trail.shift();\n\n    /* Broadcast modulation */\n    gBus.publish('mod:xy', {\n      instanceId,\n      x:     _params.x,\n      y:     _params.y,\n      xDest: _params.xDest,\n      yDest: _params.yDest,\n    });\n\n    sBus.publish('org:xy_update', {\n      x:     _params.x,\n      y:     _params.y,\n      trail: _trail.slice(),\n    });\n  }\n"
+}

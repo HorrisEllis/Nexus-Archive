@@ -1,0 +1,23 @@
+{
+  "id": "chunk-7ad07c2ef0742c81",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "runtime/organism-factory.js",
+  "range": {
+    "start_line": 1839,
+    "end_line": 1872
+  },
+  "symbols": [
+    "renderAll"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "5c14eba448c278a39eb5a65419f5332065b2a5188519d5d691a378fea9560c61"
+  },
+  "status": "complete",
+  "content": "    function renderAll() {\n      requestAnimationFrame(renderAll);\n      drawFilterCurve();\n      drawDensity();\n      drawOvertones();\n    }\n    renderAll();\n    _updateDial();\n  },\n});\n\n\n/* ═══════════════════════════════════════════════════════\n   CONTRAST ANALYSER — rebuilt\n   FREQUENCY: hardware-style spectrum analyser\n   DYNAMIC:   dual mirrored waveform, RMS overlay\n   RHYTHMIC:  transient roll notation, tension arcs\n   Each mode is a completely different visual language.\n═══════════════════════════════════════════════════════ */\nreg('contrast-analyser', {\n  category:'Audio — Analysis', summary:'Frequency / dynamic / rhythmic contrast analyser between two sources.', needs:[],\n  label:'Contrast Analyser', icon:'⟺', accent:'#00d4ff',\n  width:760, height:500, minWidth:560, minHeight:360,\n  mountEngine(instanceId, intakeResult, sBus) {\n    ContrastAnalyserEngine.mount(instanceId, sBus, KERNEL.audio, {});\n  },\n  buildUI(content, intakeResult, instanceId, sBus, _pub) {\n    const root = document.createElement('div');\n    root.style.cssText = 'display:flex;flex-direction:column;height:100%;background:#010308;';\n\n    /* ── Slot drop zones — top bar ── */\n    const slotBar = document.createElement('div');\n    slotBar.style.cssText = 'display:flex;gap:1px;flex-shrink:0;height:44px;border-bottom:1px solid var(--b1);background:var(--bg2);';\n"
+}

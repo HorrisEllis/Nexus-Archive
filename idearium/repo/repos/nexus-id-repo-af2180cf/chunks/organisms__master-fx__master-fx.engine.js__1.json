@@ -1,0 +1,23 @@
+{
+  "id": "chunk-b6d7e0168a532fb2",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/master-fx/master-fx.engine.js",
+  "range": {
+    "start_line": 14,
+    "end_line": 27
+  },
+  "symbols": [
+    "mount"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "428ce4fca86e8975e12411fbb9f612ec1fd909ce3d467fd94e17de538eed3648"
+  },
+  "status": "complete",
+  "content": "function mount(instanceId, sBus, audio, config = {}) {\n  const gBus = KERNEL.bus;\n\n  let _params = {\n    reverbMix:   config.reverbMix   != null ? config.reverbMix   : 0.35,\n    reverbTime:  config.reverbTime  != null ? config.reverbTime  : 2.4,\n    reverbDecay: config.reverbDecay != null ? config.reverbDecay : 3.2,\n    delayMix:    config.delayMix    != null ? config.delayMix    : 0.28,\n    delayTime:   config.delayTime   != null ? config.delayTime   : 0.32,\n    delayFB:     config.delayFB     != null ? config.delayFB     : 0.35,\n    compThresh:  config.compThresh  != null ? config.compThresh  : -24,\n    compRatio:   config.compRatio   != null ? config.compRatio   : 12,\n  };\n"
+}

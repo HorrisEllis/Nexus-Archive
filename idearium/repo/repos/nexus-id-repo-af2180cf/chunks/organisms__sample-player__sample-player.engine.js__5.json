@@ -1,0 +1,23 @@
+{
+  "id": "chunk-ddde90ad57d70f13",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/sample-player/sample-player.engine.js",
+  "range": {
+    "start_line": 56,
+    "end_line": 95
+  },
+  "symbols": [
+    "_buildPeaks"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "ff2f9a1365ada206a044c51905e640ca9fba1224dce324fa80f4ed4a0fbee37b"
+  },
+  "status": "complete",
+  "content": "  function _buildPeaks(ab, count) {\n    const data=ab.getChannelData(0), step=Math.ceil(data.length/count), peaks=[];\n    for(let i=0;i<count;i++){let max=0;for(let j=0;j<step;j++)max=Math.max(max,Math.abs(data[i*step+j]||0));peaks.push(max);}\n    return peaks;\n  }\n\n  if (intakeResult?.arrayBuffer) setTimeout(()=>_load(intakeResult), 10);\n\n  const _unsubs = [\n    gBus.subscribe('ui:play_press:'+instanceId,   ()=>_playing?_stop():_play()),\n    gBus.subscribe('ui:stop_press:'+instanceId,   ()=>_stop()),\n    gBus.subscribe('ui:config_change:'+instanceId,({key,value})=>{\n      if(key==='gain')gain=value; if(key==='pitch')pitch=value;\n      if(key==='start')start=value; if(key==='end')end=value;\n      if(key==='loop')_looping=value; if(key==='reverse')_reverse=value;\n    }),\n    gBus.subscribe('intake:file', result=>{\n      if(result.id==='audio:sample' && result._targetInstanceId===instanceId) _load(result);\n    }),\n  ];\n\n  KERNEL.registry.register({\n    instanceId, id:'eravos.sample-player', label:_name,\n    provides:['capability.audio_out','capability.sample_source'],\n    requires:['capability.audio_context'],\n    permissions:['audio_out','bus_publish','bus_subscribe','filesystem_read'],\n    hooks:[\n      {hook_id:'samp.hook.audio_out',  direction:'out',event_type:'audio:signal',contract_version:'1.0.0'},\n      {hook_id:'samp.hook.trigger_in', direction:'in', event_type:'pad:trigger', contract_version:'1.0.0'},\n    ],\n  });\n\n  return {\n    unmount(){_stop();_unsubs.forEach(u=>u());KERNEL.registry.unregister(instanceId);},\n    play:_play, stop:_stop, load:_load,\n  };\n}\nreturn { mount };\n})();\n"
+}

@@ -1,0 +1,23 @@
+{
+  "id": "chunk-834d35829225d0db",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "runtime/organism-factory.js",
+  "range": {
+    "start_line": 377,
+    "end_line": 407
+  },
+  "symbols": [
+    "drawRuler"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "c5a9027b802727f5a3b08fb11fffbcd5ee4ee86236d5b8695aecc1b3de29d9e5"
+  },
+  "status": "complete",
+  "content": "    function drawRuler(cursor=0) {\n      const rect=rulerMarks.getBoundingClientRect(); const W=rect.width,H=rect.height; if(!W) return;\n      rulerCvs.width=W; rulerCvs.height=H;\n      const ctx=rulerCvs.getContext('2d');\n      const accent=getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()||'#00ff88';\n      ctx.clearRect(0,0,W,H);\n      const beatSec=60/KERNEL.clock.BPM, barSec=beatSec*4;\n      let t=Math.floor(_offset/barSec)*barSec;\n      ctx.font='6.5px \"Share Tech Mono\",monospace'; ctx.textBaseline='middle';\n      while(t<=_offset+W/_pxPerSec+barSec){\n        const x=(t-_offset)*_pxPerSec;\n        ctx.strokeStyle='rgba(42,60,88,.8)'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke();\n        for(let b=1;b<4;b++){const bx=x+b*beatSec*_pxPerSec;ctx.strokeStyle='rgba(42,60,88,.35)';ctx.lineWidth=.5;ctx.beginPath();ctx.moveTo(bx,H*.5);ctx.lineTo(bx,H);ctx.stroke();}\n        ctx.fillStyle=accent; ctx.fillText(`${Math.round(t/barSec)+1}`,x+3,H/2);\n        t+=barSec;\n      }\n      const phX=(cursor-_offset)*_pxPerSec;\n      ctx.strokeStyle=accent; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(phX,0); ctx.lineTo(phX,H); ctx.stroke();\n    }\n\n    rulerMarks.addEventListener('click',e=>{\n      const r=rulerMarks.getBoundingClientRect();\n      const sec=Math.max(0,_offset+(e.clientX-r.left)/_pxPerSec);\n      _pub('ui:ruler_click',{position_sec:sec});\n    });\n    rulerMarks.addEventListener('wheel',e=>{\n      e.preventDefault();\n      _pxPerSec=Math.max(20,Math.min(400,_pxPerSec*(e.deltaY<0?1.12:.9)));\n      _pub('ui:zoom_change',{px_per_sec:_pxPerSec});\n    },{passive:false});\n"
+}

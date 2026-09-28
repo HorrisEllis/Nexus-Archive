@@ -1,0 +1,21 @@
+{
+  "id": "chunk-666b6a8a1190c5e6",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "kernel/intake.js",
+  "range": {
+    "start_line": 1,
+    "end_line": 33
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "72619e117ac19b77643b4e949e22f192709dbbb46729829a2fcfe47efd24a09b"
+  },
+  "status": "complete",
+  "content": "/* ═══════════════════════════════════════════════════════════\n   ERAVOS INTAKE  v3.0.0\n   File identification, FNV hash, MIME detection, type routing.\n   Every file entering ERAVOS goes through here first.\n   ═══════════════════════════════════════════════════════════ */\n\nwindow.Intake = (() => {\n'use strict';\n\nconst TYPES = [\n  { id:'audio:sample', label:'Audio Sample', icon:'🎵',\n    exts:['wav','mp3','ogg','flac','aiff','aif','m4a','opus'],\n    mimes:['audio/'] },\n  { id:'audio:midi', label:'MIDI', icon:'🎹',\n    exts:['mid','midi'], mimes:['audio/midi','audio/x-midi'],\n    magic:[0x4D,0x54,0x68,0x64] },\n  { id:'image', label:'Image', icon:'🖼️',\n    exts:['png','jpg','jpeg','gif','webp','svg','bmp'], mimes:['image/'] },\n  { id:'video', label:'Video', icon:'🎬',\n    exts:['mp4','webm','mov','avi'], mimes:['video/'] },\n  { id:'zip', label:'Plugin Pack', icon:'📦',\n    exts:['zip'], mimes:['application/zip'],\n    magic:[0x50,0x4B,0x03,0x04] },\n  { id:'json:preset',  label:'Preset',  icon:'🎛️', exts:['json'], mimes:['application/json'],\n    jsonDetect: p => !!(p && (p._eravos || p.comp_id || p.manifest_version)) },\n  { id:'json:pattern', label:'Pattern', icon:'🥁', exts:['json'], mimes:['application/json'],\n    jsonDetect: p => !!(p && p.tracks && Array.isArray(p.tracks)) },\n  { id:'json:generic', label:'JSON',    icon:'{ }', exts:['json'], mimes:['application/json'],\n    jsonDetect: () => true },\n  { id:'text', label:'Text', icon:'📄',\n    exts:['txt','md','csv','spec','log'], mimes:['text/'] },\n];\n"
+}

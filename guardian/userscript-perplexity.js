@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Guardian — Perplexity v10.0
 // @namespace    nexus.guardian.perplexity
-// @version      10.8.2
+// @version      10.8.0
 // @description  Guardian v10 — Perplexity: protocol parity with Claude/ChatGPT/Gemini
 //               v10 (NCP handshake, IndexedDB kernel, SHA-256 dedup, tab-claim, SEAM
 //               jobs, intelligence injection, usage detection) built around
@@ -29,7 +29,7 @@ const CORTEX_URL  = 'http://127.0.0.1:3748';
 const INTELLIGENCE_URL = 'http://127.0.0.1:3753'; // intelligence is its own sovereign system (moved out of cortex 2026-09-19)
 const ORCH_URL    = 'http://127.0.0.1:9000';
 const PROVIDER    = 'perplexity';
-const VERSION     = '10.8.2';
+const VERSION     = '10.8.0';
 // §P113: exponential backoff 3s→30s — eliminates SSE flood on disconnect
 const RECONNECT_MIN_MS = 3000;
 const RECONNECT_MAX_MS = 30000;
@@ -252,7 +252,7 @@ function _getSendBtn() {
 // blind.
 function _nexusGetFullChat() {
   const el = findResponseEl();
-  const text = el ? _replyText(el) : '';
+  const text = el ? (el.innerText || el.textContent || '').trim() : '';
   const messages = text ? [{ role: 'assistant', text }] : [];
   return { provider: PROVIDER, chatId: chatId(), url: location.href, extractedAt: Date.now(), messages, partial: true, note: 'no verified human-turn selector for this provider yet — assistant\'s last response only' };
 }
@@ -398,35 +398,6 @@ function _nexusAnchor(el) {
   }
   return { path: path.join(' > '), tag: el.tagName.toLowerCase(), attrs, textLen: (el.innerText || el.textContent || '').length, children: el.childElementCount };
 }
-// §0.39.267 — James: "guardian isn't capturing the code from chatgpt." innerText is what the page SHOWS: a rendered
-// code block reads "JavaScript\n<code>" with its ``` fences gone, so lib/extract-code.js found no code block and every
-// code chunk failed ("no fenced code block found in the response"). The reply is read with each <pre> put back as a
-// fenced block — language from the code element's class, else the block's header label — the rest stays innerText.
-function _replyText(el) {
-  if (!el) return '';
-  const full = (el.innerText || el.textContent || '');
-  let out = full;
-  try {
-    for (const pre of el.querySelectorAll('pre')) {
-      const codeEl = pre.querySelector('code') || pre;
-      const code = (codeEl.textContent || '').replace(/\n+$/, '');
-      if (!code.trim()) continue;
-      const cls = String(codeEl.className || '') + ' ' + String(pre.className || '');
-      let lang = (cls.match(/(?:language|lang)-([\w+#.-]+)/) || [])[1] || '';
-      const preTxt = (pre.innerText || '').replace(/\n+$/, '');
-      if (!lang) {
-        const first = preTxt.split('\n')[0].trim();
-        if (first && first.length < 24 && !/[;{}()=]/.test(first) && !code.startsWith(first)) lang = first.toLowerCase();
-      }
-      const fenced = '```' + lang + '\n' + code + '\n```';
-      if (preTxt && out.includes(preTxt)) out = out.replace(preTxt, fenced);
-      else if (out.includes(code)) out = out.replace(code, fenced);
-      else out += '\n\n' + fenced;
-    }
-  } catch (_) { return full.trim(); }
-  return out.trim();
-}
-
 function findResponseEl() {
   const answers = document.querySelectorAll('.prose, [data-testid="answer"], .answer-text, .result__content');
   return answers.length ? answers[answers.length - 1] : null;
@@ -682,7 +653,7 @@ function startWatch(jobId, prompt, retryCount = 0) {
   // a completion must be a different element, or different text.
   let _sawNew = false;
   const _baseEl   = findResponseEl();
-  const _baseText = _baseEl ? _replyText(_baseEl) : '';
+  const _baseText = _baseEl ? (_baseEl.innerText || _baseEl.textContent || '').trim() : '';
   const mode = detectSearchMode();
   const maxMs = mode === 'research' ? 600000 : 180000; // 10min research, 3min quick/pro
   let lastText = '', stableCount = 0, _lastChunkLen = 0;
@@ -713,7 +684,7 @@ function startWatch(jobId, prompt, retryCount = 0) {
       }
       _watchTimer = setTimeout(checkStable, 600); return;
     }
-    const text = _replyText(el);
+    const text = (el.innerText || el.textContent || '').trim();
     // Still showing the previous answer: this job has produced nothing yet.
     // §1.2 — after NO_REPLY_MS say so loudly rather than return a stale reply.
     // §WATCH-EVIDENCE 2026-09-23 — the reply WAS on screen and guardian still
@@ -735,16 +706,14 @@ function startWatch(jobId, prompt, retryCount = 0) {
       }
       _watchTimer = setTimeout(checkStable, 600); return;
     }
-    // 0.39.259 — an empty turn is never a stable reply: a follow-up in an existing chat renders the new
-    // assistant turn empty for a moment, and three empty reads used to complete the job with 0 chars.
-    if (text && text === lastText && !_isGenerating()) {
+    if (text === lastText && !_isGenerating()) {
       stableCount++;
       if (stableCount >= 3) { const ms = Date.now() - _watchStart; _onJobComplete(jobId, text, el, ms, prompt, retryCount, mode); return; }
     } else {
       if (text.length > _lastChunkLen) {
         const delta = text.slice(_lastChunkLen); _lastChunkLen = text.length;
         if (delta.length > 10 || /[.!?\n]/.test(delta)) {
-          const _first = typeof _txWatchStreamed === 'undefined' || _txWatchStreamed !== jobId; _txWatchStreamed = jobId; send({ type:'GUARDIAN_CHUNK', jobId, text:_first ? text : delta, full:text, reset:_first && typeof _txJob !== 'undefined' && !!_txJob && _txJob.jobId === jobId && !!_txJob.sent, provider:PROVIDER, chatUrl:location.href, anchor:_nexusAnchor(el), mutations:_nexusMutations, ts:Date.now() });
+          _txWatchStreamed = jobId; send({ type:'GUARDIAN_CHUNK', jobId, text:delta, full:text, provider:PROVIDER, chatUrl:location.href, anchor:_nexusAnchor(el), mutations:_nexusMutations, ts:Date.now() });
           _streamToCortex(jobId, delta, text);
         }
       }

@@ -1,0 +1,23 @@
+{
+  "id": "chunk-0a82f0480dda9c47",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "runtime/organism-factory.js",
+  "range": {
+    "start_line": 1339,
+    "end_line": 1339
+  },
+  "symbols": [
+    "freqSlider"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "c0a6a309dfd8d9be628378037999792426778884803ae66d3eb5e0f9422339fa"
+  },
+  "status": "complete",
+  "content": "    const freqSlider  = mkParamRow('FREQ',   20,  220, 55,  1,   'Hz','#00ff88', v => _pub('ui:bass-param', { key:'freq',     val:v }));"
+}

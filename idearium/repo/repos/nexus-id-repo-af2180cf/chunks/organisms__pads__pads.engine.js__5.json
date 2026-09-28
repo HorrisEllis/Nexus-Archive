@@ -1,0 +1,23 @@
+{
+  "id": "chunk-e9c26fefd27286b8",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/pads/pads.engine.js",
+  "range": {
+    "start_line": 95,
+    "end_line": 129
+  },
+  "symbols": [
+    "_syncUI"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "c67ae73c7163215f756593b7c219e0c1c667731c6bf446920764c0ace797a948"
+  },
+  "status": "complete",
+  "content": "  function _syncUI() {\n    sBus.publish('org:state_sync', {\n      bank: curBank,\n      pads: banks[curBank].pads,\n      config: { volume, pitch, decay },\n      voiceNames: Object.keys(VOICES),\n    });\n  }\n\n  const _unsubs = [\n    sBus.global.subscribe('ui:pad_press:' + instanceId,   ({ index, velocity }) => { if (typeof index === 'number') _fire(index, velocity ?? 0.9); }),\n    sBus.global.subscribe('ui:bank_select:' + instanceId, ({ bank }) => _setBank(bank)),\n    sBus.global.subscribe('ui:pad_assign:' + instanceId,  ({ index, sound, color }) => {\n      if (typeof index === 'number' && sound) {\n        banks[curBank].pads[index].sound = sound;\n        if (color) banks[curBank].pads[index].color = color;\n        _syncUI();\n      }\n    }),\n    sBus.global.subscribe('ui:config_change:' + instanceId, ({ key, value }) => {\n      if (key === 'volume') volume = value;\n      if (key === 'pitch')  pitch  = value;\n      if (key === 'decay')  decay  = value;\n    }),\n    gBus.subscribe('seq:fire', ({ track }) => {\n      const pad = banks[curBank].pads[track];\n      if (pad) sBus.publish('org:pad_lit', { index: track, color: pad.color, duration_ms: 100 });\n    }),\n    gBus.subscribe('midi:note', ({ note, velocity }) => {\n      const idx = note - 36;\n      if (idx >= 0 && idx < 16) _fire(idx, velocity);\n    }),\n  ];\n\n  const KEY_MAP = { q:0,w:1,e:2,r:3,a:4,s:5,d:6,f:7,z:8,x:9,c:10,v:11,'1':12,'2':13,'3':14,'4':15 };"
+}

@@ -1,0 +1,21 @@
+{
+  "id": "chunk-f35b3f67b0396b5a",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/sample-player/schema/schema.json",
+  "range": {
+    "start_line": 1,
+    "end_line": 89
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "36ddf6f0554a6c0c9eb44ce17a812bcc596d2cf72dd5c485a4e1d78981512513"
+  },
+  "status": "complete",
+  "content": "{\n  \"schema_version\": \"1.0.0\",\n  \"id\": \"eravos.sample-player\",\n  \"label\": \"Sample Player\",\n  \"icon\": \"\\ud83c\\udfb5\",\n  \"accent\": \"#aa44ff\",\n  \"domain\": [\n    \"music\",\n    \"audio\",\n    \"playback\"\n  ],\n  \"description\": \"Single-file sample player. Waveform IS the interface. Drag start/end handles. Pitch shift. Loop. Reverse.\",\n  \"permissions\": [\n    \"audio_out\",\n    \"bus_publish\",\n    \"bus_subscribe\",\n    \"filesystem_read\"\n  ],\n  \"provides\": [\n    \"capability.audio_out\",\n    \"capability.sample_source\"\n  ],\n  \"requires\": [\n    \"capability.audio_context\"\n  ],\n  \"hooks\": [\n    {\n      \"hook_id\": \"samp.hook.audio_out\",\n      \"direction\": \"out\",\n      \"event_type\": \"audio:signal\",\n      \"contract_version\": \"1.0.0\"\n    },\n    {\n      \"hook_id\": \"samp.hook.trigger_in\",\n      \"direction\": \"in\",\n      \"event_type\": \"pad:trigger\",\n      \"contract_version\": \"1.0.0\"\n    }\n  ],\n  \"params\": {\n    \"gain\": {\n      \"type\": \"float\",\n      \"min\": 0,\n      \"max\": 2,\n      \"default\": 1.0,\n      \"unit\": \"\"\n    },\n    \"pitch\": {\n      \"type\": \"float\",\n      \"min\": -24,\n      \"max\": 24,\n      \"default\": 0,\n      \"unit\": \"semitones\"\n    },\n    \"start\": {\n      \"type\": \"float\",\n      \"min\": 0,\n      \"max\": 1,\n      \"default\": 0,\n      \"unit\": \"normalized\"\n    },\n    \"end\": {\n      \"type\": \"float\",\n      \"min\": 0,\n      \"max\": 1,\n      \"default\": 1,\n      \"unit\": \"normalized\"\n    },\n    \"loop\": {\n      \"type\": \"bool\",\n      \"default\": false\n    },\n    \"reverse\": {\n      \"type\": \"bool\",\n      \"default\": false\n    }\n  },\n  \"ui\": {\n    \"type\": \"waveform_full\",\n    \"handles\": [\n      \"start\",\n      \"end\"\n    ],\n    \"scrub\": true\n  },\n  \"spawn_on\": [\n    \"audio:sample\"\n  ]\n}"
+}

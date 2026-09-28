@@ -1,0 +1,40 @@
+envelope: 1
+uuid: nexus-export-chunk-eravos-v3-17-catalog.nexus-id-repo-af2180cf.598e1d72-e88c-4e97-88cc-9c683ed52f62
+type: chunk
+id: eravos-v3-17-catalog.nexus-id-repo-af2180cf.598e1d72-e88c-4e97-88cc-9c683ed52f62
+context: idearium spec-engine chunk of spec ced8d1a8-ea48-4c70-88e9-ab5758ff3a3f
+intent: null
+summary: organisms-photo-editor-photo-editor-engine (complete)
+system: idearium
+tags:
+  - spec:ced8d1a8-ea48-4c70-88e9-ab5758ff3a3f
+  - status:complete
+  - section:organisms-photo-editor-photo-editor-engine
+  - specName:eravos-v3-17-catalog
+  - agent:ingest
+  - repo:nexus-id-repo-af2180cf
+exported_at: 1790367431532
+source: nexus.lib.node-export
+occurrences: 1
+firstSeenAt: 1790367431532
+lastSeenAt: 1790367431532
+fingerprint: null
+payload:
+  uuid: 598e1d72-e88c-4e97-88cc-9c683ed52f62
+  specUuid: ced8d1a8-ea48-4c70-88e9-ab5758ff3a3f
+  sectionId: organisms-photo-editor-photo-editor-engine
+  sectionTitle: organisms/photo-editor/photo-editor.engine.js
+  chunkIdx: 39
+  status: complete
+  realPath: organisms/photo-editor/photo-editor.engine.js
+  fileName: 39-organisms-photo-editor-photo-editor-engine.md
+  filePath: D:\Backups\Downloads\Nexus_v0_39_241\idearium\data\specs\ced8d1a8-ea48-4c70-88e9-ab5758ff3a3f\39-organisms-photo-editor-photo-editor-engine-598e1d72.md
+  agent: ingest
+  agentModel: ingest:drop
+  attempts: 1
+  failureMode: null
+  byteSize: 4950
+  contentHash: 3616af382ccfcac5f126c7640a0ef559cb0bb5d2188ba2eb5800ba7ac7ad3c61
+  createdAt: 1790367431337
+  updatedAt: 1790367431366
+  completedAt: 1790367431366

@@ -1,0 +1,23 @@
+{
+  "id": "chunk-8a5b48768714e1f1",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "runtime/organism-factory.js",
+  "range": {
+    "start_line": 2744,
+    "end_line": 2762
+  },
+  "symbols": [
+    "_selectStage"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "ede62bcf43a347af3dfa2fb96961f7aee8773f8c1c381c50fc41b2a406da78d2"
+  },
+  "status": "complete",
+  "content": "    function _selectStage(idx) {\n      _activeStage = STAGES[idx].id;\n      stagePanel.style.display = 'flex';\n\n      stagePanel.innerHTML = '';\n\n      const st = STAGES[idx];\n      const hdr = document.createElement('div');\n      hdr.style.cssText = `display:flex;align-items:center;gap:8px;`;\n      const dot = document.createElement('div'); dot.style.cssText=`width:8px;height:8px;border-radius:50%;background:${st.color};flex-shrink:0;box-shadow:0 0 6px ${st.color};`;\n      const lbl = document.createElement('div'); lbl.style.cssText=`font-family:var(--orb);font-size:9px;font-weight:700;color:${st.color};letter-spacing:.16em;`; lbl.textContent=st.label;\n      const desc= document.createElement('div'); desc.style.cssText=`font-family:var(--mono);font-size:7px;color:var(--dim2);letter-spacing:.06em;`; desc.textContent=st.desc;\n      hdr.appendChild(dot); hdr.appendChild(lbl); hdr.appendChild(desc);\n      stagePanel.appendChild(hdr);\n\n      /* Stage-specific params */\n      const paramRow = document.createElement('div');\n      paramRow.style.cssText = 'display:flex;gap:14px;align-items:center;';\n"
+}

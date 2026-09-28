@@ -1,0 +1,23 @@
+{
+  "id": "chunk-d18e507fd4aba04b",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/contrast-analyser/contrast-analyser.engine.js",
+  "range": {
+    "start_line": 293,
+    "end_line": 338
+  },
+  "symbols": [
+    "_bufferFFT"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "add638cb5c635fda855832f7fdfcd0928182be0a15bd8bb29165821052d9cb03"
+  },
+  "status": "complete",
+  "content": "  function _bufferFFT(ab, size) {\n    const data   = ab.getChannelData(0);\n    const centre = Math.floor(data.length / 2);\n    const half   = size / 2;\n    const fft    = new Uint8Array(half);\n    /* Very lightweight: just map raw amplitude to frequency bins */\n    for (let i = 0; i < half; i++) {\n      let sum = 0;\n      const span = Math.max(1, Math.floor(data.length / half));\n      for (let j = 0; j < span; j++) {\n        sum += Math.abs(data[Math.min(centre + i * span + j, data.length - 1)] || 0);\n      }\n      fft[i] = Math.round(Math.min(255, (sum / span) * 255 * 8));\n    }\n    return fft;\n  }\n\n  /* ── UI hook subscribers ── */\n  const _unsubs = [\n    gBus.subscribe('ui:slot-load:' + instanceId, ({ slot, arrayBuffer, name }) => {\n      if (!arrayBuffer) return;\n      _loadSlot(slot, { arrayBuffer, name });\n    }),\n    gBus.subscribe('ui:mode-change:' + instanceId, ({ mode: m }) => {\n      mode = m;\n      _runAnalysis();\n      sBus.publish('org:mode-changed', { mode });\n    }),\n    gBus.subscribe('ui:config-change:' + instanceId, ({ key, value }) => {\n      if (key === 'bpm')         { bpm = value; _runAnalysis(); }\n      if (key === 'sensitivity') { sensitivity = value; }\n    }),\n    gBus.subscribe('ui:tap-bpm:' + instanceId, _tapBPM),\n    gBus.subscribe('ui:reanalyse:' + instanceId, _runAnalysis),\n\n    /* Accept drops from intake directly */\n    gBus.subscribe('intake:file', result => {\n      if (result.id !== 'audio:sample') return;\n      const slot = (!slots.A.buffer) ? 'A' : (!slots.B.buffer) ? 'B' : null;\n      if (!slot) return;\n      _loadSlot(slot, result);\n    }),\n  ];\n\n  /* Tap BPM */\n  const _taps = [];"
+}

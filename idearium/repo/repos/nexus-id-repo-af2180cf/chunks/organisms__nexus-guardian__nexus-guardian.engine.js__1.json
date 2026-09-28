@@ -1,0 +1,23 @@
+{
+  "id": "chunk-84ddc87abcc0c008",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/nexus-guardian/nexus-guardian.engine.js",
+  "range": {
+    "start_line": 14,
+    "end_line": 33
+  },
+  "symbols": [
+    "mount"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "b1cd7339af05a53df8e5c49334c27c90a943772444ad66cfb09e1a8bb56d73c1"
+  },
+  "status": "complete",
+  "content": "function mount(instanceId, sBus, audio, config = {}) {\n  return NexusNodeCore.mount(instanceId, sBus, {\n    key: 'guardian',\n    label: 'NEXUS_GUARDIAN',\n    icon: '🛡️',\n    accent: '#ffaa00',\n    base: 'http://127.0.0.1:7820',\n    statusPath: '/api/status',\n    snapshotsPath: '/snapshots',\n    orchestratorBase: 'http://127.0.0.1:9000',\n    diagnosePath: '/diagnose',\n    idLink: 'http://127.0.0.1:4800',\n    isOrchestrator: false,\n    ...config,\n  });\n}\n\nreturn { mount };\n})();\n"
+}

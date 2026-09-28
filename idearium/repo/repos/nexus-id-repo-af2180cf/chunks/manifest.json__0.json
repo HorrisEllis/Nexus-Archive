@@ -1,0 +1,21 @@
+{
+  "id": "chunk-9f03a2055c381473",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "manifest.json",
+  "range": {
+    "start_line": 1,
+    "end_line": 14
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "bfccd03f81f4e119d1d2a6f0d804d467ebeed61c81b66fe53447cc85944fa62a"
+  },
+  "status": "complete",
+  "content": "{\n  \"name\": \"test\",\n  \"version\": \"1.0.0\",\n  \"uuid\": \"nexus-project-container-116082ea\",\n  \"hookId\": \"idearium.project-container:v1:116082ea\",\n  \"description\": \"Refactor the API layer for clarity\",\n  \"layer\": \"idearium\",\n  \"repoUuid\": \"nexus-id-repo-af2180cf\",\n  \"containerUuid\": \"116082ea-95e3-4606-a69b-7bdfa2f7f8fa\",\n  \"compartmentId\": \"53dd1d1d-7214-4271-9a8d-8e4debd9f397\",\n  \"intentUuid\": \"6e3ea934-d2c2-4877-83ca-c615b469e340\",\n  \"endStateId\": \"es-1790367422736\",\n  \"importedAt\": 1790367432365\n}"
+}

@@ -1,0 +1,23 @@
+{
+  "id": "chunk-edb8703f4c947dce",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/serial-bridge/serial-bridge.engine.js",
+  "range": {
+    "start_line": 97,
+    "end_line": 108
+  },
+  "symbols": [
+    "disconnect"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "b6164b1d7ad67d3a6b7682d820a99344f48de97450b06f1c43d2d5dd0818551b"
+  },
+  "status": "complete",
+  "content": "  async function disconnect() {\n    _readLoopStop = true;\n    try { if (_reader) { await _reader.cancel(); _reader.releaseLock(); } } catch (e) {}\n    try { if (_writer) { _writer.releaseLock(); } } catch (e) {}\n    try { if (_port)   { await _port.close(); } } catch (e) {}\n    _connected = false;\n    sBus.publish('org:disconnected', {});\n  }\n\n  /* Map an XY pad value (0..1, 0..1) into a bounded G-code jog move.\n     Kept intentionally simple/general — a real rig would customize\n     bounds per its own travel limits via config. */"
+}

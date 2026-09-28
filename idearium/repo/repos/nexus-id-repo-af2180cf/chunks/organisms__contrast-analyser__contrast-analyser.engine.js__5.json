@@ -1,0 +1,23 @@
+{
+  "id": "chunk-5464feb5575b7d4d",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/contrast-analyser/contrast-analyser.engine.js",
+  "range": {
+    "start_line": 100,
+    "end_line": 110
+  },
+  "symbols": [
+    "peakDb"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "c34188ff4246a0dc8e3de8bec27eb1cd6cbe30d186a4b53f46ef2b99a7413fb6"
+  },
+  "status": "complete",
+  "content": "function peakDb(audioBuffer) {\n  const data = audioBuffer.getChannelData(0);\n  let peak = 0;\n  for (let i = 0; i < data.length; i++) {\n    const a = Math.abs(data[i]);\n    if (a > peak) peak = a;\n  }\n  return peak > 0 ? 20 * Math.log10(peak) : -Infinity;\n}\n\n/* ── Average RMS ────────────────────────────────────────── */"
+}

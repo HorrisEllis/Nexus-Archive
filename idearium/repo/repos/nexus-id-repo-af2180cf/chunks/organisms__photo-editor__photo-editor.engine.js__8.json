@@ -1,0 +1,23 @@
+{
+  "id": "chunk-71436f0915f28749",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/photo-editor/photo-editor.engine.js",
+  "range": {
+    "start_line": 96,
+    "end_line": 128
+  },
+  "symbols": [
+    "_syncUI"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "95d717195f049df40b628e4f0552712cc3ca70bf306c9422cd9495fefe0ef26e"
+  },
+  "status": "complete",
+  "content": "  function _syncUI() {\n    sBus.publish('org:state_sync', { params: { ..._params } });\n  }\n\n  const _unsubs = [\n    gBus.subscribe('ui:config_change:' + instanceId, ({ key, value }) => _updateParam(key, value)),\n  ];\n\n  _syncUI();\n\n  KERNEL.registry.register({\n    instanceId,\n    id:       'eravos.photo-editor',\n    label:    'Photo Editor',\n    provides: ['capability.image_edit', 'capability.image_export'],\n    requires: [],\n    permissions: ['filesystem_read', 'bus_publish', 'bus_subscribe'],\n    hooks: [\n      { hook_id: 'photo.hook.exported', direction: 'out', event_type: 'photo:exported', contract_version: '1.0.0' },\n    ],\n  });\n\n  return {\n    unmount() { _unsubs.forEach(u => u()); KERNEL.registry.unregister(instanceId); },\n    loadFile, draw, applyCrop, exportPNG, filterString,\n    get image()  { return _image; },\n    get params() { return { ..._params }; },\n  };\n}\n\nreturn { mount };\n})();\n"
+}

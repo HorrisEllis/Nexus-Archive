@@ -1,0 +1,23 @@
+{
+  "id": "chunk-cd2cf36d8186f7e7",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/sample-player/sample-player.engine.js",
+  "range": {
+    "start_line": 7,
+    "end_line": 13
+  },
+  "symbols": [
+    "mount"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "0734228490f29de0ba75075a7b7a6b438750227ec6e97c3cdde47d39eef9ca82"
+  },
+  "status": "complete",
+  "content": "function mount(instanceId, sBus, audio, config = {}, intakeResult = null) {\n  const gBus = KERNEL.bus;\n  let _buf=null, _src=null, _playing=false;\n  let _looping=config.loop??false, _reverse=config.reverse??false;\n  let gain=config.gain??1, pitch=config.pitch??0, start=config.start??0, end=config.end??1;\n  let _name = intakeResult?.name ?? '(no file)';\n"
+}

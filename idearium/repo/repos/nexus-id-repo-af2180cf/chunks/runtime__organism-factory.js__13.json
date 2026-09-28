@@ -1,0 +1,23 @@
+{
+  "id": "chunk-a939369800594a3e",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "runtime/organism-factory.js",
+  "range": {
+    "start_line": 210,
+    "end_line": 257
+  },
+  "symbols": [
+    "renderQA"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "f9343aa1ad3def41294e21e4891bd6476631746634c1c9d86d881eab8bf8caf2"
+  },
+  "status": "complete",
+  "content": "    function renderQA(pads) {\n      qa.innerHTML='';\n      if(selIdx===null||!pads[selIdx]) return;\n      const pad=pads[selIdx];\n      const row=document.createElement('div'); row.style.cssText='display:flex;align-items:center;gap:5px;';\n      const lbl=document.createElement('div'); lbl.style.cssText='font-family:var(--raj);font-size:8px;font-weight:600;color:var(--dim2);min-width:36px;'; lbl.textContent=`PAD ${selIdx+1}`;\n      const sel=document.createElement('select'); sel.style.cssText='flex:1;background:var(--bg3);border:1px solid var(--b2);border-radius:3px;color:var(--white);font-family:var(--mono);font-size:8px;padding:2px 4px;outline:none;';\n      (state.voiceNames.length?state.voiceNames:['kick','snare','hat','clap','808','rim','reese','wobble','acid','stab','openhat','crash','laser','glitch','noise','riser','drone','scream','vinyl']).forEach(n=>{const o=document.createElement('option');o.value=n;o.textContent=n;if(n===pad.sound)o.selected=true;sel.appendChild(o);});\n      sel.addEventListener('change',()=>_pub('ui:pad_assign',{index:selIdx,sound:sel.value}));\n      const swatch=document.createElement('div'); swatch.style.cssText='width:24px;height:20px;border-radius:3px;border:1px solid var(--b2);overflow:hidden;flex-shrink:0;cursor:pointer;';\n      const ci=document.createElement('input'); ci.type='color'; ci.value=pad.color; ci.style.cssText='width:200%;height:200%;margin:-25%;border:none;cursor:pointer;';\n      ci.addEventListener('input',()=>_pub('ui:pad_assign',{index:selIdx,color:ci.value}));\n      swatch.appendChild(ci);\n      row.appendChild(lbl); row.appendChild(sel); row.appendChild(swatch); qa.appendChild(row);\n    }\n\n    /* Knobs */\n    mkKnob(kRow,{label:'VOL',  min:0,  max:1,   value:.88,step:.01,unit:'',    eventKey:'volume',pub:_pub});\n    mkKnob(kRow,{label:'PITCH',min:-12,max:12,  value:0,  step:1,  unit:'st',  eventKey:'pitch',pub:_pub});\n    mkKnob(kRow,{label:'DECAY',min:.01,max:2,   value:.3, step:.01,unit:'s',   eventKey:'decay',pub:_pub});\n\n    /* State sync from engine */\n    sBus.subscribe('org:state_sync', d=>{\n      state={...state,...d};\n      if(d.pads){ renderPads(d.pads); if(selIdx!==null) renderQA(d.pads); }\n      if(d.bank!==undefined){ Array.from(bankBar.children).forEach((b,i)=>{ const on=i===d.bank; b.style.color=on?'var(--accent)':'var(--dim)'; b.style.borderColor=on?'var(--accent)':'var(--b2)'; b.style.background=on?'rgba(0,255,136,.07)':'transparent'; }); }\n      if(d.voiceNames) state.voiceNames=d.voiceNames;\n    });\n    sBus.subscribe('org:pad_lit', ({index,color})=>litPad(index,color));\n  },\n});\n\n/* ═══════════════════════════════════════════════════════\n   SEQUENCER\n═══════════════════════════════════════════════════════ */\nreg('sequencer', {\n  category:'Audio — Sequencing', summary:'Step sequencer driving pads and synths over the shared clock.', needs:[],\n  label:'Sequencer', icon:'⬛', accent:'#00d4ff',\n  width:600, height:440, minWidth:420, minHeight:280,\n  mountEngine(instanceId, intakeResult, sBus) {\n    SequencerOrganism.mount(instanceId, sBus, KERNEL.audio, KERNEL.clock, {});\n  },\n  buildUI(content, intakeResult, instanceId, sBus, _pub) {\n    const wrap=document.createElement('div'); wrap.style.cssText='display:flex;flex-direction:column;height:100%;min-height:0;';\n\n    /* Header */\n    const hdr=document.createElement('div'); hdr.style.cssText='display:flex;align-items:center;gap:6px;padding:6px 10px;border-bottom:1px solid var(--b1);flex-shrink:0;background:var(--bg2);flex-wrap:wrap;';\n    let playing=false;"
+}

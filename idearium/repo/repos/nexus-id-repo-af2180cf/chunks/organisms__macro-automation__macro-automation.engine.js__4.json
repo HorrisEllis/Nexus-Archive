@@ -1,0 +1,23 @@
+{
+  "id": "chunk-d770e3583b21ec50",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/macro-automation/macro-automation.engine.js",
+  "range": {
+    "start_line": 44,
+    "end_line": 51
+  },
+  "symbols": [
+    "arm"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "d2913e771dd819f11f44bbe6a573f103d920823e904ebda674009bc9c914b82a"
+  },
+  "status": "complete",
+  "content": "  function arm() {\n    if (!_params.targetInstanceId) { sBus.publish('org:error', { message: 'Pick a target organism first.' }); return; }\n    _events = [];\n    _recStartAt = performance.now();\n    _recording = true;\n    sBus.publish('org:state_sync', { recording: true, playing: _playing, count: 0 });\n  }\n"
+}

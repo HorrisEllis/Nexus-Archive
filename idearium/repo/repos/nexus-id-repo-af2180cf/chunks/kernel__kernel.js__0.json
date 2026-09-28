@@ -1,0 +1,21 @@
+{
+  "id": "chunk-5ac135f0bc6fe390",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "kernel/kernel.js",
+  "range": {
+    "start_line": 1,
+    "end_line": 43
+  },
+  "symbols": [],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "840b39f033c08b0af9b550ee168aaa79fa57d585eb268ef5860d9162ae645b21"
+  },
+  "status": "complete",
+  "content": "/* ═══════════════════════════════════════════════════════════\n   ERAVOS KERNEL  v3.0.0\n   ═══════════════════════════════════════════════════════════\n\n   Axioms (from ERAVOS.kernel.spec):\n   K-1  Nothing exists until registered\n   K-2  Nothing silently fails\n   K-3  No organism touches another directly\n   K-4  Every connection is a wire\n   K-5  Wires owned by wire registry\n   K-6  Every mutation recorded before it applies\n   K-7  Contracts match before wire goes live\n   K-8  Permissions enforced, never trusted\n   K-9  Everything removable\n   K-10 Spec is source of truth\n\n   Exports:  window.KERNEL\n   Requires: nothing\n   ═══════════════════════════════════════════════════════════ */\n\nwindow.KERNEL = (() => {\n'use strict';\n\n/* ──────────────────────────────────────────────────────────\n   BUS  — publish/subscribe event backbone\n   No organism talks to another organism directly.\n   Everything goes through here.\n────────────────────────────────────────────────────────── */\nconst _subs = {};\n\nconst bus = {\n  publish(topic, payload = {}) {\n    if (!topic) return;\n    (_subs[topic] || []).slice().forEach(fn => {\n      try { fn(payload); }\n      catch(e) { _fault('RUNTIME_003', null, `bus handler error on ${topic}: ${e.message}`); }\n    });\n  },\n  subscribe(topic, fn) {\n    (_subs[topic] = _subs[topic] || []).push(fn);\n    return () => { _subs[topic] = (_subs[topic] || []).filter(f => f !== fn); };\n  },\n  once(topic, fn) {"
+}

@@ -1,0 +1,23 @@
+{
+  "id": "chunk-2d5e53b8c1a45cd2",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "runtime/organism-factory.js",
+  "range": {
+    "start_line": 137,
+    "end_line": 151
+  },
+  "symbols": [
+    "mkBtn"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "86bfebdeac68c8dc65b5eea5356698ae3b849b54fd75654b7365f9f4e7229600"
+  },
+  "status": "complete",
+  "content": "function mkBtn(parent, label, onClick, opts={}) {\n  const b=document.createElement('button');\n  b.textContent=label; b.title=opts.title||'';\n  b.style.cssText=`height:${opts.h||20}px;padding:0 ${opts.px||7}px;border-radius:3px;border:1px solid var(--b2);background:transparent;color:var(--dim2);font-family:var(--mono);font-size:${opts.fs||7}px;letter-spacing:.08em;cursor:pointer;transition:all .12s;outline:none;flex-shrink:0;`;\n  b.addEventListener('mouseenter',()=>{b.style.borderColor='var(--accent)';b.style.color='var(--accent)';});\n  b.addEventListener('mouseleave',()=>{if(!b.dataset.on){b.style.borderColor='var(--b2)';b.style.color='var(--dim2)';}});\n  b.addEventListener('click',onClick);\n  if(parent) parent.appendChild(b);\n  return b;\n}\n\n/* ── Organism definitions ──────────────────────────────── */\n\nconst DEFS = {};\n"
+}

@@ -1,0 +1,23 @@
+{
+  "id": "chunk-121ca73c54cace11",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/bass-drop-builder/bass-drop-builder.engine.js",
+  "range": {
+    "start_line": 318,
+    "end_line": 324
+  },
+  "symbols": [
+    "_stopAll"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "c9667f2fb1858a8f3c57d68fe05add2a2db5e58a5a02729900160cef7623e685"
+  },
+  "status": "complete",
+  "content": "  function _stopAll() {\n    _activeNodes.forEach(n => { try { if (n.stop) n.stop(0); } catch(e) {} });\n    _activeNodes = [];\n    _running = false;\n    sBus.publish('org:state-sync', { running: false });\n  }\n"
+}

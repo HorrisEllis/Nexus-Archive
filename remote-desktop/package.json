@@ -4,5 +4,8 @@
   "private": true,
   "scripts": {
     "signal": "node signal.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
   }
 }

@@ -34,13 +34,6 @@ contextBridge.exposeInMainWorld('ClearGlass', {
   // ── Co-pilot ─────────────────────────────────────────────────────────
   copilot: {
     send: (payload) => ipcRenderer.invoke('copilot:send', payload),
-    hat:        () => ipcRenderer.invoke('copilot:hat'),
-    hatEnsure:  () => ipcRenderer.invoke('copilot:hatEnsure'),
-    hatUpdate:  (patch) => ipcRenderer.invoke('copilot:hatUpdate', patch),
-    exec:       (cmd, agentId) => ipcRenderer.invoke('copilot:exec', { cmd, agentId }),
-    // handlers existed in ipc/bridge.js; the pane's /build and /diagnose had no preload path to them
-    build:      (payload) => ipcRenderer.invoke('copilot:build', payload),
-    diagnose:   (payload) => ipcRenderer.invoke('copilot:diagnose', payload),
   },
 
   // ── Context ───────────────────────────────────────────────────────────
@@ -97,15 +90,6 @@ contextBridge.exposeInMainWorld('ClearGlass', {
     disable: (id) => ipcRenderer.invoke('plugins:disable', { id }),
   },
 
-  // ── WebExtensions — §BUILT 2026-09-26 (src/plugins/webextensions.js) ──
-  webext: {
-    list:       ()                          => ipcRenderer.invoke('webext:list'),
-    pick:       (kind)                      => ipcRenderer.invoke('webext:pick', { kind }),
-    install:    (source, allowFileAccess)   => ipcRenderer.invoke('webext:install', { source, allowFileAccess }),
-    setEnabled: (id, enabled)               => ipcRenderer.invoke('webext:setEnabled', { id, enabled }),
-    remove:     (id)                        => ipcRenderer.invoke('webext:remove', { id }),
-  },
-
   // ── Downloads — §NEW 2026-08-24 ─────────────────────────────────────────
   downloads: {
     list:           (filter)  => ipcRenderer.invoke('downloads:list', filter),
@@ -143,8 +127,6 @@ contextBridge.exposeInMainWorld('ClearGlass', {
   macros: {
     list:   ()     => ipcRenderer.invoke('macros:list'),
     get:    (name) => ipcRenderer.invoke('macros:get', { name }),
-    recordStart: (agentId) => ipcRenderer.invoke('macros:recordStart', { agentId }),
-    recordStop:  (agentId) => ipcRenderer.invoke('macros:recordStop', { agentId }),
     run:    (name, agentOrOpts, params, skipSnapshot) => {
       const o = (agentOrOpts && typeof agentOrOpts === 'object') ? agentOrOpts : { agentId: agentOrOpts, params, skipSnapshot };
       return ipcRenderer.invoke('macros:run', { name, agentId: o.agentId, params: o.params, skipSnapshot: o.skipSnapshot });
@@ -223,17 +205,6 @@ contextBridge.exposeInMainWorld('ClearGlass', {
     update:    (id, updates)  => ipcRenderer.invoke('listeners:update', { id, updates }),
     remove:    (id)           => ipcRenderer.invoke('listeners:remove', { id }),
     forUrl:    (url)          => ipcRenderer.invoke('listeners:forUrl', { url }),
-    decay:     { get: () => ipcRenderer.invoke('listeners:decay:get'), set: (patch) => ipcRenderer.invoke('listeners:decay:set', patch), run: () => ipcRenderer.invoke('listeners:decay:run') },
-  },
-
-  // §0.39.265 — keyboard shortcuts. The main process catches the keys (in the
-  // chrome and inside pages) and sends a window its browser actions here.
-  shortcuts: {
-    list:     ()               => ipcRenderer.invoke('shortcuts:list'),
-    set:      (accel, action)  => ipcRenderer.invoke('shortcuts:set', { accel, action }),
-    remove:   (accel)          => ipcRenderer.invoke('shortcuts:remove', { accel }),
-    reset:    ()               => ipcRenderer.invoke('shortcuts:reset'),
-    onAction: (cb) => { const f = (_e, d) => cb(d); ipcRenderer.on('shortcut:action', f); return () => ipcRenderer.removeListener('shortcut:action', f); },
   },
 
   agents: {
@@ -280,10 +251,6 @@ contextBridge.exposeInMainWorld('ClearGlass', {
     list:   (filter)  => ipcRenderer.invoke('bookmarks:list',   filter || {}),
     check:  (payload) => ipcRenderer.invoke('bookmarks:check',  payload),
     visit:  (payload) => ipcRenderer.invoke('bookmarks:visit',  payload),
-    // §0.39.265 — a bookmark carries page state (a rewind snapshot) and an account
-    addWithState:  (payload) => ipcRenderer.invoke('bookmarks:addWithState',  payload),
-    openWithState: (payload) => ipcRenderer.invoke('bookmarks:openWithState', payload),
-    linkState:     (payload) => ipcRenderer.invoke('bookmarks:linkState',     payload),
   },
 
   // ── History — §fix 2026-09-02 ────────────────────────────────────────
@@ -312,10 +279,7 @@ contextBridge.exposeInMainWorld('ClearGlass', {
     updateProfile: (id, updates)  => ipcRenderer.invoke('autofill:profile:update', { id, updates }),
     deleteProfile: (id)           => ipcRenderer.invoke('autofill:profile:delete', { id }),
     detect: (profileId, agentId)  => ipcRenderer.invoke('autofill:detect', { profileId, agentId }),
-    fill:   (profileId, agentId, minConfidence, vars) => ipcRenderer.invoke('autofill:fill', { profileId, agentId, minConfidence, vars }),
-    // §0.39.265 — cover letters / Upwork & Fiverr proposals (src/autofill/proposal.js)
-    proposal: (payload)   => ipcRenderer.invoke('autofill:proposal', payload),
-    readPage: (agentId)   => ipcRenderer.invoke('autofill:readPage', { agentId }),
+    fill:   (profileId, agentId, minConfidence) => ipcRenderer.invoke('autofill:fill', { profileId, agentId, minConfidence }),
   },
 
   // §BUILT 2026-09-21 — James: "clearglass needs to help me with job

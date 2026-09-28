@@ -1,0 +1,23 @@
+{
+  "id": "chunk-b90e095404d88d70",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/supersaw/supersaw.engine.js",
+  "range": {
+    "start_line": 106,
+    "end_line": 110
+  },
+  "symbols": [
+    "_updateParam"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "9e992b637ea7c24424364d0f47b9927fbf62308ea8a02471c0a08b519be05d05"
+  },
+  "status": "complete",
+  "content": "  function _updateParam(key, val) {\n    _params[key] = val;\n    if (_nodes && key === 'cutoff') _nodes.filt.frequency.setTargetAtTime(val, audio.AC.currentTime, 0.02);\n  }\n"
+}

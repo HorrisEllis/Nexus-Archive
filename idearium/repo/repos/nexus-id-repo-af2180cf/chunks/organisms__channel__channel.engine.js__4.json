@@ -1,0 +1,23 @@
+{
+  "id": "chunk-c1fbb37c9ae2b453",
+  "repository": "nexus-id-repo-af2180cf",
+  "file": "organisms/channel/channel.engine.js",
+  "range": {
+    "start_line": 57,
+    "end_line": 62
+  },
+  "symbols": [
+    "_updateGain"
+  ],
+  "parent": null,
+  "tags": [],
+  "relations": [],
+  "dependencies": [],
+  "contracts": [],
+  "tests": [],
+  "hash": {
+    "content": "1727cb26c1685e51cff31128e9562c10dba8d062a0a8759e3142854a0b8bb1b1"
+  },
+  "status": "complete",
+  "content": "  function _updateGain() {\n    if (!_gainNode) return;\n    const target = _params.mute ? 0 : _params.gain;\n    _gainNode.gain.setTargetAtTime(target, audio.AC?.currentTime || 0, 0.02);\n  }\n"
+}
