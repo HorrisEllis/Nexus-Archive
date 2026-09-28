@@ -1638,3 +1638,10 @@ spec:
     |---|---|---|---|
     | `docs/2026-09-27-idearium-codebase-toolkit-phasemap.spec` | 1.0.0 | built (0.39.273) | Idearium solid for building codebases: the measured chunker defects (1054 of 3584 chunks cut mid-body, 984 docs split from their symbol, chunks to 1253 lines), chunker v2, chunk cards, the search index, the edit engine, the code API and tools. Mapped before building. |
     | `docs/code-intel.spec` | 1.0.0 | built (0.39.273) | lib/code-intel (structural chunker v2, cards, BM25 search, grep), lib/code-edit.js, idearium/repo/code-api.js (/api/repos/:uuid/code/*), the eleven idearium.code_*.tool agent tools; the inject delete op and RepoLayer's real-bytes read/delete. |
+
+    ## §REGISTERED 2026-09-28 — mapped on 0.39.274 (docs only, nothing built)
+
+    | spec | version | status | governs |
+    |---|---|---|---|
+    | `docs/2026-09-28-staging-self-heal-phasemap.spec` | 1.0.0 | mapped, not built | Staging as the missing piece of the autonomous loop: branch fork point, code-edit stage/promote, heal loop onto staging, verify gate, score (compound), before/after tension, promote/auto-rewind, feedback, compound → failure-mode mapping, loom L1, atlases A1. |
+    | `docs/2026-09-28-graph-build-context-settings-memory-phasemap.spec` | 1.0.0 | mapped, not built | A dependency graph per repo (global-symbol + load-order + uses_member + SCCs); builds in the source repo, uncommitted, snapshot per chunk, path-gated; one identity and one compose so every build wears the hat with context locked on; graph-ordered chunk phases with contract-diff acceptance; full enterprise per-repo settings (identity, context, build, gates, promote, quotas, security, audit, export); memory bounded by rate, per-process tables, one writer per table. Atlas + loom map per file; L1/A1/X1 inside every phase. |
