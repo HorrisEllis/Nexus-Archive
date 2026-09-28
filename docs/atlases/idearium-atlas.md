@@ -314,7 +314,12 @@ All of them are under /api/repos/:uuid/, except the last two.
 
 **The rest of a repo's life:**
 - **Snapshots** (`idearium/repo/snapshot.js`) commit the repo's derived state to versionium: source hash, git commit, atlas, chunk and graph identity, dependencies, environment, tests and verification.
-- **The roadmap** (`idearium/repo/roadmap.js`) reads and edits the repo's phasemap specs.
+- **The roadmap** (`idearium/repo/roadmap.js`) reads and edits the repo's phasemap specs, using loom's parser (`loom/scanners/phasemap-map.js`), and turns their phases into dependency-ordered nodes: layers, ready, blocked-by, and a warning for anything it cannot resolve. A dependency is read three ways:
+  - **A key in the same phasemap** is an edge to that phase. A key that matches two phases (P1_a and P1_b for P1) is reported as ambiguous and not guessed; a key that names the phase itself is reported as a self-dependency.
+  - **A phase in another phasemap**, written as the map's words then the phase (for example "B0, staging S0"), is an edge only when the words name exactly one *other* map and that map has exactly one phase with that id or key. It does not matter which of the two maps is listed first. A bare key is never looked up across maps, because two phasemaps written the same day reuse C0, C1, L1, A1 and X1.
+  - **Anything else** (a file, a URL, a phase that exists nowhere) stays an unresolved-dependency warning and does not order or block anything.
+
+  A comment after a flow list is not part of its last item (0.39.275): loom's list reader stops at the closing bracket, so a list of S3 and C1 followed by a comment keeps both edges.
 - **The scan** (`idearium/repo/scan.js`) finds what the Intelligence tab shows.
 - **The run menu** (`lib/cos-run.js`) runs a repo in a COS branch, a process or the COS test VM (`cos/testenv/`).
 - **Git and CI** are `lib/repo-git.js` and `cos/ci/`.
@@ -377,6 +382,8 @@ The build path is proven by:
 - `tests/modules/test-component-store.test.js`
 - `tests/modules/test-file-tree-plan.js`
 - `tests/modules/test-idearium-codegen.test.js`
+
+The roadmap and its dependency rules, including the cross-phasemap and trailing-comment cases, are proven by `tests/modules/test-moce-roadmap.js`.
 
 NEXUS-as-a-repo is proven by `tests/modules/test-nexus-self-and-cos-run.test.js` and `tests/modules/test-nexus-self-visible.test.js`. Every reference in this atlas is resolved against the tree by `tests/modules/test-nexus-atlas-refs.test.js`.
 

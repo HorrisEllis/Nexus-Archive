@@ -93,6 +93,7 @@ export function buildRoadmap({ projectId, maps = [] } = {}) {
   const warnings = [];
   const nodes = [];
   const mapInfo = [];
+  const crossPending = [];   // §0.39.275 — dependencies naming a phase in ANOTHER map, resolved once every map is read
 
   maps.forEach((m, mapIdx) => {
     const name = mapNameOf(m.path);
@@ -119,7 +120,12 @@ export function buildRoadmap({ projectId, maps = [] } = {}) {
         if (cands.length === 1 && cands[0].id !== p.id) deps.push(`${projectId}:${m.path}:${cands[0].id}`);
         else if (cands.length === 1) warnings.push({ type: 'self_dependency', map: m.path, phase: p.id });
         else if (cands.length > 1) { unresolved.push(tok); warnings.push({ type: 'ambiguous_dependency', map: m.path, phase: p.id, token: tok, candidates: cands.map(c => c.id) }); }
-        else { unresolved.push(tok); warnings.push({ type: 'unresolved_dependency', map: m.path, phase: p.id, token: tok, note: 'not a phase in this phasemap; it does not order or block anything' }); }
+        else {
+          unresolved.push(tok);
+          const w = { type: 'unresolved_dependency', map: m.path, phase: p.id, token: tok, note: 'not a phase in this phasemap; it does not order or block anything' };
+          warnings.push(w);
+          crossPending.push({ node: () => byUuid.get(uuid), tok, w, mapPath: m.path });
+        }
       }
       // §0.39.271 P2 — a list-form phase ("- id: T1", loom P1) has no slug after its key;
       // its title is its name:. Key-form titles are unchanged.
@@ -140,8 +146,27 @@ export function buildRoadmap({ projectId, maps = [] } = {}) {
     }
   });
 
-  // layering (Kahn); a node is placed once every dependency is placed
+  // §0.39.275 — CROSS-MAP dependencies. A phase can wait on a phase in a different spec, written as
+  // "<map words> <phase>" (graph-build-context-settings-memory B1: `depends_on: [B0, staging S0]`). It
+  // resolves only when the words name exactly one OTHER map and that map has exactly one phase by that
+  // id or key: both specs of one day reuse C0/C1/L1/A1/X1, so a bare key across maps is never guessed.
+  // Anything less exact stays an unresolved_dependency, as before.
   const byUuid = new Map(nodes.map(n => [n.uuid, n]));
+  for (const c of crossPending) {
+    const parts = c.tok.split(/\s+/);
+    if (parts.length < 2) continue;
+    const key = parts[parts.length - 1]; const words = parts.slice(0, -1).join(' ').toLowerCase();
+    const mapsHit = [...new Set(nodes.filter(n => n.map !== c.mapPath && mapNameOf(n.map).toLowerCase().includes(words)).map(n => n.map))];
+    if (mapsHit.length !== 1) continue;
+    const hits = nodes.filter(n => n.map === mapsHit[0] && (n.phase_key === key || keyOf(n.phase_key) === key));
+    if (hits.length !== 1) continue;
+    const self = c.node(); if (!self) continue;
+    self.depends_on.push(hits[0].uuid);
+    self.unresolved_deps = self.unresolved_deps.filter(t => t !== c.tok);
+    warnings.splice(warnings.indexOf(c.w), 1);
+  }
+
+  // layering (Kahn); a node is placed once every dependency is placed
   const remaining = new Set(nodes.map(n => n.uuid)); let layer = 0; const layers = [];
   while (remaining.size) {
     const now = [...remaining].filter(u => byUuid.get(u).depends_on.every(d => !remaining.has(d)));

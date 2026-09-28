@@ -292,7 +292,14 @@ function _fields(lines, at) {
 /** _list("[A, B]" | "A, B" | "- A - B") -> ['A','B'] (empty for nothing). */
 function _list(v) {
   if (v == null) return [];
-  const s = String(v).trim().replace(/^\[|\]$/g, '');
+  let raw = String(v).trim();
+  // §FIXED 2026-09-28 — a flow list ends at its own `]`; what follows is a YAML comment, not another
+  // item. `depends_on: [S3, C1]  # why` was read as the items `S3` and `C1] # why`, so the edge to C1
+  // was lost and the phase could read as ready while C1 was still open (staging-self-heal S4). A block
+  // or bare list has no `]`, so only a ` # …` tail is cut there.
+  if (raw.startsWith('[')) { const close = raw.indexOf(']'); if (close !== -1) raw = raw.slice(0, close + 1); }
+  else raw = raw.replace(/\s+#.*$/, '');
+  const s = raw.replace(/^\[|\]$/g, '');
   if (!s) return [];
   const items = s.startsWith('- ') ? s.split(/\s+-\s+/).map(x => x.replace(/^-\s*/, '')) : s.split(',');
   return items.map(x => x.trim().replace(/^["']|["']$/g, '')).filter(Boolean);
