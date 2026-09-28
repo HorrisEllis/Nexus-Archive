@@ -14,8 +14,12 @@
  *   - Set options, run diagnostics, add URL listeners
  *
  * Routes:
- *   1. NEXUS copilot :3750/api/prompt — primary, full consciousness stream
- *   2. Direct fallback — only if copilot is down AND fallbackApiKey is set
+ *   1. NEXUS copilot :3750/api/prompt — primary, full consciousness stream (it answers through ollama or guardian)
+ *   2. When copilot is down (or "Route through NEXUS co-pilot" is off): the same two backends, directly —
+ *      Ollama (ollama/ollama-runtime.js) and Guardian :7820 (/command, then /jobs?id= until the reply lands).
+ *      The route decides the order: guardian first when the route is guardian, else Ollama first.
+ *   §0.39.274 — James: "nexus settings are depreciated. fix it. copilot, is either ollama or guardian. no api".
+ *   The paid-API fallback (an Anthropic key in Clear Glass settings) is removed: no external API is ever called.
  *
  * Tool execution:
  *   Co-pilot responses are scanned for ```driver and ```tool blocks.
@@ -112,13 +116,7 @@ class CoPilotBridge {
     const persona = require('./hat').personaFor(route.hat);
     if (persona) systemExtra = persona + (systemExtra ? '\n\n' + systemExtra : '');
 
-    let result;
-    try {
-      result = await this._callNexusCopilot({ message, agentId, domContext, systemExtra, msgId, route });
-    } catch (err) {
-      console.warn(`[${new Date().toISOString()}] [clear-glass/src/copilot/bridge.js] [CoPilot] NEXUS offline, falling back:`, err.message);
-      result = await this._callFallback({ message, agentId, domContext, msgId });
-    }
+    const result = await this._ask({ message, agentId, domContext, systemExtra, msgId, route });
 
     let text       = result.text || '';
     let commands   = this._parseCommands(text);
@@ -157,7 +155,7 @@ class CoPilotBridge {
       this.sse.emit('copilot.thinking', { msgId, agentId, route, round: round + 1, ts: Date.now() });
       let next;
       try {
-        next = await this._callNexusCopilot({ message: this._formatToolResults(roundResults), agentId, domContext: null, systemExtra, msgId, route, followUp: true });
+        next = await this._ask({ message: this._formatToolResults(roundResults), agentId, domContext: null, systemExtra, msgId, route, followUp: true, direct: result.direct });
       } catch (err) { this.sse.emit('copilot.tool.error', { action: 'follow-up', error: err.message, agentId }); break; }
       text = next.text || text;
       commands = this._parseCommands(next.text || '');
@@ -504,27 +502,71 @@ ${toolsPrompt}${domSection}`;
     };
   }
 
-  // ── Fallback: direct API ──────────────────────────────────────────────
-  async _callFallback({ message, agentId, domContext, msgId }) {
+  // ── One call: copilot, else Ollama / Guardian directly ────────────────
+  // §0.39.274 — replaces the Anthropic-key fallback. Never throws: when nothing answers, the reply says which of the
+  // three was tried and why each failed, so the pane shows what to start instead of a settings page that is gone.
+  async _ask({ message, agentId, domContext, systemExtra, msgId, route, followUp = false, direct = null }) {
     const s = this.settings.get();
-    if (!s.fallbackApiKey) {
-      return { text: 'NEXUS copilot offline. No fallback API key configured — set one in NEXUS Settings.', modelUsed: 'none' };
+    const tried = [];
+    if (!direct && s.useCortex !== false) {
+      try {
+        const r = await this._callNexusCopilot({ message, agentId, domContext, systemExtra, msgId, route, followUp });
+        return { ...r, via: 'copilot' };
+      } catch (err) {
+        tried.push(`copilot :${s.copilotPort || 3750} — ${err.message}`);
+        console.warn(`[${new Date().toISOString()}] [clear-glass/src/copilot/bridge.js] [CoPilot] copilot unreachable, going direct:`, err.message);
+      }
     }
-    const cgContext = await this._buildCgContext(agentId, domContext);
-    const res = await fetch(s.fallbackEndpoint || 'https://api.anthropic.com/v1/messages', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': s.fallbackApiKey, 'anthropic-version': '2023-06-01' },
-      body:    JSON.stringify({
-        model:      s.fallbackModel || 'claude-sonnet-4-6',
-        max_tokens: 4096,
-        system:     cgContext,
-        messages:   [{ role: 'user', content: message }],
-      }),
-      timeout: 60000,
+    // a follow-up round (tool results) stays on the backend that answered the first round
+    const order = direct ? [direct] : (route.backend === 'guardian' ? ['guardian', 'ollama'] : ['ollama', 'guardian']);
+    const system = (await this._buildCgContext(agentId, followUp ? null : domContext)) + (systemExtra ? '\n\n' + systemExtra : '');
+    for (const b of order) {
+      try {
+        const r = b === 'ollama'
+          ? await this._callOllamaDirect({ system, message, timeoutMs: Number(s.copilotTimeoutMs) || 60000 })
+          : await this._callGuardianDirect({ system, message, agent: route.agent || s.copilotAgent || 'claude', sessionId: agentId, timeoutMs: Number(s.copilotTimeoutMs) || 60000 });
+        return { ...r, via: b, direct: b };
+      } catch (err) { tried.push(`${b === 'ollama' ? 'ollama' : `guardian :${s.guardianPort || 7820} (${route.agent || s.copilotAgent || 'claude'})`} — ${err.message}`); }
+    }
+    return {
+      text: `Nothing answered. Tried:\n${tried.map(t => `• ${t}`).join('\n')}\n\nStart the copilot service (:${s.copilotPort || 3750}), or Ollama, or connect a Guardian agent — then send again.`,
+      modelUsed: 'none', via: 'none',
+    };
+  }
+
+  // Ollama directly — the shared runtime every NEXUS system uses (ollama/ollama-runtime.js), model from the
+  // Clear Glass setting copilotOllamaModel or ollama/config.js's DEFAULT_MODEL.
+  _callOllamaDirect({ system, message, timeoutMs = 60000 }) {
+    const rt = require('../../../ollama/ollama-runtime.js');
+    const model = this.settings.get().copilotOllamaModel || rt.DEFAULT_MODEL;
+    return new Promise((resolve, reject) => {
+      let text = '', done = false;
+      const timer = setTimeout(() => { if (!done) { done = true; reject(new Error(`no reply in ${Math.round(timeoutMs / 1000)}s`)); } }, timeoutMs);
+      rt.streamGenerate({ model, prompt: message, system, caller: 'clear-glass.copilot', max_tokens: 2048 },
+        (tok) => { text += tok; },
+        () => { if (done) return; done = true; clearTimeout(timer); resolve({ text, modelUsed: `ollama:${model}` }); },
+        (err) => { if (done) return; done = true; clearTimeout(timer); reject(err); });
     });
-    if (!res.ok) throw new Error(`Fallback API error ${res.status}`);
-    const data = await res.json();
-    return { text: data.content?.[0]?.text || '', modelUsed: 'claude-fallback' };
+  }
+
+  // Guardian directly — POST /command (the agent in a browser tab), then GET /jobs?id= until the job finishes.
+  async _callGuardianDirect({ system, message, agent, sessionId, timeoutMs = 60000 }) {
+    const started = await this._bridgeDispatch('guardian', 'guardian.command', {
+      provider: agent, prompt: `${system}\n\n───\n\n${message}`, sessionId: sessionId || randomUUID(), source: 'clear-glass-copilot',
+    }, 15000);
+    const jobId = started && (started.jobId || (started.job && started.job.id));
+    if (!jobId) throw new Error(started && started.error ? started.error : 'guardian accepted nothing (no jobId)');
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+      await new Promise(r => setTimeout(r, 1000));
+      let j;
+      try { j = await this._guardianFetch(`/jobs?id=${encodeURIComponent(jobId)}`); } catch (_) { continue; }
+      const job = j && j.job;
+      if (!job) continue;
+      if (job.status === 'complete') return { text: String(job.result || job.response || ''), modelUsed: `guardian:${job.provider || agent}` };
+      if (job.status === 'failed' || job.status === 'error') throw new Error(job.error || job.failReason || `job ${job.status}`);
+    }
+    throw new Error(`job ${jobId} still running after ${Math.round(timeoutMs / 1000)}s (${agent} may have no tab open)`);
   }
 
   // ── Guardian — direct, not routed through Bridge (retired) ───────────
@@ -592,10 +634,15 @@ ${toolsPrompt}${domSection}`;
   }
 
   // ── Ollama — direct, not routed through Bridge (retired) ─────────────
-  async ollamaGenerate({ model, prompt, sessionId }) {
-    return this._bridgeDispatch('ollama', 'ollama.generate', {
-      model: model || 'llama3', prompt, sessionId: sessionId || randomUUID(),
-    }, 120000);
+  // §0.39.274 — was a POST to :3749/api/generate, a route the NEXUS ollama service does not serve (it 404'd).
+  async ollamaGenerate({ model, prompt, system }) {
+    const rt = require('../../../ollama/ollama-runtime.js');
+    const m = model || this.settings.get().copilotOllamaModel || rt.DEFAULT_MODEL;
+    return new Promise((resolve, reject) => {
+      let text = '';
+      rt.streamGenerate({ model: m, prompt, system: system || 'You are a helpful assistant.', caller: 'clear-glass.ollamaGenerate' },
+        (t) => { text += t; }, () => resolve({ response: text, model: m }), reject);
+    });
   }
 
   // ── Parse tool calls from response ────────────────────────────────────
