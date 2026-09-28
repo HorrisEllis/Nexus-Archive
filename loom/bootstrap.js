@@ -137,6 +137,9 @@ const handMapped = [
   ...require('./maps/ui-map').FILES.map(f => f[0]),
   ...require('./maps/raid-events-and-tools-map').FILES.map(f => f[0]),
   ...require('./maps/accounts-authority-map').FILES.map(f => f[0]),
+  ...require('./maps/cos-testenv-map').FILES.map(f => f[0]),     // §0.39.264
+  ...require('./maps/agent-memory-map').FILES.map(f => f[0]),    // §0.39.269
+  ...require('./maps/one-idearium-map').FILES.map(f => f[0]),    // §0.39.271
   'loom/agent-suite/index.js',
 ];
 console.log('\nscanning whole tree from source (real require/import edges only)...\n');
@@ -162,8 +165,50 @@ for (const file of handMapped) {
   if (r.ok) boundaryHooks++;
 }
 console.log(`  boundary .export hooks for hand-mapped files required by the tree: ${boundaryHooks}`);
+// §PRUNE 0.39.260 — registry.json was add-only: a file the scanner mapped
+// once stayed in the registry after it was deleted, moved, or (the case in
+// James's boot log) turned out to be an imported user project under
+// idearium/repo/repos/. Every such stale record's hooks were then reported
+// as dangling on every boot. Only records THIS scanner owns are pruned
+// (uuid prefix nexus-loom-scan-), plus anything under an excluded path;
+// hand-mapped and seeded records are never touched. Wires whose endpoint
+// hook is gone are removed with them — a wire cannot exist without both
+// endpoints (loom.wire-endpoints-exist), so such a wire is stale by
+// definition.
+{
+  const { skippedIdPrefixes } = require('./scanners/source-map');
+  const prefixes = skippedIdPrefixes();
+  const live = new Set(scan.FILES.map(f => f[1]));
+  for (const f of handMapped) live.add(idFor(f));
+  const isStaleComp = (c) =>
+    prefixes.some(p => c.id.startsWith(p)) ||
+    (typeof c.uuid === 'string' && c.uuid.startsWith('nexus-loom-scan-') && !live.has(c.id));
+  const staleComps = new Set(Object.values(driver.registry.all('component')).filter(isStaleComp).map(c => c.id));
+  // §0.39.266 — scan-owned EVENT hooks/wires are re-derived every run (below, in mapSource): drop them
+  // first, so an event that stopped being emitted or heard leaves the registry instead of dangling, and
+  // loom.unique-id does not reject the fresh declaration of one that still exists.
+  const scanEvent = (rec) => typeof rec.uuid === 'string' && rec.uuid.startsWith('nexus-loom-scan-') && rec.type === 'event';
+  const r1 = driver.registry.removeWhere((kind, rec) =>
+    (kind === 'component' && staleComps.has(rec.id)) ||
+    (kind === 'hook' && (staleComps.has(rec.component_id) || scanEvent(rec))) ||
+    (kind === 'wire' && scanEvent(rec)));
+  const hooksLeft = driver.registry.all('hook');
+  const r2 = driver.registry.removeWhere((kind, rec) =>
+    kind === 'wire' && (!hooksLeft[rec.from_hook_id] || !hooksLeft[rec.to_hook_id]));
+  console.log(`  pruned stale scan records: ${r1.component} component(s), ${r1.hook} hook(s), ${r2.wire} wire(s)`);
+}
 const mappedSrc = mapSource(driver, scan.FILES);
 console.log(`  components: ${mappedSrc.components.length} ok   hooks: ${mappedSrc.hooks.length} ok   wires: ${mappedSrc.wires.length} ok`);
+// §0.39.266 — the registry as an event bus map: wired events became hooks + wires above; every event,
+// wired or not, is written beside the registry for component cards and registry.find.
+{
+  const { eventMap } = require('./scanners/source-map');
+  const em = eventMap(scan.FILES);
+  const names = Object.keys(em.byEvent);
+  console.log(`  events: ${names.length} named · ${mappedSrc.eventHooks.length} event hooks · ${mappedSrc.eventWires.length} emit→listen wires (${names.filter(n => em.byEvent[n].emitters.length && em.byEvent[n].listeners.length).length} events with both sides)`);
+  try { require('fs').writeFileSync(require('path').join(__dirname, 'data', 'events.json'), JSON.stringify({ generatedAt: Date.now(), ...em }, null, 1)); }
+  catch (e) { console.log(`  events.json not written: ${e.message}`); }
+}
 if (mappedSrc.failures.length) {
   console.log(`  FAILURES: ${mappedSrc.failures.length}`);
   for (const f of mappedSrc.failures.slice(0, 6)) console.log(`    ${JSON.stringify(f).slice(0, 200)}`);
@@ -232,6 +277,18 @@ console.log(`  wires:      ${mappedCC.wires.length} ok`);
 console.log('\nmapping ui files...\n');
 const mappedUi = mapUi(driver);
 const mappedAccounts = mapAccountsAuthority(driver); // §0.39.223 — account authority / login portals / sealed vaults
+// §0.39.264 — the COS test VM + Eravos "new organism" → Idearium (require, spawn, HTTP and postMessage edges)
+const mappedCosTestenv = require('./maps/cos-testenv-map').mapCosTestenv(driver);
+console.log(`  cos-testenv: ${mappedCosTestenv.components.length} components, ${mappedCosTestenv.hooks.length} hooks, ${mappedCosTestenv.wires.length} wires`);
+if (mappedCosTestenv.failures.length) { console.log(`  cos-testenv FAILURES: ${mappedCosTestenv.failures.length}`); for (const f of mappedCosTestenv.failures.slice(0, 6)) console.log(`    ${JSON.stringify(f).slice(0, 200)}`); failures += mappedCosTestenv.failures.length; }
+// §0.39.269 — agent providers, agent memory over the Clear Glass download manager, copilot's activity recall
+const mappedAgentMemory = require('./maps/agent-memory-map').mapAgentMemory(driver);
+console.log(`  agent-memory: ${mappedAgentMemory.components.length} components, ${mappedAgentMemory.hooks.length} hooks, ${mappedAgentMemory.wires.length} wires`);
+if (mappedAgentMemory.failures.length) { console.log(`  agent-memory FAILURES: ${mappedAgentMemory.failures.length}`); for (const f of mappedAgentMemory.failures.slice(0, 6)) console.log(`    ${JSON.stringify(f).slice(0, 200)}`); failures += mappedAgentMemory.failures.length; }
+// §0.39.271 — the Phases manager, the living spec, the COS debug report, per-system nodes
+const mappedOneIdearium = require('./maps/one-idearium-map').mapOneIdearium(driver);
+console.log(`  one-idearium: ${mappedOneIdearium.components.length} components, ${mappedOneIdearium.hooks.length} hooks, ${mappedOneIdearium.wires.length} wires`);
+if (mappedOneIdearium.failures.length) { console.log(`  one-idearium FAILURES: ${mappedOneIdearium.failures.length}`); for (const f of mappedOneIdearium.failures.slice(0, 6)) console.log(`    ${JSON.stringify(f).slice(0, 200)}`); failures += mappedOneIdearium.failures.length; }
 console.log(`  components: ${mappedUi.components.length} ok`);
 console.log(`  hooks:      ${mappedUi.hooks.length} ok`);
 console.log(`  wires:      ${mappedUi.wires.length} ok`);

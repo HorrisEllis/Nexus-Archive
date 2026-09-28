@@ -90,18 +90,31 @@ class CoPilotBridge {
   }
 
   // ── Primary: send message ────────────────────────────────────────────────
-  async send({ message, agentId = 'default', domContext, systemExtra, requestId }) {
-    const msgId = requestId || randomUUID();
-    this.sse.emit('copilot.thinking', { msgId, agentId, ts: Date.now() });
+  // §BUILT 2026-09-26 — per-call route (backend/agent/hat) from the CLI or
+  // settings; see src/copilot/hat.js for why the hat is composed per call
+  // instead of switching copilot's global agent.
+  _route({ backend, agent, hat } = {}) {
+    const s = this.settings.get();
+    const b = ['ollama', 'copilot', 'guardian'].includes(backend) ? backend : (s.copilotBackend || 'copilot');
+    return { backend: b, agent: b === 'guardian' ? (agent || s.copilotAgent || 'claude') : undefined,
+      hat: typeof hat === 'boolean' ? hat : s.copilotWearHat !== false };
+  }
 
-    // Always get live DOM context
-    if (!domContext && this._domGet) {
+  async send({ message, agentId = 'default', domContext, systemExtra, requestId, backend, agent, hat, noDom }) {
+    const msgId = requestId || randomUUID();
+    const route = this._route({ backend, agent, hat });
+    this.sse.emit('copilot.thinking', { msgId, agentId, route, ts: Date.now() });
+
+    // Live DOM context unless the caller (or the setting) turned it off
+    if (!domContext && !noDom && this.settings.get().copilotDomContext !== false && this._domGet) {
       try { domContext = await this._domGet(agentId); } catch (_) {}
     }
+    const persona = require('./hat').personaFor(route.hat);
+    if (persona) systemExtra = persona + (systemExtra ? '\n\n' + systemExtra : '');
 
     let result;
     try {
-      result = await this._callNexusCopilot({ message, agentId, domContext, systemExtra, msgId });
+      result = await this._callNexusCopilot({ message, agentId, domContext, systemExtra, msgId, route });
     } catch (err) {
       console.warn(`[${new Date().toISOString()}] [clear-glass/src/copilot/bridge.js] [CoPilot] NEXUS offline, falling back:`, err.message);
       result = await this._callFallback({ message, agentId, domContext, msgId });
@@ -110,41 +123,48 @@ class CoPilotBridge {
     let text       = result.text || '';
     let commands   = this._parseCommands(text);
     const allCommands = [];
+    const results = [];
 
-    // 0.39.259 — results go BACK to copilot. Before this, every tool call's result was dropped on the floor: the
-    // bus-routed ones returned {dispatched} and nothing was ever sent back, so the co-pilot in this browser could
-    // act but never see what its action did (read a page, then answer from it, was impossible). Now each round's
-    // results are sent back as the next message, until the reply carries no tool call or the round limit is hit
-    // (settings.copilotToolRounds, default 3; 0 = the old fire-and-forget behaviour).
+    // Execute all tool calls — here, and only here (§FIX 2026-09-26: the
+    // renderer used to run res.commands a second time via cg.driver.exec,
+    // so every copilot click/type happened twice). With auto-run off the
+    // commands come back unexecuted and the pane offers Run per command
+    // (copilot:exec → execCommand below).
+    //
+    // 0.39.272 — with auto-run on, each round's RESULTS go back to copilot as the next message, until a reply
+    // carries no command or settings.copilotToolRounds (default 3; 0 = one round, the old behaviour) is reached.
+    // Before this the results were dropped: copilot could click but never read what the click did.
+    const autoRun = this.settings.get().copilotAutoRunCommands !== false;
     const maxRounds = Number.isInteger(this.settings.get().copilotToolRounds) ? this.settings.get().copilotToolRounds : 3;
-    for (let round = 0; ; round++) {
-      const results = [];
+    for (let round = 0; autoRun; round++) {
+      const roundResults = [];
       for (const cmd of commands) {
         const label = cmd.action || cmd.name || '?';
         try {
           const r = await this._executeCommand(cmd, agentId);
-          results.push({ tool: label, ok: !(r && (r.ok === false || r.error)), result: r });
-          this.sse.emit('copilot.tool.result', { action: label, agentId, ok: !(r && (r.ok === false || r.error)), ts: Date.now() });
+          const ok = !(r && (r.ok === false || r.error));
+          roundResults.push({ tool: label, ok, result: r });
+          this.sse.emit('copilot.tool.result', { action: label, agentId, ok, round, ts: Date.now() });
         } catch (err) {
           console.warn(`[${new Date().toISOString()}] [clear-glass/src/copilot/bridge.js] [CoPilot] Command failed [${label}]:`, err.message);
           this.sse.emit('copilot.tool.error', { action: label, error: err.message, agentId });
-          results.push({ tool: label, ok: false, error: err.message });
+          roundResults.push({ tool: label, ok: false, error: err.message });
         }
       }
       allCommands.push(...commands);
-      if (!results.length || round >= maxRounds) break;
-      this.sse.emit('copilot.thinking', { msgId, agentId, round: round + 1, ts: Date.now() });
+      results.push(...roundResults);
+      if (!roundResults.length || round >= maxRounds) break;
+      this.sse.emit('copilot.thinking', { msgId, agentId, route, round: round + 1, ts: Date.now() });
       let next;
       try {
-        next = await this._callNexusCopilot({ message: this._formatToolResults(results), agentId, domContext: null, systemExtra, msgId, followUp: true });
-      } catch (err) {
-        this.sse.emit('copilot.tool.error', { action: 'follow-up', error: err.message, agentId });
-        break;
-      }
+        next = await this._callNexusCopilot({ message: this._formatToolResults(roundResults), agentId, domContext: null, systemExtra, msgId, route, followUp: true });
+      } catch (err) { this.sse.emit('copilot.tool.error', { action: 'follow-up', error: err.message, agentId }); break; }
       text = next.text || text;
       commands = this._parseCommands(next.text || '');
       if (!commands.length) break;
     }
+    if (!autoRun) allCommands.push(...commands);
+
     this.sse.emit('copilot.response', {
       msgId, agentId, text, commands: allCommands,
       modelUsed:  result.modelUsed || 'unknown',
@@ -155,41 +175,48 @@ class CoPilotBridge {
     this._ingestToNexus({ type: 'clear-glass.copilot.exchange',
       agentId, msgId, prompt: message.slice(0, 100), ts: Date.now() });
 
-    return { text, commands: allCommands, msgId };
+    return { text, commands: allCommands, results, executed: autoRun, msgId, route: { ...route, modelUsed: result.modelUsed || null } };
   }
 
-  // 0.39.259 — one compact message per round: each result as JSON, capped so a page read cannot flood the chat.
+  // 0.39.272 — one compact message per round: each result as JSON, capped so a page read cannot flood the chat.
   _formatToolResults(results) {
     const cap = (v) => { const t = JSON.stringify(v); return t && t.length > 6000 ? t.slice(0, 6000) + ' …[cut ' + (t.length - 6000) + ' chars]' : t; };
     return '[tool results]\n' + results.map(r => `- ${r.tool}: ${r.ok ? 'ok' : 'FAILED'} ${cap(r.error ? { error: r.error } : r.result)}`).join('\n') +
       '\nContinue: use these results. Call another tool if needed, otherwise answer.';
   }
 
+  /** Run one command the person confirmed from the pane (auto-run off). */
+  async execCommand(cmd, agentId) {
+    if (!cmd || !(cmd.action || cmd.name)) return { ok: false, error: 'command has no action (or tool name)' };
+    try { return { ok: true, result: await this._executeCommand(cmd, agentId) ?? null }; }
+    catch (err) { this.sse.emit('copilot.tool.error', { action: cmd.action, error: err.message, agentId }); return { ok: false, error: err.message }; }
+  }
+
   // ── Execute a tool command via bus or direct call ──────────────────────
   async _executeCommand(cmd, agentId) {
-    // 0.39.259 — a ```tool block in copilot's own format ({"name","arguments"}, copilot/tool-runtime.js) is a NEXUS
-    // agent tool: run it through copilot's /api/tools/run, the same gate every tool call takes. So the co-pilot in
-    // this browser has every tool the co-pilot everywhere else has (context atlas, opportunity pipeline, cortex...).
+    // 0.39.272 — a ```tool block in copilot's own format ({"name","arguments"}, copilot/tool-runtime.js) is a NEXUS
+    // agent tool: run through copilot's /api/tools/run, the same gate every tool call takes. So the co-pilot in this
+    // browser has every tool the co-pilot everywhere else has (the atlas, the opportunity pipeline, cortex…).
     if (cmd && !cmd.action && cmd.name) return this._runAgentTool(cmd.name, cmd.arguments || {}, agentId);
     const action = cmd.action;
     const aid    = cmd.agentId || agentId;
 
     this.sse.emit('copilot.tool.start', { action, agentId: aid, ts: Date.now() });
 
-    // 0.39.259 — browser actions run on the driver directly and return its result (was: emitted on the bus, result
-    // never seen). The bus path below stays for anything the driver does not own.
+    // 0.39.272 — browser actions run on the driver and return its result (was: emitted on the bus, result unseen).
     if (this._driver && CoPilotBridge.DRIVER_ACTIONS.has(action)) {
       const { action: _a, agentId: _id, ...args } = cmd;
       return this._driver.exec({ action, agentId: aid, ...args });
     }
     if (action === 'state' || action === 'clearglass.state') return this._ipcGet(`/cli/state?agentId=${encodeURIComponent(aid)}`);
     if (action === 'readPage' || action === 'page.read') return this._ipcPost('/cli/page/read', { agentId: aid, maxText: cmd.maxText });
-    if (/^(opportunity|context)\./.test(action) || /\.tool$/.test(action)) {
-      const map = { opportunity: 'nexus.opportunity.tool', context: 'nexus.context.tool' };
+    if (action === 'invoke' || action === 'ipc') return this._ipcPost('/cli/invoke', { channel: cmd.channel, args: cmd.args, agentId: aid });
+    if (action === 'channels') return this._ipcGet(`/cli/invoke${cmd.query ? `?q=${encodeURIComponent(cmd.query)}` : ''}`);
+    if (/^(opportunity|context|learned)\./.test(action) || /\.tool$/.test(action)) {
+      const map = { opportunity: 'nexus.opportunity.tool', context: 'nexus.context.tool', learned: 'clearglass.learned.tool' };
       const [ns, sub] = action.split('.');
-      const name = map[ns] ? map[ns] : action;
       const { action: _a, agentId: _id, ...args } = cmd;
-      return this._runAgentTool(name, map[ns] ? { action: sub, ...args } : args, aid);
+      return this._runAgentTool(map[ns] || action, map[ns] ? { action: sub, ...args } : args, aid);
     }
 
     // ── Guardian tools — direct to Guardian :7820 ──────────────────────
@@ -329,10 +356,10 @@ class CoPilotBridge {
     return { skipped: action, reason: 'no handler' };
   }
 
-  // ── 0.39.259 helpers — copilot's tool gate, and this process's own :7702 routes ─────────────────────
+  // ── 0.39.272 helpers — copilot's tool gate, and this process's own :7702 routes ─────────────────────
   async _runAgentTool(name, args, agentId) {
     this.sse.emit('copilot.tool.start', { action: name, agentId, ts: Date.now() });
-    const res = await this._httpPostBridge(this.settings.copilotDirectUrl('/api/tools/run'), { name, args, agent: 'clear-glass-copilot' }, 60000);
+    const res = await this._httpPostBridge(this.settings.copilotDirectUrl('/api/tools/run'), { name, args, agent: 'clear-glass-copilot', context: { agentId } }, 60000);
     let body = null; try { body = JSON.parse(res.body); } catch (_) {}
     if (!res.ok) return { ok: false, error: (body && body.error) || `copilot /api/tools/run HTTP ${res.status}` };
     return body && body.result !== undefined ? body.result : body;
@@ -343,7 +370,7 @@ class CoPilotBridge {
     try { return JSON.parse(r.body); } catch (_) { return { ok: false, error: `bad reply from ${p}` }; }
   }
   async _ipcPost(p, body) {
-    const r = await this._httpPostBridge(`http://127.0.0.1:${this._ipcPort()}${p}`, body, 45000);
+    const r = await this._httpPostBridge(`http://127.0.0.1:${this._ipcPort()}${p}`, body, 60000);
     try { return JSON.parse(r.body); } catch (_) { return { ok: false, error: `bad reply from ${p}` }; }
   }
 
@@ -428,18 +455,19 @@ class CoPilotBridge {
   }
 
   async _buildCgContext(agentId, domContext) {
+    const domMax = Number(this.settings.get().copilotDomMaxChars) || 3000;
     const domSection = domContext
-      ? `\n\n## Live Browser DOM (Agent: ${agentId})\n\`\`\`json\n${JSON.stringify(domContext, null, 2).slice(0, 3000)}\n\`\`\``
+      ? `\n\n## Live Browser DOM (Agent: ${agentId})\n\`\`\`json\n${JSON.stringify(domContext, null, 2).slice(0, domMax)}\n\`\`\``
       : '';
     const toolsPrompt = await this._liveToolsPrompt();
 
-    // 0.39.259 — said on every turn, whichever catalog answered: the orchestrator's live capability prompt (used when
-    // it is up) predates these, so without this line the panel's co-pilot never learned it can read pages and use them.
+    // 0.39.272 — said on every turn, whichever catalog answered (the orchestrator's live capability prompt predates these).
     const always = [
       'Results of every call come back to you in the next message. Read before you act: {"action":"readPage"}, then',
       'setValue/select/check/upload by the selectors it returns. {"action":"state"} shows every open tab.',
-      'Any NEXUS agent tool: ```tool {"name":"<tool>","arguments":{...}}``` — e.g. nexus.opportunity.tool (jobs, gigs,',
-      'Fiverr/Upwork: status, capture, draft, prepare), nexus.context.tool (search every memory: action search, query).',
+      'Anything the Clear Glass window can do: {"action":"channels","query":"window"} lists it, {"action":"invoke","channel":"…","args":{…}} runs it.',
+      'Any NEXUS agent tool: ```tool {"name":"<tool>","arguments":{...}}``` — e.g. nexus.opportunity.tool (jobs, gigs, Fiverr/Upwork),',
+      'nexus.context.tool (search every memory), clearglass.learned.tool (what you have learned about sites).',
     ].join('\n');
     return `## Clear Glass Browser Context
 Agent ID: ${agentId}
@@ -451,17 +479,22 @@ ${toolsPrompt}${domSection}`;
   }
 
   // ── Call NEXUS copilot — routed through Bridge :9999 ─────────────────
-  async _callNexusCopilot({ message, agentId, domContext, systemExtra, msgId, followUp = false }) {
-    // 0.39.259 — a follow-up round (tool results going back) does not re-send the tool catalog and DOM: same session.
+  async _callNexusCopilot({ message, agentId, domContext, systemExtra, msgId, route = this._route(), followUp = false }) {
+    // 0.39.272 — a follow-up round (tool results going back) does not re-send the tool catalog and DOM: same session.
     const cgContext = followUp ? '## Clear Glass — tool results round (same session; tools as listed before)' : await this._buildCgContext(agentId, domContext);
+    const s = this.settings.get();
     const result = await this._bridgeDispatch('copilot', 'copilot.prompt', {
       prompt:      message,
-      channel:     'clear-glass',
+      channel:     s.copilotChannel || 'clear-glass',
       sessionId:   agentId,
       requestId:   msgId,
       source:      'clear-glass',
       systemExtra: cgContext + (systemExtra ? '\n\n' + systemExtra : ''),
-    }, 60000);
+      // Same per-call fields ui/tv-shell/menu.js sends to /api/prompt.
+      backend:     route.backend,
+      provider:    route.backend === 'guardian' ? route.agent : route.backend,
+      agent:       route.agent,
+    }, Number(s.copilotTimeoutMs) || 60000);
     const data = result?.response || result || {};
     return {
       text:          data.text || data.response || '',
@@ -760,13 +793,13 @@ ${toolsPrompt}${domSection}`;
   }
 }
 
-// 0.39.259 — the driver's own vocabulary (driver/index.js _dispatch). An action in this set runs on the driver and
-// its result comes back; the tools.js names 'picker.enable' etc. are the driver's names too.
+// 0.39.272 — the driver's own vocabulary (driver/index.js _dispatch). An action in this set runs on the driver and
+// its result comes back.
 CoPilotBridge.DRIVER_ACTIONS = new Set([
   'navigate', 'click', 'type', 'setValue', 'select', 'check', 'upload', 'pressKey', 'scroll', 'hover', 'wait', 'waitFor',
   'screenshot', 'toast', 'eval', 'zoom', 'findInPage', 'stopFindInPage', 'print', 'getUrl', 'getTitle', 'back', 'forward',
   'reload', 'cookies.get', 'cookies.set', 'cookies.clear', 'storage.get', 'storage.set', 'network.block',
-  'network.intercept', 'picker.enable', 'picker.disable', 'inject', 'record.start', 'record.stop',
+  'network.intercept', 'picker.enable', 'picker.disable', 'inject', 'record.start', 'record.stop', 'readPage',
 ]);
 
 module.exports = CoPilotBridge;

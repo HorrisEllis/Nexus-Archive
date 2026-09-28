@@ -20,6 +20,8 @@
  *   POST /cli/driver        { action, agentId?, ...args }  → the driver's own result, awaited (timeoutMs, default 30s)
  *   POST /cli/page/read     { agentId?, maxText? ... }      → page/reader.js normalize() shape
  *   GET  /cli/state         ?agentId=                        → one snapshot of everything above, each source degrading alone
+ *   GET  /cli/invoke                                        → every IPC channel (grouped; denied ones named with the reason)
+ *   POST /cli/invoke        { channel, args?, agentId? }     → that channel's own handler, awaited (ipc/handler-registry.js)
  *
  * Same handlers, second door — the driver is the same instance the bus gate calls; nothing is reimplemented.
  */
@@ -66,6 +68,7 @@ async function buildState(deps, { agentId = null, pageTimeoutMs = 2500 } = {}) {
   const macros = await _safe(blind, 'macros', async () => { if (!macroTool) return []; const r = await macroTool.execute({ action: 'list' }); return r.macros || r.list || r || []; }, []);
   const scripts = await _safe(blind, 'userscripts', () => (userscripts ? userscripts.list({}) : []), []);
   const dls = await _safe(blind, 'downloads', () => (downloads ? downloads.list({}) : []), []);
+  const wx = await _safe(blind, 'extensions', () => (deps.webExtensions && deps.webExtensions.list ? deps.webExtensions.list() : []), []);
   return {
     ok: true,
     module: 'clear-glass',
@@ -79,6 +82,8 @@ async function buildState(deps, { agentId = null, pageTimeoutMs = 2500 } = {}) {
     macros: Array.isArray(macros) ? macros.map(m => (typeof m === 'string' ? m : m.name)).filter(Boolean) : [],
     userscripts: Array.isArray(scripts) ? scripts.map(s => ({ id: s.id, name: s.name, enabled: s.enabled !== false })) : [],
     recentDownloads: Array.isArray(dls) ? dls.slice(-5).map(d => ({ id: d.id, filename: d.filename || d.name, state: d.state })) : [],
+    extensions: Array.isArray(wx) ? wx.map(x => ({ id: x.id, name: x.name, enabled: x.enabled !== false })) : [],
+    ipcChannels: deps.handlers ? deps.handlers.list().length : null,
     blind,
     ts: Date.now(),
   };
@@ -105,6 +110,21 @@ function install(app, deps) {
       const r = await _withTimeout(deps.driver.exec({ ...body, action: 'readPage', agentId: body.agentId || 'default' }), +body.timeoutMs || DEFAULT_TIMEOUT_MS, 'readPage');
       res.status(r && r.ok === false ? 502 : 200).json(r);
     } catch (e) { res.status(502).json({ ok: false, error: e.message }); }
+  });
+
+  // Every IPC channel — the renderer's whole surface — by name. GET lists, POST runs the same handler.
+  app.get('/cli/invoke', (req, res) => {
+    if (!deps.handlers) return res.status(503).json({ ok: false, error: 'handler registry not installed' });
+    const channels = deps.handlers.list();
+    const q = String(req.query.q || '').toLowerCase();
+    const shown = q ? channels.filter(c => c.channel.toLowerCase().includes(q)) : channels;
+    res.json({ ok: true, count: shown.length, total: channels.length, channels: shown });
+  });
+  app.post('/cli/invoke', async (req, res) => {
+    if (!deps.handlers) return res.status(503).json({ ok: false, error: 'handler registry not installed' });
+    const b = req.body || {};
+    const r = await deps.handlers.invoke(b.channel, b.args, { agentId: b.agentId || null, timeoutMs: +b.timeoutMs || DEFAULT_TIMEOUT_MS });
+    res.status(r.ok ? 200 : r.denied ? 403 : /^no handler/.test(r.error || '') ? 404 : 502).json(r);
   });
 
   app.get('/cli/state', async (req, res) => {

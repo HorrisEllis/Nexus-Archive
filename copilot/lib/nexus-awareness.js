@@ -85,7 +85,7 @@ async function answerAbout(prompt, opts = {}) {
   const p = (prompt || '').toLowerCase();
   if (/\b(what('?s| is) wrong|what's broken|any (problems|issues|gaps)|diagnos)/.test(p)) return whatsWrong(opts);
   if (/\b(rundown|overview|system status|state of (the )?system|how is nexus|tell me about (the )?system)\b/.test(p)) return systemRundown(opts);
-  // 0.39.259 — the browser, the opportunity pipeline and the memory atlas are part of NEXUS's state too.
+  // 0.39.272 — the browser, the opportunity pipeline and the memory atlas are part of NEXUS's state too.
   if (/\b(what('?s| is) open in (clear ?glass|the browser)|clear ?glass (status|state)|which tabs( are open)?|browser (status|state))\b/.test(p)) return clearGlassState(opts);
   if (/\bwhat needs me\b|\b(jobs?|applications?|opportunit\w*|fiverr|upwork|gigs?)\b.*\b(status|pipeline|waiting|pending|needs? me|queue)\b/.test(p)) return opportunityState();
   if (/\b(what (memory|memories) (do you have|exist|is there)|memory directory|where (is|does) .* (memory|remember)|what do you remember\b(?! about))/.test(p)) return memoryDirectory();

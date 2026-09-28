@@ -4,7 +4,7 @@
  * UUID: nexus-copilot-context-v2-0000-4000-0000-000000000001
  * Version: 2.0.0
  *
- * Nine sensing layers — from raw events to predictive intent, the browser and the opportunity pipeline (L7-L8 0.39.259).
+ * Nine sensing layers — from raw events to predictive intent, the browser and the opportunity pipeline (L7-L8 0.39.272).
  * Assembled as a single system snapshot for injection into any model call.
  *
  * Layer 0 — live event bus          (SSE /events · bus.sample)
@@ -14,8 +14,8 @@
  * Layer 4 — CFR-Ω field state       (coherence · friction · entropy · regime)
  * Layer 5 — memory & artifact graph (chat_log · decisions · artifact names)
  * Layer 6 — predictive intent       (gap patterns · session velocity · Qwen triage)
- * Layer 7 — Clear Glass browser     (open tabs · url/title · providers · accounts · autofill · macros) 0.39.259
- * Layer 8 — opportunities           (job/freelance pipeline counts · what waits on James) 0.39.259
+ * Layer 7 — Clear Glass browser     (open tabs · url/title · providers · accounts · autofill · macros) 0.39.272
+ * Layer 8 — opportunities           (job/freelance pipeline counts · what waits on James) 0.39.272
  *
  * §1.1 Nothing exists until proven — every layer degrades gracefully
  * §1.2 Nothing silently fails — every layer timeout is logged
@@ -284,14 +284,14 @@ async function _layer5_memory() {
   return lines.join('\n');
 }
 
-// ── Layer 7: Clear Glass — the browser, as it is right now (0.39.259) ────────────────
+// ── Layer 7: Clear Glass — the browser, as it is right now (0.39.272) ────────────────
 // James, 2026-09-27: "i want copilot completely aware of clearglass." Every other layer described NEXUS's services;
 // none said which tabs are open, what page each is on, which accounts and autofill profiles exist, or that the
 // browser is down. One GET to Clear Glass's own /cli/state (ipc/agent-routes.js), which already degrades per source.
 const CG_URL = process.env.CLEARGL_IPC_URL || `http://127.0.0.1:${process.env.CLEARGL_IPC_PORT || 7702}`;
 async function _layer7_clearglass() {
   const st = await _get(`${CG_URL}/cli/state`, 3500);
-  if (!st || !st.ok) return '  Clear Glass: not reachable on :7702 (not running, or a build older than 0.39.259) — use clearglass.browser.tool action "state" to re-check';
+  if (!st || !st.ok) return '  Clear Glass: not reachable on :7702 (not running, or a build older than 0.39.272) — use clearglass.browser.tool action "state" to re-check';
   const lines = [];
   const agents = st.agents || [];
   lines.push(`  tabs (${agents.length}):`);
@@ -302,11 +302,16 @@ async function _layer7_clearglass() {
   if ((st.autofillProfiles || []).length) lines.push(`  autofill profiles: ${st.autofillProfiles.map(p => p.name || p.id).slice(0, 6).join(', ')}`);
   if ((st.macros || []).length) lines.push(`  macros: ${st.macros.slice(0, 10).join(', ')}`);
   if ((st.blind || []).length) lines.push(`  unreadable: ${st.blind.map(b => b.source).join(', ')}`);
-  lines.push('  act with clearglass.browser.tool (state/read/act/sequence/autofill/questions); results come back in the call');
+  lines.push('  act with clearglass.browser.tool (state/read/act/sequence/autofill/questions; channels/invoke = anything the window can do); results come back in the call');
+  if (st.ipcChannels) lines.push(`  ${st.ipcChannels} Clear Glass capabilities reachable by name (clearglass.browser.tool channels)`);
+  try {
+    const L = require('../../lib/cg-learning.js').summary();
+    if (L.observations) lines.push(`  learned: ${L.hosts.length} site(s), ${L.observations} action(s), ${L.hosts.reduce((n, h) => n + h.healed, 0)} healed, ${L.flows} flow(s) — clearglass.learned.tool`);
+  } catch (_) { /* learning store unreadable — the layer still reports the browser */ }
   return lines.join('\n');
 }
 
-// ── Layer 8: Opportunities — the job/freelance pipeline (0.39.259) ─────────────────
+// ── Layer 8: Opportunities — the job/freelance pipeline (0.39.272) ─────────────────
 async function _layer8_opportunity() {
   try {
     const s = require('../../lib/opportunity').status();

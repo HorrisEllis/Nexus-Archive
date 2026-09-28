@@ -58,13 +58,10 @@ const TOOLBAR_COMMANDS = [
   // this at the source: unpinning picker-btn now hides its selector too.
   { id: 'picker-btn',      icon: '◎', label: 'Element Picker',         group: 'Tools',   pinnable: true, defaultPinned: false, pairsWith: ['picker-route', 'picker-api-url'] },
   { id: 'btn-mesh',        icon: '⬡', label: 'Agent Mesh',             group: 'Tools',   pinnable: true, defaultPinned: false },
-  { id: 'btn-diag',        icon: '⚕', label: 'Diagnostics',            group: 'Tools',   pinnable: true, defaultPinned: false },
   { id: 'copilot-toggle',  icon: '✦', label: 'Toggle Co-pilot',        group: 'Session', pinnable: true, defaultPinned: true  },
   { id: 'btn-bookmark',    icon: '★', label: 'Bookmark this page',     group: 'Session', pinnable: true, defaultPinned: true  },
   { id: 'btn-rewind',      icon: '⏮', label: 'Rewind session',         group: 'Session', pinnable: true, defaultPinned: false },
   { id: 'btn-providers',   icon: '⟳', label: 'NCP Providers',          group: 'Session', pinnable: true, defaultPinned: false },
-  { id: 'btn-userscripts', icon: '✎', label: 'Userscripts',            group: 'Session', pinnable: true, defaultPinned: false },
-  { id: 'btn-options',     icon: '☰', label: 'Nexus Options',          group: 'Session', pinnable: true, defaultPinned: false },
   // §FIXED 2026-09-25 — James, pointing at the real "Customize Toolbar"
   // dialog (screenshot): "WHERE IS IT? anything outside of this, is
   // wrong." Root cause, found by reading this file plus browser.js's
@@ -88,17 +85,15 @@ const TOOLBAR_COMMANDS = [
   // James is describing, closed at its structural cause instead of
   // papered over with a new label on the same invisible action.
   { id: 'btn-settings',    icon: '⚙', label: 'Settings',               group: 'Session', pinnable: true, defaultPinned: false },
-  { action: 'new-agent',   icon: '⊞', label: 'New Agent Window',       group: 'Window' },
-  { action: 'bg-tab',      icon: '▣', label: 'Move to Background Tab', group: 'Window' },
-  { action: 'maximize',    icon: '⛶', label: 'Maximize / Restore',     group: 'Window' },
-  { action: 'queue',       icon: '☰', label: 'Mesh Queue',             group: 'Window' },
-  // §NEW 2026-08-24 — the actual, permanent fix for "too much got pinned
-  // over time, unpin it": a real palette action that restores
-  // pinnedToolbarButtons to exactly this file's defaultPinned set, instead
-  // of requiring every extra pin to be removed by hand, one at a time.
-  { action: 'reset-toolbar', icon: '↺', label: 'Reset toolbar to defaults', group: 'Window' },
-  // 0.39.259 — the page James is looking at (a job post, an Upwork gig, a Fiverr buyer message) into the opportunity
-  // pipeline: copilot :3750 POST /api/opportunity/capture reads this tab through /cli/page/read, scores it, and says where it landed.
+  // §0.39.265 — James: "remove the old" — Diagnostics, Userscripts and Nexus
+  // Options left the toolbar (each has a Settings section: Diagnostics, Agent
+  // suite › Userscripts, General / Privacy & data), and the Window actions
+  // (New Agent Window, Move to Background Tab, Maximize / Restore, Mesh Queue,
+  // Reset toolbar to defaults) left the palette. The Customize Toolbar
+  // dialog's own "Restore Defaults" button still resets the pins.
+  // 0.39.272 — the page James is looking at (a job post, an Upwork gig, a Fiverr buyer message) into the opportunity
+  // pipeline: copilot :3750 POST /api/opportunity/capture reads this tab through /cli/page/read, scores it, and says
+  // where it landed. A palette action (no toolbar button), in the Tools group.
   { action: 'capture-opportunity', icon: '✚', label: 'Capture job / gig / lead to NEXUS', group: 'Tools' },
 ];
 

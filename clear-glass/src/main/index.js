@@ -62,7 +62,7 @@ const MODULE_UUID = randomUUID();
 // glass.spec's meta.version independently exhibited. All three synced
 // to 3.9.0 (3.8.0 baseline + this session's real additions) together;
 // see clear-glass.spec's version_history for what's actually new.
-const CG_VERSION  = '3.16.0';
+const CG_VERSION  = '3.18.0';
 
 // ── Headless / tray-only mode ─────────────────────────────────────────────
 // CG_HEADLESS=1  OR  --headless in argv → no BrowserWindow, tray only.
@@ -164,14 +164,21 @@ const EROS_COMPONENTS   = require('../../wire/eros-registry-components');
 
 // ── Wire config ───────────────────────────────────────────────────────────
 const EROS_PORT = parseInt(process.env.EROS_PORT || '7432');
+// §0.39.264 — James: "hook it in to run with clearglass." ErosmancerOS is started,
+// connected to CG_CDP_PORT, restarted and stopped by Clear Glass (src/eros/supervisor.js).
+// EROS_AUTOSTART=0 leaves it to be started by hand, as before.
+const { ErosSupervisor } = require('../eros/supervisor');
+let erosSupervisor = null;
 const WIRE_PORT = parseInt(process.env.WIRE_PORT || '7704');
 
 // ── State ──────────────────────────────────────────────────────────────────
 let loginPortal, jobIntake;
+let webExtensions = null;
 let tray, sse, ipcBridge, nexusOptions, bookmarks, rewind, providerHost, userscripts, siteSettings, downloads, passwordVault, pluginHost, errorCapture, processMetrics, history, mesh, autofillStore;
 let fp          = null;   // FingerprintEngine  — set in bootstrap()
 let ctxMgr      = null;   // ContextMgr         — set in bootstrap()
 let driver      = null;   // ClearDriver        — set in bootstrap()
+let cookieVault = null;   // CookieVault        — set in bootstrap(); account windows restore from it
 let urlListener = null;   // UrlListener        — set in bootstrap()
 let apiSettings = null;   // ApiSettings        — set in bootstrap()
 let _heartbeatInterval = null;
@@ -648,11 +655,13 @@ async function _startWire() {
   // app.commandLine.appendSwitch) so its Target.setDiscoverTargets call
   // actually sees Clear Glass's webContents.
   const erosConnect = await _proxyEros('POST', '/api/connect', {
-    target: { type: 'local', port: CG_CDP_PORT, host: 'localhost' },
+    target: { type: 'local', port: CG_CDP_PORT, host: '127.0.0.1' },
   }, 8000);
   console.log(erosConnect.ok
     ? `[ClearGlass/Wire] ErosmancerOS connected to CDP :${CG_CDP_PORT}`
-    : `[ClearGlass/Wire] ErosmancerOS connect failed (will retry on first driver call): ${erosConnect.error || erosConnect.status}`);
+    : (erosSupervisor && erosSupervisor.state !== 'failed'
+      ? `[ClearGlass/Wire] ErosmancerOS not up yet (${erosConnect.error || erosConnect.status}) — Clear Glass is starting it and connects it to :${CG_CDP_PORT} when ready`
+      : `[ClearGlass/Wire] ErosmancerOS connect failed (will retry on first driver call): ${erosConnect.error || erosConnect.status}`));
 
   // ── Register nexus-wire itself ───────────────────────────────────────────
   await _ncReq(NEXUS_PORTS.orchestrator, 'POST', '/api/register', {
@@ -719,7 +728,7 @@ async function _startWire() {
     // this entire time; this was the actual block.
     if (req.method === 'OPTIONS') {
       res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, PUT, OPTIONS');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Nexus-Token');
       res.writeHead(204);
       return res.end();
     }
@@ -828,12 +837,15 @@ async function _startWire() {
       }
 
       if (u === '/agent-mesh/spawn' && req.method === 'POST') {
-        const { agentKey } = parsed;
+        const { agentKey, accountId } = parsed;
         if (!agentKey) { res.writeHead(400); return res.end(JSON.stringify({ ok: false, error: 'agentKey required' })); }
         try {
-          const state = await mesh.spawn(agentKey);
+          // §0.39.265 — Settings › Accounts opens a mesh tab AS an account: the
+          // same deterministic mesh-<provider>-<account> id Guardian uses, so a
+          // second click reuses that tab and two accounts get two tabs.
+          const state = await mesh.spawn(agentKey, accountId ? { accountId, contextId: `mesh-${agentKey}-${accountId}` } : {});
           res.writeHead(200);
-          return res.end(JSON.stringify({ ok: true, agentKey, contextId: state.contextId }));
+          return res.end(JSON.stringify({ ok: true, agentKey, accountId: state.accountId || null, contextId: state.contextId }));
         } catch (e) {
           res.writeHead(502);
           return res.end(JSON.stringify({ ok: false, error: e.message }));
@@ -871,69 +883,22 @@ async function _startWire() {
         return res.end(JSON.stringify(result));
       }
 
-      // §BUILT — Automation engine real HTTP surface, same thin-pass-
-      // through convention as the routes above.
-      if (u === '/automation/workflows' && req.method === 'GET') {
-        res.writeHead(200);
-        return res.end(JSON.stringify({ ok: true, workflows: mesh.listWorkflows() }));
-      }
-      if (u === '/automation/workflows' && req.method === 'POST') {
-        const result = mesh.createWorkflow(parsed);
-        res.writeHead(result.ok ? 200 : 400);
-        return res.end(JSON.stringify(result));
-      }
-      if (u.match(/^\/automation\/workflows\/[^/]+$/) && req.method === 'PATCH') {
-        const id = u.split('/').pop();
-        const result = mesh.updateWorkflow(id, parsed);
-        res.writeHead(result.ok ? 200 : 404);
-        return res.end(JSON.stringify(result));
-      }
-      if (u.match(/^\/automation\/workflows\/[^/]+$/) && req.method === 'DELETE') {
-        const id = u.split('/').pop();
-        const result = mesh.removeWorkflow(id);
-        res.writeHead(result.ok ? 200 : 404);
-        return res.end(JSON.stringify(result));
-      }
-      if (u.match(/^\/automation\/workflows\/[^/]+\/run$/) && req.method === 'POST') {
-        const id = u.split('/')[3];
-        try {
-          const result = await mesh.runWorkflow(id, 'manual');
-          res.writeHead(result.ok ? 200 : 500);
-          return res.end(JSON.stringify(result));
-        } catch (e) {
-          res.writeHead(500);
-          return res.end(JSON.stringify({ ok: false, error: e.message }));
-        }
-      }
-      if (u === '/automation/log' && req.method === 'GET') {
-        res.writeHead(200);
-        return res.end(JSON.stringify({ ok: true, log: mesh.getAutomationLog() }));
-      }
-      // §BUILT — per-step CRUD, the real Tasker-style step editor's
-      // backend (James: "like tasker and automate").
-      if (u.match(/^\/automation\/workflows\/[^/]+\/steps$/) && req.method === 'POST') {
-        const id = u.split('/')[3];
-        const result = mesh.addWorkflowStep(id, parsed);
-        res.writeHead(result.ok ? 200 : 400);
-        return res.end(JSON.stringify(result));
-      }
-      if (u.match(/^\/automation\/workflows\/[^/]+\/steps\/[^/]+$/) && req.method === 'PATCH') {
-        const parts = u.split('/'); const id = parts[3], stepId = parts[5];
-        const result = mesh.updateWorkflowStep(id, stepId, parsed);
-        res.writeHead(result.ok ? 200 : 404);
-        return res.end(JSON.stringify(result));
-      }
-      if (u.match(/^\/automation\/workflows\/[^/]+\/steps\/[^/]+$/) && req.method === 'DELETE') {
-        const parts = u.split('/'); const id = parts[3], stepId = parts[5];
-        const result = mesh.removeWorkflowStep(id, stepId);
-        res.writeHead(result.ok ? 200 : 404);
-        return res.end(JSON.stringify(result));
-      }
-      if (u.match(/^\/automation\/workflows\/[^/]+\/steps\/[^/]+\/move$/) && req.method === 'POST') {
-        const parts = u.split('/'); const id = parts[3], stepId = parts[5];
-        const result = mesh.moveWorkflowStep(id, stepId, parsed?.dir);
-        res.writeHead(result.ok ? 200 : 404);
-        return res.end(JSON.stringify(result));
+      // §BUILT — Automation engine real HTTP surface. §0.39.265 — every
+      // /automation/* route lives in src/automation/routes.js (shared with the
+      // tests): workflows and steps, runs and cancel, catalogue, templates,
+      // import/export, validate, one-off steps, events, webhooks, cron preview.
+      // Local pages only, except webhooks (they carry their own secret).
+      if (u.startsWith('/automation/')) {
+        const r = await require('../automation/routes.js').handle(mesh && mesh._automation, { method: req.method, url: u, body: parsed, headers: req.headers, rawBody: body }, {
+          getMacro: (name) => macroTool.execute({ action: 'get', name }),
+          createMacro: (m) => macroTool.execute({ action: 'create', ...m }),
+          openPath: (dir) => shell.openPath(dir),
+          pages: {
+            list: () => listBackgroundTabs().filter(t => /^auto-/.test(t.agentId)),
+            act: (page, action) => _automationBrowser({ page, action }),
+          },
+        });
+        if (r) { res.writeHead(r.status); return res.end(JSON.stringify(r.body)); }
       }
 
       // §BL24 2026-08-23 — James: "a command/tool to disable and re-
@@ -1036,10 +1001,24 @@ async function _startWire() {
         return res.end(JSON.stringify(result));
       }
 
+      // §0.39.264 — ErosmancerOS's lifetime, owned by Clear Glass (src/eros/supervisor.js)
+      if (u === '/eros-supervisor' && req.method === 'GET') {
+        return res.end(JSON.stringify({ ok: true, autostart: !!erosSupervisor, ...(erosSupervisor ? erosSupervisor.status() : { state: 'manual', port: EROS_PORT, cdpPort: CG_CDP_PORT }) }));
+      }
+      if (u === '/eros-supervisor/start' && req.method === 'POST') {
+        if (!erosSupervisor) erosSupervisor = new ErosSupervisor({ port: EROS_PORT, cdpPort: CG_CDP_PORT });
+        const st = erosSupervisor.state === 'running' ? (await erosSupervisor.connect(), erosSupervisor.status()) : await erosSupervisor.start();
+        if (st.state !== 'running') res.writeHead(502);
+        return res.end(JSON.stringify({ ok: st.state === 'running', ...st }));
+      }
+
       // ErosmancerOS proxy
       if (u.startsWith('/eros/')) {
         const erosPath = '/api' + u.replace(/^\/eros/, '');
-        const up = await _proxyEros(req.method, erosPath, parsed);
+        // §0.39.265 — human-type is guardian's fallback typist: a long prompt typed at a person's pace takes
+        // minutes, not the proxy's default 15 s; and ErosmancerOS must be connected to Clear Glass first.
+        if (erosPath === '/api/human-type' && erosSupervisor && !erosSupervisor.connected) { try { await erosSupervisor.connect({ tries: 2 }); } catch (_) {} }
+        const up = await _proxyEros(req.method, erosPath, parsed, erosPath === '/api/human-type' ? 10 * 60000 : 15000);
         res.writeHead(up.status);
         return res.end(JSON.stringify(up.body));
       }
@@ -1202,6 +1181,7 @@ async function bootstrap() {
   // 3. Cookie vault
   const vault = new CookieVault();
   await vault.init();
+  cookieVault = vault;
 
   // 3.5. Global session CSP — allow NCP userscripts to connect to localhost
   // Guardian NCP uses http://127.0.0.1 from https:// pages (Private Network Access)
@@ -1246,6 +1226,9 @@ async function bootstrap() {
 
   // 8.5. Nexus options — window behavior + defaults, bus + UI controllable
   nexusOptions = new NexusOptions();
+  // §0.39.265 — page-listener decay: once at start, then hourly.
+  try { const d = nexusOptions.decayListeners(); if (d.disabled.length || d.removed.length) console.log(`[listeners] decay: ${d.disabled.length} switched off, ${d.removed.length} removed`); } catch (e) { console.warn(`[listeners] decay failed: ${e.message}`); }
+  setInterval(() => { try { nexusOptions.decayListeners(); } catch (_) {} }, 3600000).unref();
   await nexusOptions.load();
 
   // 8.6. Bookmark store
@@ -1318,7 +1301,10 @@ async function bootstrap() {
   // startup — the real RAM cost this was built to cut (3 fewer resident
   // Chromium renderer processes at boot, in the common case where they
   // don't all get used every session).
-  const autoBootSetting = (process.env.CG_AUTOBOOT_PROVIDERS || 'chatgpt').trim();
+  // §0.39.265 — the Provider tabs page's "Start … with Clear Glass" toggles
+  // (NexusOptions.autoStartOnBoot) decide now; CG_AUTOBOOT_PROVIDERS still wins
+  // when set. Defaults: ChatGPT + DeepSeek (providers/registry.js DEFAULT_AUTOSTART).
+  const autoBootSetting = require('../providers/registry').autoBootList(process.env.CG_AUTOBOOT_PROVIDERS, nexusOptions.get().autoStartOnBoot);
   if (autoBootSetting === 'none' || autoBootSetting === '') {
     console.log('[ClearGlass] NCP auto-boot: skipped (lazy-only — providers start on first real use). Set CG_AUTOBOOT_PROVIDERS to pre-warm specific providers.');
   } else {
@@ -1404,6 +1390,21 @@ async function bootstrap() {
   // GET /agent-mesh/view) can actually call it.
   mesh = new AgentMesh({ ctxMgr, driver, vault, accounts: nexusOptions, sse: { emit: (t, d) => emit(t, d) } });
   await mesh.init();
+  // §0.39.265 — workflow steps that run a macro or show a notification
+  // §0.39.265 — and browser steps (a hidden automation page per workflow, or an
+  // open window) and agent steps that wait for the reply.
+  try {
+    mesh._automation?.setHooks({
+      runMacroFn: ({ name, agentId, params }) => macroTool.execute({ action: 'run', name, agentId, params }),
+      notifyFn: ({ title, body }) => { const { Notification } = require('electron'); if (Notification.isSupported()) new Notification({ title, body: body || '' }).show(); },
+      browserFn: (a) => _automationBrowser(a),
+      askAgentFn: async ({ agentKey, prompt }) => {
+        const r = await mesh.route({ prompt, preferAgent: agentKey });
+        return r && typeof r === 'object' ? { text: r.text ?? r.reply ?? r.response ?? '', agentKey: r.agentKey || agentKey } : { text: String(r ?? '') };
+      },
+    });
+    setTimeout(() => { try { mesh._automation?.emitEvent('app.start', { at: Date.now() }); } catch (_) {} }, 3000);
+  } catch (e) { console.warn(`[ClearGlass] automation hooks not set: ${e.message}`); }
 
   // §BUILT 2026-09-23 — login portals: per-account provider sign-in in the
   // SAME partition + vault key agent-mesh spawn() reads (src/accounts/login-portal.js).
@@ -1441,7 +1442,11 @@ async function bootstrap() {
   // unwanted resource/behavior change to existing installs). Best-effort:
   // never blocks or fails boot (§1.2) — a dead deepseek tab just falls back
   // to on-demand spawn() the same as before this existed.
-  mesh.spawn('deepseek').catch((e) => emit('mesh.boot_spawn.error', { agentKey: 'deepseek', error: e.message }));
+  // §0.39.265 — removed. This opened a MESH tab (driven by Clear Glass's own DOM
+  // selectors), not a provider tab: guardian could never dispatch to it, and it
+  // showed up as "deepseek · Default — deepseek" under Agent mesh → Running now.
+  // DeepSeek now opens at boot as a real NCP provider tab (providers/registry.js
+  // DEFAULT_AUTOSTART), carrying guardian/userscript-deepseek.js.
 
   // 11. Diagnostic engine — Playwright-equivalent on ClearDriver
   const diag = new DiagnosticEngine({ driver, dom, sse: { emit: (t, d) => emit(t, d) } });
@@ -1487,6 +1492,19 @@ async function bootstrap() {
   // needs that gate to already be registered — checked the ordering
   // directly rather than assuming it would just work.
   pluginHost = new PluginHost();
+  // §BUILT 2026-09-26 — Chrome WebExtensions (src/plugins/webextensions.js):
+  // registry from JAA, loaded into the default session now and into every
+  // persistent session (each tab's persist:agent-* partition) as it's made.
+  try {
+    const { WebExtensionHost } = require('../plugins/webextensions');
+    webExtensions = new WebExtensionHost({ session, app });
+    webExtensions.load();
+    webExtensions.attach();
+    const n = webExtensions.records.filter(r => r.enabled).length;
+    if (n) console.log(`[ClearGlass/WebExtensions] ${n} enabled extension(s) loading`);
+  } catch (err) {
+    console.error('[ClearGlass/WebExtensions] host failed to start:', err.message);
+  }
   const BUILTIN_PLUGINS = ['adblocker', 'captcha-pause', 'guardian-listeners', 'zoom', 'permissions', 'passwords'];
   for (const dir of BUILTIN_PLUGINS) {
     try {
@@ -1573,6 +1591,13 @@ async function bootstrap() {
   _startHeartbeat();
   _startAutopilotActivityHeartbeat();
 
+  // 14.4. ErosmancerOS — started with Clear Glass, then pointed at its DevTools port (non-fatal, not awaited:
+  // the wire below must answer autopilot's health probe on :7704 without waiting for tsx to compile)
+  if (process.env.EROS_AUTOSTART !== '0') {
+    erosSupervisor = new ErosSupervisor({ port: EROS_PORT, cdpPort: CG_CDP_PORT });
+    erosSupervisor.start().catch(err => console.warn(`[ClearGlass/Eros] start failed (non-fatal): ${err.message}`));
+  }
+
   // 14.5. Wire — ErosmancerOS registration + :7704 HTTP server (non-fatal)
   _startWire().catch(err => console.warn(`[ClearGlass/Wire] start failed (non-fatal): ${err.message}`));
 
@@ -1611,9 +1636,10 @@ async function bootstrap() {
     speech,
     macroTool,
     pluginHost,
+    driver,
+    webExtensions,
     copilot,
     loginPortal,
-    driver,   // 0.39.259 — POST /cli/driver awaits the real driver (ipc/agent-routes.js)
   });
   await ipcBridge.start();
   // §5.2 Contract IS the bridge — serve /contract so orchestrator can verify us
@@ -1949,6 +1975,32 @@ function _rebuildTrayMenu(mesh) {
   tray.setContextMenu(Menu.buildFromTemplate(menuTemplate));
 }
 
+// ── Account windows — §0.39.265 ─────────────────────────────────────────────
+// James: a bookmark "with a check mark to attach to the account … that way
+// you can have different accounts in each tab." Tabs inside one window share
+// its webview (renderer/browser.js's tab system), so an account gets its own
+// WINDOW: agentId `acct-<accountId>`, its own persist:agent-acct-<id> session.
+// On open it is signed in with every provider session saved for that account
+// in Settings › Accounts & sign-in (the same vault records the mesh restores).
+const ACCOUNT_WINDOW_PREFIX = 'acct-';
+function accountIdOfWindow(agentId) {
+  return typeof agentId === 'string' && agentId.startsWith(ACCOUNT_WINDOW_PREFIX) ? agentId.slice(ACCOUNT_WINDOW_PREFIX.length) : null;
+}
+async function _restoreAccountWindow(agentId, partition) {
+  const accountId = accountIdOfWindow(agentId);
+  if (!accountId || !cookieVault || !nexusOptions) return null;
+  const acc = nexusOptions.getAccount?.(accountId);
+  if (!acc) { console.warn(`[ClearGlass] account window ${agentId}: no account ${accountId}`); return null; }
+  const ses = session.fromPartition(partition);
+  let restored = 0;
+  for (const provider of acc.agentKeys || []) {
+    try { const r = await cookieVault.restore({ agentId: provider, accountId, ses }); restored += (r && r.restored) || 0; }
+    catch (e) { console.warn(`[ClearGlass] account window ${agentId}: ${provider} sign-in not restored — ${e.message}`); }
+  }
+  console.log(`[ClearGlass] account window "${acc.label}" — ${restored} saved cookie(s) restored across ${(acc.agentKeys || []).length} provider(s)`);
+  return restored;
+}
+
 // ── Window management ──────────────────────────────────────────────────────
 async function openAgentWindow({ agentId = randomUUID(), url = 'about:blank' } = {}) {
   if (windows.has(agentId)) {
@@ -1970,6 +2022,7 @@ async function openAgentWindow({ agentId = randomUUID(), url = 'about:blank' } =
       console.warn(`[ClearGlass] context create failed for ${agentId}:`, e.message);
     }
   }
+  await _restoreAccountWindow(agentId, partition);
 
   // §NEW 2026-08-24 — the other half of the same gap James caught
   // ("as plugins right?"): the adblocker plugin was genuinely installed
@@ -1990,7 +2043,11 @@ async function openAgentWindow({ agentId = randomUUID(), url = 'about:blank' } =
       const contentFilterSigs = pluginHost.getSignaturesForType('content-filter');
       if (contentFilterSigs.length > 0) {
         const { attachContentFilters } = require('../plugins/webrequest-adapter');
-        attachContentFilters(session.fromPartition(partition), pluginHost.bus, { signatures: contentFilterSigs });
+        attachContentFilters(session.fromPartition(partition), pluginHost.bus, {
+          signatures: contentFilterSigs,
+          // Settings → Site settings → "Content blocking: off for this site"
+          exempt: (pageUrl) => siteSettings?.get(pageUrl, 'contentFilter') === 'off',
+        });
       }
     } catch (err) {
       console.warn(`[ClearGlass/Plugins] content-filter wiring failed for ${agentId}:`, err.message);
@@ -2211,11 +2268,52 @@ function hideAppToTray() {
   // app itself stays running — tray icon remains
 }
 
+// ── Automation pages — §0.39.265 ───────────────────────────────────────────
+// A workflow's browser steps run on its own hidden page, "auto-<id>" (a
+// background tab: same chrome as an agent window, never shown unless asked),
+// in the persist:automation session — so a site signed in once stays signed
+// in for every run. A step can instead name an open window ("default", or an
+// agent id). Every action goes through the one driver (src/driver/index.js).
+async function _automationBrowser({ page, action, args = {}, settings = {} }) {
+  const isAuto = /^auto-/.test(String(page || ''));
+  if (isAuto && action === 'close') return closeBackgroundTab(page);
+  if (isAuto && !bgTabs.has(page)) {
+    const part = /^persist:[\w-]{1,60}$/.test(settings.partition || '') ? settings.partition : 'persist:automation';
+    await openBackgroundTab({ agentId: page, url: 'about:blank', partition: part, webviewPartition: part });
+    if (settings.showPage) bgTabs.get(page)?.show();
+    const t0 = Date.now();                                   // its webview appears once browser.html has run
+    while (Date.now() - t0 < 15000) {
+      if (driver._getWebContents(page)) break;
+      await new Promise(r => setTimeout(r, 150));
+    }
+    if (!driver._getWebContents(page)) throw new Error('the automation page did not start (no webview after 15 s)');
+  }
+  if (action === 'show') {
+    const win = windows.get(page) || bgTabs.get(page);
+    if (!win) throw new Error(`no page "${page}"`);
+    win.show(); win.focus();
+    return { shown: page };
+  }
+  if (action === 'close') throw new Error('a workflow can only close its own automation pages');
+  if (action === 'cookies.get' || action === 'cookies.clear') {
+    const wc = driver._getWebContents(page);
+    if (!wc) throw new Error(`No webcontents for agent: ${page}`);
+    if (action === 'cookies.get') return { cookies: await wc.session.cookies.get(args.url ? { url: args.url } : {}) };
+    await wc.session.clearStorageData({ storages: ['cookies'] });
+    return { ok: true };
+  }
+  if (action === 'storage.get') {
+    const r = await driver.exec({ action, agentId: page, ...args });
+    return r && typeof r === 'object' && 'result' in r ? { value: r.result } : r;
+  }
+  return driver.exec({ action, agentId: page, ...args });
+}
+
 // ── Background tabs — same chrome as an agent window, never shown ─────────
 // "Move to background tab" carries a URL into a hidden window under a new
 // agentId, freeing the visible window to navigate elsewhere while the
 // background context keeps running (mesh/automation use).
-async function openBackgroundTab({ agentId, url = 'about:blank', partition } = {}) {
+async function openBackgroundTab({ agentId, url = 'about:blank', partition, webviewPartition } = {}) {
   agentId = agentId || randomUUID();
   if (bgTabs.has(agentId)) { bgTabs.get(agentId).focus?.(); return { agentId, url, reused: true }; }
 
@@ -2250,6 +2348,9 @@ async function openBackgroundTab({ agentId, url = 'about:blank', partition } = {
     query: {
       agentId, ssePort: SSE_PORT, ipcPort: IPC_PORT, url: url || '',
       wvPreload: 'file://' + path.join(__dirname, '../preload/webview-bridge.js'),
+      // §0.39.265 — the <webview> keeps the app's default session unless told
+      // otherwise; automation pages give it theirs (persist:automation).
+      ...(webviewPartition ? { wvPartition: webviewPartition } : {}),
     },
   });
 
@@ -2355,19 +2456,86 @@ function closeLibraryWindow() {
   if (libraryWin && !libraryWin.isDestroyed()) libraryWin.close();
 }
 
-// Ctrl+J opens the Library at Downloads from anywhere in Clear Glass — the
-// browser chrome AND the page inside it. A page's keystrokes never reach
-// browser.js (the webview is its own renderer), so the key is taken in the main
-// process for every web contents Clear Glass creates. Ctrl+Shift+J stays DevTools.
-function _isLibraryKey(input) {
-  return input && input.type === 'keyDown' && (input.control || input.meta) && !input.shift && !input.alt &&
-         String(input.key).toLowerCase() === 'j';
+// ── Keyboard shortcuts — §0.39.265 ─────────────────────────────────────────
+// James: "add keyboard shortcuts including macro support." A page's keystrokes
+// never reach browser.js (the webview is its own renderer), so shortcuts are
+// taken here, in the main process, for every web contents Clear Glass creates:
+// the chrome of an agent window AND the page inside it. The bindings are
+// src/shortcuts/registry.js's defaults plus Settings › Keyboard shortcuts.
+//   macro:<name>   runs the macro in the window the key was pressed in
+//   workflow:<id>  runs that Automation workflow
+//   cg.library / cg.settings open those windows
+//   anything else  is sent to that window's renderer ('shortcut:action')
+// (This replaces the Ctrl+J-only handler: Ctrl+J is cg.library's default.)
+// Ctrl+Shift+J / Ctrl+Shift+I / F12 stay DevTools (openAgentWindow).
+const Shortcuts = require('../shortcuts/registry');
+function _agentWindowFor(contents) {
+  const host = contents.hostWebContents || contents;   // a <webview> page → the window that embeds it
+  for (const [agentId, win] of windows) if (!win.isDestroyed() && win.webContents === host) return { agentId, win };
+  return null;
+}
+function _runShortcut(action, accel, owner) {
+  const tell = (result) => { if (owner && !owner.win.isDestroyed()) owner.win.webContents.send('shortcut:action', { action, accel, result }); };
+  if (action === 'cg.library') return openLibraryWindow('downloads');
+  if (action === 'cg.settings') return openSettingsWindow();
+  if (action.startsWith('macro:')) {
+    const name = action.slice(6);
+    return Promise.resolve(macroTool.execute({ action: 'run', name, agentId: owner ? owner.agentId : 'default' }))
+      .then(r => tell(r && r.error ? { ok: false, error: r.error } : { ok: true, text: `Ran macro \u201C${name}\u201D` }))
+      .catch(e => tell({ ok: false, error: e.message }));
+  }
+  if (action.startsWith('workflow:')) {
+    if (!mesh) return tell({ ok: false, error: 'the agent mesh is not ready' });
+    return Promise.resolve(mesh.runWorkflow(action.slice(9), 'shortcut'))
+      .then(r => tell(r && r.ok === false ? { ok: false, error: r.error } : { ok: true, text: 'Workflow ran' }))
+      .catch(e => tell({ ok: false, error: e.message }));
+  }
+  if (owner) owner.win.webContents.send('shortcut:action', { action, accel });
+}
+// §0.39.265 — workflow event triggers: "I open a page" and "a download finishes".
+// Pages a workflow drives itself (auto-* windows) never fire page.visited.
+const _automationSessions = new WeakSet();
+function _automationEvents(contents) {
+  contents.on('did-finish-load', () => {
+    try {
+      if (!mesh || !mesh._automation) return;
+      const url = contents.getURL();
+      if (!/^https?:/i.test(url)) return;
+      const host = contents.hostWebContents || null;
+      const hostWin = host ? BrowserWindow.fromWebContents(host) : BrowserWindow.fromWebContents(contents);
+      if (hostWin && /\bauto-/.test(hostWin.getTitle())) return;
+      if (!host && contents.getType() !== 'webview') return;   // only page content, not the app's own windows
+      mesh._automation.emitEvent('page.visited', { url, title: contents.getTitle() });
+    } catch (_) {}
+  });
+  const ses = contents.session;
+  if (ses && !_automationSessions.has(ses)) {
+    _automationSessions.add(ses);
+    ses.on('will-download', (_ev, item) => {
+      item.once('done', (_e2, state) => {
+        if (state !== 'completed' || !mesh || !mesh._automation) return;
+        try { mesh._automation.emitEvent('download.done', { file: item.getFilename(), path: item.getSavePath(), url: item.getURL(), bytes: item.getTotalBytes() }); } catch (_) {}
+      });
+    });
+  }
 }
 app.on('web-contents-created', (_e, contents) => {
+  try { _automationEvents(contents); } catch (_) {}
   contents.on('before-input-event', (event, input) => {
-    if (!_isLibraryKey(input)) return;
+    if (!input || input.type !== 'keyDown' || input.isAutoRepeat) return;
+    const accel = Shortcuts.accelFromInput(input);
+    if (!accel) return;
+    const host = contents.hostWebContents || contents;
+    if (settingsWin && !settingsWin.isDestroyed() && host === settingsWin.webContents) return;   // Settings records new shortcuts
+    let bindings;
+    try { bindings = nexusOptions ? nexusOptions.getShortcuts().bindings : Shortcuts.DEFAULT_BINDINGS; } catch (_) { bindings = Shortcuts.DEFAULT_BINDINGS; }
+    const action = bindings[accel];
+    if (!action) return;
+    const owner = _agentWindowFor(contents);
+    // outside an agent window (the Library) only the window-opening shortcuts apply
+    if (!owner && action !== 'cg.library' && action !== 'cg.settings') return;
     event.preventDefault();
-    openLibraryWindow('downloads');
+    try { _runShortcut(action, accel, owner); } catch (e) { console.warn(`[shortcuts] ${accel} → ${action} failed: ${e.message}`); }
   });
 });
 
@@ -2377,6 +2545,8 @@ async function shutdown() {
   _postEvent('clear-glass.shutdown', { uuid: MODULE_UUID });
 
   if (_heartbeatInterval) clearInterval(_heartbeatInterval);
+  // §0.39.264 — ErosmancerOS goes down with Clear Glass (only the one Clear Glass started)
+  if (erosSupervisor) { try { erosSupervisor.stop(); } catch (_) {} }
 
   // §NEW 2026-08-24 — closes the gap named at the end of the previous
   // commit, but scoped correctly rather than mechanically as originally

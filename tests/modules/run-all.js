@@ -18,6 +18,8 @@ const fs   = require('fs');
 const MODULES_DIR = __dirname;
 
 const SUITES = [
+  'clear-glass-agent-surface.test.js',   // 0.39.272
+  'test-opportunity.test.js',            // 0.39.272
   'jaa-db.test.js',
   'test-p1-fanin-live.js',
   'test-p2-snapshot-sigma.js',
@@ -68,6 +70,10 @@ const SUITES = [
   'test-repo-run.js',
   'test-repo-agent-provider.js',
   'test-cos-testenv.js',
+  'test-cos-testenv-any-repo.js',
+  'test-cg-eros-supervisor.js',
+  'test-guardian-retry-novelty-installs.js', // 0.39.265 — guardian retry + answer-first + join, semantic rewording with novelty, Eros human typing, Run-menu installs
+  'test-nexus-atlas-refs.test.js',  // §0.39.264 — every reference in the written-out atlases resolves against the real tree     // §0.39.264 — ErosmancerOS starts, connects and stops with Clear Glass (real tsx + Chromium where available)   // §0.39.264 — the VM for any repo: tar disk, detect, provision, setup job, real QEMU boot where available
   'test-repo-chunks-tool.js',
   'test-repo-context.js',
   'test-runtime-proof.js',
@@ -141,6 +147,9 @@ const SUITES = [
   'test-dispatcher-deepseek-ncp.js',
   'route-graph.test.js',
   'automation-engine.test.js',
+  'automation-v2.test.js',                // §0.39.265 — workflows v2: DOM steps, data, loops, triggers, runs, tools
+  'automation-settings-ui.test.js',       // §0.39.265 — Settings → Automation against a real engine
+  'automation-nodes.test.js',             // §0.39.266 — .workflow / .macro node files: export, bundle, import, library
   'brainos-app-hostile.test.js',
   'guardian-hostile-file-read.test.js',
   'guardian-hostile-body-dos.test.js',
@@ -162,6 +171,10 @@ const SUITES = [
   'test-artifact-index-jaa.test.js',      // §0.39.242 — the Responses index is JAA, self-healing against responses/
   'test-repo-agent-late.test.js',         // §0.39.241 — the Agent tab picks up a late reply from the Responses index, once
   'test-cg-accounts-portal-settings.test.js', // §0.39.223 — Clear Glass account authority, login portals, sealed vault keys, settings rebuild
+  'test-cg-listener-decay.test.js',          // §0.39.265 — page listeners fade: switched off when idle, deleted later; Keep exempts
+  'test-cg-bookmark-account-state.test.js',  // §0.39.265 — ★ dialog: account check mark + rewind page state; account windows
+  'test-cg-shortcuts.test.js',               // §0.39.265 — keyboard shortcuts everywhere, macros and workflows on a key
+  'test-cg-autofill-jobs.test.js',           // §0.39.265 — job-application + Upwork/Fiverr autofill, label matching, proposal drafts
   'test-provider-host-respawn.js',
   'test-userscript-mixed-content-fix.js',
   'test-contract-handshake-paths.js',
@@ -292,10 +305,33 @@ const SUITES = [
   'test-three-graphs.test.mjs',      // 0.39.246 — code · execution · spec graphs hooked into repo import
   'test-response-downloads.test.js', // 0.39.246 — responses land in the Clear Glass downloads manager
   'test-selector-map.test.js',        // 0.39.249 — one selector map per provider, pushed to the userscripts
-  'test-cg-selector-assign.test.js',   // 0.39.251 — the element picker assigns selectors (Chromium parts SKIPPED without python playwright)
+  'test-cg-selector-assign.test.js',   // 0.39.251 — the element picker assigns selectors (real-page parts run in Clear Glass's engine; SKIPPED without it)
   'test-chat-transcripts.test.js',
+  'test-back-and-forth.test.js',     // 0.39.259 — turns 2+ of a conversation complete; each agent keeps its chat
+  'test-dangling-hooks-and-idearium-load.test.js', // 0.39.260 — dangling-hook flood, large-import idearium stall, real idearium health in the UI
+  'test-nexus-self-and-cos-run.test.js', // 0.39.261 — Nexus as immutable repos in nested compartments, the COS run menu + JS runtime, tool calls, glyphs, in-house zip/http/ws
+  'test-nexus-atlas-and-glass.test.js',  // 0.39.263 — one nexus repo whose Home is the Nexus atlas (every reference opens in idearium); Clear Glass's engine replaces Playwright
+  'test-idearium-source-files-async.test.js',  // 0.39.265 — nexus-self sync writes sources without blocking the event loop; unchanged files are kept
+  'test-idearium-codegen.test.js',  // 0.39.265 — a finished spec → Generate code → a code spec (one chunk per real file) built into its own repo
+  'test-idearium-spec-meta-cache.test.js',  // 0.39.265 — repo lists read cached, content-free spec metadata instead of parsing every whole manifest
+  'test-repo-git.test.js',  // 0.39.265 — real git for repos: remote, commit, push, pull (changed files back into the repo), clone, SSH keygen; Git & CI tab
+  'test-cos-remote.test.js',  // 0.39.265 — compartment remotes: push/pull a COS compartment to a folder or ssh host, two machines, in-sync/ahead/behind/diverged
+  'test-cos-remote-api.test.js',  // 0.39.265 — the same through a real idearium API: a repo's compartment pushed, pulled elsewhere, edits back into the repo, clone
+  'test-nexus-self-visible.test.js',  // 0.39.266 — immutable nexus repos refuse Delete; ones already archived are restored by the sync; the library refills on nexus-self events
+  'test-nexus-inject-approval.test.js',  // 0.39.266 — agent code on a nexus repo waits for approval, then goes through the apply gate into the live tree; revert = gate rollback
+  'test-jaa-deletes-stick.test.js',  // 0.39.266 — a row deleted by one process stays deleted (compaction stuck at 7,176 → 19,788 rows/h before)
+  'test-nexus-specs-and-ideas-cleanup.test.js',  // 0.39.266 — nexus repos are not ideas; one spec per nexus repo; removing a spec deletes it
+  'test-registry-harness.test.js',  // 0.39.266 — loom's registry as the agent's harness: events, find/card/read, a ~2.7k-char first message
+  'test-component-store.test.js',   // 0.39.266 — the component store: folders, pinned deps, reuse by contract/prompt, harness
+  'test-ollama-activity.test.js',  // 0.39.266 — num_ctx sized to every prompt; every model call logged; nexus-live capped
+  'test-agent-hat-agnostic.test.js',  // 0.39.267–268 — one provider list; a build wears its hat on copilot/ollama/guardian; RAID reads the worn hat; activity recall; code captured with fences
+  'test-one-idearium-phases-nodes.test.js',  // 0.39.271 — /idearium/ redirect, versionium newest-first per repo, one bar, Phases manager, living spec, COS suite + every test + debug reports, copilot contract, per-system nodes + guardian .hat/.agent
+  'test-agent-memory.test.js',        // 0.39.269 — agent memory over the Clear Glass download manager: record on every backend, recall before every call; loom map
+  'test-chat-per-agent.test.js',  // 0.39.266 — each repo agent gets its own chat (they all shared one)
+  'test-versionium-repo-history.test.js', // 0.39.263 — every repo's history in versionium (staged big versions, files/versions), nexus repos committed on sync, loom reads versionium not git
+  'brainos-float-cg.test.js', // 0.39.262 — BrainOS Float Clear Glass tabs + pre-mount registration fix
   'test-agent-tools-and-graph.test.js', // 0.39.257 — every tool (enforced), /tools /debug /graph, the graph in context
-  'test-live-stream-and-gates.test.js', // 0.39.256 — 500 ms transcript streaming + gate-specific errors (GS-20 Chromium SKIPPED without python playwright)     // 0.39.254 — every provider chat, one versioned record per chat (TX-20 Chromium SKIPPED without python playwright)
+  'test-live-stream-and-gates.test.js', // 0.39.256 — 500 ms transcript streaming + gate-specific errors (GS-20 in Clear Glass's engine)     // 0.39.254 — every provider chat, one versioned record per chat (TX-20 in Clear Glass's engine)
   'test-one-tab-e2e.test.js',        // 0.39.247 — real guardian, one tab: job → reply → .response   // 0.39.245 — spec-engine/manifest phase 1: file list → wire-check → manifest + registry
   'idearium-phase-compartment-integration.test.js',
   'idearium-agent-routing.test.mjs',

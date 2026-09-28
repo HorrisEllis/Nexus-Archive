@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Guardian — Claude v10.0
 // @namespace    nexus.guardian.claude
-// @version      10.9.0
+// @version      10.11.1
 // @description  Guardian v10: IndexedDB kernel, SHA-256 dedup, pre-prompt intelligence
 //               injection, full system widget, connection info, log/ledger, options,
 //               SEAM, queue, tags — fully system aware, no localStorage for state.
@@ -32,7 +32,7 @@ const CORTEX_URL  = 'http://127.0.0.1:3748';
 const INTELLIGENCE_URL = 'http://127.0.0.1:3753'; // intelligence is its own sovereign system (moved out of cortex 2026-09-19)
 const ORCH_URL    = 'http://127.0.0.1:9000';
 const PROVIDER    = 'claude';
-const VERSION    = '10.9.0';
+const VERSION    = '10.11.1';
 // §P113: exponential backoff 3s→30s — eliminates SSE flood on disconnect
 const RECONNECT_MIN_MS = 3000;
 const RECONNECT_MAX_MS = 30000;
@@ -562,6 +562,35 @@ function _nexusAnchor(el) {
   }
   return { path: path.join(' > '), tag: el.tagName.toLowerCase(), attrs, textLen: (el.innerText || el.textContent || '').length, children: el.childElementCount };
 }
+// §0.39.267 — James: "guardian isn't capturing the code from chatgpt." innerText is what the page SHOWS: a rendered
+// code block reads "JavaScript\n<code>" with its ``` fences gone, so lib/extract-code.js found no code block and every
+// code chunk failed ("no fenced code block found in the response"). The reply is read with each <pre> put back as a
+// fenced block — language from the code element's class, else the block's header label — the rest stays innerText.
+function _replyText(el) {
+  if (!el) return '';
+  const full = (el.innerText || el.textContent || '');
+  let out = full;
+  try {
+    for (const pre of el.querySelectorAll('pre')) {
+      const codeEl = pre.querySelector('code') || pre;
+      const code = (codeEl.textContent || '').replace(/\n+$/, '');
+      if (!code.trim()) continue;
+      const cls = String(codeEl.className || '') + ' ' + String(pre.className || '');
+      let lang = (cls.match(/(?:language|lang)-([\w+#.-]+)/) || [])[1] || '';
+      const preTxt = (pre.innerText || '').replace(/\n+$/, '');
+      if (!lang) {
+        const first = preTxt.split('\n')[0].trim();
+        if (first && first.length < 24 && !/[;{}()=]/.test(first) && !code.startsWith(first)) lang = first.toLowerCase();
+      }
+      const fenced = '```' + lang + '\n' + code + '\n```';
+      if (preTxt && out.includes(preTxt)) out = out.replace(preTxt, fenced);
+      else if (out.includes(code)) out = out.replace(code, fenced);
+      else out += '\n\n' + fenced;
+    }
+  } catch (_) { return full.trim(); }
+  return out.trim();
+}
+
 function findResponseEl() {
   return document.querySelector(
     '[data-is-streaming="true"], .font-claude-message:last-child, ' +
@@ -570,7 +599,8 @@ function findResponseEl() {
   );
 }
 function _isGenerating() {
-  return !!document.querySelector('[data-is-streaming="true"], .text-streaming, [class*="loading"]');
+  // 0.39.259 — the composer's stop button is Claude's own "still answering" signal.
+  return !!document.querySelector('[data-is-streaming="true"], .text-streaming, [class*="loading"], button[aria-label="Stop response"], button[aria-label="Stop Response"]');
 }
 function injectText(text, opts = {}) {
   // §NEXUS-WAKE 2026-08-18 — one-line hook (HOOKUP.md §3): if the outgoing
@@ -677,7 +707,7 @@ function startWatch(jobId, prompt, retryCount = 0) {
   // a completion must be a different element, or different text.
   let _sawNew = false;
   const _baseEl   = findResponseEl();
-  const _baseText = _baseEl ? (_baseEl.innerText || _baseEl.textContent || '').trim() : '';
+  const _baseText = _baseEl ? _replyText(_baseEl) : '';
   setJobBar(true, prompt, jobId);
 
   let lastText = '', stableCount = 0;
@@ -708,7 +738,7 @@ function startWatch(jobId, prompt, retryCount = 0) {
       }
       _watchTimer = setTimeout(checkStable, 600); return;
     }
-    const text = (el.innerText || el.textContent || '').trim();
+    const text = _replyText(el);
     // Still showing the previous answer: this job has produced nothing yet.
     // §1.2 — after NO_REPLY_MS say so loudly rather than return a stale reply.
     // §WATCH-EVIDENCE 2026-09-23 — the reply WAS on screen and guardian still
@@ -730,7 +760,9 @@ function startWatch(jobId, prompt, retryCount = 0) {
       }
       _watchTimer = setTimeout(checkStable, 600); return;
     }
-    if (text === lastText && !_isGenerating()) {
+    // 0.39.259 — an empty turn is never a stable reply: a follow-up in an existing chat renders the new
+    // assistant turn empty for a moment, and three empty reads used to complete the job with 0 chars.
+    if (text && text === lastText && !_isGenerating()) {
       stableCount++;
       if (stableCount >= 3) {
         const ms = Date.now() - _watchStart;
@@ -741,7 +773,7 @@ function startWatch(jobId, prompt, retryCount = 0) {
       if (text.length > _lastChunkLen) {
         const delta = text.slice(_lastChunkLen); _lastChunkLen = text.length;
         if (delta.length > 10 || /[.!?\n]/.test(delta)) {
-          _txWatchStreamed = jobId; send({ type:'GUARDIAN_CHUNK', jobId, text:delta, full:text, provider:PROVIDER, chatUrl:location.href, anchor:_nexusAnchor(el), mutations:_nexusMutations, ts:Date.now() });
+          const _first = typeof _txWatchStreamed === 'undefined' || _txWatchStreamed !== jobId; _txWatchStreamed = jobId; send({ type:'GUARDIAN_CHUNK', jobId, text:_first ? text : delta, full:text, reset:_first && typeof _txJob !== 'undefined' && !!_txJob && _txJob.jobId === jobId && !!_txJob.sent, provider:PROVIDER, chatUrl:location.href, anchor:_nexusAnchor(el), mutations:_nexusMutations, ts:Date.now() });
           _streamToCortex(jobId, delta, text);
         }
       }
@@ -1246,6 +1278,59 @@ function connect() {
   };
 }
 
+// §RESUME-CHAT 0.39.259 — James: "conversations need back and forth, also persistent chaturl".
+// Guardian sends a repo agent's job with resumeChatUrl: the chat that agent was last talking in
+// (guardian/lib/chat-transcripts.js chatFor). If this tab is somewhere else, the job is carried
+// across the page load in sessionStorage, the tab opens that chat, and the job runs there once the
+// page has rendered it — one conversation per agent, across restarts. Guardian is told first
+// ('resuming-chat'), so the reload's disconnect is not mistaken for a dead tab and the job is not
+// sent twice. The carried job is used once and expires after 2 minutes.
+const _RESUME_KEY = 'nexus_resume_job_' + PROVIDER;
+const _normPath = (p) => String(p || '').replace(/\/+$/, '') || '/';
+function _nexusOpenJobChat(msg) {
+  if (!msg || !msg.resumeChatUrl) return false;
+  let u; try { u = new URL(msg.resumeChatUrl); } catch (_) { return false; }
+  if (u.host !== location.host || _normPath(u.pathname) === _normPath(location.pathname)) return false;
+  try { sessionStorage.setItem(_RESUME_KEY, JSON.stringify({ msg, path: _normPath(u.pathname), ts: Date.now() })); }
+  catch (_) { return false; }   // cannot carry the job across a load: run it where the tab is
+  send({ type:'GUARDIAN_PROGRESS', jobId:msg.jobId, stage:'resuming-chat', how:u.href, chatUrl:location.href, ts:Date.now() });
+  _log('job', "Opening the agent's chat", `${u.pathname} · #${String(msg.jobId).slice(0,8)}`);
+  setTimeout(() => location.assign(u.href), 300);   // let the progress report leave before the page unloads
+  return true;
+}
+let _nexusResumeChecked = false;
+function _nexusResumeCarriedJob() {
+  if (_nexusResumeChecked) return;
+  _nexusResumeChecked = true;
+  let st = null;
+  try { st = JSON.parse(sessionStorage.getItem(_RESUME_KEY) || 'null'); sessionStorage.removeItem(_RESUME_KEY); } catch (_) { st = null; }
+  if (!st || !st.msg || !st.msg.jobId || Date.now() - (st.ts || 0) > 120000) return;
+  const msg = st.msg;
+  const landed = _normPath(location.pathname) === st.path;
+  const t0 = Date.now();
+  (function waitReady() {
+    const composer = document.querySelector('[contenteditable="true"]') || document.querySelector('textarea');
+    let turns = 0; try { turns = (_nexusGetFullChat().messages || []).length; } catch (_) {}
+    // The chat's earlier turns must be on the page before the job starts: the reply watch and the
+    // transcript streamer both count what was there before this job's own turn.
+    // §0.39.266 — a new chat (msg.newChat) has no earlier turns to wait for
+    if ((!composer || (landed && !turns && !msg.newChat)) && Date.now() - t0 < 20000) { setTimeout(waitReady, 400); return; }
+    if (!composer) {
+      send({ type:'GUARDIAN_ERROR', jobId:msg.jobId, gate:'resume',
+             error:`opened ${st.path} for this job, but no input appeared within 20s`, chatUrl:location.href, account:getAccount() });
+      return;
+    }
+    if (jobActive && currentJobId && currentJobId !== msg.jobId) {
+      send({ type:'GUARDIAN_ERROR', jobId:msg.jobId, gate:'tab_busy',
+             error:`this ${PROVIDER} tab took job ${currentJobId} while opening the chat for ${msg.jobId}`, chatUrl:location.href, account:getAccount() });
+      return;
+    }
+    // resume-chat-missing: the chat is gone (deleted, or the account changed) — the job runs in the chat the page opened instead
+    send({ type:'GUARDIAN_PROGRESS', jobId:msg.jobId, stage: landed ? 'resumed-chat' : 'resume-chat-missing', how:location.href, chatUrl:location.href, ts:Date.now() });
+    currentJobId = msg.jobId; _txJobStart(msg); handleJob(msg);
+  })();
+}
+
 function _handleServerMessage(msg) {
   switch(msg.type) {
     case 'NCP_READY':
@@ -1253,6 +1338,7 @@ function _handleServerMessage(msg) {
       setConnState('ready');
       _log('ok', `Ready · ${msg.provider||PROVIDER}`, NCP_CHANNEL);
       toast('Guardian connected ✓', 'success', 2000);
+      _nexusResumeCarriedJob();   // 0.39.259 — a job carried across a load into its chat
       break;
     case 'GUARDIAN_CLAIM':
       if (msg.tabId===MY_TAB||msg.tabId==='any') {
@@ -1278,6 +1364,7 @@ function _handleServerMessage(msg) {
           error:`this ${PROVIDER} tab is still answering job ${currentJobId} — refused job ${msg.jobId} rather than overwrite it` });
         break;
       }
+      if (_nexusOpenJobChat(msg)) break;   // 0.39.259 — the tab reloads into the agent's chat and runs the job there
       currentJobId = msg.jobId; _txJobStart(msg); handleJob(msg); break;
     case 'NEXUS_CONTEXT_RESPONSE':
       if (msg.context) { _intelligenceCtx = msg.context; _log('sys','Context updated from server'); }
@@ -1311,9 +1398,14 @@ function _handleServerMessage(msg) {
 let _lastPath = location.pathname;
 setInterval(() => {
   if (location.pathname !== _lastPath) {
+    const _prev = _lastPath;
     _lastPath = location.pathname;
     _sessionId = null; // reset session chain on navigation
-    if (currentJobId) stopWatch();
+    // 0.39.259 — a new chat getting its URL (home → temporary id → real id) is the SAME conversation
+    // the running job was typed into; stopping the watch there left every first job of a new chat
+    // to the transcript path alone. Only leaving a real chat for another one ends the watch.
+    const _forming = _prev === '/' || _prev === '/new';
+    if (currentJobId && !_forming) stopWatch();
     _log('sys', `Nav → ${chatId()}`);
     setTimeout(() => sendDOMMap(), 1000);
   }
@@ -2070,7 +2162,7 @@ function _nexusGetMessages() {
     '[data-testid="human-turn-content"], [data-testid="assistant-turn-content"], .font-claude-message, .human-turn'
   )];
   for (const el of all) {
-    const text = (el.innerText || el.textContent || '').trim();
+    const text = _replyText(el);
     if (!text || text.length < 5) continue;
     const isHuman = el.matches('[data-testid="human-turn-content"], .human-turn, [class*="HumanMessage"]');
     msgs.push({ role: isHuman ? 'user' : 'assistant', text: text.slice(0, 2000) });
@@ -2091,7 +2183,7 @@ function _nexusGetFullChat() {
   )];
   const messages = [];
   for (const el of all) {
-    const text = (el.innerText || el.textContent || '').trim();
+    const text = _replyText(el);
     if (!text) continue;
     const isHuman = el.matches('[data-testid="human-turn-content"], .human-turn, [class*="HumanMessage"]');
     messages.push({ role: isHuman ? 'user' : 'assistant', text });

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 /**
- * cli/opportunity.js — the opportunity pipeline from a terminal. 0.39.259.
+ * cli/opportunity.js — the opportunity pipeline from a terminal. 0.39.272.
  * comp_id: nexus.cli.opportunity
  *
  *   node cli/opportunity.js status

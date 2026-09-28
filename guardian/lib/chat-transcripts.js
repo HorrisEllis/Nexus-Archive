@@ -36,7 +36,7 @@
  */
 
 const MODULE_ID = 'guardian/chat-transcripts';
-const VERSION = '1.1.0';   // 0.39.255 — a chat is filed under the agent whose job prompt it contains; that job completes from the transcript
+const VERSION = '1.2.0';   // 0.39.259 — each agent's chat is remembered (chatFor) so its next job continues that conversation
 
 const _payload = (d) => (d && d.data && typeof d.data === 'object' ? d.data : d) || {};
 
@@ -47,6 +47,34 @@ function chatPathOf(url) {
 }
 
 const _norm = (t) => String(t || '').replace(/\s+/g, ' ').trim();
+
+/**
+ * resumableChatUrl(provider, url) -> the URL when it names one real, finished chat
+ * of that provider, else null. 0.39.259 — James: "persistent chaturl". Only a chat
+ * that has its own permanent id can be returned to: ChatGPT's /c/<id> (not the
+ * /c/WEB:<tmp> it shows for the first seconds of a new chat), Claude's /chat/<id>.
+ * Home, /new, and every other provider return null (their URL shapes are not
+ * verified here, so they keep today's behaviour: the job runs where the tab is).
+ */
+const RESUMABLE = {
+  chatgpt: { host: /(^|\.)chatgpt\.com$|(^|\.)chat\.openai\.com$/, path: /^\/c\/[A-Za-z0-9-]+$/ },
+  claude:  { host: /(^|\.)claude\.ai$/,                             path: /^\/chat\/[A-Za-z0-9-]+$/ },
+};
+// §0.39.266 — where a provider starts a NEW conversation. James's log: the nexus agent and the nexus/core agent
+// both dispatched into chatgpt.com/c/6ab92781… — an agent with no chat yet had its first job typed into whatever
+// chat the tab was showing (another agent's), and learnJobChat then filed that chat as its own.
+const NEW_CHAT = { chatgpt: 'https://chatgpt.com/', claude: 'https://claude.ai/new' };
+function newChatUrl(provider) { return NEW_CHAT[provider] || null; }
+function isNewChatUrl(url) { return Object.values(NEW_CHAT).includes(String(url || '')); }
+function resumableChatUrl(provider, url) {
+  const rule = RESUMABLE[provider];
+  if (!rule || !url) return null;
+  try {
+    const u = new URL(url);
+    const p = decodeURIComponent(u.pathname).replace(/\/+$/, '');
+    return rule.host.test(u.hostname) && rule.path.test(p) ? `${u.origin}${p}` : null;
+  } catch (_) { return null; }
+}
 
 /**
  * matchJobs(messages, candidates) — which guardian job each user turn of a chat
@@ -87,7 +115,52 @@ function createChatTranscripts({ bus, jobs, ncp, complete, rootFn, index, log = 
   const idx = index || require('../../clear-glass/src/downloads/artifact-chat-index.js');
   const root = rootFn || (() => idx.defaultRoot());
   const _agentByChat = new Map();   // chatPath -> { agentId, jobId }
+  const _chatByAgent = new Map();   // `${provider}|${agentId}` -> { url, ts } — the agent's conversation, newest wins
   const stats = { recorded: 0, refused: {}, failed: 0, completed: 0, withheld: {} };
+
+  function rememberAgentChat(provider, agentId, url) {
+    const r = resumableChatUrl(provider, url);
+    if (!r || !agentId) return false;
+    _chatByAgent.set(`${provider}|${agentId}`, { url: r, ts: Date.now() });
+    return true;
+  }
+
+  /**
+   * chatFor(job) -> the URL of the chat this job's agent was last talking in on this
+   * provider, or null (no agent, provider not resumable, no chat yet). Memory first;
+   * after a restart, the newest transcript filed under the agent in the downloads
+   * index — that index is on disk, so the conversation survives a reboot.
+   */
+  // §0.39.266 — one chat per agent: a chat another agent already holds is not this agent's
+  function _heldByAnother(provider, agentId, url) {
+    for (const [k, v] of _chatByAgent) if (v.url === url && k !== `${provider}|${agentId}` && k.startsWith(`${provider}|`)) return k.slice(provider.length + 1);
+    return null;
+  }
+  function _own(job, url) {
+    if (!url) return null;
+    const other = _heldByAnother(job.provider, job.agentId, url);
+    if (!other) return url;
+    log.log && log.log(`[${MODULE_ID}] ${job.agentId}: its last ${job.provider} chat is ${other}'s — starting its own`);
+    _chatByAgent.delete(`${job.provider}|${job.agentId}`);
+    return null;
+  }
+  /** chatFor(job) -> this agent's chat URL; a NEW-chat URL when it has none of its own yet (§0.39.266); null when not a resumable agent job. */
+  function chatFor(job) {
+    if (!job || !job.agentId || !RESUMABLE[job.provider]) return null;
+    const hit = _chatByAgent.get(`${job.provider}|${job.agentId}`);
+    if (hit) return _own(job, hit.url) || newChatUrl(job.provider);
+    try {
+      const row = idx.listChats(root(), { agentId: job.agentId, provider: job.provider, limit: 1 })[0];
+      if (!row) return newChatUrl(job.provider);
+      const it = typeof idx.readItem === 'function' ? idx.readItem(root(), row.id) : null;
+      const url = _own(job, resumableChatUrl(job.provider, it && it.raw && it.raw.url));
+      if (url) rememberAgentChat(job.provider, job.agentId, url);
+      return url || newChatUrl(job.provider);
+    } catch (e) {
+      log.warn && log.warn(`[${MODULE_ID}] could not read ${job.agentId}'s last ${job.provider} chat from the index: ${e.message}`);
+      return null;
+    }
+  }
 
   function learnJobChat({ jobId, chatUrl }) {
     if (!jobId || !chatUrl || !jobs) return;
@@ -95,6 +168,7 @@ function createChatTranscripts({ bus, jobs, ncp, complete, rootFn, index, log = 
     const p = chatPathOf(chatUrl);
     if (!p || !job || !job.agentId) return;
     _agentByChat.set(p, { agentId: job.agentId, jobId });
+    rememberAgentChat(job.provider, job.agentId, chatUrl);
   }
 
   function _candidates(provider) {
@@ -159,6 +233,8 @@ function createChatTranscripts({ bus, jobs, ncp, complete, rootFn, index, log = 
         messages: chat.messages, partial: chat.partial, extractedAt: chat.extractedAt,
         source: source || 'push',
       });
+      const filedUnder = r.agentId || agentId || (viaPrompt && viaPrompt.job.agentId) || (viaJob && viaJob.agentId) || null;
+      if (filedUnder && chat.url) rememberAgentChat(prov, filedUnder, chat.url);
       if (r.recorded) {
         stats.recorded++;
         log.log && log.log(`[${MODULE_ID}] ${r.chatKey} v${r.version} · ${r.messageCount} messages${r.agentId ? ` · ${r.agentId}` : ''} (${source || 'push'})`);
@@ -223,7 +299,29 @@ function createChatTranscripts({ bus, jobs, ncp, complete, rootFn, index, log = 
     }
   }
 
-  return { record, attach, route, learnJobChat, stats };
+  /**
+   * replyFor(job) -> { text, chatUrl, chatKey } | null — §0.39.265 "check for the response first … chat logs?".
+   * The newest transcripts filed under the job's agent (or, without an agent, this provider's newest chats):
+   * if the job's prompt is a user turn there and the next turn answers it, that is the job's answer.
+   * Read-only; the caller decides what to do with it (guardian/lib/job-retry.js answerFirst).
+   */
+  function replyFor(job, { chats = 3 } = {}) {
+    if (!job || typeof job.prompt !== 'string') return null;
+    let rows = [];
+    try { rows = idx.listChats(root(), { agentId: job.agentId || undefined, provider: job.provider, limit: chats }) || []; } catch (_) { return null; }
+    for (const row of rows) {
+      let it = null;
+      try { it = typeof idx.readItem === 'function' ? idx.readItem(root(), row.id) : null; } catch (_) { continue; }
+      const raw = it && it.raw;
+      const messages = raw && (raw.messages || (raw.chat && raw.chat.messages));
+      if (!Array.isArray(messages)) continue;
+      const m = matchJobs(messages, [job])[0];
+      if (m && m.reply) return { text: m.reply, chatUrl: raw.url || null, chatKey: row.chatKey || null };
+    }
+    return null;
+  }
+
+  return { record, attach, route, learnJobChat, chatFor, rememberAgentChat, replyFor, stats };
 }
 
-module.exports = { createChatTranscripts, chatPathOf, matchJobs, MODULE_ID, VERSION };
+module.exports = { createChatTranscripts, chatPathOf, matchJobs, resumableChatUrl, newChatUrl, isNewChatUrl, MODULE_ID, VERSION };

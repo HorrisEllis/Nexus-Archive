@@ -18,6 +18,7 @@
 
 const path = require('path');
 const fs   = require('fs');
+const { JaaKV } = require('../storage/jaa');
 const { randomUUID } = require('crypto');
 const { defaultPinnedIds } = require('../toolbar/commands');
 
@@ -59,7 +60,7 @@ const DEFAULT_START_URL = 'http://127.0.0.1:9000/';
 // this version, then stamps it current so a person who deliberately sets
 // 'about:blank' afterward (a real, valid choice) is never overwritten
 // again.
-const OPTIONS_SCHEMA_VERSION = 1;
+const OPTIONS_SCHEMA_VERSION = 2;   // v2 (0.39.265): autoStartOnBoot reset once — see load()
 
 const DEFAULTS = {
   // Window behavior
@@ -95,6 +96,13 @@ const DEFAULTS = {
   // convention as accounts below, for the same reason — a real delete needs
   // a key that can actually disappear, which set()'s merge can never do).
   listeners: {},
+  // §0.39.265 — James: "Page listeners -> needs decay." A listener that has not
+  // fired or been re-armed for disableAfterDays is switched off; one left off
+  // by decay until removeAfterDays is deleted. A pinned listener never decays.
+  listenerDecay: { enabled: true, disableAfterDays: 14, removeAfterDays: 30 },
+  // §0.39.265 — keyboard shortcuts: the user's changes on top of
+  // src/shortcuts/registry.js's defaults ({ accel: action | null }).
+  shortcuts: {},
 
   // §2026-08-28 — James: "a download listener for artifacts." Real,
   // separate registry from `listeners` above — a download isn't tied to
@@ -132,11 +140,15 @@ const DEFAULTS = {
   // NCP_PROVIDERS exactly (checked directly, not guessed) — a provider
   // added there later needs a matching entry here, same one-source-of-
   // truth discipline that file's own header already states for itself.
+  // §0.39.265 — defaults are the providers/registry.js DEFAULT_AUTOSTART (ChatGPT
+  // and DeepSeek at boot, the rest on first use), and main/index.js now READS
+  // this (autoBootList) — before, it read only CG_AUTOBOOT_PROVIDERS.
   autoStartOnBoot: {
-    claude:     true,
+    claude:     false,
     chatgpt:    true,
-    gemini:     true,
-    perplexity: true,
+    gemini:     false,
+    perplexity: false,
+    deepseek:   true,
   },
 
   // §BL24 2026-08-23 — James: "also have the ability to disable opening
@@ -192,9 +204,8 @@ class NexusOptions {
 
   async load() {
     try {
-      fs.mkdirSync(path.dirname(OPTIONS_PATH), { recursive: true });
-      if (fs.existsSync(OPTIONS_PATH)) {
-        const raw = JSON.parse(fs.readFileSync(OPTIONS_PATH, 'utf8'));
+      const raw = this._kv().load();
+      if (Object.keys(raw).length) {
         this.data = { ...DEFAULTS, ...raw };
 
         // §BUGFIX 2026-09-25 — one-time migration, real and versioned, not
@@ -207,9 +218,19 @@ class NexusOptions {
         // never runs again for this file.
         const onDiskVersion = raw._schemaVersion || 0;
         if (onDiskVersion < OPTIONS_SCHEMA_VERSION) {
-          if (raw.defaultStartUrl === 'about:blank' || raw.defaultStartUrl === undefined) {
+          // each step runs only for the version it belongs to — v1 is the start URL
+          if (onDiskVersion < 1 && (raw.defaultStartUrl === 'about:blank' || raw.defaultStartUrl === undefined)) {
             this.data.defaultStartUrl = DEFAULT_START_URL;
             console.log(`[NexusOptions] migrated defaultStartUrl 'about:blank' -> '${DEFAULT_START_URL}' (schema v${onDiskVersion} -> v${OPTIONS_SCHEMA_VERSION})`);
+          }
+          // §0.39.265 (v2) — autoStartOnBoot was saved and shown but never read:
+          // boot opened ChatGPT alone whatever it said (every stored copy says
+          // "all four on", the old default). It is read now, so it is reset once
+          // to what actually happened, plus DeepSeek — not to four resident tabs
+          // nobody asked for.
+          if (onDiskVersion < 2) {
+            this.data.autoStartOnBoot = { ...DEFAULTS.autoStartOnBoot };
+            console.log('[NexusOptions] autoStartOnBoot reset to the real defaults (ChatGPT + DeepSeek at boot, the rest on first use)');
           }
           this.data._schemaVersion = OPTIONS_SCHEMA_VERSION;
           this._persist();
@@ -262,9 +283,14 @@ class NexusOptions {
   // when a caller needs "the" account for a given agent and didn't say
   // which.
 
-  /** _persist() — the one real place this store writes to disk. */
+  // §JAA 2026-09-26 — James: "with clearglass, make it jaa. no json." Rows live in
+  // the Clear Glass JAA store (src/storage/jaa.js); the old nexus-options.json is imported
+  // once on first load and left on disk.
+  _kv() { return this._jaa || (this._jaa = new JaaKV('cg_options', { legacyFile: OPTIONS_PATH })); }
+
+  /** _persist() — the one real place this store writes: one JAA row per option key. */
   _persist() {
-    fs.writeFileSync(OPTIONS_PATH, JSON.stringify(this.data, null, 2), 'utf8');
+    this._kv().replaceAll(this.data);
   }
 
   listAccounts() {
@@ -594,11 +620,27 @@ class NexusOptions {
    * a person just configured should fire the next time its page loads,
    * not require a second "turn it on" step.
    */
-  registerListener({ urlPattern, fingerprint, eventType, calltoId, label, matchCriteria, linkTarget } = {}) {
+  registerListener({ urlPattern, fingerprint, eventType, calltoId, label, matchCriteria, linkTarget, pageListenerId } = {}) {
     if (!urlPattern)  return { error: 'urlPattern required' };
     if (!fingerprint) return { error: 'fingerprint required' };
-    const id  = randomUUID();
     const now = Date.now();
+    // §0.39.265 — the picker announces a listener every time it starts one, so
+    // the same element on the same site used to be saved again on every
+    // start and never went away. The same (site, element, event) is now one
+    // listener: re-arming it refreshes that record instead of adding another.
+    const same = Object.values(this.data.listeners || {}).find(l => l.urlPattern === urlPattern
+      && (l.fingerprint && l.fingerprint.selector) === fingerprint.selector && l.eventType === (eventType || 'mutation'));
+    if (same) {
+      const refreshed = { ...same, label: label || same.label, matchCriteria: matchCriteria || same.matchCriteria,
+        linkTarget: linkTarget || same.linkTarget, pageListenerId: pageListenerId || same.pageListenerId || null,
+        lastSeenAt: now, updatedAt: now,
+        // a listener switched off by decay comes back when it is armed again; one you switched off stays off
+        ...(same.decayedAt ? { enabled: true, decayedAt: null } : {}) };
+      this.data = { ...this.data, listeners: { ...this.data.listeners, [same.id]: refreshed } };
+      this._persist();
+      return { ...refreshed, reused: true };
+    }
+    const id  = randomUUID();
     const listener = {
       id, urlPattern, fingerprint, eventType: eventType || 'mutation',
       // §EXTENDED 2026-08-28 — James, live, in guardian-picker.js's real
@@ -614,6 +656,8 @@ class NexusOptions {
       label: label || null,
       matchCriteria: matchCriteria || null,
       linkTarget: linkTarget || null,
+      pageListenerId: pageListenerId || null,
+      pinned: false, fireCount: 0, lastFiredAt: null, lastSeenAt: now, decayedAt: null,
       enabled: true, createdAt: now, updatedAt: now,
     };
     this.data = { ...this.data, listeners: { ...this.data.listeners, [id]: listener } };
@@ -664,7 +708,11 @@ class NexusOptions {
       ...(updates.fingerprint !== undefined ? { fingerprint: updates.fingerprint } : {}),
       ...(updates.eventType !== undefined ? { eventType: updates.eventType } : {}),
       ...(updates.calltoId !== undefined ? { calltoId: updates.calltoId } : {}),
-      ...(updates.enabled !== undefined ? { enabled: !!updates.enabled } : {}),
+      ...(updates.enabled !== undefined ? { enabled: !!updates.enabled, decayedAt: null } : {}),
+      ...(updates.pinned !== undefined ? { pinned: !!updates.pinned } : {}),
+      ...(updates.label !== undefined ? { label: updates.label || null } : {}),
+      // switching a listener on by hand restarts its decay clock
+      ...(updates.enabled === true ? { lastSeenAt: Date.now() } : {}),
       updatedAt: Date.now(),
     };
     this.data = { ...this.data, listeners: { ...this.data.listeners, [id]: updated } };
@@ -699,6 +747,104 @@ class NexusOptions {
    * here since a listener firing on the wrong page is a real, visible
    * mistake in a way userscript over-matching mostly isn't.
    */
+  // ── Keyboard shortcuts — §0.39.265 ──────────────────────────────────────
+  // Stored as overrides only; src/shortcuts/registry.js owns the defaults and
+  // the rules (one key → one action, one action → one key, no bare typing keys).
+  getShortcuts() {
+    const R = require('../shortcuts/registry');
+    return { bindings: R.effective(this.data.shortcuts || {}), overrides: { ...(this.data.shortcuts || {}) } };
+  }
+
+  setShortcut(accel, action) {
+    const R = require('../shortcuts/registry');
+    const r = R.bind(this.data.shortcuts || {}, accel, action);
+    if (r.error) return { error: r.error };
+    this.data = { ...this.data, shortcuts: r.overrides };
+    this._persist();
+    return { ...this.getShortcuts(), replaced: r.replaced };
+  }
+
+  removeShortcut(accel) {
+    const R = require('../shortcuts/registry');
+    const r = R.unbind(this.data.shortcuts || {}, accel);
+    if (r.error) return { error: r.error };
+    this.data = { ...this.data, shortcuts: r.overrides };
+    this._persist();
+    return this.getShortcuts();
+  }
+
+  resetShortcuts() {
+    this.data = { ...this.data, shortcuts: {} };
+    this._persist();
+    return this.getShortcuts();
+  }
+
+  // ── Listener decay — §0.39.265 ───────────────────────────────────────────
+
+  /** touchListener — a listener fired (kind 'fired') or was armed on a page ('seen'). */
+  touchListener(idOrPageId, kind = 'fired') {
+    const l = this.data.listeners?.[idOrPageId]
+      || Object.values(this.data.listeners || {}).find(x => x.pageListenerId && x.pageListenerId === idOrPageId);
+    if (!l) return null;
+    const now = Date.now();
+    const next = { ...l, lastSeenAt: now, ...(kind === 'fired' ? { lastFiredAt: now, fireCount: (l.fireCount || 0) + 1 } : {}) };
+    this.data = { ...this.data, listeners: { ...this.data.listeners, [l.id]: next } };
+    this._persist();
+    return { ...next };
+  }
+
+  getListenerDecay() {
+    return { ...DEFAULTS.listenerDecay, ...(this.data.listenerDecay || {}) };
+  }
+
+  setListenerDecay(patch = {}) {
+    const cur = this.getListenerDecay();
+    const num = (v, d) => (Number.isFinite(+v) && +v > 0 ? Math.round(+v) : d);
+    const next = {
+      enabled: patch.enabled !== undefined ? !!patch.enabled : cur.enabled,
+      disableAfterDays: num(patch.disableAfterDays, cur.disableAfterDays),
+      removeAfterDays: num(patch.removeAfterDays, cur.removeAfterDays),
+    };
+    if (next.removeAfterDays <= next.disableAfterDays) return { error: 'removeAfterDays must be more than disableAfterDays' };
+    this.data = { ...this.data, listenerDecay: next };
+    this._persist();
+    return next;
+  }
+
+  /**
+   * listenerStrength(l) — 1 when just used, falling linearly to 0 at the
+   * point decay switches it off. `fadesAt` is when that happens (null when
+   * pinned or decay is off); `removeAt` is when a decayed listener is deleted.
+   */
+  listenerStrength(l, now = Date.now()) {
+    const cfg = this.getListenerDecay();
+    const DAY = 86400000;
+    const last = Math.max(l.lastFiredAt || 0, l.lastSeenAt || 0, l.createdAt || 0);
+    if (l.pinned || !cfg.enabled) return { strength: 1, lastActiveAt: last, fadesAt: null, removeAt: null };
+    const fadesAt = last + cfg.disableAfterDays * DAY;
+    return { strength: Math.max(0, Math.min(1, (fadesAt - now) / (cfg.disableAfterDays * DAY))), lastActiveAt: last, fadesAt, removeAt: last + cfg.removeAfterDays * DAY };
+  }
+
+  /**
+   * decayListeners(now) — switch off listeners idle past disableAfterDays,
+   * delete ones decay switched off that stay idle past removeAfterDays.
+   * A listener switched off BY HAND is never deleted by decay.
+   */
+  decayListeners(now = Date.now()) {
+    const cfg = this.getListenerDecay();
+    const out = { disabled: [], removed: [] };
+    if (!cfg.enabled) return out;
+    const next = { ...(this.data.listeners || {}) };
+    for (const l of Object.values(next)) {
+      if (l.pinned) continue;
+      const { fadesAt, removeAt } = this.listenerStrength(l, now);
+      if (l.decayedAt && now >= removeAt) { delete next[l.id]; out.removed.push(l.id); }
+      else if (l.enabled && now >= fadesAt) { next[l.id] = { ...l, enabled: false, decayedAt: now, updatedAt: now }; out.disabled.push(l.id); }
+    }
+    if (out.disabled.length || out.removed.length) { this.data = { ...this.data, listeners: next }; this._persist(); }
+    return out;
+  }
+
   findListenersForUrl(url) {
     if (!url) return [];
     return this.listListeners().filter(l => {

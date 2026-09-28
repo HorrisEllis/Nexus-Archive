@@ -11,8 +11,10 @@
  */
 
 const http    = require('http');
-const express = require('express');
+const express = require('../../../lib/micro-http.js');   // §0.39.261 — in-house express subset (lib/micro-http.js), was express
 const { ipcMain, session, Notification } = require('electron');
+// 0.39.272 — record every ipcMain.handle channel as it is registered, so /cli/invoke reaches the same handler (ipc/handler-registry.js)
+require('./handler-registry').install(ipcMain);
 const { emit, on, Event, getBus } = require('../core/bus');
 const { randomUUID: uuidv4 } = require('crypto'); // §BUGFIX 2026-08-23 — the real 'uuid' npm package was never installed (checked node_modules and package.json directly); this crashed every real file that required it, including boot-critical ones. Node's own built-in produces the identical UUID format, zero dependency.
 const { detectFields: _autofillDetect, fillFields: _autofillFill } = require('../autofill/matcher.js');
@@ -22,7 +24,7 @@ const {
 } = require('../screen-qa/detector.js');
 
 class IpcBridge {
-  constructor({ port, sse, ctxMgr, vault, apiSettings, urlListener, mesh, diag, fp, options, minimizeFn, hideFn, openFn, maximizeFn, openSettingsFn, closeSettingsFn, openLibraryFn, closeLibraryFn, bookmarks, rewind, providerHost, userscripts, siteSettings, downloads, passwordVault, speech, macroTool, errorCapture, copilot, postEvent, pluginHost, history, autofillStore, dom, loginPortal, driver }) {
+  constructor({ port, sse, ctxMgr, vault, apiSettings, urlListener, mesh, diag, fp, options, minimizeFn, hideFn, openFn, maximizeFn, openSettingsFn, closeSettingsFn, openLibraryFn, closeLibraryFn, bookmarks, rewind, providerHost, userscripts, siteSettings, downloads, passwordVault, speech, macroTool, errorCapture, copilot, postEvent, pluginHost, history, autofillStore, dom, loginPortal, driver, webExtensions }) {
     this.port        = port;
     this.sse         = sse;
     this.errorCapture = errorCapture;
@@ -51,7 +53,8 @@ class IpcBridge {
     this.history       = history;
     this.autofillStore = autofillStore;
     this.dom           = dom;
-    this.driver        = driver || null;   // 0.39.259 — the same ClearDriver the driver.exec gate calls; /cli/driver awaits it
+    this.driver        = driver || null;
+    this.webExtensions = webExtensions || null; // §2026-09-26 — src/plugins/webextensions.js // §2026-09-26 — macro recorder (macros:recordStart/Stop)
     this.downloads     = downloads;
     // §BUGFIX 2026-08-24 — found while wiring speech, not by inspection:
     // main/index.js already passed passwordVault into this constructor
@@ -424,11 +427,13 @@ class IpcBridge {
     // truly-current set without needing filesystem access.
     this.app.get('/cli/commands', (req, res) => res.json(this._buildCommandIndex()));
 
-    // 0.39.259 — the synchronous agent surface: POST /cli/driver (result in the response, not on SSE),
-    // POST /cli/page/read, GET /cli/state. See ipc/agent-routes.js for why each exists.
+    // 0.39.272 — the synchronous agent surface: POST /cli/driver (the driver's result in the response, not on SSE),
+    // POST /cli/page/read, GET /cli/state, and GET/POST /cli/invoke (every IPC channel by name, same handler).
+    // See ipc/agent-routes.js and ipc/handler-registry.js for why each exists.
     require('./agent-routes').install(this.app, {
       driver: this.driver, providerHost: this.providerHost, options: this.options, autofillStore: this.autofillStore,
       macroTool: this.macroTool, userscripts: this.userscripts, downloads: this.downloads, ctxMgr: this.ctxMgr, mesh: this.mesh,
+      webExtensions: this.webExtensions || null, handlers: require('./handler-registry'),
       listAgents: () => require('../main/index').listOpenAgents?.() || { windows: [], bgTabs: [] },
       listBgTabs: () => require('../main/index').listBackgroundTabs?.() || [],
     });
@@ -716,6 +721,11 @@ class IpcBridge {
     // §fix 2026-07-04 — copilot:send was fire-and-forget (rendererEmit only).
     // Now calls the real CoPilotBridge.send() and returns its response,
     // so the renderer gets an actual {text, commands, msgId} back.
+    // §BUILT 2026-09-26 — the Clear Glass hat + the pane's CLI (src/copilot/hat.js).
+    ipcMain.handle('copilot:hat', async () => require('../copilot/hat').status());
+    ipcMain.handle('copilot:hatEnsure', async () => require('../copilot/hat').ensure());
+    ipcMain.handle('copilot:hatUpdate', async (e, patch) => require('../copilot/hat').update(patch || {}));
+    ipcMain.handle('copilot:exec', async (e, { cmd, agentId } = {}) => (this.copilot ? this.copilot.execCommand(cmd, agentId) : { ok: false, error: 'co-pilot bridge not wired' }));
     ipcMain.handle('copilot:send', async (e, d) => {
       if (this.copilot) {
         try {
@@ -819,6 +829,8 @@ class IpcBridge {
     // reimplementation that could drift from this one.
     ipcMain.handle('bookmarks:addWithState',  async (e, d) => this._bookmarkAddWithState(d));
     ipcMain.handle('bookmarks:openWithState', async (e, d) => this._bookmarkOpenWithState(d));
+    // §0.39.265 — attach / detach an account (the ★ dialog's check mark) or a snapshot
+    ipcMain.handle('bookmarks:linkState',     async (e, d) => this.bookmarks?.linkState(d || {}));
 
     // Rewind
     ipcMain.handle('rewind:list',     async (e, d) => this.rewind?.list(d.agentId, d.limit));
@@ -971,6 +983,26 @@ class IpcBridge {
       if (!this.macroTool) return { error: 'macro tool not available' };
       return this.macroTool.execute({ action: 'delete', name: d.name });
     });
+    // §BUILT 2026-09-26 — record a macro from a real tab: the driver's
+    // recorder captures, src/macros/recording.js turns it into steps the
+    // builder opens pre-filled (passwords become a {{password}} parameter).
+    const _recStart = new Map(); // agentId → start url
+    ipcMain.handle('macros:recordStart', async (e, { agentId } = {}) => {
+      if (!this.driver) return { ok: false, error: 'driver not wired — recording unavailable' };
+      if (!agentId) return { ok: false, error: 'agentId required' };
+      try { const r = await this.driver.exec({ action: 'record.start', agentId }); _recStart.set(agentId, r.startUrl || null); return { ok: true, agentId, startUrl: r.startUrl || null }; }
+      catch (err) { return { ok: false, error: err.message }; }
+    });
+    ipcMain.handle('macros:recordStop', async (e, { agentId } = {}) => {
+      if (!this.driver) return { ok: false, error: 'driver not wired — recording unavailable' };
+      try {
+        const r = await this.driver.exec({ action: 'record.stop', agentId });
+        const { recordingToSteps } = require('../macros/recording');
+        const out = recordingToSteps(r.recording || [], { startUrl: _recStart.get(agentId) });
+        _recStart.delete(agentId);
+        return { ok: true, events: (r.recording || []).length, ...out };
+      } catch (err) { return { ok: false, error: err.message }; }
+    });
     ipcMain.handle('macros:schema', async () => {
       try {
         const ba = require('../../../lib/agent-tools/tools/browser/browser-action.js');
@@ -1089,6 +1121,22 @@ class IpcBridge {
       try { return this.pluginHost?.list() || []; }
       catch (err) { return { ok: false, error: err.message }; }
     });
+    // §BUILT 2026-09-26 — WebExtensions (Settings → Plugins → Add WebExtension).
+    const _wx = () => { if (!this.webExtensions) throw new Error('WebExtension host not running'); return this.webExtensions; };
+    const _wxWrap = (fn) => async (e, d = {}) => { try { return await fn(d, e); } catch (err) { return { ok: false, error: err.message }; } };
+    ipcMain.handle('webext:list', _wxWrap(() => ({ ok: true, extensions: _wx().list(), folder: require('path').join(process.env.APPDATA || process.env.HOME || '.', '.clear-glass', 'extensions') })));
+    ipcMain.handle('webext:install', _wxWrap((d) => _wx().install({ source: d.source, allowFileAccess: !!d.allowFileAccess })));
+    ipcMain.handle('webext:setEnabled', _wxWrap((d) => _wx().setEnabled(d.id, !!d.enabled)));
+    ipcMain.handle('webext:remove', _wxWrap((d) => _wx().remove(d.id)));
+    ipcMain.handle('webext:pick', _wxWrap(async (d, e) => {
+      const { dialog, BrowserWindow } = require('electron');
+      const win = BrowserWindow.fromWebContents(e.sender);
+      const folder = d.kind === 'folder';
+      const r = await dialog.showOpenDialog(win, folder
+        ? { title: 'Choose an unpacked extension folder (the one with manifest.json)', properties: ['openDirectory'] }
+        : { title: 'Choose a packed extension', properties: ['openFile'], filters: [{ name: 'Chrome extension', extensions: ['crx', 'zip'] }] });
+      return r.canceled || !r.filePaths.length ? { ok: true, canceled: true } : { ok: true, path: r.filePaths[0] };
+    }));
     ipcMain.handle('plugins:disable', async (e, { id } = {}) => {
       if (typeof id !== 'string') return { ok: false, error: 'id is required' };
       try { this.pluginHost?.disable(id); return { ok: true }; }
@@ -1161,9 +1209,39 @@ class IpcBridge {
       if (!this.dom || !this.autofillStore) return { error: 'autofill unavailable' };
       return _autofillDetect(this.dom, this.autofillStore, { agentId, profileId });
     });
-    ipcMain.handle('autofill:fill', async (e, { agentId = 'default', profileId, minConfidence = 'medium' } = {}) => {
+    ipcMain.handle('autofill:fill', async (e, { agentId = 'default', profileId, minConfidence = 'medium', vars } = {}) => {
       if (!this.dom || !this.autofillStore) return { error: 'autofill unavailable' };
-      return _autofillFill(this.dom, this.autofillStore, { agentId, profileId, minConfidence });
+      return _autofillFill(this.dom, this.autofillStore, { agentId, profileId, minConfidence, vars });
+    });
+
+    // §0.39.265 — James: "expand the job application autofill … maybe add fiverr
+    // and upwork support?" Draft a proposal / cover letter for one job post from
+    // a profile (src/autofill/proposal.js), through the same co-pilot the
+    // on-screen answers use. A draft only — shown to the person, never sent.
+    ipcMain.handle('autofill:proposal', async (e, { profileId, jobPost, platform, length, tone, extra, agentId = 'default' } = {}) => {
+      if (!this.autofillStore) return { ok: false, error: 'autofill unavailable' };
+      if (!this.copilot) return { ok: false, error: 'co-pilot is not connected' };
+      const profile = this.autofillStore.getProfile(profileId);
+      if (!profile) return { ok: false, error: `no autofill profile "${profileId}"` };
+      const { buildProposalPrompt } = require('../autofill/proposal.js');
+      const b = buildProposalPrompt({ profile, jobPost, platform, length, tone, extra });
+      if (b.error) return { ok: false, error: b.error };
+      try {
+        const r = await this.copilot.send({ message: b.prompt, agentId });
+        const text = String((r && (r.text || r.reply || r.message)) || '').trim();
+        return text ? { ok: true, text } : { ok: false, error: 'co-pilot returned no text' };
+      } catch (err) { return { ok: false, error: err.message }; }
+    });
+    // The text of a tab's page (the job post), for the proposal drafter.
+    ipcMain.handle('autofill:readPage', async (e, { agentId = 'default' } = {}) => {
+      if (!this.driver) return { ok: false, error: 'driver unavailable' };
+      try {
+        const [t, u] = await Promise.all([
+          this.driver.exec({ action: 'eval', agentId, code: '(document.querySelector("main,[role=main],article") || document.body).innerText.slice(0, 12000)' }),
+          this.driver.exec({ action: 'getUrl', agentId }).catch(() => ({})),
+        ]);
+        return { ok: true, text: String((t && t.result) || ''), url: (u && u.url) || null };
+      } catch (err) { return { ok: false, error: err.message }; }
     });
 
     // §BUILT 2026-09-21 — screen-qa's UI layer (hotkey, right-click menu,
@@ -1232,7 +1310,21 @@ class IpcBridge {
     // listener-modal save path is wired to this instead of only setting
     // activeListeners.set(...) in memory — that wiring is TX16's own next
     // slice, named honestly as not done in this pass.
-    ipcMain.handle('listeners:list',       async ()    => this.options?.listListeners());
+    // §0.39.265 — each listener comes back with its decay state (strength, fadesAt, removeAt).
+    ipcMain.handle('listeners:list',       async ()    => {
+      if (!this.options) return [];
+      this.options.decayListeners();
+      return this.options.listListeners().map(l => ({ ...l, decay: this.options.listenerStrength(l) }));
+    });
+    ipcMain.handle('listeners:decay:get',  async ()    => this.options?.getListenerDecay());
+    ipcMain.handle('listeners:decay:set',  async (e, d) => this.options?.setListenerDecay(d || {}));
+    ipcMain.handle('listeners:decay:run',  async ()    => this.options?.decayListeners());
+
+    // §0.39.265 — keyboard shortcuts (src/shortcuts/registry.js; caught in main, see main/index.js)
+    ipcMain.handle('shortcuts:list',   async () => ({ ...(this.options?.getShortcuts() || { bindings: {}, overrides: {} }), actions: require('../shortcuts/registry').ACTIONS, defaults: require('../shortcuts/registry').DEFAULT_BINDINGS }));
+    ipcMain.handle('shortcuts:set',    async (e, d) => this.options?.setShortcut(d.accel, d.action));
+    ipcMain.handle('shortcuts:remove', async (e, d) => this.options?.removeShortcut(d.accel));
+    ipcMain.handle('shortcuts:reset',  async () => this.options?.resetShortcuts());
     ipcMain.handle('listeners:get',        async (e, d) => this.options?.getListener(d.id));
     ipcMain.handle('listeners:register',   async (e, d) => this.options?.registerListener(d));
     ipcMain.handle('listeners:update',     async (e, d) => this.options?.updateListener(d.id, d.updates));
@@ -1321,6 +1413,7 @@ class IpcBridge {
             if (urlPattern && this.options) {
               this.options.registerListener({
                 urlPattern,
+                pageListenerId: d.listenerId,
                 fingerprint: { selector: d.config.selector, xpath: d.config.xpath },
                 eventType: d.config.mode,
                 label: d.config.label,
@@ -1333,6 +1426,8 @@ class IpcBridge {
           }
         } else if (d.type === 'guardian.listener.event' && d.listenerId) {
           this._routeGuardianListenerEvent(d.listenerId, d.eventData);
+          // §0.39.265 — firing keeps a listener alive (listener decay)
+          try { this.options?.touchListener(d.listenerId, 'fired'); } catch (_) {}
         } else if (d.type === 'guardian.callto.added' && d.callto?.id) {
           // §2026-08-29 — James: "a tool that links guardian directly to
           // dom elements." Real gap closed: guardian-picker.js's "ADD TO
@@ -1674,8 +1769,10 @@ class IpcBridge {
     // the caller is told that plainly rather than getting back a
     // bookmark that silently claims state it doesn't have.
     if (!snap) return { bookmark, added, stateError: 'rewind returned no snapshot for this page' };
-    const accountId = this.options?.resolveDefaultAccountForAgent
-      ? this.options.resolveDefaultAccountForAgent(bookmark.agentId) : null;
+    // §0.39.265 — the ★ dialog names the account explicitly (null = none);
+    // only a caller that says nothing gets the agent's default account.
+    const accountId = d.accountId !== undefined ? (d.accountId || null)
+      : this.options?.resolveDefaultAccountForAgent ? this.options.resolveDefaultAccountForAgent(bookmark.agentId) : null;
     const linked = this.bookmarks.linkState({ id: bookmark.id, snapshotId: snap.id, accountId });
     return { bookmark: linked.bookmark || bookmark, added };
   }

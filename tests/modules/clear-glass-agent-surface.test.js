@@ -113,7 +113,7 @@ async function run() {
 
   // ── ipc/agent-routes.js ────────────────────────────────────────────────────────────────────────────────
   // clear-glass's own express (4.x, what IpcBridge runs on) when its node_modules is installed, else the root's.
-  let express; try { express = require(path.join(__dirname, '../../clear-glass/node_modules/express')); } catch (_) { express = require('express'); }
+  const express = require('../../lib/micro-http.js');
   const calls = [];
   const driver = {
     async exec(p) {
@@ -270,7 +270,7 @@ async function run() {
     const b = new CoPilotBridge({ sse: { emit: () => {} }, apiSettings: stubSettings(port, { copilotToolRounds: 2 }) });
     b._liveToolsPrompt = async () => '';
     const r = await b.send({ message: 'find my resume notes', agentId: 'default', domContext: {} });
-    assert.deepStrictEqual(runs, [{ name: 'nexus.context.tool', args: { action: 'search', query: 'resume' }, agent: 'clear-glass-copilot' }]);
+    assert.deepStrictEqual(runs, [{ name: 'nexus.context.tool', args: { action: 'search', query: 'resume' }, agent: 'clear-glass-copilot', context: { agentId: 'default' } }]);
     assert.strictEqual(r.text, 'done');
     cop.close();
   });

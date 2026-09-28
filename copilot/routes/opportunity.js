@@ -1,6 +1,6 @@
 'use strict';
 /**
- * copilot/routes/opportunity.js — /api/opportunity/* and /api/context/* on copilot :3750. 0.39.259.
+ * copilot/routes/opportunity.js — /api/opportunity/* and /api/context/* on copilot :3750. 0.39.272.
  *
  * The HTTP door to lib/opportunity (jobs, gigs, Fiverr/Upwork leads) and lib/context-atlas (every memory system and
  * graph). Same shape as routes/person-model.js: handle() returns false for a path it does not own.

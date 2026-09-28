@@ -104,6 +104,9 @@
   // (see src/preload/webview-bridge.js for why the old require('electron')
   // trick inside injected page scripts didn't work).
   if (wvPreload) wv.setAttribute('preload', wvPreload);
+  // §0.39.265 — automation pages run in their own session (persist:automation)
+  const wvPartition = params.get('wvPartition') || '';
+  if (wvPartition && /^persist:[\w-]{1,60}$/.test(wvPartition)) wv.setAttribute('partition', wvPartition);
 
   // §NEW 2026-07-04: main process navigates this window in place when the
   // orchestrator's wire /open call targets the already-open default window
@@ -112,7 +115,7 @@
   // load anyway once this fires.
   if (window.ClearGlass?.on) {
     window.ClearGlass.on('cg:navigate', (targetUrl) => {
-      if (targetUrl && typeof wv.loadURL === 'function') wv.loadURL(targetUrl);
+      if (targetUrl && typeof wv.loadURL === 'function') navigate(targetUrl);
     });
   }
   const urlBar         = document.getElementById('url-bar');
@@ -239,9 +242,72 @@
   wv.addEventListener('did-navigate-in-page', updateUrl);
   // page-title-updated handled by tab system below — removed duplicate here
 
+  // §fix 2026-09-26 — "[renderer] unhandledrejection Error invoking remote
+  // method 'GUEST_VIEW_MANAGER_CALL': ERR_CONNECTION_REFUSED (-102) loading
+  // 'http://127.0.0.1:900/'". <webview>.loadURL() returns a Promise that
+  // rejects on any failed navigation; every call site here dropped it, so
+  // each failure hit the global unhandledrejection handler (error toast +
+  // errors:report) on top of did-fail-load. ERR_ABORTED (-3) is a
+  // navigation superseded by a newer one (the :9000 start page cut off by
+  // a typed URL) — not an error at all. All navigation now goes through
+  // navigate(): the rejection is consumed here, and did-fail-load (below)
+  // is the single place a real failure is surfaced, as an in-view page.
+  function navigate(url) {
+    let p;
+    try { p = wv.loadURL(url); } catch (err) { _navFailed(url, -1, String(err?.message || err)); return Promise.resolve(false); }
+    return Promise.resolve(p).then(() => true, (err) => {
+      const m = /\((-\d+)\)/.exec(String(err?.message || ''));
+      const code = m ? Number(m[1]) : -1;
+      if (code !== -3 && code !== -1) _navFailed(url, code, String(err?.message || err));
+      return false;
+    });
+  }
+
+  // NEXUS service ports (nexus/autopilot.js). A refused connection to a
+  // local port one keystroke away from one of these is almost always a
+  // typo (":900" for ":9000") — the error page offers the real target.
+  const NEXUS_PORTS = [9000, 4800, 7820, 7821, 3747, 7799];
+  function _suggestPort(u) {
+    try {
+      const x = new URL(u);
+      if (!/^(127\.0\.0\.1|localhost)$/.test(x.hostname)) return null;
+      const p = Number(x.port || 80);
+      const hit = NEXUS_PORTS.find(n => n !== p && (String(n).startsWith(String(p)) || String(p).startsWith(String(n))));
+      if (!hit) return null;
+      x.port = String(hit);
+      return x.toString();
+    } catch { return null; }
+  }
+
+  let _lastNavFail = { url: '', at: 0 };
+  function _navFailed(url, code, desc) {
+    if (!url || url.startsWith('data:')) return;
+    const now = Date.now();
+    if (_lastNavFail.url === url && now - _lastNavFail.at < 1500) return; // promise + did-fail-load both report one failure
+    _lastNavFail = { url, at: now };
+    const esc = (v) => String(v).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+    const alt = _suggestPort(url);
+    const refused = code === -102;
+    const html = `<!doctype html><meta charset="utf-8"><title>Can't reach ${esc(url)}</title>
+<body style="margin:0;background:#0b0b12;color:#d8dae4;font:14px system-ui,sans-serif;display:grid;place-items:center;height:100vh">
+<div style="max-width:560px;padding:24px">
+<div style="font-size:12px;letter-spacing:.2em;color:#ff5c7a">NAVIGATION FAILED · ${esc(code)}</div>
+<h2 style="margin:8px 0 4px;font-weight:600">${refused ? 'Nothing is listening at this address' : "This page couldn't load"}</h2>
+<code style="display:block;color:#00f5ff;margin:8px 0 12px;word-break:break-all">${esc(url)}</code>
+<div style="color:#8a8da2">${esc(desc)}</div>
+${alt ? `<p>Did you mean <a style="color:#00f5ff" href="${esc(alt)}">${esc(alt)}</a>?</p>` : ''}
+<p><a style="color:#00f5ff" href="${esc(url)}">Retry</a></p></div></body>`;
+    // Keep the address bar on the URL that failed, not the data: URL.
+    _tabs.setUrl(_tabs.activeId, url);
+    const shown = 'data:text/html;charset=utf-8,' + encodeURIComponent(html);
+    Promise.resolve(wv.loadURL(shown)).catch(() => {}).finally(() => { urlBar.value = url; });
+  }
+
   wv.addEventListener('did-fail-load', (e) => {
-    if (e.errorCode === -3) return; // Aborted — normal
+    if (e.errorCode === -3) return; // Aborted — superseded navigation, normal
+    if (e.isMainFrame === false) return; // subresource/iframe failures are the page's business
     addMsg('assistant', `Navigation failed: ${e.errorDescription}`);
+    _navFailed(e.validatedURL, e.errorCode, e.errorDescription);
   });
 
   wv.addEventListener('console-message', (e) => {
@@ -256,8 +322,16 @@
     if (domPanelVisible) refreshDomTree();
   });
 
+  // The navigation-failure page is a data: URL; everywhere the person sees
+  // or records "the current URL" it stands in for the URL that failed.
+  function _visibleUrl() {
+    const u = wv.getURL();
+    return (u && u.startsWith('data:text/html') && _lastNavFail.url) ? _lastNavFail.url : u;
+  }
+
   function updateUrl() {
-    const url = wv.getURL();
+    const url = _visibleUrl();
+    if (url !== wv.getURL()) { urlBar.value = url; statusUrl.textContent = url; return; }
     urlBar.value = url;
     statusUrl.textContent = url;
     _restoreZoomForOrigin();
@@ -321,7 +395,7 @@
     const url = normalizeUrl(urlBar.value);
     if (!url) return;
     _tabs.setUrl(_tabs.activeId, url);
-    wv.loadURL(url);
+    navigate(url);
   });
 
   // ── Tab system ───────────────────────────────────────────────────────────
@@ -373,7 +447,7 @@
       const t = tabs.find(x => x.id === id);
       if (!t) return;
       activeId = id;
-      wv.loadURL(t.url || 'about:blank');
+      navigate(t.url || 'about:blank');
       urlBar.value = t.url || '';
       render();
     }
@@ -390,7 +464,7 @@
         closedStack.push({ url: closed.url, title: closed.title });
         if (closedStack.length > 10) closedStack.shift();
       }
-      if (tabs.length === 1) { tabs[0].url = 'about:blank'; wv.loadURL('about:blank'); urlBar.value=''; render(); return; }
+      if (tabs.length === 1) { tabs[0].url = 'about:blank'; navigate('about:blank'); urlBar.value=''; render(); return; }
       const idx = tabs.findIndex(t => t.id === id);
       tabs = tabs.filter(t => t.id !== id);
       if (activeId === id) switchTo(tabs[Math.max(0, idx - 1)].id);
@@ -434,7 +508,7 @@
   wv.addEventListener('did-start-loading', () => _tabs.setLoading(_tabs.activeId, true));
   wv.addEventListener('did-stop-loading',  () => {
     _tabs.setLoading(_tabs.activeId, false);
-    const url = wv.getURL();
+    const url = _visibleUrl();
     _tabs.setUrl(_tabs.activeId, url);
     urlBar.value = url;
   });
@@ -451,9 +525,9 @@
       // node but the Electron API methods aren't attached until after that
       // event. Guard: call immediately if already ready, otherwise wait.
       if (typeof wv.loadURL === 'function') {
-        wv.loadURL(norm);
+        navigate(norm);
       } else {
-        wv.addEventListener('dom-ready', () => wv.loadURL(norm), { once: true });
+        wv.addEventListener('dom-ready', () => navigate(norm), { once: true });
       }
     }
   } else {
@@ -532,7 +606,7 @@
     }
   }
 
-  document.getElementById('btn-options').addEventListener('click', openOptionsPanel);
+  document.getElementById('btn-options')?.addEventListener('click', openOptionsPanel);
   document.getElementById('options-panel-close').addEventListener('click', () => optionsPanel.classList.remove('visible'));
 
   optDefaultUrl.addEventListener('keydown', (e) => { if (e.key === 'Enter') optDefaultUrl.blur(); });
@@ -817,7 +891,22 @@
     ctxCookies = !ctxCookies; e.target.classList.toggle('active', ctxCookies);
   });
 
+  // §BUILT 2026-09-26 — the pane's CLI wearing the Clear Glass hat
+  // (renderer/copilot-cli.js): route bar, slash commands, ↑/↓ history.
+  const _ctxChip = { dom: 'ctx-dom', picks: 'ctx-picks', cookies: 'ctx-cookies' };
+  const cli = window.CGCopilotCLI ? window.CGCopilotCLI.create({
+    cg, agentId, wv, normalizeUrl, navigate,
+    print: (role, text) => addMsg(role, text),
+    getCtx: () => ({ dom: ctxDom, picks: ctxPicks, cookies: ctxCookies }),
+    setCtx: (what, on) => {
+      if (what === 'dom') ctxDom = on; else if (what === 'picks') ctxPicks = on; else if (what === 'cookies') ctxCookies = on;
+      document.getElementById(_ctxChip[what])?.classList.toggle('active', on);
+    },
+    clearMessages: () => { copilotMsgs.replaceChildren(); },
+  }) : null;
+
   copilotInput.addEventListener('keydown', (e) => {
+    if (cli && cli.onKey(e, copilotInput)) return;
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendCopilot();
@@ -826,10 +915,15 @@
   copilotSend.addEventListener('click', sendCopilot);
 
   async function sendCopilot() {
-    const text = copilotInput.value.trim();
+    let text = copilotInput.value.trim();
     if (!text) return;
 
     copilotInput.value = '';
+    if (cli) {
+      const handled = await cli.handle(text);
+      if (handled === true) return;
+      if (handled && handled.passthrough) text = handled.passthrough;
+    }
     addMsg('user', text);
 
     // §NEW 2026-07-11 — /build and /diagnose slash commands. Both call
@@ -885,7 +979,7 @@
     }
 
     try {
-      const res = await cg.copilot.send({ message: text, agentId, domContext, systemExtra });
+      const res = await cg.copilot.send({ message: text, agentId, domContext, systemExtra, noDom: !ctxDom, ...(cli ? cli.route() : {}) });
       removeThinking();
 
       // Format response with code blocks
@@ -894,15 +988,15 @@
         .replace(/`([^`]+)`/g, '<code>$1</code>');
 
       addMsg('assistant', formatted, true);
-
-      // Execute any driver commands
-      for (const cmd of res.commands || []) {
-        try {
-          await cg.driver.exec({ ...cmd, agentId });
-        } catch (err) {
-          addMsg('assistant', `Command error: ${err.message}`);
-        }
+      if (res.route && cli && cli.state.showRoute !== false) {
+        const r = res.route;
+        addMsg('route', `${r.backend}${r.agent ? ' · ' + r.agent : ''}${r.hat ? ' · 🎩' : ''}${r.modelUsed ? ' · ' + r.modelUsed : ''}${(res.commands || []).length ? ` · ${res.commands.length} command${res.commands.length === 1 ? '' : 's'}${res.executed === false ? ' proposed' : ' run'}` : ''}`);
       }
+      // §FIX 2026-09-26 — commands run once, in the main process
+      // (CoPilotBridge.send). This loop used to re-run every one through
+      // cg.driver.exec, so each copilot click/type happened twice. With
+      // auto-run off they come back unexecuted and the CLI proposes them.
+      if (res.executed === false && cli) cli.propose(res.commands || []);
     } catch (err) {
       removeThinking();
       addMsg('assistant', `Error: ${err.message}`);
@@ -1244,7 +1338,7 @@
     try {
       const res = await fetch('http://127.0.0.1:3750/api/agent/current');
       const cur = await res.json();
-      const agents = ['auto', 'claude', 'chatgpt', 'gemini', 'perplexity'];
+      const agents = ['auto', 'claude', 'chatgpt', 'gemini', 'perplexity', 'deepseek'];
       panel.innerHTML = `
         <div style="padding:6px 4px;font-size:11px;color:var(--text-dim,#999);border-bottom:1px solid var(--border,#333);margin-bottom:6px">
           Current: <b style="color:var(--text,#ccc)">${(cur.agent || 'auto').replace(/</g,'&lt;')}</b>${cur.hatName ? ` (${cur.hatName.replace(/</g,'&lt;')})` : ''}
@@ -1301,23 +1395,148 @@
   connectSSE();
 
   // ── Bookmarks ──────────────────────────────────────────────────────────
+  // §0.39.265 — James: "the bookmark system is supposed to be hooked in to the
+  // system state/rewind engine and account. Like a bookmark with a check mark
+  // to attach to the account … different accounts in each tab." A bookmark
+  // can carry page state (a rewind snapshot of this window: URL, cookies,
+  // storage, scroll) and an account. An account's pages open in that
+  // account's own window (acct-<accountId>, its own session, signed in with
+  // the account's saved provider sessions — src/main/index.js), because the
+  // tabs of one window share its webview and so its session.
+  const ACCT_PREFIX = 'acct-';
+  const myAccountId = agentId.startsWith(ACCT_PREFIX) ? agentId.slice(ACCT_PREFIX.length) : null;
+  let _accountsCache = null;
+  async function _accounts(refresh) {
+    if (!_accountsCache || refresh) _accountsCache = await cg.accounts.list().catch(() => []) || [];
+    return _accountsCache;
+  }
+  const _accountLabel = (id) => ((_accountsCache || []).find(a => a.id === id) || {}).label || (id ? id.slice(0, 8) + '…' : '');
+
+  // This window's bookmarks, plus every bookmark attached to an account (those
+  // open in their account's window from anywhere).
+  async function _visibleBookmarks() {
+    const all = await cg.bookmarks.list({}) || [];
+    return all.filter(b => b.agentId === agentId || b.accountId);
+  }
+
+  async function openBookmark(bk) {
+    if (bk.accountId && bk.accountId !== myAccountId) {
+      const target = ACCT_PREFIX + bk.accountId;
+      await cg.window.open({ agentId: target, url: bk.url });
+      if (bk.snapshotId && bk.agentId === target) await cg.bookmarks.openWithState({ id: bk.id, agentId: target }).catch(() => {});
+      else cg.bookmarks.visit({ id: bk.id });
+      addMsg('assistant', `Opened in ${_accountLabel(bk.accountId) || 'the account'}\u2019s window.`);
+      return;
+    }
+    if (bk.snapshotId && bk.agentId === agentId) {
+      const r = await cg.bookmarks.openWithState({ id: bk.id, agentId }).catch(e => ({ restored: false, restoreError: e.message }));
+      if (r && r.restored) return;
+      navigate(bk.url);
+      if (r && r.restoreError) addMsg('assistant', `Saved page state could not be restored (${r.restoreError}) \u2014 opened the page without it.`);
+      return;
+    }
+    navigate(bk.url);
+    cg.bookmarks.visit({ id: bk.id });
+  }
+
+  // An account window says whose it is, next to its tabs.
+  if (myAccountId) _accounts().then(() => {
+    const b = document.createElement('span');
+    b.id = 'window-account'; b.textContent = `\u25C8 ${_accountLabel(myAccountId)}`;
+    b.title = 'This window is signed in as this account (its own session)';
+    document.getElementById('btn-new-tab')?.after(b);
+  });
+
   async function loadBookmarks() {
     try {
-      const bks = await cg.bookmarks.list({ agentId }) || [];
+      const bks = await _visibleBookmarks();
+      if (bks.some(b => b.accountId)) await _accounts();
       const list = document.getElementById('bookmarks-list');
       list.innerHTML = '';
       bks.slice(0, 20).forEach(bk => {
         const btn = document.createElement('button');
         btn.className = 'bk-btn';
-        btn.title = bk.url;
-        btn.textContent = bk.title || bk.url;
-        btn.addEventListener('click', () => {
-          wv.loadURL(bk.url);
-          cg.bookmarks.visit({ id: bk.id });
-        });
+        btn.title = [bk.url, bk.accountId ? `account: ${_accountLabel(bk.accountId)}` : null, bk.snapshotId ? 'restores saved page state' : null].filter(Boolean).join('\n');
+        if (bk.accountId) { const a = document.createElement('span'); a.className = 'bk-acct'; a.textContent = '\u25C8'; btn.appendChild(a); }
+        if (bk.snapshotId) { const st = document.createElement('span'); st.className = 'bk-state'; st.textContent = '\u23EE'; btn.appendChild(st); }
+        btn.appendChild(document.createTextNode(bk.title || bk.url));
+        btn.addEventListener('click', () => openBookmark(bk));
         list.appendChild(btn);
       });
     } catch (_) {}
+  }
+
+  // The ★ dialog — title, the account check list, "remember page state".
+  async function openBookmarkDialog() {
+    const url = wv.getURL(), title = wv.getTitle();
+    if (!url || url === 'about:blank') return;
+    document.getElementById('bk-dialog')?.remove();
+    const [accounts, all] = await Promise.all([_accounts(true), cg.bookmarks.list({ agentId }).catch(() => [])]);
+    const existing = (all || []).find(b => b.url === url);
+    let chosen = existing ? (existing.accountId || null) : myAccountId;
+
+    const el = (tag, props = {}, ...kids) => { const n = document.createElement(tag); Object.assign(n, props); kids.flat().forEach(k => k != null && n.append(k)); return n; };
+    const box = el('div', { id: 'bk-dialog', className: 'bk-dialog' });
+    box.setAttribute('role', 'dialog'); box.setAttribute('aria-label', 'Bookmark this page');
+    const titleIn = el('input', { type: 'text', value: (existing && existing.title) || title || url, className: 'bk-title' });
+    const acctList = el('div', { className: 'bk-accts', role: 'listbox' });
+    const paint = () => acctList.querySelectorAll('.bk-acct-opt').forEach(o => {
+      const on = (o.dataset.id || null) === chosen;
+      o.setAttribute('aria-selected', String(on)); o.querySelector('.tick').textContent = on ? '\u2713' : '';
+    });
+    const opt = (id, label, sub) => {
+      const o = el('button', { type: 'button', className: 'bk-acct-opt' }, el('span', { className: 'tick' }), el('span', { className: 'lbl', textContent: label }), sub ? el('span', { className: 'sub', textContent: sub }) : null);
+      o.dataset.id = id || '';
+      o.addEventListener('click', () => { chosen = id || null; paint(); stateNote(); });
+      return o;
+    };
+    acctList.append(opt(null, 'No account', 'opens in whichever window you click it'));
+    accounts.forEach(a => acctList.append(opt(a.id, a.label, (a.agentKeys || []).join(', ') + (a.id === myAccountId ? ' \u00B7 this window' : ''))));
+    const stateIn = el('input', { type: 'checkbox', checked: !!(existing && existing.snapshotId) });
+    const note = el('div', { className: 'bk-note' });
+    const stateNote = () => { note.textContent = chosen && chosen !== myAccountId
+      ? `Opens in ${_accountLabel(chosen)}\u2019s own window, signed in as that account. Page state is saved from this window, so it restores only here.`
+      : 'Page state is a rewind snapshot: the URL, sign-in cookies, page storage and scroll position.'; };
+    const save = el('button', { type: 'button', className: 'bk-primary', textContent: existing ? 'Save' : 'Add bookmark' });
+    const remove = existing ? el('button', { type: 'button', className: 'bk-danger', textContent: 'Remove' }) : null;
+    const cancel = el('button', { type: 'button', textContent: 'Cancel' });
+    box.append(el('div', { className: 'bk-head', textContent: existing ? 'Edit bookmark' : 'Bookmark this page' }), titleIn,
+      el('div', { className: 'bk-label', textContent: 'Account' }), acctList,
+      el('label', { className: 'bk-check' }, stateIn, el('span', { textContent: 'Remember page state (rewind)' })), note,
+      el('div', { className: 'bk-actions' }, remove, el('span', { className: 'grow' }), cancel, save));
+    document.body.appendChild(box);
+    const r = document.getElementById('btn-bookmark').getBoundingClientRect();
+    box.style.top = `${Math.round(r.bottom + 6)}px`;
+    box.style.left = `${Math.round(Math.max(8, Math.min(r.right - box.offsetWidth, window.innerWidth - box.offsetWidth - 8)))}px`;
+    paint(); stateNote(); titleIn.focus(); titleIn.select();
+
+    const close = () => { box.remove(); document.removeEventListener('mousedown', outside, true); };
+    const outside = (e) => { if (!box.contains(e.target) && e.target.id !== 'btn-bookmark') close(); };
+    setTimeout(() => document.addEventListener('mousedown', outside, true), 0);
+    box.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); if (e.key === 'Enter' && e.target === titleIn) save.click(); });
+    cancel.addEventListener('click', close);
+    remove?.addEventListener('click', async () => {
+      await cg.bookmarks.remove({ id: existing.id });
+      document.getElementById('btn-bookmark').style.color = '';
+      close(); loadBookmarks();
+    });
+    save.addEventListener('click', async () => {
+      save.disabled = true;
+      try {
+        const t = titleIn.value.trim() || title || url;
+        let bk, stateError = null;
+        if (stateIn.checked && !(existing && existing.snapshotId)) {
+          const res = await cg.bookmarks.addWithState({ url, title: t, agentId, accountId: chosen });
+          bk = res.bookmark; stateError = res.stateError || null;
+        } else {
+          bk = (await cg.bookmarks.add({ url, title: t, agentId })).bookmark;
+        }
+        await cg.bookmarks.linkState({ id: bk.id, accountId: chosen, ...(stateIn.checked ? {} : { snapshotId: null }) });
+        document.getElementById('btn-bookmark').style.color = '#f5c842';
+        addMsg('assistant', `\u2605 ${existing ? 'Updated' : 'Bookmarked'}: ${t}${chosen ? ` \u00B7 account ${_accountLabel(chosen)}` : ''}${stateIn.checked && !stateError ? ' \u00B7 page state saved' : ''}${stateError ? ` \u00B7 page state not saved: ${stateError}` : ''}`);
+        close(); loadBookmarks();
+      } catch (e) { save.disabled = false; addMsg('assistant', `Bookmark failed: ${e.message}`); }
+    });
   }
 
   // §BUILD 2026-09-02 — wiring for the new inline #btn-zoom / #zoom-popover
@@ -1343,22 +1562,8 @@
     });
   })();
 
-  document.getElementById('btn-bookmark').addEventListener('click', async () => {
-    const url   = wv.getURL();
-    const title = wv.getTitle();
-    if (!url || url === 'about:blank') return;
-    const isMarked = await cg.bookmarks.check({ url, agentId }).catch(() => false);
-    if (isMarked) {
-      // Already bookmarked — remove it
-      const bks = await cg.bookmarks.list({ agentId });
-      const found = bks.find(b => b.url === url);
-      if (found) { await cg.bookmarks.remove({ id: found.id }); document.getElementById('btn-bookmark').style.color = ''; }
-    } else {
-      await cg.bookmarks.add({ url, title, agentId });
-      document.getElementById('btn-bookmark').style.color = '#f5c842';
-    }
-    loadBookmarks();
-  });
+  // §0.39.265 — ★ opens the bookmark dialog (add, or edit/remove when already bookmarked)
+  document.getElementById('btn-bookmark').addEventListener('click', () => { openBookmarkDialog().catch(e => addMsg('assistant', `Bookmark failed: ${e.message}`)); });
 
   // §BUILD 2026-08-28 — James: "the three dots, I want to be the menu...
   // the agent window manager moved to the menu with the 3 dots, same
@@ -1643,7 +1848,7 @@
     });
     const listEl = document.getElementById('menu-bookmarks-list');
     try {
-      const list = await cg.bookmarks.list({ agentId });
+      const list = await _visibleBookmarks();
       if (!list || !list.length) {
         listEl.innerHTML = '<div style="padding:6px 4px;color:var(--text-dim,#999);font-size:11px">No bookmarks yet — click the ★ in the search bar to add one.</div>';
         return;
@@ -1655,7 +1860,7 @@
         </div>`).join('');
       listEl.querySelectorAll('[data-visit]').forEach(el => el.addEventListener('click', async () => {
         const bk = list.find(b => b.id === el.dataset.visit);
-        if (bk) { wv.loadURL(bk.url); await cg.bookmarks.visit({ id: bk.id, agentId }); panel.style.display = 'none'; }
+        if (bk) { panel.style.display = 'none'; await openBookmark(bk); }
       }));
       listEl.querySelectorAll('[data-remove]').forEach(el => el.addEventListener('click', async (ev) => {
         ev.stopPropagation();
@@ -1784,6 +1989,61 @@
     else if (e.key === 'ArrowRight') { e.preventDefault(); if (wv.canGoForward()) wv.goForward(); }
   });
 
+  // ── Keyboard shortcuts — §0.39.265 ─────────────────────────────────────
+  // The main process catches every shortcut (in this chrome AND inside the
+  // page — src/main/index.js, bindings from src/shortcuts/registry.js plus
+  // Settings › Keyboard shortcuts) and sends this window the browser actions.
+  // Each action calls the same function its button or menu item uses.
+  let _recordingMacro = false;
+  async function _shortcutAutofill() {
+    const [settings, profiles] = await Promise.all([cg.api.get().catch(() => ({})), cg.autofill.listProfiles().catch(() => [])]);
+    const pid = settings.screenQaProfileId || (profiles && profiles[0] && profiles[0].id);
+    if (!pid) { addMsg('assistant', 'Autofill: add a profile in Settings \u203A Autofill & answers first.'); return; }
+    const r = await cg.autofill.fill(pid, agentId).catch(e => ({ error: e.message }));
+    addMsg('assistant', r && r.error ? `Autofill: ${r.error}` : `Autofill: ${(r && (r.filled ?? (r.results || []).length)) || 0} field(s) filled.`);
+  }
+  const SHORTCUT_ACTIONS = {
+    'tab.new':        () => _tabs.newTab(),
+    'tab.close':      () => _tabs.closeTab(_tabs.activeId),
+    'tab.reopen':     () => _tabs.reopenClosed(),
+    'tab.next':       () => { const ids = _tabs.tabs.map(t => t.id); _tabs.switchTo(ids[(ids.indexOf(_tabs.activeId) + 1) % ids.length]); },
+    'tab.prev':       () => { const ids = _tabs.tabs.map(t => t.id); _tabs.switchTo(ids[(ids.indexOf(_tabs.activeId) - 1 + ids.length) % ids.length]); },
+    'tab.last':       () => { const last = _tabs.tabs[_tabs.tabs.length - 1]; if (last) _tabs.switchTo(last.id); },
+    'page.reload':    () => wv.reload(),
+    'page.back':      () => { if (wv.canGoBack()) wv.goBack(); },
+    'page.forward':   () => { if (wv.canGoForward()) wv.goForward(); },
+    'page.find':      () => openFindBar(),
+    'page.print':     () => cg.driver.exec({ action: 'print', agentId }),
+    'page.zoomIn':    () => applyZoom(_zoomFactor + 0.1),
+    'page.zoomOut':   () => applyZoom(_zoomFactor - 0.1),
+    'page.zoomReset': () => applyZoom(1.0),
+    'page.address':   () => { urlBar.focus(); urlBar.select(); },
+    'page.fullscreen':() => cg.window.fullscreen(agentId),
+    'cg.bookmark':    () => document.getElementById('btn-bookmark').click(),
+    'cg.history':     () => _openPanelFromMenu('history-panel', () => _renderHistoryPanel('')),
+    'cg.copilot':     () => copilotToggle && copilotToggle.click(),
+    'cg.rewind':      () => document.getElementById('btn-rewind')?.click(),
+    'cg.picker':      () => pickerBtn.click(),
+    'cg.autofill':    () => _shortcutAutofill(),
+    'cg.macroRecord': async () => {
+      if (!_recordingMacro) {
+        const r = await cg.macros.recordStart(agentId).catch(e => ({ error: e.message }));
+        if (r && r.error) return addMsg('assistant', `Recording: ${r.error}`);
+        _recordingMacro = true; addMsg('assistant', '\u25CF Recording a macro \u2014 press the shortcut again to stop.');
+      } else {
+        _recordingMacro = false;
+        const r = await cg.macros.recordStop(agentId).catch(e => ({ error: e.message }));
+        addMsg('assistant', r && r.error ? `Recording: ${r.error}` : `Recording stopped${r && r.steps ? ` \u2014 ${r.steps.length} step(s)` : ''}. Save it in Settings \u203A Macros.`);
+      }
+    },
+  };
+  cg.shortcuts?.onAction(({ action, result }) => {
+    if (result) { addMsg('assistant', result.ok === false ? `Shortcut: ${result.error}` : result.text || 'Done.'); return; }
+    const fn = SHORTCUT_ACTIONS[action];
+    if (!fn) return;
+    Promise.resolve().then(fn).catch(e => addMsg('assistant', `Shortcut failed: ${e.message}`));
+  });
+
   // §LIBRARY 0.39.241 — the Downloads dropdown that lived here (2026-08-24, with
   // its Download Listeners form from 2026-08-28) is replaced by the Library
   // window's Downloads area (renderer/library/sections/downloads.js), which has
@@ -1866,7 +2126,7 @@
       search.focus();
       search.selectionStart = search.selectionEnd = search.value.length;
       panel.querySelectorAll('[data-open]').forEach(el => el.addEventListener('click', () => {
-        wv.loadURL(el.dataset.url);
+        navigate(el.dataset.url);
         panel.style.display = 'none';
       }));
       panel.querySelectorAll('[data-remove]').forEach(el => el.addEventListener('click', async (ev) => {
@@ -2420,12 +2680,8 @@
       // (btn-settings, src/toolbar/commands.js) with its own backing
       // button and click handler, so `cmd.id` above already returns
       // before this switch is ever reached for it — this case was dead.
-      // §NEW 2026-08-24 — the permanent fix for "toolbar accumulated too
-      // many pins over time": restore pinnedToolbarButtons to exactly the
-      // backend registry's defaultPinned set, in one action, instead of
-      // unpinning each stray item by hand.
       case 'capture-opportunity': {
-        // 0.39.259 — lib/opportunity capture() via copilot; the tab is read by its own agentId, nothing is typed.
+        // 0.39.272 — lib/opportunity capture() via copilot; the tab is read by its own agentId, nothing is typed.
         fetch('http://127.0.0.1:3750/api/opportunity/capture', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ agentId }) })
           .then(r => r.json())
           .then(r => {
@@ -2435,6 +2691,10 @@
           .catch(err => { toast(`Capture failed — copilot :3750 unreachable (${err.message})`, 'error', 5000); });
         break;
       }
+      // §NEW 2026-08-24 — the permanent fix for "toolbar accumulated too
+      // many pins over time": restore pinnedToolbarButtons to exactly the
+      // backend registry's defaultPinned set, in one action, instead of
+      // unpinning each stray item by hand.
       case 'reset-toolbar': {
         const defaults = TOOLBAR_COMMANDS.filter(c => c.pinnable && c.defaultPinned).map(c => c.id);
         cg.options.set({ pinnedToolbarButtons: defaults })
@@ -2878,9 +3138,13 @@
     ctxMenu.querySelector('[data-action="unpin-sep"]').style.display = ctxPinTarget ? '' : 'none';
     ctxMenu.querySelector('[data-action="customize-toolbar"]').style.display = ctxIsChrome ? '' : 'none';
     ctxMenu.querySelector('[data-action="customize-toolbar-sep"]').style.display = ctxIsChrome ? '' : 'none';
-    ctxMenu.style.left = Math.min(x, window.innerWidth - 180) + 'px';
-    ctxMenu.style.top  = Math.min(y, window.innerHeight - 220) + 'px';
+    // §0.39.265 — clamp to the menu's real, measured size (it grows with
+    // its rows) instead of a guessed 180×220, and never to a NaN position.
     ctxMenu.classList.add('visible');
+    const w = ctxMenu.offsetWidth || 180, h = ctxMenu.offsetHeight || 220;
+    const px = Number.isFinite(x) ? x : 0, py = Number.isFinite(y) ? y : 0;
+    ctxMenu.style.left = Math.max(4, Math.min(px, window.innerWidth - w - 4)) + 'px';
+    ctxMenu.style.top  = Math.max(4, Math.min(py, window.innerHeight - h - 4)) + 'px';
   }
   function hideCtxMenu() { ctxMenu.classList.remove('visible'); }
 
@@ -2910,9 +3174,15 @@
     // where on the page the click actually was. Adding the webview's own
     // offset within the window converts it to window-relative, the same
     // coordinate space showCtxMenu()'s Math.min clamp already assumes.
+    //
+    // §0.39.265 — still stuck: Electron's <webview> 'context-menu' event
+    // carries the point as e.params.x / e.params.y; e.x / e.y are undefined,
+    // so left/top became "NaNpx", which the browser ignores, and the menu sat
+    // at its default top-left corner. Read params (e.x kept as a fallback).
     const r = wv.getBoundingClientRect();
-    ctxPageXY = { x: e.x, y: e.y };
-    showCtxMenu(r.left + e.x, r.top + e.y);
+    const p = e.params || e;
+    ctxPageXY = { x: p.x, y: p.y };
+    showCtxMenu(r.left + p.x, r.top + p.y);
   });
 
   ctxMenu.addEventListener('click', async (e) => {

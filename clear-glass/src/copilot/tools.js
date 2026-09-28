@@ -36,7 +36,7 @@ const TOOLS = [
   { name: 'picker.disable',   cat: 'browser',  desc: 'Disable element picker', params: {} },
   { name: 'record.start',     cat: 'browser',  desc: 'Start recording user actions for replay', params: {} },
   { name: 'record.stop',      cat: 'browser',  desc: 'Stop recording, return action sequence', params: {} },
-  // 0.39.259 — read the page, and the form actions typing alone could not do. Results come back to you.
+  // 0.39.272 — read the page, and the form actions typing alone could not do. Results come back to you.
   { name: 'readPage',         cat: 'browser',  desc: 'What is on the page: text, headings, links, every form field (label + selector), every button', params: { maxText: 'number?' } },
   { name: 'state',            cat: 'browser',  desc: 'Everything Clear Glass is doing: open tabs with url/title, providers, accounts, autofill profiles, macros, userscripts', params: {} },
   { name: 'setValue',         cat: 'browser',  desc: 'Set a field\'s whole value at once (long answers; React/Vue inputs register it)', params: { selector: 'string', value: 'string' } },
@@ -127,7 +127,7 @@ const TOOLS = [
   { name: 'userscript.inject',cat: 'system',   desc: 'Inject a userscript into an agent tab', params: { agentId: 'string', scriptId: 'string' } },
   { name: 'userscript.toggle',cat: 'system',   desc: 'Enable or disable a userscript', params: { scriptId: 'string', enabled: 'boolean' } },
 
-  // ── NEXUS (0.39.259) — the memory atlas and the opportunity pipeline, run through copilot's tool gate ─────────
+  // ── NEXUS (0.39.272) — the memory atlas and the opportunity pipeline, run through copilot's tool gate ─────────
   { name: 'context.directory', cat: 'nexus',   desc: 'Every memory system and graph NEXUS has, with row counts and how to query each', params: {} },
   { name: 'context.search',   cat: 'nexus',    desc: 'Search every memory system and graph at once; hits cite their source', params: { query: 'string', sources: 'string[]?', limit: 'number?' } },
   { name: 'opportunity.status', cat: 'nexus',  desc: 'Job/freelance pipeline: counts per stage, what needs you', params: {} },

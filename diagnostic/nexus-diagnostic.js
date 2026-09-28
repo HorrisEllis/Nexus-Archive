@@ -45,6 +45,7 @@ const { sigma, mean }    = require('../intelligence/baseline');
 // actually being declared. This diagnostic makes that check periodic and
 // automatic instead of something someone has to think to run by hand.
 const { LoomDriver } = require('../loom/schema/index.js');
+const WireIntegrity = require('./wire-integrity');
 // ── Meta layer: telemetry codec replaces hand-rolled stats where available ────
 let _metaTelemetry = null;
 function _getMetaTel() {
@@ -168,7 +169,7 @@ const SYSTEMS = {
   // nothing recent.
   'clear-glass':{ port: 7704, dataDir: 'data/clear-glass', healthPath: '/status',  label: 'Clear Glass', optional: true, preferHeartbeat: true },
   // §MONITOR-03: UI surfaces — probed as virtual systems, no dataDir
-  'forge-shell':{ port: 9000, dataDir: 'data/orchestrator', healthPath: '/ui/forge-shell.html',
+  'forge-shell':{ port: 9000, dataDir: 'data/orchestrator', healthPath: '/ui/forge-shell/forge-shell.html',
     label: 'Forge Shell', virtual: true, optional: true,
     // Forge shell is served by orchestrator — it's healthy when orch is healthy
     // We track it separately to surface in the diagnostic tile
@@ -385,8 +386,11 @@ function startService() {
       openGaps.set(gapKey, {
         uuid: gapKey, type: 'dangling-hook', system: g.source,
         hookId: g.meta.hookId, direction: g.meta.direction,
-        detail: g.body, hydratedFrom: g.uuid,
+        detail: g.body, hydratedFrom: g.uuid, gapFieldUuids: [g.uuid],
       });
+      // several persisted rows can name the same hook (older boots); keep them all so the scan can close every one
+      const cur = openGaps.get(gapKey);
+      if (cur.gapFieldUuids && !cur.gapFieldUuids.includes(g.uuid)) cur.gapFieldUuids.push(g.uuid);
     }
     if (persistedOpen.length)
       console.log(`[diag] hydrated ${persistedOpen.length} open dangling-hook gap(s) from prior boot — wire-integrity scan will only announce genuinely NEW ones`);
@@ -422,24 +426,14 @@ function startService() {
       console.warn('[diag] wire-integrity scan: graph().nodes shape unexpected — 0 hooks matched out of', graph.nodes.length, 'nodes');
     }
 
-    const wiredFrom = new Set(graph.edges.map(e => e.from));
-    const wiredTo   = new Set(graph.edges.map(e => e.to));
+    // §0.39.260 — classification moved to diagnostic/wire-integrity.js (pure,
+    // tested). Require-graph `<file>.import/.export` hooks are counted, not
+    // raised: see that file's header for why they are not wiring contracts.
+    const cls = WireIntegrity.classify(graph);
+    const derivedUnwired = cls.derivedUnwired;
 
-    for (const node of graph.nodes) {
-      if (!node.direction) continue; // components have no direction; only hooks do
-      // §CORRECTED 2026-07-11 — caught by running this against the real
-      // seeded data, not just reading the logic: a webserver/api hook's
-      // 'in' direction means "an external client calls this," and by
-      // definition nothing inside the declared graph wires into it —
-      // the caller is a browser, not another component. Flagging those
-      // as dangling was a false positive on the very first real run.
-      // Only 'callto'/'direct'/'event_bus' in-hooks are suspicious when
-      // unwired, since those SHOULD have an internal source.
-      const isEntryPoint = node.direction === 'in' && (node.type === 'webserver' || node.type === 'api');
-      const isOrphanOut = node.direction === 'out' && !wiredFrom.has(node.id);
-      const isOrphanIn  = node.direction === 'in'  && !isEntryPoint && !wiredTo.has(node.id);
-      if (!isOrphanOut && !isOrphanIn) continue;
-
+    for (const node of cls.dangling) {
+      const isOrphanOut = node.isOrphanOut;
       const gapKey = `wire-integrity:${node.id}`;
       if (openGaps.has(gapKey)) continue; // don't re-open every scan — same dedup discipline as the stuck-contract gaps above
 
@@ -459,7 +453,30 @@ function startService() {
       _reportToGapField(gap);
       console.log(`[diag] GAP ${gap.system}: ${gap.type} hook=${gap.hookId} (${gap.direction})`);
     }
+
+    // Close what no longer qualifies: a hook that was since wired, removed
+    // from the registry (the pruned imported-repo records), or is a derived
+    // require-graph hook. Before this, a dangling-hook gap could be opened
+    // but never closed, so every one ever raised was re-hydrated each boot.
+    const gapField = (() => { try { return require('../lib/gap-field'); } catch (_) { return null; } })();
+    let closed = 0;
+    for (const [gapKey, g] of openGaps) {
+      if (g.type !== 'dangling-hook' || !gapKey.startsWith('wire-integrity:')) continue;
+      const why = WireIntegrity.closeReason(g.hookId, cls);
+      if (!why) continue;
+      openGaps.delete(gapKey);
+      const uuids = g.gapFieldUuids || (g.hydratedFrom ? [g.hydratedFrom] : []);
+      if (gapField && typeof gapField.resolve === 'function') for (const u of uuids) gapField.resolve(u, why);
+      broadcast({ type: 'gap.resolved', gap: { uuid: gapKey, hookId: g.hookId, reason: why }, ts: Date.now() });
+      closed++;
+    }
+    if (closed) console.log(`[diag] wire-integrity: closed ${closed} dangling-hook gap(s) that no longer qualify`);
+    if (derivedUnwired !== _lastDerivedUnwired) {
+      _lastDerivedUnwired = derivedUnwired;
+      if (derivedUnwired) console.log(`[diag] wire-integrity: ${derivedUnwired} require-graph hook(s) without a wire (root/leaf files, dynamic requires) — counted, not raised as gaps`);
+    }
   }
+  let _lastDerivedUnwired = -1;
   // Wire declarations don't change every 15s the way system health does —
   // every 60s is frequent enough to catch a regression quickly without
   // spamming a scan that reads the whole registry each time.
@@ -1014,7 +1031,9 @@ function startService() {
 
     // 5. Forge Shell availability check — it's a UI, not a service
     // Healthy when orchestrator is healthy and the file exists
-    const forgeFile = path.join(ROOT, 'ui', 'forge-shell.html');
+    // §0.39.265 — the shell moved into its own folder (ui/forge-shell/); this
+    // still looked for ui/forge-shell.html and warned "missing" on every boot.
+    const forgeFile = path.join(ROOT, 'ui', 'forge-shell', 'forge-shell.html');
     const forgeShellExists = fs.existsSync(forgeFile);
     const orchState = systemState['orchestrator'] || {};
     const forgeHealthy = forgeShellExists && orchState.online;
@@ -1022,8 +1041,8 @@ function startService() {
       const gapKey = 'forge-shell:unavailable';
       if (!_remediatedGaps.has(gapKey)) {
         _remediatedGaps.add(gapKey);
-        const reason = !forgeShellExists ? 'ui/forge-shell.html missing' : 'orchestrator offline';
-        _logRemediation({ action: 'forge_shell_unavailable', reason, fix: forgeShellExists ? 'Start orchestrator' : 'Deploy ui/forge-shell.html' });
+        const reason = !forgeShellExists ? 'ui/forge-shell/forge-shell.html missing' : 'orchestrator offline';
+        _logRemediation({ action: 'forge_shell_unavailable', reason, fix: forgeShellExists ? 'Start orchestrator' : 'Deploy ui/forge-shell/forge-shell.html' });
         console.log(`[diagnostic] ⚠  forge-shell unavailable — ${reason}`);
       }
     } else {

@@ -112,7 +112,7 @@ const components=[
   }),
   _c('person_model.health','GET','/api/person-model/health','Person-model stats + chain state',{tags:['person-model']}),
 
-  // ── OPPORTUNITY + CONTEXT ATLAS (0.39.259) ─────────────────────────────
+  // ── OPPORTUNITY + CONTEXT ATLAS (0.39.272) ─────────────────────────────
   _c('opportunity.status','GET','/api/opportunity/status','Job/freelance pipeline: counts per stage and what waits on James',{grammar:['job status','applications','what needs me','opportunity status'],tags:['opportunity']}),
   _c('opportunity.profile.get','GET','/api/opportunity/profile','The job profile: skills, roles, floor, sources, per-platform policy',{tags:['opportunity']}),
   _c('opportunity.profile.set','POST','/api/opportunity/profile','Update the job profile (merge)',{tags:['opportunity'],permissions:['user']}),
@@ -170,10 +170,34 @@ const components=[
     grammar:['agent limits','what can chatgpt take','agent capability','chunk size'],
     tags:['agents','capability','measured']
   }),
-  _c('agent.calibrate','POST','/api/agents/calibrate',
-    'Binary-search an agent\u2019s real input limit from live probes',{
-    grammar:['calibrate agent','find the limit'],tags:['agents','capability'],permissions:['user']
-  }),
+  // §0.39.271 C1 — NOT SERVED, kept (§0.3). lib/agent-capability.js calibrate() needs a probe(size)
+  // that sends a live prompt of N tokens to the agent; no such probe is wired, and a
+  // guessed one would spend real quota. Limits are measured from real outcomes (record())
+  // and read at GET /api/agents/capability.
+  Object.assign(_c('agent.calibrate','POST','/api/agents/calibrate',
+    'Binary-search an agent\u2019s real input limit from live probes — NOT SERVED: no live probe is wired',{
+    grammar:['calibrate agent','find the limit'],tags:['agents','capability','not-served'],permissions:['user']
+  }),{served:false,notServed:'lib/agent-capability.js calibrate() needs a live probe(size) function; none is wired'}),
+
+  // ── §0.39.271 C1 — served by copilot/server.js, missing from this registry ──
+  // (declared ≠ served both ways: these 16 answered but were not declared; a registry
+  // missing them left their command/capability nodes unwritten).
+  _c('events','GET','/events','Server-sent events for the copilot UI',{tags:['sse']}),
+  _c('agent.suite','GET','/api/agent/suite','The current agent and every hat',{grammar:['agent suite','hats']}),
+  _c('agent.current','GET','/api/agent/current','Which agent copilot is wearing now',{grammar:['current agent']}),
+  _c('agent.switch','POST','/api/agent/switch','Switch the worn agent/hat, then check it is reachable',{grammar:['switch agent','wear hat']}),
+  _c('sessions.get','GET','/api/sessions/:id','One session (404 when unknown)'),
+  _c('context.get','GET','/api/context/:id','The context snapshot copilot would send for a session'),
+  _c('event','POST','/api/event','Add one event to the stream'),
+  _c('bridge.deliver','POST','/bridge/deliver','Delivery from the retired Bridge path — still called'),
+  _c('queue.health','GET','/api/queue/health','Every work queue\'s health'),
+  _c('reword','POST','/api/reword','Reword a text (lib/reword)'),
+  _c('activity','GET','/api/activity','What copilot has been up to (?hours=, ?since=, &text=1)',{grammar:['what have you been up to','activity']}),
+  _c('prompt.resolve','GET','/api/prompt/resolve','Which backend a prompt with no backend would go to'),
+  _c('prompt.tools','POST','/api/prompt/tools','A prompt with the full tool loop (all 109 tools unless a scope is given)',{grammar:['use tools']}),
+  _c('channel','POST','/api/channel','Set the channel on every session'),
+  _c('observe','POST','/api/observe','A UI confusion signal into the user model'),
+  _c('person_model.correct','POST','/api/person-model/correct','Correct a person-model node',{tags:['person-model'],permissions:['user']}),
 
   // ── LEDGER WIRE ─────────────────────────────────────────────────────────
   _c('ledger.stream','GET','/ledger/stream',
