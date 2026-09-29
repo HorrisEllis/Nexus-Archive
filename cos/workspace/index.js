@@ -36,9 +36,24 @@ const MODULE_ID = 'nexus.cos.workspace';
 const VERSION = '1.0.0';
 const BRANCH_PREFIX = 'nexus/';
 
+// §0.39.280 BS14 — James's log: "git worktree failed: warning: in the working copy of 'atlas.json', LF will be replaced by
+// CRLF …". On Windows every git call printed a CRLF warning per file, and the reason shown was the first 300 characters
+// of that — the real failure (often the 60s timeout on a 90 MB tree) was cut off. Now: no line-ending conversion and no
+// warning (core.autocrlf / core.safecrlf off, per call — the person's own git config is untouched), 10 minutes for a
+// large tree, and gitWhy() reports git's own error lines, never its warnings.
+const GIT_TIMEOUT_MS = 600000;
 function _git(args, { cwd, git = 'git', env } = {}) {
-  return execFileSync(git, args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 60000, windowsHide: true,
+  return execFileSync(git, ['-c', 'core.autocrlf=false', '-c', 'core.safecrlf=false', ...args], { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
+    timeout: GIT_TIMEOUT_MS, windowsHide: true, maxBuffer: 64 * 1024 * 1024,
     env: { ...process.env, GIT_TERMINAL_PROMPT: '0', ...(env || {}) } }).trim();
+}
+/** gitWhy(error) — why a git call failed, in git's words: its error lines (warnings dropped), or the timeout/exit. */
+function gitWhy(e) {
+  if (!e) return 'unknown';
+  if (e.code === 'ETIMEDOUT' || e.signal === 'SIGTERM') return `git timed out after ${GIT_TIMEOUT_MS / 1000}s`;
+  const lines = String(e.stderr || '').split(/\r?\n/).map(l => l.trim()).filter(l => l && !/^warning:/i.test(l) && !/^hint:/i.test(l));
+  const msg = lines.slice(-3).join(' | ') || (e.status != null ? `git exited ${e.status}` : String(e.message || e).split('\n')[0]);
+  return msg.slice(0, 400);
 }
 function _real(p) { try { return fs.realpathSync(p); } catch (_) { return path.resolve(p); } }
 
@@ -95,7 +110,7 @@ function branchWorkspace({ originDir, name, root = null, git = 'git' } = {}) {
     try { _git(['rev-parse', '--verify', '--quiet', `refs/heads/${branch}`], { cwd: originDir, git }); hasBranch = true; } catch (_) {}
     _git(hasBranch ? ['worktree', 'add', '-q', dir, branch] : ['worktree', 'add', '-q', '-b', branch, dir, 'HEAD'], { cwd: originDir, git });
     return { ok: true, dir, branch, originDir, base: own.head, reused: false };
-  } catch (e) { return { ok: false, error: `git worktree failed: ${(e.stderr || e.message || '').toString().trim().slice(0, 300)}` }; }
+  } catch (e) { return { ok: false, error: `git worktree failed: ${gitWhy(e)}` }; }
 }
 
 /** listBranches(originDir) -> [{ dir, branch, head }] — the original's worktrees other than itself */
@@ -121,7 +136,7 @@ function removeBranch({ originDir, dir, deleteBranch = false, git = 'git' } = {}
     _git(['worktree', 'remove', '--force', dir], { cwd: originDir, git });
     if (deleteBranch && w.branch) _git(['branch', '-D', w.branch], { cwd: originDir, git });
     return { ok: true, removed: dir, branch: w.branch, branchKept: !deleteBranch };
-  } catch (e) { return { ok: false, error: (e.stderr || e.message || '').toString().trim().slice(0, 300) }; }
+  } catch (e) { return { ok: false, error: gitWhy(e) }; }
 }
 
 /**
@@ -162,6 +177,8 @@ function desktopDisk(stateRoot) { return path.join(stateRoot, DESKTOP_DIR, 'desk
  *   -> { ok, state: 'booting'|'running', compartmentId, disk, backing, ports, reused } | { ok:false, error }
  * Returns once QEMU is spawned; the repo is copied in the background (desktopStatus says when it is there).
  */
+const EARLY_EXIT_MS = 15000;
+
 function startDesktop({ compartmentId, name = 'repo', workDir, stateRoot, originStateRoot = null, baseImage = null, ramMB = 4096, cpus = 2,
                         network = 'nat', _qemu = null, _spawn = null, _ga = null, _host = null, _runImg = null } = {}) {
   if (!compartmentId) return { ok: false, error: 'compartmentId required' };
@@ -189,17 +206,43 @@ function startDesktop({ compartmentId, name = 'repo', workDir, stateRoot, origin
   const vmConfig = { disk, baseImage: null, iso: null, ramMB, cpus, cpu: 'max', ephemeral: false, network: network === 'none' ? 'none' : 'nat',
     headless: true, accelerator: null, machineType: 'q35', vmStateDir: stateDir, guestAgent: true,
     shareDir: share === '9p' ? workDir : null, shareDisk };
-  let built;
-  try { built = q.buildQemuArgs(vmConfig, compartmentId, `desktop-${String(compartmentId).slice(0, 8)}`); }
-  catch (e) { return { ok: false, error: `could not build the VM: ${e.message}` }; }
   const bin = typeof q.qemuSystemBin === 'function' ? q.qemuSystemBin() : 'qemu-system-x86_64';
-  let proc;
-  try { proc = spawn(bin, built.args, { stdio: ['ignore', 'ignore', 'pipe'], windowsHide: true }); }
-  catch (e) { return { ok: false, error: `qemu did not start: ${e.message}` }; }
+  // §0.39.280 — James's screenshot: "unreachable — Could not reach the VM's screen on port 5724 … accel whpx". A VM
+  // that dies at once never serves its screen. The one launch below is watched: an exit within EARLY_EXIT_MS on a
+  // hardware accelerator (whpx / hvf / kvm — whpx refuses some CPU models and machines) is retried ONCE in software
+  // (tcg, cpu qemu64+) and said (accelFallback, with the first attempt's stderr); anything else is reported as it is.
+  const launch = (accelerator, cpu) => {
+    const built = q.buildQemuArgs({ ...vmConfig, accelerator, cpu }, compartmentId, `desktop-${String(compartmentId).slice(0, 8)}`);
+    const proc = spawn(bin, built.args, { stdio: ['ignore', 'ignore', 'pipe'], windowsHide: true });
+    return { built, proc };
+  };
+  let first;
+  try { first = launch(null, vmConfig.cpu); }
+  catch (e) { return { ok: false, error: `${/buildQemuArgs|vmConfig/.test(e.message) ? 'could not build the VM' : 'qemu did not start'}: ${e.message}` }; }
+  const { built } = first;
   const sess = { compartmentId, name, disk, backing, branchedFrom: backing === originDisk ? 'original' : 'base', startedAt: Date.now(), exited: null,
-    stderr: '', repoIn: workDir ? 'pending' : 'none', repoError: null, accel: built.accel, ports: { display: built.vncDisplayNum, vncPort: 5900 + built.vncDisplayNum, wsPort: 5700 + built.vncDisplayNum }, proc, built };
-  if (proc.stderr && proc.stderr.on) proc.stderr.on('data', d => { if (sess.stderr.length < 20000) sess.stderr += d; });
-  if (proc.on) proc.on('exit', (code) => { sess.exited = code; });
+    stderr: '', repoIn: workDir ? 'pending' : 'none', repoError: null, accel: built.accel, accelFallback: null,
+    ports: { display: built.vncDisplayNum, vncPort: 5900 + built.vncDisplayNum, wsPort: 5700 + built.vncDisplayNum }, proc: first.proc, built };
+  const watch = (proc, canRetry) => {
+    if (proc.stderr && proc.stderr.on) proc.stderr.on('data', d => { if (sess.stderr.length < 20000) sess.stderr += d; });
+    if (!proc.on) return;
+    proc.on('exit', (code) => {
+      if (sess.proc !== proc) return;
+      const early = Date.now() - sess.startedAt < EARLY_EXIT_MS;
+      if (canRetry && early && !sess.stopping && sess.accel !== 'tcg') {
+        const why = sess.stderr.trim().split('\n').slice(-3).join(' ') || `exit ${code}`;
+        try {
+          const again = launch('tcg', 'qemu64,+ssse3,+sse4.1,+sse4.2,+popcnt');
+          sess.accelFallback = { from: sess.accel, to: 'tcg', reason: why.slice(0, 400) };
+          sess.accel = 'tcg'; sess.stderr = ''; sess.startedAt = Date.now(); sess.proc = again.proc; sess.built = again.built;
+          watch(again.proc, false);
+          return;
+        } catch (_) { /* fall through: report the first exit */ }
+      }
+      sess.exited = code === null ? -1 : code;
+    });
+  };
+  watch(first.proc, true);
   _sessions.set(compartmentId, sess);
   if (workDir) {
     const GA = _ga || require('../compartment/guest-agent.js');
@@ -208,7 +251,7 @@ function startDesktop({ compartmentId, name = 'repo', workDir, stateRoot, origin
       ? `mkdir -p ${dest} && mount -t 9p -o trans=virtio,version=9p2000.L cos_share ${dest}`
       : `mkdir -p ${dest} && (tar -xf /dev/vdb -C ${dest} --no-same-owner 2>/dev/null || tar -xf /dev/vdb -C ${dest}) && chown -R nexus ${dest} 2>/dev/null; true`;
     Promise.resolve().then(async () => {
-      const agent = await GA.connectWhenReady(built.qga, { timeoutMs: 600000 });
+      const agent = await GA.connectWhenReady(sess.built.qga, { timeoutMs: 600000 });
       const r = await agent.run('/bin/sh', ['-c', cmd], { timeoutMs: 180000 });
       sess.repoIn = r.exitCode === 0 ? dest : 'failed';
       if (r.exitCode !== 0) sess.repoError = (r.stderr || '').trim().slice(0, 300) || `exit ${r.exitCode}`;
@@ -223,7 +266,7 @@ function desktopStatus(compartmentId) {
   const s = _sessions.get(compartmentId);
   if (!s) return { compartmentId, state: 'none', ports: desktopFor(compartmentId) };
   const state = s.exited !== null ? 'stopped' : (s.repoIn === 'pending' ? 'booting' : 'running');
-  return { compartmentId, state, ports: s.ports, disk: s.disk, backing: s.backing, branchedFrom: s.branchedFrom, accel: s.accel, repoIn: s.repoIn,
+  return { compartmentId, state, ports: s.ports, disk: s.disk, backing: s.backing, branchedFrom: s.branchedFrom, accel: s.accel, accelFallback: s.accelFallback || null, repoIn: s.repoIn,
     repoError: s.repoError, startedAt: s.startedAt, exitCode: s.exited, error: s.exited !== null && s.exited !== 0 ? s.stderr.trim().split('\n').slice(-3).join(' ') : null };
 }
 
@@ -231,9 +274,10 @@ function desktopStatus(compartmentId) {
 function stopDesktop(compartmentId) {
   const s = _sessions.get(compartmentId);
   if (!s || s.exited !== null) return { ok: true, state: 'stopped', kept: s ? s.disk : null };
+  s.stopping = true;
   try { s.proc.kill('SIGTERM'); } catch (_) {}
   return { ok: true, state: 'stopping', kept: s.disk };
 }
 
-module.exports = { MODULE_ID, VERSION, BRANCH_PREFIX, DESKTOP_DIR, slug, gitAvailable, ownRepo, branchWorkspace, listBranches, removeBranch, branchDisk, desktopFor,
+module.exports = { gitWhy, MODULE_ID, VERSION, BRANCH_PREFIX, DESKTOP_DIR, slug, gitAvailable, ownRepo, branchWorkspace, listBranches, removeBranch, branchDisk, desktopFor,
   desktopDisk, startDesktop, desktopStatus, stopDesktop, _sessions };

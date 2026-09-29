@@ -38,6 +38,7 @@
  */
 
 const { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage, session, shell } = require('electron');
+const CompartmentWindow = require('./compartment-window.js');
 const path   = require('path');
 const http   = require('http');
 const { randomUUID } = require('crypto');
@@ -1615,6 +1616,9 @@ async function bootstrap() {
   // 14.5. Wire — ErosmancerOS registration + :7704 HTTP server (non-fatal)
   _startWire().catch(err => console.warn(`[ClearGlass/Wire] start failed (non-fatal): ${err.message}`));
 
+  // 14.9. §0.39.280 — window controls for idearium's compartment windows (main/compartment-window.js)
+  try { CompartmentWindow.registerIpc(ipcMain, BrowserWindow); } catch (e) { console.warn(`[ClearGlass] compartment-window ipc: ${e.message}`); }
+
   // 15. IPC bridge — HTTP command endpoint :IPC_PORT + ipcMain handlers
   ipcBridge = new IpcBridge({
     port:        IPC_PORT,
@@ -2551,6 +2555,7 @@ app.on('web-contents-created', (_e, contents) => {
     event.preventDefault();
     try { _runShortcut(action, accel, owner); } catch (e) { console.warn(`[shortcuts] ${accel} → ${action} failed: ${e.message}`); }
   });
+  try { CompartmentWindow.attach(contents); } catch (_) {}   // §0.39.280 — idearium's desktop / settings pop-outs
 });
 
 // ── Shutdown ───────────────────────────────────────────────────────────────

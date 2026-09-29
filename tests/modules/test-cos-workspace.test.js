@@ -128,6 +128,41 @@ const git = (cwd, ...a) => execFileSync('git', a, { cwd, encoding: 'utf8', stdio
     assert.strictEqual(W.desktopStatus('never').state, 'none');
   });
 
+  await t('WS-13', '0.39.280: a VM that dies at once on whpx is retried once in software (tcg) and said; a second death is reported with QEMU\'s words', async () => {
+    const F = fakes();
+    F.q.buildQemuArgs = (cfg) => ({ args: ['-accel', String(cfg.accelerator)], qga: { transport: 'tcp', port: 1 }, vncDisplayNum: 9, accel: cfg.accelerator || 'whpx', cfg });
+    const r = W.startDesktop({ compartmentId: 'c-whpx', stateRoot: path.join(tmp, 'c-whpx'), baseImage: path.join(tmp, 'orig.qcow2'), _qemu: F.q, _spawn: F.spawn, _ga: F.ga, _runImg: (a) => fs.writeFileSync(a[a.length - 1], 'ov') });
+    assert.ok(r.ok && r.accel === 'whpx');
+    F.spawned[0].p.stderr.emit('data', 'qemu: WHPX: Failed to emulate MMIO access\n');
+    F.spawned[0].p.emit('exit', 1);
+    assert.strictEqual(F.spawned.length, 2, 'retried once');
+    assert.deepStrictEqual(F.spawned[1].args, ['-accel', 'tcg']);
+    let s = W.desktopStatus('c-whpx');
+    assert.strictEqual(s.state, 'running');
+    assert.deepStrictEqual([s.accel, s.accelFallback.from, /WHPX/.test(s.accelFallback.reason)], ['tcg', 'whpx', true]);
+    F.spawned[1].p.stderr.emit('data', 'qemu: could not open disk\n');
+    F.spawned[1].p.emit('exit', 1);
+    assert.strictEqual(F.spawned.length, 2, 'never a third try');
+    s = W.desktopStatus('c-whpx');
+    assert.deepStrictEqual([s.state, s.exitCode], ['stopped', 1]);
+    assert.match(s.error, /could not open disk/);
+    const page = fs.readFileSync(path.join(ROOT, 'idearium/ui/desktop.html'), 'utf8');
+    assert.match(page, /async function whyUnreachable\(\)/, 'the viewer asks why instead of only saying unreachable');
+  });
+
+  await t('WS-14', '0.39.280 BS14: git errors are git\'s own error lines, never its CRLF warnings; a CRLF-configured git makes the branch without warnings', () => {
+    const warn = Array.from({ length: 40 }, (_, i) => `warning: in the working copy of 'f${i}.json', LF will be replaced by CRLF the next time Git touches it`).join('\n');
+    assert.strictEqual(W.gitWhy({ stderr: warn + '\nfatal: \'nexus/x\' is already checked out at \'/y\'', status: 128 }), "fatal: 'nexus/x' is already checked out at '/y'");
+    assert.strictEqual(W.gitWhy({ stderr: warn, status: 1 }), 'git exited 1', 'only warnings → the exit status, not the warnings');
+    assert.match(W.gitWhy({ code: 'ETIMEDOUT' }), /timed out after 600s/);
+    const o = path.join(tmp, 'crlf-orig'); fs.mkdirSync(o, { recursive: true });
+    fs.writeFileSync(path.join(o, 'atlas.json'), '{"a":1}\n');
+    const prev = process.env.GIT_CONFIG_PARAMETERS;
+    process.env.GIT_CONFIG_PARAMETERS = "'core.autocrlf'='true' 'core.safecrlf'='warn'";   // what a Windows git config does
+    try { const r = W.branchWorkspace({ originDir: o, name: 'crlf code' }); assert.ok(r.ok, JSON.stringify(r)); }
+    finally { if (prev === undefined) delete process.env.GIT_CONFIG_PARAMETERS; else process.env.GIT_CONFIG_PARAMETERS = prev; }
+  });
+
   // ── wiring ──────────────────────────────────────────────────────────────
   await t('WS-20', 'qemu-runtime: a headless VM\'s screen is also a websocket on 5700+N; desktopPorts says where', () => {
     const q = require(path.join(ROOT, 'cos/compartment/qemu-runtime.js'));
