@@ -88,6 +88,8 @@ const SUITES = [
   'flush-redundancy.test.js',
   'admin-server-routes.test.js',
   'orchestrator-cli.test.js',
+  'test-c0-cfr-collapse-anchor.test.js',
+  'test-c1-compound-failure-mode.test.js',
   'interaction-contract.test.js',
   'uid.test.js',
   'alk.test.js',

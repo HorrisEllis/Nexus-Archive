@@ -135,6 +135,12 @@ try { ({ _bootSystems } = require('../cli/boot-systems')); } catch(e) { console.
 // .open()/.startAutoSave()/.getAllBaselines()/.getAllStats()/.scanInvariants()
 // surface, plus .handleCFRRoute() for the /cfr/* debugger routes mounted below.
 try { ({ createCFRLedger } = require('../intelligence/cfr/ledger')); } catch(e) { console.warn('[orchestrator] cfr ledger not found:', e.message); createCFRLedger = null; }
+// C0 (staging-self-heal phasemap) — anchored gaps need lib/gap-field.js, the
+// one real report() entry point (not re-derived, §16.5 already applied once
+// in cortex/gap-finder; a second inline dedup/insert would be exactly the
+// duplication that file was written to remove).
+let gapField;
+try { gapField = require('../lib/gap-field'); } catch (e) { console.warn('[orchestrator] gap-field not found:', e.message); gapField = null; }
 
 // ── NEXUS INTERCONNECT LAYER ──────────────────────────────────────────────────
 const nexusBus       = (() => { try { return require('../nexus/nexus-bus');           } catch(e) { console.warn('[orc] nexus-bus:',e.message); return null; } })();
@@ -475,6 +481,38 @@ function _getEventLedger(system) {
           if (SIGNAL_TYPES.has(gap.type)) return;
           console.warn(`[orchestrator][cfr:${system}] ${gap.type}: ${gap.message}`);
         } catch(_) {}
+
+        // §C0 (staging-self-heal phasemap, decided 2026-09-28) — ONLY
+        // 'cfr.collapse' becomes a real gap for now. 'sigma.spike' is left
+        // as a log line above: the real firing rate of either type against
+        // SIGMA_GAP_THRESHOLD/CFR_COLLAPSE_THRESHOLD has not been observed
+        // in this environment, and gap-field's dedup (type+source, one open
+        // row, occurrence bump) means a high-rate type would still be safe
+        // as ONE gap, not a flood — but "safe" was not enough to widen this
+        // without seeing it. 'delta.tension' stays dropped, as it already
+        // was (§CFR-WIRE-02's own reason above still holds: a field metric,
+        // not an actionable gap). Revisit sigma.spike once cfr.collapse's
+        // real rate is seen.
+        //
+        // The anchor is the PAIR (ledgerSystem, entryUuid), not the gap's
+        // own uuid: this system's ledger and causal graph are what C1 will
+        // walk, and `system` (this closure's own createCFRLedger arg, not
+        // re-derived) is the only correct value — gap.entry._system would be
+        // the emitting sub-source, not the ledger this entry lives in.
+        // causedBy is the ledger entry's own uuid (gap.entry.uuid, written
+        // by intelligence/cfr/ledger.js at record time), never inferred
+        // from timestamp or type (§I9 — no invented causal identity).
+        try {
+          if (gap.type !== 'cfr.collapse' || !gapField || !gap.entry) return;
+          gapField.report({
+            type: gap.type,
+            body: gap.message,
+            source: `cfr.ledger.${system}`,
+            domain: 'system',
+            severity: gap.severity >= 0.75 ? 'high' : gap.severity >= 0.4 ? 'medium' : 'low',
+            meta: { ledgerSystem: system, causedBy: gap.entry.uuid, cfrRegime: gap.entry.cfr?.regime },
+          });
+        } catch (e) { console.warn(`[orchestrator][cfr:${system}] gap-field report failed:`, e.message); }
       },
     });
     ledger.open();
@@ -978,7 +1016,21 @@ if (M==='GET' && u.pathname==='/nexus-bus/sse') {
   // ── CFR-Ω routes — orchestrator's own field debugger ────────────────────
   // §CFR-WIRE-03: same handleCFRRoute() contract as cortex/guardian/bridge.
   if (u.pathname.startsWith('/cfr')) {
-    if (_eventLedger && _eventLedger.handleCFRRoute && _eventLedger.handleCFRRoute(req, res, u)) return;
+    // §C1 (staging-self-heal phasemap, D2=a decided 2026-09-28) — the compound
+    // chain lookup can name WHICH system's ledger/graph to read. Each system has
+    // its own ledger and its own CausalGraph, and a C0 anchor is the pair
+    // (ledgerSystem, entryUuid): cortex (a different process) cannot reach
+    // _eventLedgers, so it asks over this route. Only an ALREADY-EXISTING
+    // ledger is used (_eventLedgers.get, never _getEventLedger — that lazily
+    // creates a ledger + directory for any name it is handed). An unknown
+    // system is an explicit ok:false, never a silent fall-back to the
+    // orchestrator's own graph: the wrong graph would be an invented chain (I9).
+    const _c1sys = (M==='GET' && u.pathname.startsWith('/cfr/compound/') && u.searchParams) ? u.searchParams.get('system') : null;
+    if (_c1sys) {
+      const target = _eventLedgers.get(_c1sys);
+      if (!target || !target.handleCFRRoute) return json(res, 200, { ok: false, error: `no ledger for system '${_c1sys}'` });
+      if (target.handleCFRRoute(req, res, u)) return;
+    } else if (_eventLedger && _eventLedger.handleCFRRoute && _eventLedger.handleCFRRoute(req, res, u)) return;
   }
   if (M==='POST' && u.pathname==='/api/nexus/query') {
     if (!nexusQuery) return json(res,503,{ok:false,error:'nexus-query not loaded'});

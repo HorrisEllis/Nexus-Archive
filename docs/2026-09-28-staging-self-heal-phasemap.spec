@@ -207,7 +207,7 @@ spec:
         branch rather than the working tree.
     - id: C0
       name: anchor — gaps born from a CFR ledger entry carry (ledgerSystem, entryUuid) as meta.ledgerSystem and meta.causedBy
-      status: read done 2026-09-28 — findings below; code NOT started, waiting on decision D1
+      status: CLOSED 2026-09-28 — D1 decided, code landed, real test passing (below)
       files: [lib/gap-field.js, orchestrator/orchestrator.js, intelligence/server.js, cortex/gap-finder/index.js]
       closes: [S-10]
       findings: >-
@@ -229,19 +229,101 @@ spec:
         Turning ledger onGap into real gaps changes behavior (today they are log lines), so it needs D1.
       decision:
         D1: >-
-          Which ledger gap types become real gaps carrying the anchor? Proposed: cfr.collapse and sigma.spike
-          through gapField.report (its dedup on type+source keeps one open gap and bumps occurrences — the
-          anchor stays the FIRST entry); delta.tension stays dropped as it is today. Unknown before choosing:
-          how often sigma.spike fires (SIGMA_GAP_THRESHOLD not checked against real traffic) — start with
-          cfr.collapse only if the rate is unknown.
+          DECIDED 2026-09-28: cfr.collapse only, for now. sigma.spike's real firing rate against
+          SIGMA_GAP_THRESHOLD was never observed in this environment, and "gap-field's dedup would keep it
+          safe as one row even at a high rate" was not enough to widen the change without seeing that rate —
+          so it stays a log line, as it already was. delta.tension stays dropped too (§CFR-WIRE-02's own
+          reason still holds: a field metric, not an actionable gap). Revisit sigma.spike once cfr.collapse's
+          real rate is seen.
+      landed:
+        - >-
+          orchestrator/orchestrator.js — the per-system onGap in _getEventLedger() now calls
+          lib/gap-field.js's report() for gap.type === 'cfr.collapse' only, with meta.ledgerSystem = system
+          (the closure's own createCFRLedger arg — confirmed the only correct value; gap.entry._system would
+          be the emitting sub-source, not the ledger the entry lives in) and meta.causedBy = gap.entry.uuid
+          (the ledger entry itself, from the SAME onGap payload — no separate lookup needed, confirmed by
+          reading _checkGaps() in intelligence/cfr/ledger.js: every onGap call already carries { entry }).
+        - >-
+          tests/modules/test-c0-cfr-collapse-anchor.test.js (registered in run-all.js) — spawns the REAL
+          orchestrator process, drives real ledger entries through the documented POST /cfr/emit test hook,
+          and reads the real persisted gaps table. 3/3 passing, run twice, no leaked child process.
+          C0-1: 3 real 'contract.structural.fail' emits cross CFR_COLLAPSE_THRESHOLD; the resulting gap's
+          meta.ledgerSystem is 'orchestrator' and causedBy is EXACTLY the third emit's own entry uuid (the one
+          that actually crossed the threshold, not any of the three — I9's "no invented identity" holds for
+          picking among real candidates too, not only for inventing one).
+          C0-2: a fourth collapse does not add a second gaps-table row for the same dedup key.
+          C0-3: no 'sigma.spike' or 'delta.tension' row ever reaches the gaps table, reading the real file.
+        - >-
+          FOUND WHILE TESTING, corrected here rather than left wrong: the gaps table is NOT
+          '<table>.jsonl' as cortex/memory/jaa-db.js's own JaaDB._append() class suggested on a first read.
+          The jaaDB singleton lib/gap-field.js writes through actually wraps guardian/jaa-store.js's JaaStore
+          (cortex/memory/jaa-db.js's own _getStore() confirms this; the JaaDB class earlier in that file is
+          dead code for this path) — one '<table>.json' FULL-SNAPSHOT ARRAY, flushed on a 1500ms debounce or
+          synchronously on close(). The first version of this test read the wrong filename and wrong format
+          and failed with zero rows found; this is now the confirmed real format and the test reads it
+          correctly. Worth carrying into A1's cortex-atlas/intelligence-atlas entries, since the next reader
+          of gap-field.js or the gaps table would make the same wrong assumption from the same file.
     - id: C1
       name: compound hooks into failure-mode enrichment — regime, chain-scoped sigma/delta progression and
             compounding factors on the failure_modes row, the .failure_mode node and the .debug_macro
-      status: open
+      status: CLOSED 2026-09-28 — D2 decided (a), code landed, real test passing (below)
       files: [cortex/self-heal/failure-mode-forensics.js, intelligence/causal/compound.js,
-              cortex/self-heal/index.js, intelligence/rfr2/causality/index.js]
+              cortex/self-heal/index.js, intelligence/rfr2/causality/index.js,
+              orchestrator/orchestrator.js, lib/node-schemas/schema.failure_mode,
+              lib/node-schemas/schema.debug_macro]
       closes: [S-10]
       depends_on: [C0]
+      findings: >-
+        Read, not recalled. enrichFailureMode runs in the CORTEX service (cortex/boot.js loads ./self-heal);
+        the per-system ledgers and their CausalGraphs live in the ORCHESTRATOR process, in a private
+        _eventLedgers map that is not exported. The only cross-process reach is HTTP, and the orchestrator
+        mounted /cfr/* against its own 'orchestrator' ledger only — so the note's "take the ledger for
+        gap.source" could not work in-process, and a C0 anchor for any other system would have come back
+        unavailable. analyzeChain(uuid) walks to the TRUE ROOT and analyzes from there, so its record
+        describes the root's chain, not the anchored entry. C0 sets gap.source = 'cfr.ledger.<system>',
+        which _gatherFailureContext uses as ctx.system — the anchor is therefore read from
+        gap.meta.ledgerSystem, never from source.
+      decision:
+        D2: >-
+          DECIDED 2026-09-28: (a) — the orchestrator's GET /cfr/compound/:uuid takes ?system=<s> and reads
+          that system's ledger; cortex calls it over HTTP with a 2500ms timeout. (b) — moving the compound
+          step into the orchestrator — was rejected: it would split enrichment across two services and
+          leave the failure_modes row written from a process that does not own it.
+      landed:
+        - >-
+          orchestrator/orchestrator.js — GET /cfr/compound/:uuid?system=<s> resolves through
+          _eventLedgers.get(s) (the EXISTING ledger only; _getEventLedger would lazily create a ledger and a
+          directory for any name it is handed). An unknown system answers { ok:false, error:"no ledger for
+          system 's'" }; it never falls back to the orchestrator's own graph, because a real uuid analyzed
+          under the wrong system's graph is an invented chain (I9). No ?system= keeps the old behavior.
+        - >-
+          cortex/self-heal/index.js — _gatherFailureContext adds ctx.anchor = { ledgerSystem, entryUuid }
+          from gap.meta.ledgerSystem + gap.causedBy, and only when BOTH are present; otherwise null.
+        - >-
+          cortex/self-heal/failure-mode-forensics.js — computeCompound(anchor, fetcher) and the default
+          fetchCompoundViaOrchestrator(anchor, timeoutMs, baseUrl); enrichFailureMode gains a fifth
+          argument, the fetcher (injected like gatherContext; default is the HTTP one). Stored under
+          `compound` = { status: analyzed|unavailable, reason, class, factors, sigmaProgression,
+          deltaProgression, peakSigma, rootUuid, anchor }. The system-wide sigmaBefore/sigmaAtEntry/
+          sigmaDelta stay flat and unchanged (no consumer of them exists in the tree — checked). debug_macro
+          gets payload.compoundClass only when status is analyzed. A ripple is status analyzed, class
+          ripple, factors and progressions null — it has no CausalRecord by design.
+        - >-
+          lib/node-schemas/schema.failure_mode (+ cortex/schemas copy) gains `compound`;
+          schema.debug_macro (+ cortex/schemas copy) gains `compoundClass`, each a correction_2026-09-28
+          field. checkPayload checks required keys only, so the new keys never blocked an export.
+        - >-
+          tests/modules/test-c1-compound-failure-mode.test.js (registered in run-all.js) — 12/12. REAL cases
+          (C1-8..C1-11) spawn the real orchestrator, drive real entries through POST /cfr/emit and call the
+          DEFAULT fetcher over real HTTP. INJECT cases (C1-1..C1-7, C1-1b) pin the mapping rules with an
+          injected fetcher. Negative control: against the C0-only orchestrator (no ?system= route) C1-9
+          fails — a real uuid under a nonexistent system gets analyzed — and passes with the route.
+      not_done: >-
+        compound.class is NOT yet reached by anything that decides: S4 reads it, and S4 is open. Not run:
+        the full run-all suite. Not checked: whether a cfr.collapse gap actually reaches level 4 in a live
+        system (test-c1 drives enrichFailureMode directly). analyze() on a wave/tidal writes a tidal-alert
+        gap through compound's own TidalAlertGate; C1 now triggers that from a cortex request too — the
+        route already did, but repeat enrichment of the same chain is not deduplicated here.
       note: >-
         Add a compound step to enrichFailureMode: read gap.causedBy, take the ledger for gap.source from the
         orchestrator's per-system ledgers (each has its own graph and compound engine; getGraph() and
@@ -369,7 +451,7 @@ spec:
       This map is grounded against the 0.39.274 tree for: heal loop, engine.js commit, code-edit, cos/ci,
       syntax-check, compound.js, alk rewind, cfr delta, rfr2 enforcement/version-gate/forge headers. It is NOT
       yet grounded against: which CausalGraph instance is live and whether failure conditions are nodes in it
-      (C1), the used-by card format, Guardian's patch result shape, failure/reuse memory
+      the used-by card format, Guardian's patch result shape, failure/reuse memory
       storage, or cos/ci's tree selection. Each is named in the phase that needs it.
     - >-
       Nexus-self promotions default to the inject gate. James has not confirmed that; it is an assumption.
@@ -377,5 +459,10 @@ spec:
       Nothing here has run against live services.
     - >-
       Loom baseline above is from a bootstrap on a copy; the shipped loom/data/registry.json was not modified.
+      C0's orchestrator.js and test changes have NOT yet gone through L1 (Loom wires) or A1 (atlas/spec
+      addenda) — both are per-phase obligations owed on C0 now that it's closed, not deferred to the end.
     - >-
-      NEXT: decide D1, then C0 code, then C1. S0 and C1 are independent and can start in either order. S0, after confirming which Versionium path repo-<uuid> branches use.
+      C1's orchestrator.js, cortex, schema and test changes have NOT yet gone through L1 (Loom wires) or A1
+      (atlas/spec addenda) either — owed on C0 and C1 together.
+      NEXT: L1 + A1 for C0 and C1, then S4's dependency S3/S0 chain. S0 (Versionium fork point) is independent.
+      S0 (Versionium fork point) remains independent and can start in either order with C1.
