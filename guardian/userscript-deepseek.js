@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Guardian — DeepSeek v1.0
 // @namespace    nexus.guardian.deepseek
-// @version      10.9.0
+// @version      10.10.0
 // @description  Guardian - DeepSeek: NCP v10 protocol parity (handshake, IndexedDB
 //               kernel, SHA-256 dedup, tab-claim, SEAM jobs, intelligence injection,
 //               usage detection) cloned from userscript-perplexity.js per reuse-
@@ -34,7 +34,7 @@ const CORTEX_URL  = 'http://127.0.0.1:3748';
 const INTELLIGENCE_URL = 'http://127.0.0.1:3753'; // intelligence is its own sovereign system (moved out of cortex 2026-09-19)
 const ORCH_URL    = 'http://127.0.0.1:9000';
 const PROVIDER    = 'deepseek';
-const VERSION     = '10.9.0';
+const VERSION     = '10.10.0';
 // §P113: exponential backoff 3s→30s — eliminates SSE flood on disconnect
 const RECONNECT_MIN_MS = 3000;
 const RECONNECT_MAX_MS = 30000;
@@ -173,6 +173,9 @@ function estimateTokens(s) { return Math.max(1, Math.round((s||'').length / 4));
 // fallback only, same honesty posture already used for gemini/perplexity's own
 // less-certain fields; correct if a real chat URL slug shows different.
 function chatId() {
+  // §0.39.279 — the session id of /a/chat/s/<id> (one key per chat in the ledger), else the path as before
+  const m = location.pathname.match(/\/s\/([A-Za-z0-9_-]+)/);
+  if (m) return m[1];
   const p = location.pathname.replace(/^\/+|\/+$/g, '');
   return p ? p.slice(0,80) : 'home';
 }
@@ -268,11 +271,28 @@ function _getSendBtn() {
 // response only. Full multi-turn extraction needs a real, verified
 // selector added the same way findResponseEl()'s own was — not invented
 // blind.
+// §0.39.279 — James: "can you fix gemini and deepseek." chat.deepseek.com renders every turn, both sides, as a
+// .ds-message; a reply is the one that carries .ds-markdown (outside the thinking block), the thinking is
+// .ds-think-content ("Thought for N seconds"). Not checked against the live page from here: when no user turn is
+// found the reader falls back to the last reply alone (partial: true), exactly as before.
 function _nexusGetFullChat() {
+  const messages = [];
+  for (const el of document.querySelectorAll('.ds-message')) {
+    const think = el.querySelector('.ds-think-content, [class*="think-content"]');
+    const md = [...el.querySelectorAll('.ds-markdown')].filter(x => !(think && think.contains(x)));
+    const thinking = think ? (think.innerText || '').trim() : '';
+    if (md.length || thinking) {
+      const text = md.map(x => _replyText(x)).filter(Boolean).join('\n\n');
+      if (text || thinking) messages.push({ role: 'assistant', text, ...(thinking ? { thinking } : {}) });
+    } else {
+      const text = (el.innerText || '').trim();
+      if (text) messages.push({ role: 'user', text });
+    }
+  }
+  if (messages.some(m => m.role === 'user')) return { provider: PROVIDER, chatId: chatId(), url: location.href, extractedAt: Date.now(), messages };
   const el = findResponseEl();
   const text = el ? _replyText(el) : '';
-  const messages = text ? [{ role: 'assistant', text }] : [];
-  return { provider: PROVIDER, chatId: chatId(), url: location.href, extractedAt: Date.now(), messages, partial: true, note: 'no verified human-turn selector for this provider yet — assistant\'s last response only' };
+  return { provider: PROVIDER, chatId: chatId(), url: location.href, extractedAt: Date.now(), messages: text ? [{ role: 'assistant', text }] : [], partial: true, note: 'no .ds-message turns found on this page — assistant\'s last response only' };
 }
 
 function handleSyncRequest(msg) {

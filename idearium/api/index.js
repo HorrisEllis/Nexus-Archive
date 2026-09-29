@@ -21,7 +21,7 @@ import { spawnSync, spawn as spawnProc } from 'child_process';
 // §WIRED — real, distinct config, not inline constants. See
 // idearium/config.js's own header. Matches the established pattern.
 import config from '../config.js';
-import { getConfig as getIdeariumConfig, setConfig as setIdeariumConfig, getValue as getIdeariumValue } from '../lib/config.js';
+import { getConfig as getIdeariumConfig, setConfig as setIdeariumConfig, getValue as getIdeariumValue, describe as describeIdeariumConfig, resetConfig as resetIdeariumConfig } from '../lib/config.js';
 const _require = createRequire(import.meta.url);
 
 // §AX-010 2026-07-10 — idearium hardcoded 127.0.0.1:9000 in four places
@@ -1110,6 +1110,9 @@ const ROUTE_CAP = {
   'cli.exec':         CAPS.ADMIN,
   'config.get':       CAPS.READ_IDEAS,
   'config.set':       CAPS.WRITE_IDEAS,
+  'config.reset':     CAPS.WRITE_IDEAS,
+  'settings.console': CAPS.READ_IDEAS,
+  'settings.console.repo': CAPS.READ_IDEAS,
 };
 
 // Key-based auth removed — Idearium is internal-only, reached solely
@@ -1131,6 +1134,11 @@ function matchRoute(method, url) {
     // idearium/lib/config.js. GET has no body; POST takes {key, value,
     // actor?} — actor defaults to 'user' inside config.js itself.
     ['GET',    ['api','config'],          'config.get'],
+    // §0.39.279 — the settings console (ui/settings.html): every idearium, compartment and agent setting in one read.
+    // Writes go to the routes that already own each setting (config, agent/settings, agent/blocks, desktop).
+    ['POST',   ['api','config','reset'],              'config.reset'],
+    ['GET',    ['api','settings','console'],          'settings.console'],
+    ['GET',    ['api','settings','console',':uuid'],  'settings.console.repo'],
     ['POST',   ['api','config'],          'config.set'],
     ['GET',    ['api','stats'],           'stats.get'],
     ['GET',    ['api','snr'],             'snr.current'],
@@ -1311,6 +1319,11 @@ function matchRoute(method, url) {
     ['GET',    ['api','repos',    ':uuid','symbols'],       'repo.symbols'],
     // §24-26 graph (MCO1) — idearium/spec/idearium.repo-graph.spec
     ['GET',    ['api','repos',    ':uuid','graph'],          'repo.graph'],
+    // §0.39.279 — the repo's VM as a desktop (cos/workspace via lib/cos-bridge.js) and its branches
+    ['GET',    ['api','repos',    ':uuid','desktop'],        'repo.desktop.status'],
+    ['POST',   ['api','repos',    ':uuid','desktop'],        'repo.desktop.start'],
+    ['DELETE', ['api','repos',    ':uuid','desktop'],        'repo.desktop.stop'],
+    ['GET',    ['api','repos',    ':uuid','branches'],       'repo.branches'],
     ['GET',    ['api','repos',    ':uuid','graph','traverse'], 'repo.graph.traverse'],
     ['GET',    ['api','repos',    ':uuid','graph','cone'],   'repo.graph.cone'],
     // 0.39.246 — the other two of the three graphs (code · execution · spec)
@@ -1579,10 +1592,54 @@ async function handle(req, res, route, query, body) {
     // actor is rejected on non-copilot_writable keys (ssh_key_path) by
     // config.js itself — same validation either way, only the event's
     // actor field differs.
+    // §0.39.279 — James: "can you have a full enterprise grade settings menu that encompassed all the idearium compartment
+    // and agent settings." One read for the console: idearium's layered config (with where each value came from), and
+    // every repo with its agent, prompt blocks, hat, compartment, branch and desktop. Each source is read on its own; one
+    // that fails is named in `blind`, never shown as empty.
+    case 'settings.console':
+    case 'settings.console.repo': {
+      const blind = [];
+      const safe = (what, fn, fb = null) => { try { return fn(); } catch (e) { blind.push({ source: what, error: e.message }); return fb; } };
+      const rows = safe('repos', () => ((getRepoLayer().repos && getRepoLayer().repos.repos) || []).filter(r => r.status !== 'archived'), []);
+      const RA = safe('repo-agent', () => _require('../../lib/repo-agent.js'));
+      const RH = safe('repo-hat', () => _require('../../lib/repo-hat.js'));
+      const RI = safe('repo-inject', () => _require('../../lib/repo-inject.js'));
+      const PB = safe('prompt-blocks', () => _require('../../lib/repo-prompt-blocks.js'));
+      const cosBridge = safe('cos', () => _require('../../lib/cos-bridge.js'));
+      const brief = (r) => ({ uuid: r.uuid, name: r.name, source: r.source || null, nexusSelf: !!r.nexusSelf, immutable: !!r.immutable,
+        compartmentId: r.compartmentId || null, branchOf: r.branchOf || null, branch: r.branch || null,
+        provider: RA ? safe(`provider:${r.uuid}`, () => RA.getProvider(r.uuid)) : null,
+        settingsFrom: RH ? safe(`link:${r.uuid}`, () => RH.originOf(r.uuid)) : null });
+      if (action === 'settings.console') {
+        const cfg = safe('config', () => describeIdeariumConfig(), { keys: [] });
+        return ok(res, { config: cfg, repos: rows.map(brief), providers: RA ? safe('providers', () => RA.providers(), []) : [], toolScopes: RA ? RA.TOOL_SCOPES : [], blind });
+      }
+      const repo = rows.find(r => r.uuid === params.uuid) || getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const hat = RH ? safe('hat', () => RH.getRepoHat(repo.uuid)) : null;
+      const comp = cosBridge && repo.compartmentId ? safe('compartment', () => cosBridge.getCompartment(repo.compartmentId)) : null;
+      return ok(res, {
+        repo: brief(repo),
+        agent: RA ? safe('agent', () => ({ injectMode: RI ? RI.modeFor(repo) : null, modes: repo.nexusSelf ? ['review'] : (RI ? RI.MODES : []), ...RA.settingsView(repo.uuid) })) : null,
+        blocks: PB ? safe('blocks', () => ({ list: PB.getBlocks(repo.uuid), placeholders: PB.PLACEHOLDERS, version: PB.VERSION })) : null,
+        hat: hat ? { uuid: hat.uuid || null, name: hat.name || null, baseAgent: hat.baseAgent || null, model: hat.model || null, toolScope: hat.toolScope || [], personaChars: String(hat.personaPrompt || '').length, persona: String(hat.personaPrompt || '').slice(0, 4000) } : null,
+        compartment: comp ? { id: comp.id, name: comp.name, state: comp.state, purpose: comp.purpose || '', parentId: comp.parentId || null, root: comp.fs && comp.fs.root } : null,
+        desktop: cosBridge && repo.compartmentId ? safe('desktop', () => cosBridge.desktop(repo.compartmentId, { action: 'status' })) : null,
+        branches: repo.branchOf ? null : rows.filter(r => r.branchOf === repo.uuid).map(r => ({ uuid: r.uuid, name: r.name, branch: r.branch || null })),
+        blind,
+      });
+    }
+
     case 'config.get':
       try { return ok(res, { config: getIdeariumConfig() }); }
       catch (e) { return err(res, 500, e.message); }
 
+    // §0.39.279 — the console's "back to default / file": drops the runtime override for one key
+    case 'config.reset': {
+      if (!body || !body.key) return err(res, 400, 'key required');
+      try { const event = resetIdeariumConfig(body.key, { actor: body.actor || 'user' }); return ok(res, { event, config: getIdeariumConfig() }); }
+      catch (e) { return err(res, 400, e.message); }
+    }
     case 'config.set': {
       const { key, value, actor } = body || {};
       if (!key) return err(res, 400, 'key required');
@@ -2909,6 +2966,35 @@ async function handle(req, res, route, query, body) {
     //    on-disk output. Contract: idearium/spec/idearium.repo-graph.spec.
     //    Read-only, same shape as repo.map above; never rebuilds on the
     //    fly (POST .../reindex is the one real rebuild path, §10.1).
+    // §0.39.279 — James: "once its generated, you can open it like a desktop environment". The repo's compartment
+    // boots its VM headless (a branch repo's disk is an overlay of its original's); the viewer (ui/desktop.html, noVNC
+    // over QEMU's websocket) is opened in Clear Glass. A repo with no compartment, or no base image, is told why.
+    case 'repo.desktop.status':
+    case 'repo.desktop.start':
+    case 'repo.desktop.stop': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      if (!repo.compartmentId) return err(res, 409, 'this repo has no COS compartment — its desktop lives in one');
+      const cosBridge = _require('../../lib/cos-bridge.js');
+      const act = action.endsWith('start') ? 'start' : action.endsWith('stop') ? 'stop' : 'status';
+      const origin = repo.branchOf ? getRepoLayer().get(repo.branchOf) : null;
+      const r = cosBridge.desktop(repo.compartmentId, { action: act, workDir: act === 'start' ? _repoDiskDir(params.uuid) : null, name: repo.name,
+        originNameOrId: origin && origin.compartmentId,
+        ...(() => { const v = (k) => { try { return getIdeariumValue(k); } catch (_) { return undefined; } };   // settings console → desktop.*
+          return { ramMB: body.ramMB || v('desktop.ram_mb'), cpus: body.cpus || v('desktop.cpus'), network: body.network || v('desktop.network') }; })() });
+      if (!r.ok) return err(res, 502, r.error || 'desktop failed', r);
+      const p = r.ports || {};
+      return ok(res, { ...r, repoUuid: repo.uuid, branchOf: repo.branchOf || null, branch: repo.branch || null,
+        viewer: p.wsPort ? `/desktop.html?port=${p.wsPort}&title=${encodeURIComponent(repo.name)}&repo=${encodeURIComponent(repo.uuid)}` : null });
+    }
+    case 'repo.branches': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const dir = _repoDiskDir(params.uuid);
+      const all = ((getRepoLayer().repos && getRepoLayer().repos.repos) || []).filter(x => x.branchOf === repo.uuid);
+      return ok(res, { repoUuid: repo.uuid, worktrees: dir ? _require('../../lib/cos-bridge.js').listBranches(dir) : [],
+        repos: all.map(x => ({ uuid: x.uuid, name: x.name, branch: x.branch || null, dir: x.materializeDir || null })) });
+    }
     case 'repo.graph': {
       const repo = getRepoLayer().get(params.uuid);
       if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
@@ -3544,7 +3630,9 @@ async function handle(req, res, route, query, body) {
       if (!dir) return err(res, 500, 'could not resolve repo directory');
       const { handleCode } = await import('../repo/code-api.js');
       const r = await handleCode({ method: req.method, op: params.op, layer: getRepoLayer(), repo, uuid: params.uuid, dir, query, body: body || {},
-        emit: (type, payload) => { try { os.emit(type, payload); } catch (_) { /* the write already happened */ } }, tool: (body && body._tool) || query._tool || null });
+        emit: (type, payload) => { try { os.emit(type, payload); } catch (_) { /* the write already happened */ } }, tool: (body && body._tool) || query._tool || null,
+        // §0.39.279 (staging S1) — a staged change is a versionium commit on repo-<uuid>@staging
+        record: async (payload) => { const r = await _versionium('POST', '/api/versionium/commit', payload); if (!r.ok) return { error: r.error }; return (r.data && r.data.commit) || { error: (r.data && r.data.error) || 'versionium returned no commit' }; } });
       if (r.status >= 400) return err(res, r.status, r.body.error, Object.fromEntries(Object.entries(r.body).filter(([k]) => k !== 'error')));
       return ok(res, r.body);
     }
@@ -3731,7 +3819,8 @@ async function handle(req, res, route, query, body) {
           // the real first message (before this, the preview left {memory} out even when the dispatch sent it).
           const _blocks = _require('../../lib/repo-prompt-blocks.js').getBlocks(params.uuid);
           let _mem = { text: '' };
-          try { _mem = await _require('../../lib/agent-memory.js').recall({ agentId: RA.agentIdFor(params.uuid), query: message }); } catch (_) { /* preview without memory */ }
+          // 0.39.279 — recalled only when the 'memory' block is on, exactly as the dispatch does (off by default)
+          if (_blocks.some(b => b.id === 'memory' && b.enabled)) { try { _mem = await _require('../../lib/agent-memory.js').recall({ agentId: RA.agentIdFor(params.uuid), query: message }); } catch (_) { /* preview without memory */ } }
           const mem = await RA.atlasFor({ repo, repoDir, message, blocks: _blocks, backend });
           let text = RA.fillListedTools(RA.compose({ hat, message, context, repoUuid: params.uuid, backend, memory: _mem.text, atlas: mem.atlas, directory: mem.directory }), params.uuid);
           let toolsFilled = false;
@@ -4664,12 +4753,38 @@ async function handle(req, res, route, query, body) {
       try { FTP.writeTreeNode(manifest); }
       catch (e) { console.warn(`[speceng.codegen] .filetree node write failed (code spec still created): ${e.message}`); }
       // Its repo, the same way speceng.create makes one — so the files land somewhere real as they build.
-      let repoUuid = null;
+      // §0.39.279 — James: "each new repo, if applicable could create a branch of the original, to save resources".
+      // When a repo owns the document spec (the original), the code repo is a BRANCH of it: its files a git worktree of
+      // the original's directory (branch nexus/<name>), its compartment a CHILD of the original's (so its VM disk is a
+      // copy-on-write overlay of the original's — cos/workspace). body.branch === false, or no original, or no git →
+      // a separate copy with its own compartment, as before (and the reason is in the response).
+      let repoUuid = null, branchInfo = null;
+      const _origin = (() => { try { return ((getRepoLayer().repos && getRepoLayer().repos.repos) || []).find(x => x.specUuid === doc.uuid && x.status !== 'archived' && x.source !== 'spec.codegen') || null; } catch (_) { return null; } })();
+      const _mode = process.env.IDEARIUM_CODE_REPO_MODE || (() => { try { return getIdeariumValue('repos.code_repo_mode'); } catch (_) { return 'branch'; } })();
+      if (_origin && body.branch !== false && _mode !== 'copy') {
+        try {
+          const cosBridge = _require('../../lib/cos-bridge.js');
+          const ws = cosBridge.branchWorkspace({ originDir: _repoDiskDir(_origin.uuid), name: manifest.name });
+          branchInfo = ws.ok ? { ...ws, originUuid: _origin.uuid } : { ok: false, error: ws.error, originUuid: _origin.uuid };
+          if (!ws.ok) console.warn(`[speceng.codegen] branch of ${_origin.uuid.slice(0, 8)} not made (${ws.error}) — a separate copy instead`);
+        } catch (e) { branchInfo = { ok: false, error: e.message }; }
+      }
+      const _branchCompartment = () => {
+        const parent = _origin && _origin.compartmentId;
+        if (!parent) return _ensureCompartment(`idearium-repo-${manifest.uuid.slice(0, 8)}`, manifest.name);
+        try {
+          const cosBridge = _require('../../lib/cos-bridge.js');
+          const c = cosBridge.createCompartment({ name: cosBridge.uniqueName(`idearium-repo-${manifest.uuid.slice(0, 8)}`), purpose: `${manifest.name} — branch of ${_origin.name}`, networkIsolated: true, parentId: parent });
+          return c.ok ? c.compartment.id : _ensureCompartment(`idearium-repo-${manifest.uuid.slice(0, 8)}`, manifest.name);
+        } catch (_) { return _ensureCompartment(`idearium-repo-${manifest.uuid.slice(0, 8)}`, manifest.name); }
+      };
       try {
+        const branched = !!(branchInfo && branchInfo.ok);
         const r = getRepoLayer().ingest({
           name: manifest.name, specUuid: manifest.uuid, source: 'spec.codegen',
           parent: doc.ideaUuid || null, ideaUuid: doc.ideaUuid || null, promotedFromSpec: doc.uuid,
-          compartmentId: _ensureCompartment(`idearium-repo-${manifest.uuid.slice(0, 8)}`, manifest.name),
+          compartmentId: branched ? _branchCompartment() : _ensureCompartment(`idearium-repo-${manifest.uuid.slice(0, 8)}`, manifest.name),
+          ...(branched ? { materializeDir: branchInfo.dir, branchOf: _origin.uuid, branch: branchInfo.branch } : {}),
         });
         if (r.error) console.warn(`[speceng.codegen] repo creation failed, code spec still created: ${r.error}`);
         else { repoUuid = (r.repo && r.repo.uuid) || null; if (r.repo) _linkCodeRepo({ ...r.repo, source: 'spec.codegen', promotedFromSpec: doc.uuid }); }
@@ -4677,6 +4792,7 @@ async function handle(req, res, route, query, body) {
       os.emit('idearium.spec-engine.codegen', { specUuid: doc.uuid, codeSpecUuid: manifest.uuid, repoUuid, files: planned.files.length, planSource: planned.planSource });
       console.log(`[speceng.codegen] "${doc.name}" → ${planned.files.length} file(s) planned (${planned.planSource}) · code spec ${manifest.uuid.slice(0, 8)}`);
       return ok(res, { manifest: se.loadSpec(manifest.uuid), repoUuid,
+        branch: branchInfo ? (branchInfo.ok ? { of: branchInfo.originUuid, branch: branchInfo.branch, dir: branchInfo.dir } : { made: false, reason: branchInfo.error }) : null,
         plan: { planSource: planned.planSource, files: planned.files.length, rejected: planned.rejected.length, agentError: planned.agentError || null, layers: manifest.fileTree && manifest.fileTree.layers } });
     }
 
@@ -5495,6 +5611,20 @@ function _nexusSelfSync({ only = null, force = false } = {}) {
 
 export { _startBuildQueuePoller, _buildingSpecs, _reconcileSpecRepos, getRepoLayer, _ollamaModels, _nexusSelfSync, _buildIdentity }; // getRepoLayer: the real layer, exported so tests exercise the production write path, not a fake
 
+/**
+ * _route(method, url, body) — §0.39.279, for tests: one request through the REAL router and handler (matchRoute +
+ * handle), without a listening server or startAPI's boot work. -> { status, json }
+ */
+export async function _route(method, url, body = {}) {
+  const r = matchRoute(method, url);
+  if (!r) return { status: 404, json: { ok: false, error: `${method} ${url} not found` } };
+  let status = 200, raw = '';
+  const res = { writeHead(code) { status = code; return this; }, setHeader() {}, end(b) { raw = b == null ? '' : String(b); }, write(b) { raw += String(b); } };
+  await handle({ method, url, headers: {} }, res, r, parseQuery(url), body || {});
+  let json = null; try { json = raw ? JSON.parse(raw) : null; } catch (_) { json = { raw }; }
+  return { status, json };
+}
+
 export function startAPI() {
   const os = getIdeaOS();
 
@@ -5568,6 +5698,21 @@ export function startAPI() {
         console.error('[API] static asset handler error (non-fatal):', e.message);
         try { res.writeHead(500); res.end('internal error'); } catch (_) {}
       }
+      return;
+    }
+
+    // §0.39.279 — the standalone pages beside the app: the repo desktop viewer and the settings console. A fixed list,
+    // not a directory listing — nothing else under ui/ is served as a page.
+    if (req.method === 'GET' && (cleanUrl === '/desktop.html' || cleanUrl === '/settings.html')) {
+      try {
+        const { readFileSync, existsSync } = await import('fs');
+        const { join, dirname } = await import('path');
+        const { fileURLToPath } = await import('url');
+        const page = join(dirname(fileURLToPath(import.meta.url)), '..', 'ui', cleanUrl.slice(1));
+        if (!existsSync(page)) { res.writeHead(404); res.end('not found'); return; }
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        res.end(readFileSync(page, 'utf8'));
+      } catch (e) { try { res.writeHead(500); res.end('internal error'); } catch (_) {} }
       return;
     }
 
