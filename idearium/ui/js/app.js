@@ -3211,6 +3211,15 @@ ${res.note ? '\n' + escapeHtml(res.note) : ''}</div>${undo}`;
 // settings tab for the compartments. per repo." The Agent tab is the CLI; how
 // the agent is CONFIGURED (which model wears the hat, its persona, what it has
 // learned, where its code lands) belongs with the rest of this repo's settings.
+// §CODER-LINK 0.39.276 — the repo the Code button makes wears the ORIGINAL repo's hat and uses its agent settings.
+// One line on both agent views says so, and links to where they are edited.
+function _sharedAgentNote(st) {
+  if (!st || !st.sharedFrom) return '';
+  const o = (typeof API_REPOS !== 'undefined' ? API_REPOS : []).find(r => r.uuid === st.sharedFrom);
+  const label = o ? escapeHtml(o.name || o.uuid) : escapeHtml(st.sharedFrom);
+  return `<div style="margin:6px 0;font-size:10px;border-left:2px solid var(--b1);padding-left:8px">this repo wears the hat of <span style="cursor:pointer;text-decoration:underline" onclick="selectApiRepo('${escapeHtml(st.sharedFrom)}')">${label}</span> — the backend switch, Ollama model, tool scope and prompt blocks are that repo's. Change them there; what this repo's agent learns is kept there too.</div>`;
+}
+
 async function renderRepoAgentSettings(repo) {
   const el = document.getElementById('repo-agents-section');
   if (!el) return;
@@ -3232,6 +3241,7 @@ indexed    ${idx.indexed ? `${idx.fileCount ?? '?'} files · ${idx.chunkCount ??
 learned    ${mem.total} observation${mem.total === 1 ? '' : 's'}
 exchanges  ${st.exchanges || 0}
 toolScope  ${st.toolScopeEnforced ? 'enforced' : 'NOT enforced on this path'}</div>
+      ${_sharedAgentNote(st)}
       <div style="margin:8px 0;font-size:10px">wearing the hat:
         ${_agentBackendHtml(cfg, _agentBackendOf(cfg) === 'ollama' ? await _ollamaModelList() : null)}
         <div class="ag-note" style="margin-top:4px">ollama — a local model · copilot — copilot picks which one answers (only these settings decide what is sent) · guardian — through that agent's tab; every output lands the same way.</div>
@@ -4275,6 +4285,7 @@ indexed    ${idx.indexed ? `${idx.fileCount ?? '?'} files · ${idx.chunkCount ??
 learned    ${mem.total} observation${mem.total === 1 ? '' : 's'}${kindCounts ? ` (${kindCounts})` : ''}
 exchanges  ${st.exchanges || 0}</div>
     </div>
+    ${_sharedAgentNote(st)}
     <div style="margin:6px 0;font-size:10px;opacity:.6">hat, teaching, export/import and inject mode live in <span style="cursor:pointer;text-decoration:underline" onclick="setRepoSubtab('settings')">Settings → Agents</span>${st.exists ? '' : ' — no hat forged yet'}</div>
 `;
 

@@ -299,6 +299,25 @@ function getRepoLayer() {
   return _repoLayer;
 }
 
+// §CODER-LINK 0.39.276 — James: "the code tab needs to use the same hat from the original repo ... full agent settings in
+// the original repo." The repo the Code button makes (source 'spec.codegen', promotedFromSpec = the original spec) is
+// linked to the repo that owns that spec, so it wears that repo's hat and uses its agent settings (lib/repo-hat.js).
+// No repo owns the original spec -> nothing to link: the code spec builds as the_builder, as before. Idempotent, and it
+// also links code repos made before 0.39.276 (called from the repo list and the build identity).
+function _linkCodeRepo(codeRepo) {
+  try {
+    if (!codeRepo || codeRepo.source !== 'spec.codegen' || !codeRepo.promotedFromSpec) return null;
+    const RH = _require('../../lib/repo-hat.js');
+    if (RH.originOf(codeRepo.uuid)) return null;
+    const rows = (getRepoLayer().repos && getRepoLayer().repos.repos) || [];
+    const origin = rows.find(x => x.uuid !== codeRepo.uuid && x.specUuid === codeRepo.promotedFromSpec && x.status !== 'archived' && x.source !== 'spec.codegen');
+    if (!origin) return null;
+    const r = RH.linkCoder(codeRepo, origin);
+    if (r.ok && r.linked) console.log(`[repo-hat] code repo ${codeRepo.uuid.slice(0, 8)} now wears the hat of ${origin.uuid.slice(0, 8)} (${origin.name})`);
+    return r;
+  } catch (e) { console.warn(`[repo-hat] could not link a code repo to its original: ${e.message}`); return null; }
+}
+
 /**
  * _buildIdentity(specUuid, { agent }) — who builds this spec, wearing which hat.
  * §0.39.267 — James: "agents tab in idearium is meant to build chunks, entire code bases. the agent hat is meant
@@ -314,7 +333,8 @@ function _buildIdentity(specUuid) {
   try { const L = getRepoLayer(); repo = ((L.repos && L.repos.repos) || []).find(x => x.specUuid === specUuid && x.status !== 'archived') || null; } catch (_) {}
   let hat = null, hatSource = null, provider = null, model = null;
   if (repo) {
-    try { hat = _require('../../lib/repo-hat.js').getRepoHat(repo.uuid); if (hat) hatSource = 'repo'; } catch (_) {}
+    _linkCodeRepo(repo);
+    try { hat = _require('../../lib/repo-hat.js').getRepoHat(repo.uuid); if (hat) hatSource = _require('../../lib/repo-hat.js').originOf(repo.uuid) ? 'repo (original)' : 'repo'; } catch (_) {}
     try {
       const RA = _require('../../lib/repo-agent.js');
       provider = RA.getProvider(repo.uuid) || null;
@@ -329,7 +349,7 @@ function _buildIdentity(specUuid) {
     repoUuid: repo ? repo.uuid : null,
     agentId,                                              // §0.39.269 — who remembers this build (lib/agent-memory.js)
     compartmentId: repo ? (repo.compartmentId || null) : null,
-    hat: hat ? { name: hat.name, uuid: hat.uuid || null, personaPrompt: hat.personaPrompt || '' } : null,
+    hat: hat ? { name: hat.name, uuid: hat.uuid || null, personaPrompt: (repo ? _require('../../lib/repo-hat.js').wearable(hat, repo) : hat).personaPrompt || '' } : null,
     hatSource,
     provider: provider ? normalize(provider) : null,
     model,
@@ -2192,8 +2212,10 @@ async function handle(req, res, route, query, body) {
     // Each idea is a repo, not a single hardcoded "Nexus folder". Nexus
     // itself is just the first ingested repo, not a special case.
 
-    case 'repo.list':
+    case 'repo.list': {
+      try { for (const r of ((getRepoLayer().repos && getRepoLayer().repos.repos) || [])) if (r.source === 'spec.codegen') _linkCodeRepo(r); } catch (_) {}   // §0.39.276 — code repos made before the link existed
       return ok(res, { repos: getRepoLayer().list(query) });
+    }
 
     case 'repo.show': {
       const repo = getRepoLayer().get(params.uuid);
@@ -4604,7 +4626,9 @@ async function handle(req, res, route, query, body) {
       if (doc.codeSpecUuid && !body.again) {
         try {
           const existing = se.loadSpec(doc.codeSpecUuid);
-          return ok(res, { manifest: existing, existing: true, repoUuid: repoFor(existing.uuid) });
+          const _cr = repoFor(existing.uuid);
+          if (_cr) _linkCodeRepo({ uuid: _cr, source: 'spec.codegen', promotedFromSpec: doc.uuid });
+          return ok(res, { manifest: existing, existing: true, repoUuid: _cr });
         } catch (_) { /* the code spec was deleted — plan a new one */ }
       }
       const digest = _require('../../lib/spec-digest.js').specDigest(doc);   // the spec, condensed for the planner and every file prompt
@@ -4648,7 +4672,7 @@ async function handle(req, res, route, query, body) {
           compartmentId: _ensureCompartment(`idearium-repo-${manifest.uuid.slice(0, 8)}`, manifest.name),
         });
         if (r.error) console.warn(`[speceng.codegen] repo creation failed, code spec still created: ${r.error}`);
-        else repoUuid = (r.repo && r.repo.uuid) || null;
+        else { repoUuid = (r.repo && r.repo.uuid) || null; if (r.repo) _linkCodeRepo({ ...r.repo, source: 'spec.codegen', promotedFromSpec: doc.uuid }); }
       } catch (e) { console.warn(`[speceng.codegen] repo creation threw, code spec still created: ${e.message}`); }
       os.emit('idearium.spec-engine.codegen', { specUuid: doc.uuid, codeSpecUuid: manifest.uuid, repoUuid, files: planned.files.length, planSource: planned.planSource });
       console.log(`[speceng.codegen] "${doc.name}" → ${planned.files.length} file(s) planned (${planned.planSource}) · code spec ${manifest.uuid.slice(0, 8)}`);

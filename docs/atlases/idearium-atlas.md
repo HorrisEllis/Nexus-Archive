@@ -138,6 +138,12 @@ A repo opens onto its tabs:
 
 Every repo with a compartment has exactly one agent. It is a hat from `lib/hat-forge.js`, forged by `lib/repo-hat.js` and named repo_ plus the first 16 hex digits of the repo's uuid. The hat is held by its role, so forging twice finds the same hat, and renaming it does not lose it. A repo with no compartment gets no agent, and the tab says why: an agent scoped to nothing would be a host-wide agent wearing the project's name.
 
+**A spec's code repo shares the original repo's agent** (0.39.276). The Code button on a spec (`speceng.codegen`) makes a second repo for the code spec, with source `spec.codegen` and `promotedFromSpec` set to the original spec. That repo is linked to the repo that owns the original spec (`lib/repo-hat.js` `linkCoder`, table `repo_agent_links`; older code repos are linked on their next build or repo list). Through the link there is one agent:
+- **One hat.** The code repo has no hat of its own. It wears the original's, so its builds and its Agent tab both use it. Worn in the code repo, the persona gets one added line naming the code repo's uuid, so the `idearium.code_*` tools are pointed at the right repo. The stored hat is not changed by that.
+- **Settings live in the original.** The backend switch, the Ollama model, the tool scope and the prompt blocks are read from and written to the original repo's row, whichever repo's tab you edit them in. Both agent views say so and link to the original. Inject mode (review or auto) stays per repo.
+- **What stays the code repo's own:** its compartment, its exchange log and its agent id in the download manager.
+- **Guards.** Refreshing or revoking the hat from the code repo is refused and says where to do it, because a refresh would rewrite the shared persona with the code repo's identity. What the code repo's agent learns is stored on the original and joins the persona when the original refreshes. A spec with no repo of its own has nothing to link to and is built as before, by the_builder.
+
 The hat's persona is generated from the repo's real index (its atlas, file count, languages, chunk count, compartment) and from what the agent has learned. It is regenerated on refresh, so it is shown in Settings → Agents but edited through the prompt blocks. The hat's own tool set is 19 tools chosen to understand, fix and expand one project, and leaves out the host-wide ones (accounts, browsers, Clear Glass). Its base agent is copilot, and the backend switch decides who wears it.
 
 ### What one message goes through
@@ -266,7 +272,7 @@ In the repo's Settings tab:
 
 37 of the 217 routes serve the agent:
 - **The agent** (19): status, prompt, late replies, history, tools, debug, graph, memory, settings, blocks and their preview, export, import.
-- **The hat** (4): show, forge, refresh, revoke.
+- **The hat** (4): show, forge, refresh, revoke. On a code repo they act on the original's hat (see above).
 - **Injects** (7): list, create, get, edit, apply, reject, revert.
 - **The harness** (5): find, card, read, write, test.
 - **Other** (2): Ollama's installed models, and the provider list.
