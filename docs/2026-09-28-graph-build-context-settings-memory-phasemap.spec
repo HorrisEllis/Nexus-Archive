@@ -1,9 +1,9 @@
 spec:
   meta:
     name:     graph-build-context-settings-memory
-    version:  1.0.0
+    version:  1.1.0
     date:     2026-09-28
-    release:  0.39.274 (base) · docs only in this release — nothing below is built
+    release:  0.39.277 (map revised on 0.39.276 + staging C0/C1) · nothing in THIS map is built yet
     uuid:     nexus-graph-build-context-settings-memory-phasemap-v1-0000-2026-0928-jamesbrooks-001
     owner:    idearium.repo.graph · idearium.spec-engine · idearium.spec-engine.warp-build-dispatch ·
               idearium.api.speceng.codegen · lib.file-tree-plan · lib.repo-agent · lib.repo-prompt-blocks ·
@@ -18,6 +18,7 @@ spec:
       phases using chunks and dependancy graph, bottom up. then need to optimize memory as much as possible." →
       "The Eravos zips were to give you context." → "Make sure you follow the axioms. Using the atlas' as a map.
       Loom component registry. Have context be on at all times. Have full enterprise grade settings for each repo."
+      → "just know every system should be sovereign self contained." → "here current versions." (0.39.276, C0, C1)
     scope: >-
       NEXUS's build pipeline for ANY imported repo. The ERAVOS 3.24 import and the 16:38–20:12 boot log are the
       observed test case (what the pipeline does to a real repo today). Nothing here targets ERAVOS.
@@ -43,6 +44,13 @@ spec:
     An earlier draft of this map (same day) treated the ERAVOS import as the build target (cancel its state.js job,
     choose its kernel). Wrong reading; James: the zips were context. Those parts are removed; ERAVOS remains only
     as evidence and as the global-script fixture for G0.
+    1.1.0 (2026-09-29): re-grounded on 0.39.276. Since 1.0.0 two things landed outside this map: (a) 0.39.276
+    links the Code button's repo to the original repo (lib/repo-hat.js linkCoder, table repo_agent_links): one
+    hat and one settings row, but still a SECOND repo — which contradicts B0/I3 here (see D2); (b) staging C0
+    and C1 (cfr.collapse anchor, compound failure mode) built and merged in 0.39.277. And James set a law this
+    map did not follow: every system sovereign and self-contained. 1.0.0 proposed things that break it — a
+    cortex-owned writer for everyone's tables (M3), identity moved into lib/ so cortex could import it (C0),
+    per-repo settings kept in cortex's shared store (R0). Those are rewritten below (I12, SV0–SV3).
 
   # ── The map this uses (docs/CLAUDE.md rule 1, §8.7) ─────────────────────────
   # For every file a phase touches: the atlas that explains it and the loom map that wires it, checked by grep on
@@ -152,6 +160,17 @@ spec:
       F-11 builds carry no context — warp-build-dispatch sends hat + prompt; memory, atlas, card and directory reach
       only Agent-tab chats. The same repo's agent knows more in chat than when it builds.
     - >-
+      F-13 SOVEREIGNTY CENSUS (0.39.276, static require/import from one system folder into another; lib/ excluded):
+      263 edges. Largest: orchestrator → cortex 29 (cortex/memory/jaa-db 17), copilot → cortex 22 (jaa-db 19),
+      idearium → cos 17, guardian → cortex 13 (cortex/core/raid 6), architect → cortex 11 (raid/contract-intake 10),
+      intelligence → cortex 10, guardian → intelligence 9, orchestrator → nexus 8, idearium → cortex 8,
+      diagnostic → intelligence 8. Systems reach into each other's internals instead of calling a contract.
+    - >-
+      F-14 THE SHARED LAYER IS BOUND TO ONE SYSTEM'S DATABASE. 582 imports from systems into lib/, and 78 files IN
+      lib/ require cortex/memory/jaa-db (lib/repo-agent.js keeps repo_agent_settings in cortex's store). Any system
+      that uses lib/ therefore opens cortex's whole memory store. That is the mechanism behind F-7/F-8:
+      sovereignty and memory are the same fix.
+    - >-
       F-12 per-repo settings are four fields — no write policy, no protected paths, no gates, no quotas, no audit of
       setting changes, no export/import.
 
@@ -181,6 +200,9 @@ spec:
     - >-
       G-12 no enterprise-grade per-repo settings model, UI, audit or export.
     - >-
+      G-14 no sovereignty contract: nothing declares what a system exposes or consumes; nothing stops a require()
+      into another system's folder or a system opening another's store; the graph cannot report crossings.
+    - >-
       G-13 atlas/loom gaps: lib/context-atlas.js (no atlas, no loom), lib/code-edit.js (no atlas), lib/file-tree-plan.js,
       lib/repo-prompt-blocks.js, cortex/memory/table-compactor.js,
       idearium/spec-engine/warp-build-dispatch.js (no loom).
@@ -188,8 +210,15 @@ spec:
   # ── Axioms applied (AXIOMS-v3.1 → this map) ────────────────────────────────
   invariants:
     I1 (§10.3, §8.6): >-
-      one graph (idearium/repo/graph.js grows relations), one identity resolver, one compose (lib/repo-agent.js),
-      one settings row per repo (repo_agent_settings grows), one atlas page per system. No parallel copies.
+      one authority per concern, OWNED BY ONE SYSTEM and reached by its contract: the graph, identity, compose and
+      per-repo settings (idearium); a system's memory (that system). No parallel copies, and no other system
+      reaching the authority's internals to avoid the contract.
+    I12 (sovereignty — James 2026-09-29): >-
+      every system is sovereign and self-contained. It owns its code, its data store, its settings, its lifecycle and
+      its spec/atlas page. It crosses to another system ONLY through a declared contract: an HTTP route in its
+      interaction contract, a bus event, or the host SDK. No require()/import into another system's folder; no
+      system opens another system's store. A system can be stopped, moved or replaced without editing another
+      system's code. The graph reports every crossing (relation crosses_system); a new crossing is a defect.
     I2 (§1.1, §1.2): >-
       every inferred edge carries resolution:'inferred' and the pass that made it; unknown stays unknown. Every
       refusal, hold, skip or budget cut names its reason.
@@ -289,11 +318,13 @@ spec:
     # Tier 2 — per-repo settings (the policy every later phase reads)
     - id: R0
       name: repo settings model — repo_agent_settings grows into the full per-repo policy
-      files: [lib/repo-settings.js (new, the one reader/writer; lib/repo-agent.js keeps its getters as thin calls),
+      files: [idearium repo-settings module (the one reader/writer, in idearium; lib/repo-agent.js getters read idearium's store, not cortex's),
               cortex/memory/tiers.js (table tier), docs/repo-settings.spec (new)]
       closes: [G-12, F-12]
       note: >-
-        Extend the existing row (§8.6), do not add a second table. Groups and defaults:
+        Extend the existing row (§8.6), do not add a second table — and move it (I12): repo_agent_settings and
+        repo_agent_links live in cortex's shared store today (F-14); they belong in idearium's own store, migrated
+        with every row kept (§0.3). Groups and defaults:
         identity   — hat (repo hat, else the_builder), provider, fallbackChain [ordered], ollamaModel, toolScope
                      (harness | all | project), planner hat (default = build hat).
         context    — locked-on blocks (card, atlas, memory, directory); budgets per backend {ollama, guardian,
@@ -326,13 +357,52 @@ spec:
         Extends Settings → Agents (idearium-atlas §Settings → Agents); one panel per group; preview shows the exact
         build prompt, context included. Lead Designer lens: a locked setting says why it is locked.
 
+    # Tier 2b — sovereignty (I12). The graph measures it; fixes run largest-crossing-first.
+    - id: SV0
+      name: crosses_system in the graph + the census as a standing number
+      files: [idearium/repo/graph.js (relation crosses_system on nexus-self), loom/scanners (read-only consumer)]
+      depends_on: [G2]
+      closes: [F-13 as a live number]
+      note: >-
+        System = a top-level folder with its own entry in autopilot's supervise list. Every import from one system
+        folder into another is a crosses_system edge with both ends named. A phase may not raise the count.
+    - id: SV1
+      name: sovereignty contract per system — exposes / consumes
+      files: [each system's interaction contract (guardian/interaction-contract.json is the existing shape), loom
+              registry (hooks/wires are the contract), docs/sovereignty.spec (new)]
+      depends_on: [SV0]
+      closes: [G-14]
+      note: >-
+        Each system declares what it exposes (routes, events) and consumes. Loom's wires ARE these declarations (rule
+        3); a crosses_system edge with no matching declared wire is the defect list.
+    - id: SV2
+      name: data sovereignty — lib/ and the systems stop opening cortex's store
+      files: [cortex/memory/jaa-db.js (cortex only), the 78 lib/ files that require it, per-system importers
+              (copilot 12, intelligence 8, versionium 6, loom 6, guardian 5, orchestrator 4, idearium 4, …)]
+      depends_on: [SV1, M1]
+      closes: [F-14; absorbs M2]
+      note: >-
+        A lib/ helper that needs storage takes the CALLER's store (injected), never cortex's. Each system opens only
+        its own store. Largest importer first, measured against M0 after each. M2's goal by the right road: a process
+        loads only its own tables because it only has its own store.
+    - id: SV3
+      name: code sovereignty — internal reaches become contract calls
+      files: [architect → cortex/core/raid/contract-intake.js (10), guardian → cortex/core/raid (6), guardian →
+              intelligence (9), diagnostic → intelligence (8), idearium → cos (17), cortex → copilot/lifeline.js (2), …]
+      depends_on: [SV1]
+      note: >-
+        Largest crossing first. Each becomes a call to the owner's declared route or event; a pure stateless helper
+        may move to lib/ (D3). Proof per step: SV0's number drops.
+
     # Tier 3 — one identity, one compose, context always on
     - id: C0
       name: one identity resolver
-      files: [lib/build-identity.js (moved from idearium/api/index.js _buildIdentity, behaviour unchanged), idearium/api/index.js]
+      files: [idearium/api/index.js (_buildIdentity stays; exposed as GET /api/repos/:uuid/identity), idearium interaction contract]
       depends_on: [R0]
       closes: [G-6 part]
-      note: moved, not copied — cortex cannot import idearium/api. Reads identity from lib/repo-settings.js.
+      note: >-
+        1.1.0 (I12): NOT moved into lib/. Identity belongs to idearium, which owns repos and hats; other systems ask its
+        route. 0.39.276 already resolves the original repo's hat through the coder link — reused, not rebuilt.
     - id: C1
       name: builds compose through lib/repo-agent.js — hat + blocks + card + atlas + memory + directory
       files: [idearium/spec-engine/warp-build-dispatch.js, lib/repo-agent.js (export compose for builds)]
@@ -348,8 +418,9 @@ spec:
       depends_on: [C1]
       closes: [F-6, G-6]
       note: >-
-        Trace the one-word "[hat: the_builder]: build" job first (source unknown). Guardian: intention 'build' with no
-        hat → refused, reason named.
+        Trace the one-word "[hat: the_builder]: build" job first (source unknown). RAID asks idearium's identity route
+        and hands the build to idearium's compose, instead of composing itself (I12: cortex stops importing
+        copilot/lifeline.js). Guardian: intention 'build' with no hat → refused, reason named.
     - id: C3
       name: noContext cannot reach a build path
       files: [lib/repo-agent.js (dispatch, adoptLate), lib/repo-prompt-blocks.js]
@@ -401,7 +472,10 @@ spec:
       files: [cortex/memory/jaa-db.js, guardian/jaa-store.js, cortex/boot.js]
       depends_on: [M2]
       closes: [F-9]
-      note: cortex owns the writes, OR those tables move to the JaaDB append-only journal. Decide from M0; not both.
+      note: >-
+        1.1.0 (I12): not "cortex owns everyone's writes" — each system owns its high-volume tables in its own store
+        (copilot's ledger in copilot, diagnostic's in diagnostic); cortex keeps what cortex produces. Readers use the
+        owner's route or bus. Append-only journal vs JSON rewrite decided per store from M0.
     - id: M5
       name: GPU / local model
       files: [ollama/server.js, copilot/server.js (adversarial probe)]
@@ -429,8 +503,8 @@ spec:
     - id: A1
       name: atlases and specs expanded with each phase
       files: [docs/atlases/idearium-atlas.md (build path, Settings → Agents → full repo settings, context-on),
-              docs/atlases/core-atlas.md (lib/context-atlas.js, lib/code-edit.js, lib/repo-settings.js,
-              lib/build-identity.js), docs/atlases/nexus-atlas.md (memory model), idearium/spec/idearium.repo-graph.spec,
+              docs/atlases/core-atlas.md (lib/context-atlas.js, lib/code-edit.js), each system's own atlas page for
+              its store and contract (I12), docs/atlases/nexus-atlas.md (memory model), idearium/spec/idearium.repo-graph.spec,
               docs/code-intel.spec, docs/SPEC-REGISTRY.spec, tests/modules/test-nexus-atlas-refs.test.js (holds refs real)]
       depends_on: [each phase]
       closes: [G-13 atlas part, I8]
@@ -445,10 +519,18 @@ spec:
         safe defaults), Adversary (a prompt that asks the agent to write outside allowedRoots).
 
   decisions_needed:
+    D2: >-
+      0.39.276 keeps the Code button's second repo and links it to the original (one hat, settings in the original).
+      This map's B0/I3 builds IN the original, uncommitted — no second repo. Sovereignty (I12) favours one repo: a
+      linked coder repo is a standing cross-repo dependency. Keep the link as the transition and make B0 the default,
+      or keep the link as the model?
+    D3: >-
+      lib/. Self-contained can mean (a) lib/ is the platform SDK — a versioned package each system declares, owning NO
+      state after SV2 — or (b) each system vendors its own copy (13 copies of the same code, §10.3). Proposed: (a).
     D1: >-
       T2 — uncommitted working tree for directed builds into imported repos, staging branch for the autonomous heal
       loop? (proposed). Or one mode everywhere.
 
   order: >-
-    M0 → M1 → M4 → G0 → G1 → G2 → R0 → C0 → C1 → C2 → C3 → B0 → B1 → B3 → B4; R1/R2 after R0; G3 → M2 → M3 alongside
+    M0 → M1 → M4 → G0 → G1 → G2 → SV0 → SV1 → R0 → C0 → C1 → C2 → C3 → B0 → B1 → B3 → B4; R1/R2 after R0; SV2 (absorbs M2) and SV3 after SV1, largest crossing first; G3 → M3 alongside
     Tier 4; M5 after R0; M6 after M1. L1, A1, X1 inside every phase.
