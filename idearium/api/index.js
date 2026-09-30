@@ -5379,6 +5379,10 @@ async function handle(req, res, route, query, body) {
           {
             preferAgent,
             fallbackAgent,
+            // §CODE MODE 2026-09-30 — a chunk that IS a source file is verified as one (does it parse), not graded as
+            // prose. expectCode is the same value already handed to WARP above; fileName picks the syntax checker.
+            expectCode,
+            fileName: chunk.realPath || null,
             // §BUILT 2026-09-03 — fires the instant a queued job is
             // confirmed on guardian's side, before the (up to 5-minute)
             // poll for a browser-automated NCP provider — see

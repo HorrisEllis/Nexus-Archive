@@ -35,7 +35,9 @@
  * chunk ended up looking like).
  */
 import http from 'http';
+import path from 'path';
 import { QueueCompartment, STATE } from '../../lib/seam/queue.js';
+import { extractCode } from '../../lib/extract-code.js';
 
 const GUARDIAN_PORT = parseInt(process.env.GUARDIAN_PORT || '7820');
 
@@ -112,7 +114,9 @@ function _memoryJaa() {
  * @param {string} chunkPrompt   — the built prompt for this chunk (same as before)
  * @param {object} chunk         — Idearium's chunk object (chunkIdx, chunkTitle used for the compartment's identity)
  * @param {function} dispatchFn  — (prompt, opts) => Promise<{ok, text, error, queued, jobId, agent}> — this IS agentSuite.buildChunkWithAgent, unchanged
- * @param {object} opts          — { preferAgent, axioms, specUuid, busEmit }
+ * @param {object} opts          — { preferAgent, axioms, specUuid, busEmit, expectCode, fileName }
+ *                                 expectCode + fileName: the reply is a source FILE. It is then verified as one — does
+ *                                 it parse — not graded as prose (§CODE MODE, lib/seam/detector.js).
  * @returns {Promise<{ok, text, escalated, detection, attempts, queued, jobId, agent}>}
  */
 async function _dispatchChunkOnce(chunkPrompt, chunk, dispatchFn, opts = {}) {
@@ -146,9 +150,19 @@ async function _dispatchChunkOnce(chunkPrompt, chunk, dispatchFn, opts = {}) {
     total:        opts.total || 1,
     jaa,
     busEmit:      opts.busEmit || (() => {}),
+    // §CODE MODE 2026-09-30 — a file chunk was graded as PROSE: the Detector demanded it end in sentence punctuation,
+    // be 40% as long as a prompt that carries the whole system state, and contain fences the WARP path had already
+    // stripped. A correct file failed every attempt (composite 0.65, TRUNCATED:mid_sentence_end) and the chunk stalled.
+    mode:         opts.expectCode ? 'code' : undefined,
+    ext:          opts.expectCode && opts.fileName ? path.extname(String(opts.fileName)) : undefined,
   });
 
-  const maxWallClockAttempts = 6; // strategy ladder + watchdog ceilings already bound this internally; this is an outer safety cap, not the real limit
+  // §FIXED 2026-09-30 — this was a literal 6, described as "an outer safety cap, not the real limit". It WAS the real
+  // limit: the ladder allows 9 content retries + 3 watchdog retries, so a run that failed verification every time was
+  // cut at attempt 6 and reported "exceeded outer wall-clock attempt cap" — a message naming neither the cause nor the
+  // check that failed. The cap is now derived from the compartment's own ladder, so it can only end a run the ladder
+  // has already run out of.
+  const maxWallClockAttempts = comp.maxAttempts();
   let attempts = 0;
 
   while (attempts < maxWallClockAttempts) {
@@ -216,6 +230,15 @@ async function _dispatchChunkOnce(chunkPrompt, chunk, dispatchFn, opts = {}) {
     const { passed, detection } = comp.evaluate();
 
     if (passed) {
+      // §CODE MODE — the verified reply may still be a fenced reply (the direct agent path, WARP not loaded, never runs
+      // extractCode). completeChunk writes result.text VERBATIM as the file, so a fence or "Here you go:" around the code
+      // would land inside the file. Code the Detector checked is the code that is returned. Unfenced text (WARP's output)
+      // is returned untouched.
+      let outText = dispatchResult.text;
+      if (opts.expectCode && /^[ \t]*```/m.test(outText)) {
+        const ex = extractCode(outText);
+        if (ex.ok && ex.code) outText = ex.code;
+      }
       // §PASS-THROUGH 2026-07-09 — this returned a fixed field set, silently
       // dropping anything the dispatchFn reported beyond {ok, text, agent}.
       // With WARP in the build path that means source/cost/cacheHit vanish
@@ -224,7 +247,7 @@ async function _dispatchChunkOnce(chunkPrompt, chunk, dispatchFn, opts = {}) {
       // Verification owns quality, not provenance — forward what it did not
       // produce rather than erasing it.
       return {
-        ok: true, escalated: false, text: dispatchResult.text, detection, attempts,
+        ok: true, escalated: false, text: outText, detection, attempts,
         agent: dispatchResult.agent,
         source:   dispatchResult.source,
         cost:     dispatchResult.cost,
@@ -233,12 +256,16 @@ async function _dispatchChunkOnce(chunkPrompt, chunk, dispatchFn, opts = {}) {
       };
     }
     if (comp.state === STATE.ESCALATED) {
-      return { ok: false, escalated: true, detection, attempts, text: dispatchResult.text };
+      // §FIXED 2026-09-30 — no `error` here, so the caller's `result.error || 'agent dispatch failed after verification
+      // retries'` recorded a generic string and the real verdict was lost. failChunk() now gets the Detector's own summary.
+      return { ok: false, escalated: true, detection, attempts, text: dispatchResult.text,
+        error: `verification failed after ${attempts} attempt(s): ${detection?.summary || 'no verdict'}` };
     }
     // else state === RETRYING — loop continues, buildRetryPrompt() picks it up next iteration
   }
 
-  return { ok: false, escalated: true, detection: comp.detection, attempts, error: 'exceeded outer wall-clock attempt cap' };
+  return { ok: false, escalated: true, detection: comp.detection, attempts,
+    error: `exceeded outer wall-clock attempt cap (${maxWallClockAttempts})${comp.detection?.summary ? ` — last verdict: ${comp.detection.summary}` : ''}` };
 }
 
 // §BUILT 2026-09-03 — James: "set default to chatgpt, fallback gemini."
