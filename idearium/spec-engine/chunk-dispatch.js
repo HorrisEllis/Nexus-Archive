@@ -35,9 +35,9 @@
  * chunk ended up looking like).
  */
 import http from 'http';
-import path from 'path';
 import { QueueCompartment, STATE } from '../../lib/seam/queue.js';
-import { extractCode } from '../../lib/extract-code.js';
+import { createRequire } from 'module';
+const _req = createRequire(import.meta.url);   // §0.39.286 — this file is ESM: a bare require() is undefined here
 
 const GUARDIAN_PORT = parseInt(process.env.GUARDIAN_PORT || '7820');
 
@@ -114,9 +114,7 @@ function _memoryJaa() {
  * @param {string} chunkPrompt   — the built prompt for this chunk (same as before)
  * @param {object} chunk         — Idearium's chunk object (chunkIdx, chunkTitle used for the compartment's identity)
  * @param {function} dispatchFn  — (prompt, opts) => Promise<{ok, text, error, queued, jobId, agent}> — this IS agentSuite.buildChunkWithAgent, unchanged
- * @param {object} opts          — { preferAgent, axioms, specUuid, busEmit, expectCode, fileName }
- *                                 expectCode + fileName: the reply is a source FILE. It is then verified as one — does
- *                                 it parse — not graded as prose (§CODE MODE, lib/seam/detector.js).
+ * @param {object} opts          — { preferAgent, axioms, specUuid, busEmit }
  * @returns {Promise<{ok, text, escalated, detection, attempts, queued, jobId, agent}>}
  */
 async function _dispatchChunkOnce(chunkPrompt, chunk, dispatchFn, opts = {}) {
@@ -150,20 +148,15 @@ async function _dispatchChunkOnce(chunkPrompt, chunk, dispatchFn, opts = {}) {
     total:        opts.total || 1,
     jaa,
     busEmit:      opts.busEmit || (() => {}),
-    // §CODE MODE 2026-09-30 — a file chunk was graded as PROSE: the Detector demanded it end in sentence punctuation,
-    // be 40% as long as a prompt that carries the whole system state, and contain fences the WARP path had already
-    // stripped. A correct file failed every attempt (composite 0.65, TRUNCATED:mid_sentence_end) and the chunk stalled.
-    mode:         opts.expectCode ? 'code' : undefined,
-    ext:          opts.expectCode && opts.fileName ? path.extname(String(opts.fileName)) : undefined,
   });
 
-  // §FIXED 2026-09-30 — this was a literal 6, described as "an outer safety cap, not the real limit". It WAS the real
-  // limit: the ladder allows 9 content retries + 3 watchdog retries, so a run that failed verification every time was
-  // cut at attempt 6 and reported "exceeded outer wall-clock attempt cap" — a message naming neither the cause nor the
-  // check that failed. The cap is now derived from the compartment's own ladder, so it can only end a run the ladder
-  // has already run out of.
-  const maxWallClockAttempts = comp.maxAttempts();
+  const maxWallClockAttempts = opts.attemptsPerHop || 6; // §0.39.286 routing.attempts_per_hop · strategy ladder + watchdog ceilings already bound this internally; this is an outer safety cap, not the real limit
   let attempts = 0;
+  // §0.39.286 RG3 — the provider's own last error survives to the caller (it was replaced by "exceeded outer wall-clock
+  // attempt cap", so nothing downstream could tell a dead provider from a slow one), and a login or a limit ends this
+  // provider's attempts at once: retrying the same provider cannot fix either (guardian/lib/job-retry.js: needs-you).
+  let lastErr = null;
+  const _final = (msg) => { try { const c = _req('../../lib/pipeline-routing.js').classify({ error: msg }); return c === 'login' || c === 'rate-limit'; } catch (_) { return false; } };
 
   while (attempts < maxWallClockAttempts) {
     attempts++;
@@ -180,8 +173,9 @@ async function _dispatchChunkOnce(chunkPrompt, chunk, dispatchFn, opts = {}) {
       // content-quality failure Detector should judge. Treat as a
       // connectivity retry, same distinction QueueCompartment's own
       // watchdogRetry() draws for stalls vs. content failures.
+      lastErr = e.message;
       const { escalated } = comp.watchdogRetry(e.message);
-      if (escalated) return { ok: false, escalated: true, detection: null, attempts, error: e.message };
+      if (escalated || _final(e.message)) return { ok: false, escalated: true, detection: null, attempts, error: e.message };
       continue;
     }
 
@@ -212,8 +206,9 @@ async function _dispatchChunkOnce(chunkPrompt, chunk, dispatchFn, opts = {}) {
       }
       const polled = await _pollGuardianJob(dispatchResult.jobId);
       if (!polled.ok) {
+        lastErr = polled.error;
         const { escalated } = comp.watchdogRetry(polled.error);
-        if (escalated) return { ok: false, escalated: true, detection: null, attempts, error: polled.error };
+        if (escalated || _final(polled.error)) return { ok: false, escalated: true, detection: null, attempts, error: polled.error };
         continue;
       }
       dispatchResult = { ok: true, text: polled.text, agent: dispatchResult.agent };
@@ -221,8 +216,9 @@ async function _dispatchChunkOnce(chunkPrompt, chunk, dispatchFn, opts = {}) {
     }
 
     if (!dispatchResult.ok || !dispatchResult.text) {
-      const { escalated } = comp.watchdogRetry(dispatchResult.error || 'no text in response');
-      if (escalated) return { ok: false, escalated: true, detection: null, attempts, error: dispatchResult.error };
+      lastErr = dispatchResult.error || 'no text in response (empty reply)';
+      const { escalated } = comp.watchdogRetry(lastErr);
+      if (escalated || _final(lastErr)) return { ok: false, escalated: true, detection: null, attempts, error: dispatchResult.error || lastErr };
       continue;
     }
 
@@ -230,15 +226,6 @@ async function _dispatchChunkOnce(chunkPrompt, chunk, dispatchFn, opts = {}) {
     const { passed, detection } = comp.evaluate();
 
     if (passed) {
-      // §CODE MODE — the verified reply may still be a fenced reply (the direct agent path, WARP not loaded, never runs
-      // extractCode). completeChunk writes result.text VERBATIM as the file, so a fence or "Here you go:" around the code
-      // would land inside the file. Code the Detector checked is the code that is returned. Unfenced text (WARP's output)
-      // is returned untouched.
-      let outText = dispatchResult.text;
-      if (opts.expectCode && /^[ \t]*```/m.test(outText)) {
-        const ex = extractCode(outText);
-        if (ex.ok && ex.code) outText = ex.code;
-      }
       // §PASS-THROUGH 2026-07-09 — this returned a fixed field set, silently
       // dropping anything the dispatchFn reported beyond {ok, text, agent}.
       // With WARP in the build path that means source/cost/cacheHit vanish
@@ -247,7 +234,7 @@ async function _dispatchChunkOnce(chunkPrompt, chunk, dispatchFn, opts = {}) {
       // Verification owns quality, not provenance — forward what it did not
       // produce rather than erasing it.
       return {
-        ok: true, escalated: false, text: outText, detection, attempts,
+        ok: true, escalated: false, text: dispatchResult.text, detection, attempts,
         agent: dispatchResult.agent,
         source:   dispatchResult.source,
         cost:     dispatchResult.cost,
@@ -256,16 +243,13 @@ async function _dispatchChunkOnce(chunkPrompt, chunk, dispatchFn, opts = {}) {
       };
     }
     if (comp.state === STATE.ESCALATED) {
-      // §FIXED 2026-09-30 — no `error` here, so the caller's `result.error || 'agent dispatch failed after verification
-      // retries'` recorded a generic string and the real verdict was lost. failChunk() now gets the Detector's own summary.
-      return { ok: false, escalated: true, detection, attempts, text: dispatchResult.text,
-        error: `verification failed after ${attempts} attempt(s): ${detection?.summary || 'no verdict'}` };
+      return { ok: false, escalated: true, detection, attempts, text: dispatchResult.text };
     }
     // else state === RETRYING — loop continues, buildRetryPrompt() picks it up next iteration
   }
 
-  return { ok: false, escalated: true, detection: comp.detection, attempts,
-    error: `exceeded outer wall-clock attempt cap (${maxWallClockAttempts})${comp.detection?.summary ? ` — last verdict: ${comp.detection.summary}` : ''}` };
+  // §0.39.284 — say WHY every attempt was refused (the detector's own summary), not only that the cap was reached
+  return { ok: false, escalated: true, detection: comp.detection, attempts, error: `exceeded outer wall-clock attempt cap${comp.detection && comp.detection.summary ? ` — last check: ${comp.detection.summary}` : ''}${lastErr ? ` — last error: ${lastErr}` : ''}` };
 }
 
 // §BUILT 2026-09-03 — James: "set default to chatgpt, fallback gemini."
@@ -281,6 +265,7 @@ async function _dispatchChunkOnce(chunkPrompt, chunk, dispatchFn, opts = {}) {
 // content — real provenance, not "chatgpt" left standing for a chunk
 // gemini actually wrote.
 export async function dispatchChunkWithVerification(chunkPrompt, chunk, dispatchFn, opts = {}) {
+  if (Array.isArray(opts.route) && opts.route.length) return _walkRoute(chunkPrompt, chunk, dispatchFn, opts);
   const primary = await _dispatchChunkOnce(chunkPrompt, chunk, dispatchFn, opts);
   if (primary.ok || !opts.fallbackAgent || opts.fallbackAgent === opts.preferAgent) return primary;
 
@@ -291,6 +276,39 @@ export async function dispatchChunkWithVerification(chunkPrompt, chunk, dispatch
   // but both are real and neither is hidden — primaryError is carried
   // alongside so nothing about the first attempt is lost.
   return { ...fallbackResult, primaryAgent: opts.preferAgent, primaryError: primary.error };
+}
+
+// §0.39.286 RG3 (docs/2026-10-01-routing-registry-genesis-phasemap.spec) — James: "full options for fallback logic,
+// routing". opts.route is lib/pipeline-routing.js plan()'s ordered route. Each hop is the same verified ladder against
+// one provider; a failed hop is classified, fed to that provider's breaker, and the walk moves on only if the class is
+// in the policy's fallback_on (login never moves on: it needs a person). Every hop is returned (route) so the chunk
+// keeps who failed, why and for how long, and who built it.
+async function _walkRoute(chunkPrompt, chunk, dispatchFn, opts) {
+  const PR = _req('../../lib/pipeline-routing.js');
+  const policy = opts.policy || PR.DEFAULTS;
+  const hops = [];
+  let last = null;
+  for (let i = 0; i < opts.route.length; i++) {
+    const provider = typeof opts.route[i] === 'string' ? opts.route[i] : opts.route[i].provider;
+    const t0 = Date.now();
+    const r = await _dispatchChunkOnce(chunkPrompt, chunk, dispatchFn, { ...opts, preferAgent: provider, fallbackAgent: null, route: null, attemptsPerHop: policy.attemptsPerHop });
+    const ms = Date.now() - t0;
+    if (r.queued) { hops.push({ provider, outcome: 'queued', ms, jobId: r.jobId || null }); return { ...r, route: hops }; }
+    if (r.ok) {
+      PR.breaker.success(provider);
+      hops.push({ provider, outcome: 'ok', ms, attempts: r.attempts });
+      return { ...r, agent: r.agent || provider, route: hops, primaryAgent: hops.length > 1 ? hops[0].provider : undefined, primaryError: hops.length > 1 ? hops[0].error : undefined };
+    }
+    const cls = PR.classify(r);
+    PR.breaker.failure(provider, cls, policy);
+    const go = i < opts.route.length - 1 && PR.shouldFallback(cls, policy);
+    hops.push({ provider, outcome: 'failed', class: cls, error: r.error || (r.detection && r.detection.summary) || null, ms, attempts: r.attempts, next: go ? 'fallback' : 'stop' });
+    last = r;
+    if (go) console.warn(`[chunk-dispatch] ${provider} failed '${chunk.sectionId || chunk.title}' (${cls}) — next: ${typeof opts.route[i + 1] === 'string' ? opts.route[i + 1] : opts.route[i + 1].provider}`);
+    if (!go) break;
+  }
+  const why = hops.map(h => `${h.provider}: ${h.class}`).join(' → ');
+  return { ...(last || { ok: false, escalated: true }), ok: false, escalated: true, route: hops, error: `every route hop failed (${why})${last && last.error ? ` — last: ${last.error}` : ''}` };
 }
 
 // §BROKEN IMPORT FIXED 2026-07-09 — warp-build-dispatch.js does
