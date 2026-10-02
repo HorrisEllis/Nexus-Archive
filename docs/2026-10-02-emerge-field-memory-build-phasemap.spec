@@ -1,7 +1,7 @@
 spec:
   meta:
     name:     emerge-field-memory-build
-    version:  1.7.9
+    version:  1.7.12
     date:     2026-10-02
     release:  mapped, nothing built — each phase its own patch once built
     uuid:     nexus-emerge-field-memory-build-phasemap-v1-0000-2026-1002-jamesbrooks-001
@@ -223,7 +223,7 @@ spec:
       layer: foundation
       systems: [idearium, cortex, intelligence, loom, copilot, cos, emerge, warp]
       value: { score: 4, cost: M, for: [quality, foundation], why: "drift stops piling up: an undeclared event or route fails the suite" }
-      status: PARTIAL (1.7.7) — (1) done for every system but warp (waits on 1.5.0); (3) built; (2)(4)(5) open
+      status: "PARTIAL (1.7.11) — (1) done but warp, (3) the check, (4) declared systems, (5) declared value; (2) route contracts for cos, warp, emerge open"
       depends_on: [EM0_ground]
       files: [idearium/event-taxonomy.js, cortex/event-taxonomy.js, intelligence/event-taxonomy.js, loom/event-taxonomy.js, copilot/event-taxonomy.js, cos/event-taxonomy.js, emerge/event-taxonomy.js, warp/event-taxonomy.js, cos/interaction-contract.json, warp/interaction-contract.json, emerge/interaction-contract.json, loom/scanners/phasemap-map.js, lib/event-taxonomy-pattern.js]
       does: >-
@@ -639,7 +639,7 @@ spec:
       layer: foundation
       systems: [guardian, clear-glass]
       value: { score: 4, cost: S, for: [safety, quality], why: "one truth for the agents; removes a drift risk already found" }
-      status: OPEN
+      status: "DONE (1.7.12) — provider nodes in Guardian, GET /api/providers stamped; Clear Glass a stamped cache; one guardian.spec"
       depends_on: [EM0_ground, EV0_contracts_for_every_system]
       files: [clear-glass/src/providers/registry.js, clear-glass/src/userscripts/manager.js, guardian/spec/guardian.spec, docs/guardian.spec, guardian/userscripts.yaml, guardian/data/nodes/, guardian/routes/, lib/hat-forge.js]
       does: >-
@@ -708,7 +708,7 @@ spec:
       layer: service
       systems: [orchestrator, copilot, loom]
       value: { score: 5, cost: S, for: [compounding, daily-use], why: "Claude Code sees Nexus from inside; every later phase gets built faster and better" }
-      status: OPEN
+      status: PARTIAL (1.7.10) — .mcp.json, honest degradation, loom impact / contracts / proof / introspect tools, on every claude-code run; recall (MR1), CFR trace, field, settings and the session's Observations open
       depends_on: [EM0_ground, GA1_guardian_source_of_truth, EV0_contracts_for_every_system]
       files: [.mcp.json, orchestrator/lib/mcp-server.js, orchestrator/lib/mcp-stdio.js, lib/introspect.js, lib/reflection.js]
       does: >-
@@ -727,7 +727,7 @@ spec:
       layer: service
       systems: [guardian, economy, idearium, cos]
       value: { score: 5, cost: M, for: [income, daily-use], why: "the strongest coder available, working inside his pipeline on his account" }
-      status: PARTIAL (1.7.9) — IN2a built (the 'claude-code' backend in Idearium); IN2b built (under the economy: gate + ledger); GA1/AC1/SH1 parts open
+      status: "PARTIAL (1.7.9) — IN2a built (the 'claude-code' backend in Idearium); IN2b built (under the economy: gate + ledger); GA1/AC1/SH1 parts open"
       depends_on: [GA1_guardian_source_of_truth, AC1_accounts_into_agents, SH1_shadow_space]
       files: [lib/providers/claude-code.js, lib/economy/policy.js, lib/repo-agent.js, idearium/repo/work-surface.js]
       does: >-
@@ -1235,3 +1235,62 @@ spec:
 # Proof: tests/modules/test-claude-code-backend.test.js 6/6 (CC-06: ledger rows with reported tokens and dollars; off →
 # refused, claude not run, no row; fallback:ollama followed and said; a failed run is a 'failed' row); economy 11/11,
 # economy-guardian 5/5, pipeline-routing 19/19, warp-cascade fallback 7/7, repo-agent-provider 65/65.
+
+## ADDENDUM 2026-10-02 — 1.7.10, IN1: Nexus as Claude Code's toolbox
+# Built ahead of GA1 (its listed dependency): GA1 is Guardian as the truth for Guardian's agents; nothing in IN1 reads it.
+# .mcp.json at the repo root registers orchestrator/lib/mcp-stdio.js as server "nexus": a Claude Code session opened on
+# the repo loads it (the real `claude mcp list` finds it, pending the person's one-time approval). Idearium's claude-code
+# backend (IN2a) passes the same server to every headless run by absolute path (--mcp-config, mcp__nexus allowed; off
+# with NEXUS_CLAUDE_CODE_MCP=0), so Claude Code building inside Idearium can look before it writes.
+# New tools, each a thin call onto what exists: nexus_loom_impact (a component's real wiring — depends on, used by: the
+# impact of changing it; reads loom's registry from disk, so it answers with every service down; nexus_loom_query keeps
+# the list-by-name role), nexus_contracts_check (EV0's check), nexus_proof_check (idearium's delivery checker),
+# nexus_introspect (copilot's examination of an answer). CLI: `nexus mcp list | call <tool> [--args=<json>]`.
+# Found, a defect fixed: the server's _get turned an unreachable service into null and the tools read null as an empty
+# result — nexus_gaps with guardian down said "No open gaps ✓", nexus_jobs "No jobs found", seven tools in all. Now an
+# unreachable service or an HTTP error THROWS with the service and port; a 404 stays "nothing there".
+# Said, not fixed: the server's HTTP mode defaults to :7821, guardian's WS port — latent (nothing starts it; stdio needs
+# no port). Not built: MCP_TOOL_CALLED / MCP_TOOL_UNAVAILABLE events (nothing emitted, so nothing to declare yet), recall
+# (waits on MR1), CFR trace and rewind, the field and its lenses, settings get, the session's work as Observations.
+# Proof: tests/modules/test-nexus-mcp.test.js 5/5 — the real stdio server spoken to as Claude Code speaks: loom impact on
+# lib/component-store.js returns its real wires (idearium.api among its users); every service down → errors naming the
+# service, never an empty answer; .mcp.json valid; every claude-code run carries the server.
+
+## ADDENDUM 2026-10-02 — 1.7.11, EV0 (4) declared systems, (5) declared value
+# (4) E16 "Declared, not guessed": loom/scanners/phasemap-map.js reads a phase's own `systems:` line first and takes it as
+# written (systemsFrom: 'declared'); only a phase without one is guessed from its prose (systemsFrom: 'guessed'). The
+# guess learns cos, warp, emergence, economy, nexstore. Across every phasemap: 'general' 73 → 47 phases, 23 → 28 systems;
+# this map's 47 phases all declared — EV0 now sits under cos and warp, the map's own proof.
+# (5) E17: intelligence/synthesis reads a phase's `value:` (YAML or its one-line text form; a score outside 1–5 or a cost
+# outside S|M|L|XL is no value). The score is one more NAMED part of leverage — "declared +N" (0.5 × score) — added to
+# the structural parts, never replacing them; a declared cost is the effort (S 2, M 4, L 8, XL 16). The fill order for
+# this map now leads GA1 (S), EC6 (S), EV0, EM0, SH1, MR1.
+# Found, a defect of mine fixed: IN2's status line (1.7.9) held an unquoted ": " ("the economy: gate"), so this whole map
+# stopped parsing as YAML — synthesis listed it as unreadable (and ranked fixing that first), and PH1's
+# conditionsFromPhase would have read no conditions from it. Quoted; a test now fails if the map ever stops parsing.
+# Proof: test-loom-phasemap 7/7 (T-006 declared wins / guess marked; T-007 EV0 under cos and warp, none general),
+# test-synthesis-declared-value 3/3, moce-roadmap 43/43 (one parser: systemsFrom carried by both paths),
+# synthesis-zoom-versionium 6/6, loom-phasemap-status 12/12, phase-proof 7/7.
+
+## ADDENDUM 2026-10-02 — 1.7.12, GA1 built: Guardian states the Clear Glass agents
+# Four places kept the agent facts and disagreed: clear-glass/src/providers/registry.js (the only one with deepseek),
+# guardian's /providers (hard-coded, no deepseek), docs/guardian.spec and guardian/spec/guardian.spec (no deepseek).
+# Now the facts are Guardian's provider NODES — a new node type (lib/node-schemas/schema.provider, KNOWN_TYPES, Guardian's
+# watched types): guardian/data/nodes/provider/{chatgpt,claude,deepseek,gemini,perplexity}.provider, built from Clear
+# Glass's table (the most complete) with guardian.spec's versions and strengths. guardian/lib/agent-facts.js reads them;
+# GET :7820/api/providers serves them with their hash; /providers reads them (deepseek appears). One hash, one place:
+# lib/agent-facts-hash.js, used by both sides (facts only — envelope timestamps are not hashed).
+# Clear Glass's registry is a CACHE now (<data>/clear-glass/providers-cache.json), stamped, refreshed from Guardian at
+# boot before any tab opens; a cache whose content no longer matches its stamp is a gap (verify(), 'agent.cache.stale' —
+# declared, AGENT_CACHE_STALE); Guardian down → the stamped cache runs, said; no cache yet → its old table as a stamped
+# SEED, said. Its exports are unchanged, and NCP_PROVIDERS stays one live object, so host.js, selector-assign.js, the
+# options store and main/index.js need no change. Tab autostart: the person's toggle, then Guardian's autostart fact.
+# The two guardian.spec copies made one: docs/guardian.spec was 13 versions stale and wholly contained in the real one
+# (diffed) — it is a pointer now; SPEC-REGISTRY says so; AMC-006 reads the provider nodes instead of it.
+# Not built (said): AGENT_FACTS_CHANGED as its own event (Guardian's node registry already emits guardian.node.changed for
+# a provider node), `guardian agents list|verify` CLI, a settings section; userscripts and hats are not yet nodes here —
+# providers only.
+# Proof: tests/modules/test-agent-facts.test.js 5/5 — the map's three: a provider added in Guardian alone appears in
+# Clear Glass after its refresh (in the live table other modules imported); a hand-edited cache is a gap on the next
+# boot and the next refresh replaces it; Guardian down → the stamped cache runs, said. Plus agent-mesh coverage 7/7,
+# nexus-options-autoboot 18/18, clear-glass phase2, and 17 other suites over the registry, nodes and schemas.
