@@ -470,6 +470,10 @@ James: *"the desktop environment needs to either ask, or give me the login. or u
 
 **Desktop login: user nexus, password nexus.** This is the generic default for every repo desktop VM. Change it in Settings → Global → desktop.user and desktop.password. `cos/testenv/provision.js` run with the desktop option sets it with chpasswd and adds the account to sudo. It also works through the environment variables COS_DESKTOP_USER and COS_DESKTOP_PASSWORD, which is how idearium's "Set up the test VM" passes the settings. Every desktop boot applies the setting again through the guest agent (its guest-set-user-password command, `cos/compartment/guest-agent.js`), so an image made before 0.39.282 gets it too, even though its account had no password. The viewer (`idearium/ui/desktop.html`) shows the login; clicking it copies the password. It also says whether the setting took. An invalid login name is refused before it reaches any shell (`cos/workspace/index.js`).
 
+**If nexus / nexus does not log in** (0.39.293). James: *"i mean that i cant login to my desktop envirement in idearium with the default credientials, not sure if its a upstream problem"*. It was not upstream. Idearium's "Set up the test VM" dropped the desktop option, so the image it built had no desktop and no desktop account. The repo desktop then booted to a text console where the login could not work.
+- **Now:** the setup offers the desktop, ticked by default. Starting a desktop on an image without one is refused, with the fix: rebuild the VM with the desktop ticked, or run `cos/testenv/provision.js` with the desktop option.
+- **After a rebuild:** each repo's desktop disk is tied to the image it was made over (a stamp file beside it). A disk made over the old image is renamed with "stale" and the time in its name and kept, never deleted, and a fresh one is made. A branch whose original's disk is stale starts from the image instead.
+
 **Who answers a repo that chose no provider**: Settings → Global → repos.default_provider, which is ollama by default (`lib/repo-agent.js`). Clearing it restores the old fallback: guardian's first provider.
 
 ## Getting it to code a project: plan, phases, the work surface, one look (v0.39.284)
@@ -528,6 +532,39 @@ James, with screenshots of an empty Phases tab, three plan runs that "replied �
 - **What's kept:** the zip and every original file. Importing again only adds what's new.
 - **Code:** `lib/spec-library.js` (scanning and converting) and `idearium/lib/spec-library-import.js` (ideas, specs, the library index).
 - **Test:** `tests/modules/test-spec-library.test.js`.
+
+**A library spec into the pipeline** (0.39.292). James: "how can i import into the pipeline. the specs also need to convert into actual spec files."
+- **Where:** each row of the spec library has **→ pipeline** (then **open repo**); the idearium CLI's spec-library to-repo command; the API route POST /api/spec-library/:key/to-repo (a sha, a sha prefix or a title).
+- **What it does:** the document's spec becomes a repo through the same promotion every spec takes, and the document is written into it as a real .spec file (meta and every section, as YAML) under the repo's spec folder, with the original text beside it.
+- **One idea:** the library's idea becomes the repo's idea. Asking again opens the same repo.
+- **Code:** `idearium/lib/spec-library-import.js` (toPipeline, findRow, specFileText). The route hands in the promotion and the repo layer's file write.
+
+**The Spatial Void** (0.39.295, `idearium/ui/void.html`, `idearium/lib/void.js`). James: "Just have the spacial void, with a slider … with those linked togethe" · "the ideas come from me though not agents".
+- **Where:** Create → **The Void**, Welcome → **Enter the Void**, or the idearium CLI's void commands. It replaces Ideas and Brainstorm; every idea and every brainstorm spark is in it.
+- **Speak your vision** (Ctrl+Enter): it becomes an idea, at the dials, a point of light in the field.
+- **The dials:** creativity normal · creative · outside the box · novel · outlier; stability stable · shaky · risky · dangerous · unstable, from the other side. Linked, one carries the other. Unlink them (⌖) and each moves alone; the line joining them strains with the tension.
+- **The void answers your idea; it never writes one.** ECHO answers at the dials: creativity sets how far it pushes, stability how hard it checks. D20 rolls a field and maps its mechanism; REVERSE walks your idea's furthest form back to now. The voices are the old Nexus engines: EROSMANCER, HOSTILE TRUTH, DELTA RISK, UNIFIED where the dials meet.
+- **TAKE** a line: you say what you keep, in your words, and only that goes into your idea.
+- **The field:** worked ideas glow brighter; untouched ones fade and drift outward. Wild ideas (born wild, held steady) are magenta; unsteady ones orange. Drag to place; drag one onto another to collide them.
+- **→ SPEC** grounds the idea (stable, whatever the dials say), then opens the spec workshop.
+- **Fonts:** Bebas Neue, DM Mono and Space Grotesk ship in idearium/ui/fonts (SIL Open Font License), so it works offline.
+- **No lowercase** (0.39.296, James: "alright but no lowercase"): everything in the Void is shown in capitals, tooltips and the window title too. What you type is stored exactly as typed.
+- **Limits and states** (0.39.296): an idea is at most 4000 characters, a kept part 1000, and going over is refused with the count. The field says when it is entering, empty, or unreachable (with TRY AGAIN). An agent answer shows a running timer.
+
+**The spec workshop, its own page** (0.39.297). James: "all of it needs to be isolated, in its own pages" · "no lowercase". The workshop is the pipeline's second station, in the Void's look and in capitals: THE SPEC WORKSHOP, the stations IDEA → SPEC → ARCHITECT → BLUEPRINT → REPO → COS, your sections in cyan, the agent's proposals in magenta. Its dial is REACH, in your words: normal, creative, outside the box, novel, outlier. It asks the agent for three things only: a draft of the open section, open loops, and questions. The idea-generation feeds live in the Void. Both pages share one look: `idearium/ui/css/void-theme.css` and `idearium/ui/js/void-sky.js`.
+
+**ARCHITECT** (0.39.298). James: "with architect for archiecture using the component registry, components store with dependancies". The pipeline's third station, its own page (`idearium/ui/architect.html`, opened from the workshop's ARCHITECT station). It lays a spec out as components, each with a tier, a layer, a purpose, its dependencies and its seams, in levels from the bottom up. Each component is matched against loom's registry and the component store, searched as one index: green REUSE, cyan NEW. A dependency on nothing, a cycle, or a lower layer leaning on a higher one is a GAP, said in words. The agent only proposes components. The architecture is saved beside the spec as spec/<name>.architecture.yaml. Engine `idearium/lib/architect.js`, routes /api/architect/*, CLI idearium architect.
+
+**One canvas for both Architects** (0.39.299). James: "look at architect in idearium. rebuild it, fully. enterprise grade, beautiful style and consistent, open ui." Idearium has two Architects, the pipeline's (Build › Architect) and each repo's (its Architect tab). Both now run on one canvas, `idearium/ui/js/arch-canvas.js` with `idearium/ui/css/arch-canvas.css`, stripped from the MASTERMIND canvas James supplied. It has zoom toward the cursor, drag to pan, glass cards, wires with travelling particles, a minimap, box select, a floating toolbar and slide-in drawers. Layer bands run bottom-up, and the layout cuts crossings. Selecting a component lights what it needs and what needs it. In the pipeline's Architect you drag a card's handle onto another to make a dependency, and a card you place keeps its place. The repo tab draws the registry, with the inspector, the lists and the blueprint in a drawer.
+
+**The spec workshop** (0.39.294, `idearium/ui/workshop.html`, `idearium/lib/workshop.js`). James: "need the spec workshop … the workshop and maybe it hooks into the spec field".
+- **Where:** Welcome → **Spec workshop**; an idea's **✎ spec workshop**; a repo's Spec tab → **open in the spec workshop**; the spec library's **✎ workshop** on a row; the idearium CLI's workshop commands.
+- **Start from:** an idea, a document in the spec library, a repo's spec file, or nothing.
+- **Write it yourself, or ask the agent:** open loops, outside-the-box questions, what ifs, the d20 roll (one of twenty fields, and one of its mechanisms mapped onto the spec), a reverse causal chain (an invented end-state walked back to what exists), inspiration from your own library and repos, or a draft of the open section.
+- **The ambition dial:** 1 grounded, 2 practical, 3 stretch, 4 bold, 5 outside the box. It changes what the agent is asked to reach for.
+- **The agent only proposes.** Proposals sit apart from the spec; one goes in only when you accept it: into the open section, as a new section, or replacing a section's text (the old text is kept). A removed section is kept and can be restored.
+- **Saving (Ctrl+S)** writes the spec into its repo's spec folder, where the Spec tab shows it. With no repo yet, it makes one: a library document's own repo, else a new repo for the idea.
+- **The agent it asks:** your default provider, through copilot, the same way a repo's agent is asked.
 
 **Cut replies are finished** (0.39.289, `lib/reply-continuation.js`). When a reply stops part-way, the agent is shown the end of what it wrote and continues from there, and the two parts are stitched together:
 - **When it counts as cut:** Ollama stopped at its token limit, a code block was opened and never closed, or the reply ends mid-statement.
