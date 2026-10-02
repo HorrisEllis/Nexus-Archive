@@ -57,10 +57,15 @@ const BOUNDARY_EXPORTS = [
   // so the scanner gives it its export hook; declaring it here too was a duplicate (loom.unique-id)
   // §0.39.295 — the spatial void, reached only by await import() from idearium/api
   I('idearium/lib/void.js'),
+  // §0.39.298 AR2 — the Architect, reached only by await import() from idearium/api
+  I('idearium/lib/architect.js'),
+  // §0.39.302 PR1 — the delivery checker, reached only by await import() from idearium/api
+  I('idearium/repo/proof-run.js'),
 ];
 
 // Consumers that are HAND-MAPPED elsewhere (the scanner skips them): [consumer id, dependency id, where].
 const CONSUMERS = [
+  ['nexus.idearium.api', I('idearium/repo/proof-run.js'),  'idearium/api/index.js repo.deliver.* — the delivery checker (await import)'],
   ['nexus.idearium.api', I('idearium/repo/phases.js'),      'idearium/api/index.js repo.phases.* (await import)'],
   ['nexus.idearium.api', I('idearium/repo/living-spec.js'), 'idearium/api/index.js repo.living-spec (await import)'],
   ['nexus.idearium.api', I('lib/cos-debug-report.js'),      'idearium/api/index.js repo.run — failures keep their compact debug report'],
@@ -87,6 +92,10 @@ const CONSUMERS = [
   [I('idearium/lib/spec-library-import.js'), I('lib/spec-library.js'), 'idearium/lib/spec-library-import.js importLibrary — scan + convert (createRequire)'],
   // §0.39.294 SW1 — the spec workshop: the API owns its store and repos, hands it the agent (setAsk → copilot /api/prompt
   // through lib/repo-agent.js's default provider) and saves through the library's pipeline for a library document
+  // §0.39.298 AR2 / §0.39.299 — the Architect: the API owns its store and the agent; reuse candidates come from loom's
+  // registry (read as a file) and the component store (_require — an edge the scanner cannot see)
+  ['nexus.idearium.api', I('idearium/lib/architect.js'), 'idearium/api/index.js architect.* (_architect: await import, setAsk) — makeSession, makeIndex, analyse, editComponent, draft, decide, archText, fromArchText'],
+  ['nexus.idearium.api', I('lib/component-store.js'), 'idearium/api/index.js _architectIndex + the build path — storeDir / find / put / markFailed (_require)'],
   ['nexus.idearium.api', I('idearium/lib/workshop.js'), 'idearium/api/index.js workshop.* (_workshop: await import, setAsk)'],
   ['nexus.idearium.api', I('lib/repo-agent.js'), 'idearium/api/index.js _workshop ask — defaultProvider / routeFor / COPILOT_URL (_require)'],
   // §0.39.295 — the spatial void: the API owns the ideas, the echoes table and the agent (_agentAsk); void.js shapes it
