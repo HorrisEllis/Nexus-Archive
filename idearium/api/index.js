@@ -844,7 +844,23 @@ async function _verifyRepo(repo) {
   const BV = _require('../../lib/build-verify.js');
   const mat = getRepoLayer().materialize(repo.uuid);   // the files as the spec has them now — never a stale copy
   const dir = mat && !mat.error ? mat.dir : _repoDiskDir(repo.uuid);
-  return BV.verify({ repo, repoDir: dir, compartment: _compartmentOf(repo) });
+  const v = await BV.verify({ repo, repoDir: dir, compartment: _compartmentOf(repo) });
+  // §0.39.309 SB12 — a code repo built from its registry is also checked against it: every promised file exists and
+  // parses. A missing file is a failure the prove loop sends back to be built, like any other.
+  try {
+    const se = getSpecEngine();
+    const m = se && repo.specUuid ? se.loadSpec(repo.specUuid) : null;
+    if (m && Array.isArray(m.registry) && m.registry.length) {
+      const cl = _require('../../lib/registry-plan.js').checklist(m.registry, dir);
+      v.checks.registry = { ran: true, components: cl.components, present: cl.present, missing: cl.missing.length, unparsed: cl.unparsed.length, extra: cl.extra };
+      const seen = new Set(v.failures.map(f => `${f.file}|${f.kind}`));
+      const add = (f) => { v.failures.push(f); (v.byFile[f.file] = v.byFile[f.file] || []).push(f); };   // byFile is what the prove loop sends back
+      for (const f of cl.missing) add({ file: f, kind: 'registry', error: 'the registry promises this file and it does not exist — build it' });
+      for (const u of cl.unparsed) if (!seen.has(`${u.file}|syntax`)) add({ file: u.file, kind: 'registry', error: `does not parse: ${u.error}` });
+      if (!cl.ok && v.verdict !== 'failed') { v.verdict = 'failed'; v.why = `the registry promises ${cl.missing.length + cl.unparsed.length} file(s) that are missing or do not parse`; }
+    }
+  } catch (e) { v.checks.registry = { ran: false, why: e.message }; }
+  return v;
 }
 function _recordVerify(repo, v, how, extra = {}) {
   try {
@@ -4380,7 +4396,9 @@ async function handle(req, res, route, query, body) {
           if (!p.ok) return err(res, 502, `could not make its repo: ${p.error}`);
           w.repoUuid = p.repoUuid; w.specPath = w.specPath || p.specFile; made = 'library';
         } else {
-          const r = RL.ingest({ name: w.title, bare: true, source: 'workshop', ideaUuid: w.ideaUuid || null,
+          // §0.39.305 SB2 — the new repo's spec is described by his own first words, not "bare repo: <title>"
+          const firstWords = ((w.sections || []).find(x => x && /^(idea|purpose)/.test(x.id || '') && String(x.body || '').trim()) || {}).body || '';
+          const r = RL.ingest({ name: w.title, bare: true, source: 'workshop', ideaUuid: w.ideaUuid || null, description: String(firstWords).trim().slice(0, 500) || null,
             compartmentId: _ensureCompartment(`idearium-repo-${String(w.title).toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 24)}`, w.title) });
           if (r.error) return err(res, 502, `could not make its repo: ${r.error}`);
           w.repoUuid = r.repo.uuid; made = 'new';
@@ -4391,11 +4409,19 @@ async function handle(req, res, route, query, body) {
       w.specPath = w.specPath || `spec/${LI.slugOf(w.title)}.spec`;
       const wr = RL.writeFile(w.repoUuid, w.specPath, WS.specText(w, yaml), { preserveWhitespace: true });
       if (wr.error) return err(res, 502, `the spec was not written: ${wr.error}`, { repoUuid: w.repoUuid });
+      // §0.39.305 SB2 (docs/2026-10-05-build-from-the-spec-phasemap.spec) — his sections become the spec's: kept on the
+      // manifest for every section's agent, and written into the sections they name (purpose ← idea + purpose). A
+      // section an agent already wrote is kept. Every save, so his later words reach it too.
+      let authored = null;
+      try {
+        const se = await _specEngineReady();
+        if (se && repo && repo.specUuid && typeof se.setAuthorWords === 'function') authored = se.setAuthorWords(repo.specUuid, w.sections || []);
+      } catch (e) { authored = { error: e.message }; console.warn(`[workshop.save] his words did not reach the spec (the file is saved): ${e.message}`); }
       w.savedAt = Date.now(); w.updatedAt = w.savedAt;
       w.history.push({ at: w.savedAt, what: `saved to ${w.specPath}${made ? ` (${made === 'new' ? 'a new repo' : 'its library document\'s repo'})` : ''}` });
       syncTable(WS.TABLE, [w]);
       os.emit('idearium.workshop.saved', { uuid: w.uuid, repoUuid: w.repoUuid, specPath: w.specPath, madeRepo: made });
-      return ok(res, { repoUuid: w.repoUuid, specPath: w.specPath, madeRepo: made, created: !!wr.created, workshop: w });
+      return ok(res, { repoUuid: w.repoUuid, specPath: w.specPath, madeRepo: made, created: !!wr.created, authored, workshop: w });
     }
     // ── §0.39.298 AR2 — ARCHITECT ─────────────────────────────────────────────────────────────────────────────────
     // James: "with architect for archiecture using the component registry, components store with dependancies". One
@@ -5057,8 +5083,14 @@ async function handle(req, res, route, query, body) {
             if (!useGuardian) { target = 'ollama'; }
             else if (body.guardianAgent) { target = body.guardianAgent; }
             else {
-              const cur = RA.getProvider(params.uuid);
-              target = RA.isGuardianProvider(cur) ? cur : RA.defaultProvider();
+              // §0.39.307 — James: "i cant click guardian on the agent tab." With no guardian agent chosen yet this fell
+              // to RA.defaultProvider(), which is ollama since 0.39.282 — so the click saved ollama and the switch snapped
+              // back. Guardian means a guardian agent: the current one, else the default if it is one, else chatgpt or
+              // the first guardian agent; none at all is said, never turned into another backend.
+              const cur = RA.getProvider(params.uuid), def = RA.defaultProvider();
+              const gp = RA.guardianProviders();
+              target = RA.isGuardianProvider(cur) ? cur : RA.isGuardianProvider(def) ? def : (gp.includes('chatgpt') ? 'chatgpt' : gp[0]);
+              if (!target) return err(res, 409, 'no guardian agents found — guardian lists its agents from the userscripts in guardian/ (lib/agent-providers.js); none answered');
             }
             const r = RA.setProvider(params.uuid, target); if (!r.ok) return done(r); out.provider = r.provider;
           }
@@ -5970,14 +6002,25 @@ async function handle(req, res, route, query, body) {
         if (!r || !r.ok) throw new Error((r && r.error) || 'plan dispatch failed');
         return r.text;
       } : null;
+      // §0.39.309 SB12 (docs/2026-10-05-build-from-the-spec-phasemap.spec) — James: "Using the register as a dependancy
+      // and file check list." A spec whose registry section carries a valid components list is built FROM it: one file
+      // per component, each waiting on the files its wires name. No usable registry → the agent plans as before, and the
+      // reason is in the answer (registry.problems), never silently.
+      const RP = _require('../../lib/registry-plan.js');
+      const regChunk = (doc.chunks || []).find(c => c.sectionId === 'registry' && c.status === 'complete');
+      const registry = regChunk ? RP.parseRegistry(regChunk.content) : { components: [], problems: ['the spec has no registry section'] };
       let planned;
-      try { planned = await FTP.plan({ name: doc.name, description, ask }); }
-      catch (e) { return err(res, 502, `planning the files failed: ${e.message}`); }
-      if (!planned.ok) return err(res, 422, (planned.errors || ['the files could not be planned']).join('; '), { agentError: planned.agentError || null });
+      if (registry.components.length && !body.freePlan) planned = RP.toPlan(registry.components);
+      else {
+        try { planned = await FTP.plan({ name: doc.name, description, ask }); }
+        catch (e) { return err(res, 502, `planning the files failed: ${e.message}`); }
+      }
+      if (!planned.ok) return err(res, 422, (planned.errors || ['the files could not be planned']).join('; '), { agentError: planned.agentError || null, registry: { used: false, problems: registry.problems } });
       let manifest;
       try {
         manifest = se.createFileTreeSpec({ name: `${doc.name} · code`, description, plan: planned, agent: body.agent || null, ideaUuid: doc.ideaUuid || null });
         manifest.codeFor = doc.uuid;
+        if (planned.planSource === 'registry') manifest.registry = registry.components;   // the checklist verify reads
         se.saveSpec(manifest);
         const freshDoc = se.loadSpec(doc.uuid);
         freshDoc.codeSpecUuid = manifest.uuid;
@@ -6027,7 +6070,8 @@ async function handle(req, res, route, query, body) {
       console.log(`[speceng.codegen] "${doc.name}" → ${planned.files.length} file(s) planned (${planned.planSource}) · code spec ${manifest.uuid.slice(0, 8)}`);
       return ok(res, { manifest: se.loadSpec(manifest.uuid), repoUuid,
         branch: branchInfo ? (branchInfo.ok ? { of: branchInfo.originUuid, branch: branchInfo.branch, dir: branchInfo.dir } : { made: false, reason: branchInfo.error }) : null,
-        plan: { planSource: planned.planSource, files: planned.files.length, rejected: planned.rejected.length, agentError: planned.agentError || null, layers: manifest.fileTree && manifest.fileTree.layers } });
+        plan: { planSource: planned.planSource, files: planned.files.length, rejected: planned.rejected.length, agentError: planned.agentError || null, layers: manifest.fileTree && manifest.fileTree.layers },
+        registry: { used: planned.planSource === 'registry', components: registry.components.length, problems: registry.problems } });
     }
 
     case 'speceng.create': {
