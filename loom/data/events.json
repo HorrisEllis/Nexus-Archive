@@ -1,5 +1,5 @@
 {
- "generatedAt": 1791572900090,
+ "generatedAt": 1791606428341,
  "byFile": {
   "nexus.architect.src.spec.Blueprint": {
    "emits": [
@@ -151,6 +151,7 @@
     "driver.screenshot",
     "driver.start",
     "field.map",
+    "field.pointer",
     "field.spotlight",
     "nav.loaded",
     "nav.started"
@@ -2022,6 +2023,13 @@
     "guardian.job.progress"
    ]
   },
+  "nexus.tests.modules.test-guardian-stack-sim.test": {
+   "emits": [
+    "guardian.job.confirmed",
+    "guardian.job.progress"
+   ],
+   "listens": []
+  },
   "nexus.tests.modules.test-ico-ledger-writethrough": {
    "emits": [],
    "listens": [
@@ -2856,6 +2864,12 @@
    "listeners": []
   },
   "field.map": {
+   "emitters": [
+    "nexus.clear-glass.src.driver"
+   ],
+   "listeners": []
+  },
+  "field.pointer": {
    "emitters": [
     "nexus.clear-glass.src.driver"
    ],
@@ -5630,6 +5644,7 @@
     "nexus.guardian.lib.job-retry",
     "nexus.tests.modules.test-back-and-forth.test",
     "nexus.tests.modules.test-chat-transcripts.test",
+    "nexus.tests.modules.test-guardian-stack-sim.test",
     "nexus.tests.modules.test-live-stream-and-gates.test"
    ],
    "listeners": [
@@ -7338,6 +7353,12 @@
   "sys.known": {
    "emitters": [
     "nexus.tests.modules.test-event-contracts.test"
+   ],
+   "listeners": []
+  },
+  "guardian.job.confirmed": {
+   "emitters": [
+    "nexus.tests.modules.test-guardian-stack-sim.test"
    ],
    "listeners": []
   },
