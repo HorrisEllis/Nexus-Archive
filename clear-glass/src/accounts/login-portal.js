@@ -288,4 +288,4 @@ class LoginPortal {
   }
 }
 
-module.exports = { LoginPortal, LOGIN_URLS, partitionFor, fillScript };
+module.exports = { LoginPortal, LOGIN_URLS, partitionFor, fillScript, AUTH_COOKIE_RE };

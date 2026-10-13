@@ -180,6 +180,7 @@ let tray, sse, ipcBridge, nexusOptions, bookmarks, rewind, providerHost, userscr
 let fp          = null;   // FingerprintEngine  — set in bootstrap()
 let ctxMgr      = null;   // ContextMgr         — set in bootstrap()
 let driver      = null;   // ClearDriver        — set in bootstrap()
+let _acctSwitch = null;   // account-switch instance (§0.60.12) — made on first use by acctSwitch(); declared up here so boot can never reach it before it exists
 let cookieVault = null;   // CookieVault        — set in bootstrap(); account windows restore from it
 let urlListener = null;   // UrlListener        — set in bootstrap()
 let apiSettings = null;   // ApiSettings        — set in bootstrap()
@@ -1256,6 +1257,10 @@ async function bootstrap() {
     postEvent:   (type, data) => _postEvent(type, data),
     history:     history,
   });
+  // §0.60.12 — James: "the logins for the agent providers needs to be all the same." Each provider tab opens signed in as the
+  // provider's dispatch account from Accounts & sign-in (account-switch.sync, before the first load). It cannot fail a start:
+  // host.js bounds it and loads the tab as it is if the sync errors (cookie vault locked, no account yet).
+  providerHost.beforeLoad = (providerId) => acctSwitch().sync(providerId, { reload: false });
   // §WIRED 2026-08-22 — James: "listens for the co-pilot response and
   // injects it into the corresponding agent chat using clearglass."
   // Real close of the loop — see src/copilot/wake-relay.js for the full
@@ -1688,13 +1693,6 @@ async function bootstrap() {
     // §0.60.2 — the provider tab runs as the account guardian routed the job to (guardian/lib/account-routing.js →
     // dispatcher → here): src/providers/account-switch.js, cookies from the JAA vault. GET the tab's account and the
     // saved sign-ins; POST { accountId } switches; POST …/capture { accountId } saves the tab's sign-in as that account.
-    let _acctSwitch = null;
-    const acctSwitch = () => _acctSwitch || (_acctSwitch = require('../providers/account-switch').createAccountSwitch({
-      providerHost, vault: cookieVault, options: nexusOptions,
-      getProvider: (id) => { try { return require('../providers/registry').getProvider(id); } catch (_) { return null; } },
-      sessionFor: (id) => session.fromPartition(`persist:ncp-${id}`),
-      log: (m) => console.log(m),
-    }));
     ipcBridge.accountSwitch = acctSwitch;   // the attention panel (ipc/bridge.js) reads the tab's account through it
     ipcBridge.app.get('/providers/:id/account', (req, res) => {
       try { res.json({ ok: true, ...acctSwitch().state(req.params.id) }); } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
@@ -1702,6 +1700,18 @@ async function bootstrap() {
     ipcBridge.app.post('/providers/:id/account', async (req, res) => {
       try { const r = await acctSwitch().use(req.params.id, req.body && req.body.accountId, { reason: req.body && (req.body.why || req.body.jobId) }); res.status(r.ok ? 200 : 409).json(r); }
       catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+    });
+    // §0.60.12 — bring a tab (or every running one) to its provider's dispatch account; says what it did, per provider
+    ipcBridge.app.post('/providers/:id/account/sync', async (req, res) => {
+      try { const r = await acctSwitch().sync(req.params.id); res.status(r.ok ? 200 : 409).json(r); }
+      catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+    });
+    ipcBridge.app.post('/providers/account/sync', async (req, res) => {
+      try {
+        const ids = require('../providers/registry').listProviders().map(p => p.id);
+        const results = []; for (const id of ids) results.push(await acctSwitch().sync(id));
+        res.json({ ok: results.every(r => r.ok), results });
+      } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
     });
     ipcBridge.app.post('/providers/:id/account/capture', async (req, res) => {
       try { const r = await acctSwitch().capture(req.params.id, req.body && req.body.accountId); res.status(r.ok ? 200 : 409).json(r); }
@@ -2011,6 +2021,20 @@ function _rebuildTrayMenu(mesh) {
   ].filter(Boolean);
 
   tray.setContextMenu(Menu.buildFromTemplate(menuTemplate));
+}
+
+// ── Provider-tab account switch — §0.60.12 ────────────────────────────────────
+// One instance, made on first use. It lives here (not inside the HTTP route block further down) because ProviderHost
+// asks it to sync a tab's sign-in BEFORE the tab's first load, and that happens at boot, before the routes exist.
+// James (2026-10-13): "the logins for the agent providers needs to be all the same. the accounts and sign in, isn't wired
+// into the provider tabs in clearglass."
+function acctSwitch() {
+  return _acctSwitch || (_acctSwitch = require('../providers/account-switch').createAccountSwitch({
+    providerHost, vault: cookieVault, options: nexusOptions,
+    getProvider: (id) => { try { return require('../providers/registry').getProvider(id); } catch (_) { return null; } },
+    sessionFor: (id) => session.fromPartition(`persist:ncp-${id}`),
+    log: (m) => console.log(m),
+  }));
 }
 
 // ── Account windows — §0.39.265 ─────────────────────────────────────────────
