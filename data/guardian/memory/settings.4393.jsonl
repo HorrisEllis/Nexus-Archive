@@ -1,0 +1,14 @@
+{"t":1791885951829,"s":1,"id":"7ddc8e22-67e5-44ab-a5c9-818a0ca4c12b","r":{"id":"7ddc8e22-67e5-44ab-a5c9-818a0ca4c12b","key":"session_greeting_enabled","value":"true","updated_ts":1791885950325}}
+{"t":1791885951829,"s":2,"id":"8e8f42d4-1398-40bb-80bd-1f2fc1fad707","r":{"id":"8e8f42d4-1398-40bb-80bd-1f2fc1fad707","key":"session_greeting_text","value":"Guardian session initialising. Please ask me: \"What are we calling this session?\" — then wait for my answer before we begin.","updated_ts":1791885950325}}
+{"t":1791885951829,"s":3,"id":"75324440-e80d-4ffa-ad70-5b0661f10f59","r":{"id":"75324440-e80d-4ffa-ad70-5b0661f10f59","key":"scan_debounce_ms","value":"1500","updated_ts":1791885950325}}
+{"t":1791885951829,"s":4,"id":"adf6cc9b-1ff5-4f82-a767-f40cacf13002","r":{"id":"adf6cc9b-1ff5-4f82-a767-f40cacf13002","key":"artifact_max","value":"500","updated_ts":1791885950325}}
+{"t":1791885951829,"s":5,"id":"2cb6b84d-b0ed-4b5d-9b64-3a2001bb2b4a","r":{"id":"2cb6b84d-b0ed-4b5d-9b64-3a2001bb2b4a","key":"gap_min_score","value":"0.25","updated_ts":1791885950325}}
+{"t":1791885951829,"s":6,"id":"f5376754-98fa-4cbf-adca-154bd9c75d12","r":{"id":"f5376754-98fa-4cbf-adca-154bd9c75d12","key":"gap_taxonomy_version","value":"3.0.0","updated_ts":1791885950325}}
+{"t":1791885951829,"s":7,"id":"f9368466-c6e4-479c-a705-4dd5a640a597","r":{"id":"f9368466-c6e4-479c-a705-4dd5a640a597","key":"pa_enabled","value":"true","updated_ts":1791885950325}}
+{"t":1791885951829,"s":8,"id":"870972f0-e362-4ea9-93f8-6554ffe03986","r":{"id":"870972f0-e362-4ea9-93f8-6554ffe03986","key":"memory_auto_push","value":"true","updated_ts":1791885950326}}
+{"t":1791885951829,"s":9,"id":"3eb16b0c-ef5b-4a22-85e1-b8c2cc0b09dd","r":{"id":"3eb16b0c-ef5b-4a22-85e1-b8c2cc0b09dd","key":"dropzone_auto_upload","value":"true","updated_ts":1791885950326}}
+{"t":1791885951829,"s":10,"id":"c9c04a21-a1b2-4a29-b5cb-b45421083c66","r":{"id":"c9c04a21-a1b2-4a29-b5cb-b45421083c66","key":"stream_log_level","value":"EVENTS","updated_ts":1791885950326}}
+{"t":1791885951829,"s":11,"id":"ce839af3-aabb-4c00-b89d-98688264bd72","r":{"id":"ce839af3-aabb-4c00-b89d-98688264bd72","key":"lan_host","value":"0.0.0.0","updated_ts":1791885950326}}
+{"t":1791885951829,"s":12,"id":"b0df5f2a-9e50-43e2-9d35-f9672fa47b29","r":{"id":"b0df5f2a-9e50-43e2-9d35-f9672fa47b29","key":"greeting_delay_ms","value":"1200","updated_ts":1791885950326}}
+{"t":1791885951829,"s":13,"id":"9ba405c3-45dd-44a5-8b09-c7dbf54db309","r":{"id":"9ba405c3-45dd-44a5-8b09-c7dbf54db309","key":"poll_interval_ms","value":"500","updated_ts":1791885950326}}
+{"t":1791885951829,"s":14,"id":"b5f33814-719f-404f-bc31-a19b8c2e134b","r":{"id":"b5f33814-719f-404f-bc31-a19b8c2e134b","key":"stable_count_threshold","value":"5","updated_ts":1791885950326}}
