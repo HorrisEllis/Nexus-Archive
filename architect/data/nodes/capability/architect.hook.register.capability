@@ -1,0 +1,44 @@
+envelope: 1
+uuid: nexus-export-capability-architect.hook.register
+type: capability
+id: architect.hook.register
+context: architect/registry-components.js — declared capability
+intent: null
+summary: null
+system: null
+tags:
+  - architect
+  - capability
+exported_at: 1790684786567
+source: architect/registry-components.js:architect.hook.register
+occurrences: 1
+firstSeenAt: 1789250730056
+lastSeenAt: 1790684786567
+fingerprint: cf3e96e340fc9e981b8d3ebd
+payload:
+  intent: []
+  grammar:
+    - hook register
+  tags:
+    - architect
+    - hooks
+  id: architect.hook.register
+  namespace: architect
+  name: hook.register
+  version: 1.0.0
+  route:
+    method: POST
+    path: /api/hooks
+  description: Register a new hook
+  params: []
+  permissions:
+    - system
+  hooks:
+    in:
+      - id: architect.hook.register.receive
+        intent:
+          - register
+          - declare
+        contract: nexus-interaction-contract-v1::architect
+        tags:
+          - hooks

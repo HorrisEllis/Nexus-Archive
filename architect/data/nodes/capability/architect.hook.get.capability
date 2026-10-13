@@ -1,0 +1,35 @@
+envelope: 1
+uuid: nexus-export-capability-architect.hook.get
+type: capability
+id: architect.hook.get
+context: architect/registry-components.js — declared capability
+intent: null
+summary: null
+system: null
+tags:
+  - architect
+  - capability
+exported_at: 1790684786566
+source: architect/registry-components.js:architect.hook.get
+occurrences: 1
+firstSeenAt: 1789250730054
+lastSeenAt: 1790684786566
+fingerprint: 8bc28f9fe2a60b28e3d4bd9f
+payload:
+  intent: []
+  grammar:
+    - hook get
+  tags:
+    - architect
+  id: architect.hook.get
+  namespace: architect
+  name: hook.get
+  version: 1.0.0
+  route:
+    method: GET
+    path: /api/hooks/:id
+  description: Single hook detail
+  params: []
+  permissions:
+    - system
+  hooks: {}

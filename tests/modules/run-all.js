@@ -344,6 +344,13 @@ const SUITES = [
   // 0.60.1 — the nexus-system template's handoff and modules are checked by test-system-skeleton (SK-02 runs the laid-out system's own self-test)
   'test-accounts-picker-cos.test.js',
   'test-project-decompose.test.js',   // 0.60.5 — a project (zip or folder) decomposed into the component store, each component bundled with its require closure; the drop zone; Clear Glass in the COS window style   // 0.60.2 — account routing by hat / intent / repo (Guardian, JAA) + Clear Glass's account switch on the JAA cookie vault; the COS-window attention panel; the pick checked by Clear Glass's selector check, anchored at x/y/z and used by every userscript (field map); ChatGPT works signed out; sign-in responses untouched
+  'test-contract-gates.test.js',   // 0.60.15 — .contract v2: his four acceptance conditions (legacy files, evidence, invalidation, packet)
+  'test-contract-adapters.test.js', // 0.60.18 EX0 — agent + phase adapters: routed, budgeted, blocked≠failed, checkpoints, integration, audit
+  'test-contract-phase-build.test.js', // 0.60.18 EX0e — Build through the contract scheduler on the real route: bricks, checkpoints, resume, rejected checkpoint, recovery, integration
+  'test-lean-mode.test.js', // 0.60.20 — lean mode: one switch in Idearium settings, read by npm run start:all
+  'test-run-watch.test.js', // 0.60.21 — no run left in limbo: stalls closed + retried once, a reject retries its phase, a finished review ends
+  'test-cg-command-index.test.js', // 0.60.23 — Clear Glass's command index read 0 commands (micro-http has no _router)
+  'test-contract-ct0-self.test.js',   // 0.60.15 — CT0 complete by its own contract, read by the evaluator
   'test-no-compartment-label.test.js',   // 0.60.11 — regression guard: no "compartment · …" label drawn anywhere
   'test-reasoning-route.test.js',   // 0.60.8 — intent routing for reasoning: complex chat → agent:reason with the reasoning agent; route assess
   'test-mesh-chat-reload.test.js',   // 0.60.8 — a sent job whose page navigated is reopened at its chat URL and read (never retyped); the ladder reloads before asking a person

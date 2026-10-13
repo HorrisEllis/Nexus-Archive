@@ -1,0 +1,35 @@
+envelope: 1
+uuid: nexus-export-capability-architect.blueprint.scan
+type: capability
+id: architect.blueprint.scan
+context: architect/registry-components.js — declared capability
+intent: null
+summary: null
+system: null
+tags:
+  - architect
+  - capability
+exported_at: 1790684786586
+source: architect/registry-components.js:architect.blueprint.scan
+occurrences: 1
+firstSeenAt: 1789250730063
+lastSeenAt: 1790684786586
+fingerprint: 619e1035071446706d5ae731
+payload:
+  intent: []
+  grammar:
+    - blueprint scan
+  tags:
+    - architect
+  id: architect.blueprint.scan
+  namespace: architect
+  name: blueprint.scan
+  version: 1.0.0
+  route:
+    method: POST
+    path: /api/blueprint/scan
+  description: Scan path → generate blueprint
+  params: []
+  permissions:
+    - system
+  hooks: {}

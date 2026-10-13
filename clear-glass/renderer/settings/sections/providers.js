@@ -26,7 +26,8 @@
       // §0.60.12 — James: "the logins for the agent providers needs to be all the same." What each tab really runs as (the
       // account-switch record), beside the account Accounts & sign-in says it should (the dispatch account).
       const tabAcct = {};
-      await Promise.all(list.map(async p => { tabAcct[p.id] = await cg.providers.account(p.id).catch(() => null); }));
+      // 0.60.13 merge: an older preload has no providers.account — the section still renders
+      await Promise.all(list.map(async p => { tabAcct[p.id] = await (typeof cg.providers.account === 'function' ? cg.providers.account(p.id) : Promise.resolve(null)).catch(() => null); }));
       const labelOf = (id) => { const a = accounts.find(x => x.id === id); return a ? a.label : (id ? String(id).slice(0, 8) : null); };
       // §0.39.265 — linked to Accounts & sign-in and Agent mesh: which account
       // the mesh signs in with for this provider, and a jump to each.

@@ -1,0 +1,35 @@
+envelope: 1
+uuid: nexus-export-capability-architect.blueprint.list
+type: capability
+id: architect.blueprint.list
+context: architect/registry-components.js — declared capability
+intent: null
+summary: null
+system: null
+tags:
+  - architect
+  - capability
+exported_at: 1790684786584
+source: architect/registry-components.js:architect.blueprint.list
+occurrences: 1
+firstSeenAt: 1789250730062
+lastSeenAt: 1790684786584
+fingerprint: 258587176a4c8a8d038a1a95
+payload:
+  intent: []
+  grammar:
+    - blueprint list
+  tags:
+    - architect
+  id: architect.blueprint.list
+  namespace: architect
+  name: blueprint.list
+  version: 1.0.0
+  route:
+    method: GET
+    path: /api/blueprint
+  description: Blueprint list
+  params: []
+  permissions:
+    - system
+  hooks: {}
