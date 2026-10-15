@@ -72,7 +72,29 @@ const FILES = [
   // (pipeline-routing, reasoning-route) have no registered ids yet — left out, said.
   ['cortex/core/raid/contract-gates.js',    'nexus.cortex.core.raid.contract-gates',
     ['nexus.lib.node-export', 'nexus.lib.agent-tools', 'nexus.cortex.jaa-db']],
-  ['lib/model-door.js',                     'nexus.lib.model-door', []],
+  // 0.60.31 RT1 — the door now requires lib/route-eligibility.js (eligibility, then preference); route-eligibility reads
+  // the window Nexus gives Ollama (lib/ollama-activity.js) and Guardian's provider facts (guardian/lib/agent-facts.js —
+  // GA1, never mapped until now: node-export + agent-facts-hash; guardian/server.js serves it at /api/providers)
+  ['lib/model-door.js',                     'nexus.lib.model-door', ['nexus.lib.route-eligibility']],
+  ['lib/route-eligibility.js',              'nexus.lib.route-eligibility', ['nexus.lib.ollama-activity', 'nexus.guardian.lib.agent-facts']],
+  ['guardian/lib/agent-facts.js',           'nexus.guardian.lib.agent-facts', ['nexus.lib.node-export', 'nexus.lib.agent-facts-hash']],
+  // 0.60.32 PF1 — a tab per account profile: guardian/lib/profile-lanes.js (hat → account → tab and lane; reads ncp's
+  // PROFILE_TAB) and clear-glass/src/providers/profile-tabs.js (an account's own tab in its own session; session-hub's
+  // isAuthCookie). Consumers: the dispatcher and guardian/server.js (/api/accounts/profiles); Clear Glass main (its routes).
+  ['guardian/lib/profile-lanes.js',         'nexus.guardian.lib.profile-lanes', ['nexus.guardian.lib.ncp']],
+  ['clear-glass/src/providers/profile-tabs.js', 'nexus.clear-glass.src.providers.profile-tabs', ['nexus.clear-glass.src.cookies.session-hub']],
+  // 0.60.33 QA1 — the catalogue runs: lib/check-catalogue.js loads cos/spec/check-catalogue.spec and runs lib/checks/*
+  // (CK-230 reads lib/shadow.js); contract-gates checkCondition and idearium/api (checks.list / checks.run) consume it
+  ['lib/check-catalogue.js',                'nexus.lib.check-catalogue', ['nexus.lib.checks.ck-230-shadow', 'nexus.lib.checks.ck-233-deny', 'nexus.lib.checks.ck-248-toolchain', 'nexus.lib.checks.ck-253-versions']],
+  ['lib/checks/ck-230-shadow.js',           'nexus.lib.checks.ck-230-shadow', ['nexus.lib.shadow']],
+  ['lib/checks/ck-233-deny.js',             'nexus.lib.checks.ck-233-deny', []],
+  ['lib/checks/ck-248-toolchain.js',        'nexus.lib.checks.ck-248-toolchain', []],
+  // 0.60.34 VR1 — one version everywhere: lib/release-version.js (the release, where it is stated, what a zip carries)
+  // reads lib/version.js; CK-253 runs it; scripts/release-zip.js builds the GitHub release asset with it; idearium/api
+  // serves /api/version and stamps/reads zips with it
+  ['lib/release-version.js',                'nexus.lib.release-version', ['nexus.lib.version']],
+  ['lib/checks/ck-253-versions.js',         'nexus.lib.checks.ck-253-versions', ['nexus.lib.release-version']],
+  ['scripts/release-zip.js',                'nexus.scripts.release-zip', ['nexus.lib.release-version']],
   ['lib/phase-plan.js',                     'nexus.lib.phase-plan', []],
   ['cortex/core/raid/contract-adapters.js', 'nexus.cortex.core.raid.contract-adapters',
     ['nexus.cortex.core.raid.contract-gates', 'nexus.lib.model-door', 'nexus.lib.phase-plan']],
@@ -83,6 +105,13 @@ const CONSUMERS = [
   ['nexus.idearium.api', 'nexus.cortex.core.raid.contract-adapters'],
   ['nexus.idearium.api', 'nexus.cortex.core.raid.contract-gates'],
   ['nexus.idearium.api', 'nexus.lib.phase-plan'],
+  ['nexus.guardian.server', 'nexus.guardian.lib.agent-facts'],   // 0.60.31 — GET /api/providers, /providers (GA1)
+  ['nexus.guardian.lib.dispatcher', 'nexus.guardian.lib.profile-lanes'],          // 0.60.32 PF1 — the lane before the pool
+  ['nexus.guardian.server', 'nexus.guardian.lib.profile-lanes'],                  // 0.60.32 PF1 — /api/accounts/profiles, /route
+  ['nexus.clear-glass.src.main', 'nexus.clear-glass.src.providers.profile-tabs'],  // 0.60.32 PF1 — :7702/providers/:id/profile(s)
+  ['nexus.cortex.core.raid.contract-gates', 'nexus.lib.check-catalogue'],          // 0.60.33 QA1 — { check: CK-nnn } conditions
+  ['nexus.idearium.api', 'nexus.lib.check-catalogue'],                             // 0.60.33 QA1 — /api/checks
+  ['nexus.idearium.api', 'nexus.lib.release-version'],                             // 0.60.34 VR1 — /api/version, zip import/export
 ];
 
 function mapRaidEventsAndTools(driver) {

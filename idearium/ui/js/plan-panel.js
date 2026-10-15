@@ -213,6 +213,15 @@ async function ppRunLoad() {
 // the plan (files → registry components, exports, conditions), why a plan was refused, what a coder dropped
 function _ppPlanned(l) {
   const out = [];
+  // §GT2 0.60.42 — a gate's move: where the run stands, the commit it passed at (tagged in Versionium), why it failed
+  if (l.brick && l.progress) {
+    const pr = l.progress, pct = pr.total ? Math.round(pr.passed / pr.total * 100) : 0;
+    out.push(`<div class="pp-against${l.state === 'brick-failed' ? ' warn' : ''}">▪ ${escapeHtml(l.brick)}${l.file ? ` · ${escapeHtml(l.file)}` : ''} — ${escapeHtml(String(l.state).replace(/^brick-/, ''))}${l.failureClass ? ` (${escapeHtml(l.failureClass)})` : ''} · ${pr.passed}/${pr.total} passed (${pct}%)${l.commit ? ` · at ${escapeHtml(String(l.commit).slice(0, 12))}` : ''}</div>`);
+  }
+  // 0.60.28 PF1 — ready before run: what was left off or put last before the first agent call, and why
+  if (l.ready && l.ready.line) out.push(`<div class="pp-against${(l.ready.dropped || []).length || l.state === 'refused' ? ' warn' : ''}">ready: ${escapeHtml(l.ready.line)}</div>`);
+  // 0.60.28 PF2 — no planner could plan it: Nexus planned it from the phase itself, one file per request
+  if (l.derived) out.push(`<div class="pp-against">◇ planned without a model${l.derivedNote ? ` — ${escapeHtml(l.derivedNote)}` : ''}</div>`);
   if (l.planning && l.state === 'building') out.push(`<div class="pp-against">${l.planning.plan ? '◇ plan, then code' : 'no plan'} — ${escapeHtml(l.planning.why || '')}</div>`);
   if (l.system && l.system.conflict) out.push(`<div class="pp-against warn">system: ${escapeHtml(l.system.conflict)}</div>`);
   else if (l.system && l.system.system && l.state === 'building') out.push(`<div class="pp-against">system: ${escapeHtml(l.system.system)} (${escapeHtml(l.system.why || '')})</div>`);
@@ -227,7 +236,7 @@ function _ppPlanned(l) {
   // 0.60.18 EX0f — the build as a contract: bricks, what resumed, what a changed input made stale; at the end the audit
   if (l.contractInfo) out.push(`<div class="pp-against">◇ contract — ${l.contractInfo.bricks} brick${l.contractInfo.bricks === 1 ? '' : 's'}, ${l.contractInfo.concurrency} at once${l.contractInfo.resumed ? ` · resumed: ${l.contractInfo.kept.length} kept${l.contractInfo.stale.length ? `, ${l.contractInfo.stale.length} stale (${escapeHtml(l.contractInfo.stale.join(', '))})` : ''}${l.contractInfo.reset.length ? `, ${l.contractInfo.reset.length} given new retries` : ''}` : ' · fresh'}</div>`);
   if (l.audit) out.push(`<details class="pp-reply"><summary>contract audit — ${l.audit.bricks.filter(b => b.status === 'PASSED').length}/${l.audit.bricks.length} bricks · ${l.audit.dependencies.length} dependencies · ${l.audit.checkpoints} checkpoints · ${l.audit.gates.length} gates${(l.audit.blocked || []).length ? ` · ${l.audit.blocked.length} blocked` : ''}</summary><pre>${escapeHtml([
-    ...l.audit.bricks.map(b => `${String(b.status).padEnd(7)} ${b.file || b.id}${b.agent ? `  · ${b.agent}` : ''}${b.attempts ? `  · ${b.attempts} attempt(s)` : ''}${b.verified ? `  · ${b.verified}` : ''}${b.blocked ? `  · ${b.blocked}` : ''}`),
+    ...l.audit.bricks.map(b => `${String(b.status).padEnd(7)} ${b.file || b.id}${b.commit ? `  · passed at ${String(b.commit).slice(0, 12)}` : ''}${b.class ? `  · ${b.class}` : ''}${b.rewound ? `  · rewound${b.rewound.to ? ` to ${String(b.rewound.to).slice(0, 12)}` : ''}${(b.rewound.files || []).length ? ` (${b.rewound.files.join(', ')})` : ''}` : ''}${b.agent ? `  · ${b.agent}` : ''}${b.attempts ? `  · ${b.attempts} attempt(s)` : ''}${b.verified ? `  · ${b.verified}` : ''}${b.blocked ? `  · ${b.blocked}` : ''}`),
     `\ndependencies:\n${l.audit.dependencies.map(e => `- ${e.from} → ${e.to}`).join('\n')}`,
     `\ngates:\n${l.audit.gates.map(g => `- ${g.id} (${g.type}) ${g.status}${(g.reasons || []).length ? ` — ${g.reasons.join('; ')}` : ''}`).join('\n')}`,
     (l.audit.splits || []).length ? `\nsplits:\n${l.audit.splits.map(x => `- ${x.gate} → ${x.into.join(', ')}`).join('\n')}` : '',
@@ -258,6 +267,7 @@ function _planPaint() {
       ${_ppTimes(s)}
       ${s.failed && !done ? `<div class="pp-why" title="${escapeHtml(s.failed.error || s.failed.state)}">${escapeHtml(s.failed.state)}${s.failed.error ? ` — ${escapeHtml(String(s.failed.error).slice(0, 160))}` : ''}</div>` : ''}
       ${open ? `<div class="pp-detail"><div class="pp-meta">${escapeHtml(s.key)} · ${escapeHtml(String(s.map).split('/').pop())} · gate: ${escapeHtml(s.gate || 'all passed')}${s.failed ? ` · <span style="color:var(--coral)">${escapeHtml(s.failed.state)}: ${escapeHtml(s.failed.error || '')}</span>` : ''}</div>
+        ${s.cost ? `<div class="pp-against" title="${escapeHtml(`${s.cost.runs} run(s) · tokens: ${s.cost.method || 'estimate'} — 0.60.27 AG1a: agents used as little as possible, counted`)}">agents: ${escapeHtml(s.cost.line)}</div>` : ''}
         ${done ? '' : `<button class="pp-go" onclick="event.stopPropagation();planBuild('${escapeHtml(s.map)}','${escapeHtml(s.key)}')">▶ build</button>`}
         ${_ledgerHtml(s.ledger || [])}</div>` : ''}
     </div>`;

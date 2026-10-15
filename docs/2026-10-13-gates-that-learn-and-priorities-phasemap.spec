@@ -57,7 +57,7 @@ phasemap:
 
   phases:
     GT1_gates_route_diagnose_retry:
-      status: OPEN
+      status: "DONE 0.60.30 — classifyFailure in contract-gates; schedule learns by class; agentExecutor skips excluded agents and passes the check's words (test-contract-adapters GT-01..07)"
       folds: [RQ2_the_generation_failure_vocabulary_and_index, RQ3_repair_with_the_checks_own_words, RQ4_escalate_on_the_checks_and_keep_the_lesson, RQ24_the_gate_transaction]
       builds_on: "cortex/core/raid/contract-gates.js schedule/check · contract-adapters agentExecutor · cortex/self-heal/fault-taxonomy.js (raiseFriction, recordSuccess, recordAttempt) · lib/phase-faults.js modeOf · lib/model-door.js outcome({ verdict })"
       does: >-
@@ -73,7 +73,7 @@ phasemap:
         reads it.
       proof: "a planted failure of each class takes its own path; only capability and context failures change routing or budgets (extends test-contract-adapters)"
     RT1_eligibility_then_preference:
-      status: OPEN
+      status: "DONE 0.60.31 — lib/route-eligibility.js; the door checks tools, window and readiness over every candidate, then the learned order, then the hop cap; the record on every route (test-route-eligibility RE-01..08). Low-confidence split/ask (CK-236) not built"
       folds: [RQ6_one_intent_map]
       builds_on: "lib/model-door.js route · lib/pipeline-routing.js byTabs · lib/agent-capability-profile.js · contract-adapters doorRoute"
       does: >-
@@ -85,7 +85,7 @@ phasemap:
         or asked about (CK-236).
       proof: "an agent without the browser tool is never routed browser work, whatever its score; the route record lists the alternatives it rejected and why"
     PF1_profiles_hats_tabs:
-      status: OPEN
+      status: "DONE 0.60.32 — a tab per account: guardian/lib/profile-lanes.js (hat → account → tab, a pool lane per account), ncp profile tabs never active, dispatcher pushTab + open-on-demand, clear-glass profile-tabs.js (own session, vault sign-in); test-profile-tabs PT-01..07. Compartments as profiles (TB1/HM0) and CK-241 not built"
       is: [ID1_identities, TB1_tab_is_a_view, HM0_the_hat_keeps_a_model_of_the_repo]
       james_now: '"dynamic routing to profiles in clearglass, which can hook into hats. each tab can beb a compartment or different profile. that way we can use multiaccount routing."'
       adds: >-
@@ -94,7 +94,7 @@ phasemap:
         today). CK-241 checks that the three agree.
       proof: "two hats on one provider answer from two accounts in two tabs at once; a job for hat A never lands in hat B's tab"
     QA1_the_catalogue_runs:
-      status: OPEN
+      status: "PARTLY DONE 0.60.33 — lib/check-catalogue.js serves the catalogue; runners CK-230 (shadow), CK-233 (deny list), CK-248 (every language's toolchain); contract gates run them; test-check-catalogue QA-01..07. Open: the other section-13 checks (CK-231, 234–252) and RQ18's test/attack intents"
       folds: [CK1_the_catalogue_runs, RQ1_the_verifier_library, RQ18_test_and_attack_intents]
       does: >-
         lib/check-catalogue.js serves cos/spec/check-catalogue.spec: 119 checks; section 13 is his 2026-10-13 list of
@@ -124,10 +124,455 @@ phasemap:
 
 ## ADDENDUM 2026-10-13 — retry button built (0.60.22); four asks mapped
 
-James: "maybe add a retry button. consolidate the intelligence and debug system. notes and ideas one fully built feature. phases and specs? it would be nice to use agents intentionally for what theyre best at. as little as possible. like spread agents out opimally for what theyre best at. less tokens from you, the better. … i have like 9 or 12 accounts, and i would love to be able to add them to clearglass and use routing each time tokens run out. like account routing and fallback chaining"
+# James: "maybe add a retry button. consolidate the intelligence and debug system. notes and ideas one fully built feature. phases and specs? it would be nice to use agents intentionally for what theyre best at. as little as possible. like spread agents out opimally for what theyre best at. less tokens from you, the better. … i have like 9 or 12 accounts, and i would love to be able to add them to clearglass and use routing each time tokens run out. like account routing and fallback chaining"
 
-- RB0 retry button: DONE 0.60.22. A failed or stalled phase task in the repo's task panel has ↻ retry, which calls the Build route. lib/repo-activity.js keeps map and phase on the task.
-- AC1 account fallback chaining (= ID1 identities + SD5 account fallback; the coder recommends it next): an ordered chain of accounts per provider. When a tab reports its limit, Guardian marks that account exhausted until its reset time and dispatches the job to the next account's tab (its own profile partition). Proof: the limit reached on account 1 moves the job to account 2 with no lost job.
-- AG1 agents for what they are best at, as little as possible (folds RT1): the door's learned order already ranks per kind. The default is cheap and local first; a reasoning agent only plans, reviews and repairs when a deterministic check failed. Calls per phase are counted, so "as little as possible" is measured.
-- UX1 consolidation: Intelligence + Debug become one tab, Notes + Ideas one feature (one list with kinds), and Phases shown beside their Spec sections. This is a reorganisation of existing screens. Nothing is lost: old views stay reachable until the new ones are proven.
+# - RB0 retry button: DONE 0.60.22. A failed or stalled phase task in the repo's task panel has ↻ retry, which calls the Build route. lib/repo-activity.js keeps map and phase on the task.
+# - AC1 account fallback chaining (= ID1 identities + SD5 account fallback; the coder recommends it next): an ordered chain of accounts per provider. When a tab reports its limit, Guardian marks that account exhausted until its reset time and dispatches the job to the next account's tab (its own profile partition). Proof: the limit reached on account 1 moves the job to account 2 with no lost job.
+# - AG1 agents for what they are best at, as little as possible (folds RT1): the door's learned order already ranks per kind. The default is cheap and local first; a reasoning agent only plans, reviews and repairs when a deterministic check failed. Calls per phase are counted, so "as little as possible" is measured.
+# - UX1 consolidation: Intelligence + Debug become one tab, Notes + Ideas one feature (one list with kinds), and Phases shown beside their Spec sections. This is a reorganisation of existing screens. Nothing is lost: old views stay reachable until the new ones are proven.
 
+## ADDENDUM 2026-10-13 — the agent rule written down; Versionium ↔ GitHub mapped
+
+# James: "yes use you for the cheapest but most effective intention." He then quoted the coder's line back as his decision:
+# "Agents used for what they're best at, as little as possible. … cheap and local by default, a reasoning agent only for
+# planning, review only when the cheap check fails."
+# - AG1 decision: that rule is now written down in docs/CLAUDE.md ("Agents for what they are best at"). Building it into
+#   the door (counting calls and tokens per phase, review gated on a failed check) is still OPEN.
+# - VG1 Versionium ↔ git ↔ GitHub. His words: "what if we have the git integration integrated into versioium. use github
+#   api or app id or what ever to sync ideairum with github?"
+#   - Exists: lib/repo-git.js (0.39.265) does status, commit, push and pull with an SSH key or HTTPS token, and clone; the
+#     Sync & CI tab; history import from .git (0.60.7).
+#   - Missing:
+#     1. A Versionium snapshot and a git commit are linked both ways (each snapshot records its commit sha, each commit
+#        carries the snapshot id).
+#     2. Sync on a schedule or on Apply, per repo.
+#     3. The GitHub API with a fine-grained token first (simplest), so PRs, issues and CI status show in Sync & CI. A
+#        GitHub App id is the later, multi-repo form.
+#   - Status: OPEN, ranked after the live run and AC1.
+
+## ADDENDUM 2026-10-13 — AC1 account fallback chaining built (0.60.25)
+
+# James: "not working. can you get it working. check the accounts, account routing, fallback routing."
+
+# What his run showed (SB9): the ladder ran to rung 5, where claude sent back an empty reply, then rung 6, where deepseek
+# failed "not connected — no deepseek tab open in guardian". Ladder exhausted.
+
+# What was there:
+# - Account rules by hat, intent or repo (guardian/lib/account-routing.js, 0.60.2).
+# - Clear Glass switching a tab's account.
+# - Every tab's heartbeat reporting `usage.limited`.
+
+# What was missing:
+# - Anything that acts on a limit.
+# - Opening a missing tab.
+
+# Built:
+# - The chain is a provider's every-job rules, highest priority first.
+# - A tab that reports its limit makes its account rest (5 h). The next account takes the job, and the run says why.
+# - When every account is resting, the job fails as rate-limit and the ladder moves to the next agent.
+# - A job whose provider has no tab asks Clear Glass to open it.
+# - Where to set it:
+#   - guardian GET/POST /api/accounts/chain and POST /api/accounts/rest;
+#   - Idearium /api/accounts/* (passes through to Guardian);
+#   - the command row accounts.chain;
+#   - Idearium → Settings → Routing → Accounts (order them, save; wake a resting one).
+
+# To confirm:
+# - Claude's empty reply in that run has another cause. Possibly its tab was signed out or at its limit; the next run's
+#   rows will say which.
+# - The 5 h rest is a default. A reset time read from the banner would be better.
+
+
+## ADDENDUM 2026-10-13 — his 0.60.23 log, fixed line by line (0.60.26)
+
+# James: "next. fix anything you can." He pasted the whole PowerShell log of a 0.60.23 run with lean mode on.
+
+# What the log showed, and what changed:
+# - The gap-relay (orchestrator) reconnected to diagnostic :7825 every 30 s, and cortex warned "relay to
+#   intelligence:3753 failing". Lean mode holds both on purpose.
+#   - Now both read lib/lean-mode.js. A held target is said once and left alone, and they reconnect by themselves when
+#     lean is off.
+#   - A source that is really down still warns (§1.2), once a minute.
+# - raid-officiator sent the same nine staged drops to Claude on every boot (in-memory dedup only); each came back "no real
+#   agent response". Now each failure is persisted beside the intake dir (officiator-attempts.json, state, never
+#   committed):
+#   - backoff of 10 min, doubling;
+#   - parked after 4 tries (said once);
+#   - a tick stops at the first unanswered drop rather than sending the rest to the same silent agent;
+#   - "no available agent" spends no attempt.
+# - The copilot adversarial probe loaded qwen2.5-coder:7b for 60–85 s every ten minutes beside the build. It is held while
+#   lean mode is on (the memory gate was already there).
+# - A deepseek job with no tab went to Ollama as deepseek-coder-v2, which is not installed on his machine (HTTP 404). Then it
+#   waited 120 s.
+#   - Now the Ollama inventory is read first, and only an installed deepseek model is used.
+#   - With none installed, the job takes the tab path, which opens the tab (AC1, 0.60.25).
+
+# Checked, not changed:
+# - The "nexus" spec made on each sync is the parent index (NEXUS.md) re-versioned when a system changes; the old version
+#   is purged right after (nexus-self.js purgeSpecsOf). One spec, not a growing pile.
+# - Eros is in-process (Erosmancer events), not a service lean mode can hold. Memory returned to ok by itself each time.
+# - "Claude reply element not found" needs his ◎ pick in Clear Glass once. It cannot be fixed without seeing the page.
+
+# Proof: test-lean-quiet 5/5, test-raid-officiator 15/15 (OFF-BACKOFF), test-dispatcher-deepseek-ncp 4/4 (DSK-003/004).
+#
+# Also fixed (the coder's own debt): three phasemaps had stopped parsing as YAML because the coder's addenda were
+# written as bare prose (request-spine from line 805, nexus-memory-gates-and-contract from line 147, this one from line
+# 125). They are now `# `-commented, as this repo's other phasemaps write addenda. No word changed, and loom reads the
+# same phases (28, 12, 4). There were two quoting slips: `Idearium\'s` (YAML single quotes double the quote) and an
+# unquoted `chunks[]` inside a flow list.
+
+## ADDENDUM 2026-10-13 — AG1a mapped and built: agent calls and tokens counted per phase (0.60.27)
+
+# James: "next. fix anything you can." then "conintue". The coder picked AG1's counting half as the next piece. It was
+# OPEN since the agent rule was written down, and it is what makes "as little as possible" a number (docs/CLAUDE.md:
+# "Count it.").
+# - Reuse:
+#   - every agent call of a phase build already writes an idearium_phase_runs row: 'planning' for the planner, an
+#     attempt row with its rung for a coder, and 'reviewing' for a reviewer;
+#   - lib/economy/tokens.js estimate() is the token estimate;
+#   - lib/run-watch.js runsOf() groups the rows by run.
+# - AG1a, built:
+#   - the rows carry tokensIn/tokensOut (estimate-v1) and replyChars at the source;
+#   - lib/phase-cost.js costOf(rows) gives:
+#     - calls by role (plan/code/review) and by agent;
+#     - local vs remote;
+#     - tokens in and out;
+#     - per run, and the phase total.
+#   - Older rows without estimates use chars/4, and the result says so.
+#   - Where it shows:
+#     - route GET /api/repos/:uuid/phases/cost;
+#     - command repo cost;
+#     - the Plan panel: one line per phase, "agents: N calls (plan p · code c · review r) · L local · R remote ·
+#       ~T tokens".
+# - AG1b, still OPEN: review only after a cheap check failed. Today a draft review runs whenever reviewing is on.
+# - Found by the count (0.60.27): CP-06 counted 7 calls where the stubbed agent saw 8. With no ladder (a fixed backend), a
+#   failed coder call whose reply did not name its agent was written with no provider, so the record could not say who
+#   failed. It now names the backend it was sent to. CP-06 asserts that the calls counted equal the dispatches.
+# - Source changes: idearium/api/index.js (_tokEst, the three call rows, _phaseRows, the route);
+#   idearium/repo/build-plan.js (rows, cost); idearium/api/build-surface.js (phaseRows); idearium/ui/js/plan-panel.js;
+#   idearium/cli/route-commands.js (repo.cost); loom/maps/build-surface-map.js (phase-cost → run-watch; api, build-plan →
+#   phase-cost; api → economy/tokens).
+
+## ADDENDUM 2026-10-13 — why the pipeline doesn't work yet; PF1 ready before run, PF2 a plan without a model
+
+# James: "can we work on inventing anything that will get this pipeline going. like why doesn't this work yet?"
+#
+# The coder's reading of every run he pasted this session:
+# - The agents answer: in these logs ChatGPT finished 38 jobs and Gemini 16.
+# - The pipeline gambles twice.
+#   1. It starts a run without knowing its parts are ready.
+#      - SB9: the ladder climbed to claude, whose page needed his ◎ pick (an empty reply), then to deepseek, which had
+#        no tab and was behind a sign-in wall. Ladder exhausted.
+#      - BL30: the planner was asked while memory was critical, and the request was dropped.
+#   2. When the planner fails, the build falls back to its hardest mode, "built whole as before": one chat agent explores
+#      the whole phase alone, one tool call every 15 s. BL30 ended there, as a placeholder in the wrong place,
+#      `incomplete`.
+# - Both invert his rule ("deterministic first"): the run asks an agent first and finds out afterwards.
+#
+# The coder proposed two inventions and recommended A first. He chose: "A then B (Recommended)" (2026-10-13).
+#
+# - PF1 ready before run.
+#   - One check before the first agent call:
+#     - Guardian answers;
+#     - each rung's agent is not behind a sign-in wall, has no job waiting on his ◎ pick, and has an account left in
+#       its chain;
+#     - an Ollama rung's model is installed and memory is not critical;
+#     - a disconnected tab is fine: it is opened on demand (0.60.25).
+#   - Rungs that are not ready are dropped before the run, said on the Plan.
+#   - The planner is the configured one if ready, else the first ready remote rung.
+#   - No ready rung → the run does not start: state not-ready, with what to fix.
+#   - Guardian owns its facts (GET /api/providers/ready, guardian/lib/provider-ready.js). The run's check is pure
+#     (lib/run-ready.js).
+#   - Delivery order: backend → route → command (providers.ready) → UI (the not-ready / ready row on the Plan).
+# - PF2 a plan without a model.
+#   - When no planner is ready, or the planner fails, Nexus writes the plan itself (lib/phase-plan.js derive), from:
+#     - the files the phase names, else the paths and registry components its text names;
+#     - the exports a file it edits already has;
+#     - `does:` as its steps;
+#     - `proof:` as its conditions.
+#   - The build stays one file per request, through the same contract path, and is never handed whole to one agent.
+#     The precedent one level up: idearium/repo/spec-plan.js derivePlan.
+
+## ADDENDUM 2026-10-13 — PM: every phase mapped to its files and dependencies, Nexus and every project
+
+# James: "All the phases need to be mapped to files and dependencies. With nexus and all projects."
+#
+# Measured first, on Nexus's own phasemaps (the loom parser, docs/*phasemap.spec): 1351 phases, 777 open.
+# - Of the open ones: 370 name files:; 184 write file paths in their text but name none; 223 write no path at all;
+#   195 have no depends_on.
+# - The text is not the answer. On the phases that do name their files (ground truth), only 172 of the 644 paths in
+#   their text are among their files (27%). Phrases that suggest a file is being built score 23%. A path in a phase's
+#   prose is as often a reference ("checked against", "mirrors", "already in") as a target.
+# - That also condemns 0.60.28's derivePlan, which took paths from the text when files: was missing. Fixed here
+#   (PM0): it plans only the files a phase names.
+#
+# The design (the coder's; his rule decides the split, "deterministic first … a reasoning agent only plans"):
+# - PM0: derivePlan uses files: only. A phase without it is not planned without a model.
+# - PM1 candidates (code): the paths a phase writes, each marked as existing or new (its folder exists). Done phases are
+#   skipped unless asked.
+# - PM2 classify (model, through the learned door, Ollama first): a few phases per request. Each answer is JSON
+#   {files:[{path,new}]}, checked by code: safe paths, existing or under an existing folder.
+# - PM3 a gate that learns: before mapping, the same agent maps phases whose files are known, with their files hidden,
+#   and is scored (precision, recall). Its answers are written only when the precision reaches the threshold
+#   (phase_mapping.min_precision, 0.8). Otherwise they are kept as proposals and the report says why.
+# - PM4 dependencies (code): within a map, a phase depends on the nearest earlier phase that changes the same file.
+#   Existing depends_on is kept, and only what is missing is added.
+# - PM5 apply: files: and depends_on are added to the phase block, never replacing what is there, with a comment saying
+#   who mapped it and the measured precision. Through _phaseWrite (a nexus repo goes through the apply gate:
+#   snapshotted, reversible). A map that parsed before and would not after is refused.
+# - Order: backend (lib/phase-files.js, idearium/repo/phase-mapping.js) → route (POST/GET /api/repos/:uuid/phases/map)
+#   → command (repo map-phases) → UI (Phases tab: "Map files & dependencies", progress, the report).
+# - To confirm with him: the threshold, and whether done phases are mapped too (default: open phases only).
+# - Built (0.60.29):
+#   - PM0 derivePlan uses files: only (RR-10).
+#   - PM1–PM5: lib/phase-files.js and idearium/repo/phase-mapping.js; POST/GET /api/repos/:uuid/phases/map;
+#     `repo map-phases`; Phases tab "⇄ map files & dependencies" with its progress line.
+#   - Settings: repos.map_min_precision, map_min_scored, map_batch and map_done.
+# - Found while building:
+#   - Hub files: idearium/api/index.js is named by 118 phases and app.js by 57, so sharing one says nothing about order.
+#     A file named by at least max(8, 2% of the phases naming files) is not dependency evidence. A false depends_on
+#     blocks a phase.
+#   - A phase written on one line ({ … }) cannot take a key in place: 33 in Nexus. Not sent to the agent, and said.
+# - Applied to Nexus now, by code alone: 13 depends_on lines on open phases in 4 maps, from the files they share, each
+#   with its reason as a comment. Every map still parses and keeps its phase count.
+# - Not applied here: files: for the 407 open phases that name none. That needs the agent and its score, and it runs on
+#   his machine (Ollama first, through the door). The coder does not do this bulk mapping by hand (docs/CLAUDE.md, the
+#   agent rule).
+
+## ADDENDUM 2026-10-14 — GT1 built: gates classify before they learn (0.60.30)
+
+# James chose "Build GT1 here (Recommended)". The order this map gives: "1. GT1: gates classify before they learn.
+# 0.60.18 showed that learning from unclassified failures poisons routing. Every later build runs through gates."
+#
+# Built (reused, nothing new beside it):
+# - cortex/core/raid/contract-gates.js classifyFailure({ out, result }) → { cls, why }, one of FAILURE_CLASSES
+#   (transient, capability, context, spec, tool, verification). It reads the executor's output first (lib/pipeline-
+#   routing.js classify for its error text), then the check's reasons.
+# - schedule() checks with learn: false, then learns by class:
+#   - transient: retried on the same agent; does not spend the brick's retries (up to retry_limit in a row); nothing
+#     learned about route or size.
+#   - capability: `<gate>.exclude` records the agent; model-door outcome({ verdict: 'failed', class }) teaches the
+#     learned order without moving a breaker; Boundaries learns the size.
+#   - context: split at once when the brick has pieces; Boundaries learns; the route is not touched.
+#   - spec / verification / tool: a `<gate>.question` for a person, set aside, never a retry loop.
+#   - every class: fault-taxonomy friction `contract.<class>` (transient at level 0), so the next route reads it.
+#   - `<gate>.class` and `<gate>.feedback` (the check's own words, RQ3) are recorded as evidence.
+#   - learners are injectable (schedule(p, { learners })), best-effort, never fail a brick.
+# - cortex/core/raid/contract-adapters.js agentExecutor skips agents in `<gate>.exclude` (all of them failed it → all
+#   tried again, said on the route) and hands `feedback` to the dispatcher.
+#
+# Proof: test-contract-adapters 18/18 (GT-01..07: a planted failure of each class takes its own path; only capability
+# and context change routing or budgets). test-contract-gates 20/20, test-contract-phase-build 8/8, test-chunked-
+# phase-build 15/15 unchanged. CT0's self-contract re-checked by the evaluator after the evaluator changed (5/5 PASSED).
+#
+# Found on main and fixed on the way: two events emitted but not declared (idearium.repo.phases.mapped,
+# guardian.accounts.chain) — declared, so the EV0 contract check is green again.
+#
+# Not done here: Idearium's dispatch does not yet read `feedback` into its prompt (it is passed; the coder prompt is
+# RQ3's other half). The live run on his PC is still the proof that matters.
+
+## ADDENDUM 2026-10-14 — RT1 built: eligibility, then preference (0.60.31)
+
+# James asked: "and we have intent routing? that way the complex reasoning can be done by the bigger models or agents.
+# like claude or deepseek? also multiaccount routing in clearglass, each tab can be a different profile?" Told what
+# existed (0.60.8 intent routing; 0.60.25 account chains on one tab per provider) and what did not (RT1, PF1), with the
+# coder's recommendation RT1 then PF1, he answered: "yes we need to get it all working."
+#
+# Built, reusing what was there:
+# - lib/route-eligibility.js: needsOf (tools asked for, or named by the kind as a whole ':' segment — agent:browser,
+#   page:research; never map:phase-files; size stated or from the message), factsOf (from their owners: Guardian's
+#   provider nodes, the window Nexus gives Ollama, copilot's tools, claude-code's allowed tools), check (a hop failing
+#   tools, context or readiness is removed with its reason; a fact not stated never removes).
+# - The provider facts gained `tools` and `contextTokens` (schema.provider, the five nodes, agent-facts-hash FIELDS —
+#   Clear Glass's cache stamp covers them). The values are stated claims: chatgpt 128k, claude 200k, deepseek 64k,
+#   gemini 1M, perplexity 32k. Boundaries still learns the size each passes reliably below them.
+# - lib/model-door.js route: eligibility over every candidate, then the learned order, then max_hops. Found while
+#   proving it: the cap ran first, so an agent that could do the job but sat past max_hops was never seen (RE-02).
+#   Every route returns `record` (reason, chosen, alternatives, rejected with why, needs, confidence, fallback,
+#   verification) and `ok: false` with every reason when no agent can take the job.
+# - copilot POST /api/route passes Guardian's readiness (0.60.28) beside its tabs. A tab that is not open is not removed
+#   (Clear Glass opens it when a job comes); it is only tried later, as before.
+# - Idearium route.assess returns the door's route; `route assess … --kind --tools --tokens`; Settings → Routing →
+#   "Try a route".
+# - loom: model-door → route-eligibility → ollama-activity, guardian agent-facts (mapped for the first time).
+#
+# Not built: splitting or asking on a low-confidence intent (CK-236). The confidence on the record is the route's
+# (learned outcomes for the kind), not the intent's. The existing callers send no `needs`; they get the window and
+# readiness checks only when they pass a message or tokens. Wiring the build path's bricks to pass their packet size is
+# the next small step.
+
+## ADDENDUM 2026-10-14 — PF1 mapped for build: a tab per account profile (0.60.32)
+
+# James: "dynamic routing to profiles in clearglass, which can hook into hats. each tab can beb a compartment or different
+# profile. that way we can use multiaccount routing." (PF1's james_now) · 2026-10-14: "also multiaccount routing in
+# clearglass, each tab can be a different profile?" · "yes we need to get it all working."
+#
+# Supersedes, per account (both kept, §0.3): 0.39.247 §ONE-TAB — James (2026-09-25): "repo-agent jobs must use ONE ChatGPT
+# tab" — and 0.60.13 session-hub — "providers, accounts, and agent mesh all need to be using the same cookies". The
+# coder's reading, to confirm: both still hold for ONE account. One account = one tab = one session (the canonical
+# persist:ncp-<provider>, mirrored to normal tabs, unchanged). A second account gets its own tab in its own session; it is
+# never mirrored, never the provider's active tab, and never shares a sign-in.
+#
+# Grounded (reuse): ProviderHost already runs per-agent tabs (start(provider, { agentId }) → the userscript's tabId is the
+# agentId); NCP already keys clients by provider:tabId and has pushTab; the vault keeps every account's cookies
+# (vault.restore); account-routing already resolves hat / intent / repo → account and the fallback chain; the dispatch
+# pool is a semaphore per key.
+#
+# Found while grounding (each a defect for multi-tab, fixed in this phase):
+# - ncp handleChannel makes ANY newly connected tab the provider's active tab: a second tab would take every job.
+# - ncp getProviders keeps the LAST client per provider: a second tab would overwrite the provider's usage, chat and tab
+#   state (readiness, usage-limit fallback).
+# - the dispatcher requeues every in-flight job of a provider when ANY of its tabs disconnects.
+#
+# Build, bottom-up:
+# 1. guardian/lib/ncp.js: a profile tab (tabId `profile~<accountId>`) is never the provider's active tab and is not in
+#    getProviders; isTabConnected(provider, tabId); getTabs() lists every tab with its usage.
+# 2. guardian/lib/profile-lanes.js: laneFor(job, { accountRouting, enabled }) → { lane, accountId, tabId, profile, why }.
+#    A job routed to an account other than the canonical tab's account runs in that account's profile tab, in its own
+#    pool lane (provider~account, one job at a time per account). The canonical tab's account (or no account) keeps the
+#    old path: one tab, switching as before. GUARDIAN_PROFILE_TABS=0 turns profiles off.
+# 3. guardian/lib/dispatcher.js: the lane is decided before the pool; a profile job is pushed to its tab (pushTab), and
+#    when the tab is not open Clear Glass is asked to open it (cgOpenProfile) and the job waits for its connect; a
+#    disconnect requeues only the jobs of that tab; a profile tab's usage limit rests only its account.
+# 4. clear-glass/src/providers/profile-tabs.js + host.js: open(provider, accountId) — the account must be known and have a
+#    saved sign-in; its session persist:ncp-<provider>~<accountId> gets the account's cookies from the vault when it holds
+#    no sign-in yet; ProviderHost starts the tab with that partition and tabId. POST/GET :7702/providers/:id/profile(s).
+# 5. API + command + UI: Guardian GET /api/accounts/profiles (lanes, tabs, which account each runs); `guardian profiles`
+#    in the command table; the Accounts card on Idearium's Routing page shows each provider's profile tabs.
+#
+# Proof (the map's): two hats on one provider answer from two accounts in two tabs at once; a job for hat A never lands in
+# hat B's tab (test-profile-tabs, a real dispatcher over a real NCP server with two fake tabs).
+# Not in this phase: CK-241 (the three agree), compartments as profiles (TB1/HM0).
+
+## ADDENDUM 2026-10-14 — PF1 built: a tab per account profile (0.60.32)
+
+# Built as mapped above (steps 1–5). Proof: test-profile-tabs 7/7 — a real NCP server with live SSE tabs, the real
+# dispatcher and account routing: hat builder → acct-a (the provider tab), hat critic → acct-b (its profile tab); both
+# delivered at once, B2 waits only for B1 (one job per account), no job crossed tabs; with GUARDIAN_PROFILE_TABS=0 the
+# old single-tab behaviour holds. Guardian suites unchanged (back-and-forth 18/18, stack-sim 11/11, account-fallback
+# 7/7, run-ready 10/10, economy 5/5, ncp-hostile 5/5, sr3 7/7, retry 52/52; mesh-client 13/14 as on main).
+#
+# Found by the proof test, fixed before it shipped: moving the job payload into one builder left the provider tab's log
+# line reading a variable that no longer existed — every dispatch to the provider tab threw after the job was sent and
+# gave its slot back, so a second job went out beside it.
+# Also fixed on the way: the pool bridge freed a completion's slot by the provider the payload named; it now frees the
+# slot the job really holds (job-retry the same), so a profile lane is never left held.
+#
+# Open, said:
+# - A repo agent's resumed chat (resumeChatUrl) belongs to the account that started it; a profile tab of another account
+#   asked to open it lands on a chat it cannot see. Same as switching accounts on one tab since 0.60.2 — not made worse;
+#   keying chats by account is the fix (not built).
+# - A profile tab's refreshed sign-in lives in its own persistent session; it is not written back to the vault. The
+#   provider tab's account-switch capture is unchanged.
+# - Not run in Clear Glass on his machine yet: the Electron half (profile-tabs.js, host partition, :7702 routes) is unit
+#   tested with fakes, not driven live.
+
+## ADDENDUM 2026-10-14 — QA1 mapped for build: the catalogue runs (0.60.33)
+
+# James: "yes start QA1" — after the coder's answer to "now what? does that make it more stalbe?": GT1 and RT1 add
+# stability, PF1 adds capacity; the live run is the real proof; QA1 next because it guards what already works (CK-233,
+# the regressions he fears: "im scared of regression", 2026-10-13).
+#
+# Grounded first:
+# - The map says "lib/check-catalogue.js serves cos/spec/check-catalogue.spec". It does not exist: nothing loads the
+#   catalogue (only lib/import-checks.js names it). Drift, said here; QA1 builds it.
+# - contract-gates checkCondition runs { check: CK-001|CK-002|CK-060 } through lib/import-checks.js; every other id is
+#   "unverifiable".
+# - lib/shadow.js keeps open shadows in memory and forgets a shadow once settled — CK-230 cannot tell "settled clean"
+#   from "never declared" without a record of settles.
+# - CK-233 exists as two one-off tests (test-no-compartment-label, CG-001b Playwright); the removed Architect page has
+#   no guard at all.
+# - Toolchains here: node, tsc, python3 + ruff, go, cargo, gcc, javac; not shellcheck, yamllint. CK-248 must say which
+#   tool it lacked, never pass silently.
+#
+# Build, bottom-up:
+# 1. lib/shadow.js: settled history (a bounded ring) and settled({ step }); open({ step, olderThanMs }).
+# 2. lib/checks/: one runner per check, each (condition, ctx) → { ok, verifiable, evidence, reason, items }:
+#    ck-230-shadow.js (open shadows for a step past their age, or settled with absences → fail; settled clean → pass;
+#    never declared → unverifiable), ck-233-deny.js (cos/spec/deny-list.spec + a repo's own .nexus/deny.yaml: pattern,
+#    paths, except, why, since — every hit file:line), ck-248-toolchain.js (per extension: node --check, tsc --noEmit,
+#    py_compile, bash -n, JSON.parse, YAML parse, gofmt -e, gcc -fsyntax-only; a missing tool is reported, not passed).
+# 3. lib/check-catalogue.js: load the spec, list / get / runnable / run(id, condition, ctx); import-checks ids keep
+#    their path.
+# 4. cos/spec/deny-list.spec: Nexus's own — the compartment label, Playwright, the Architect page's entry points —
+#    each with his words and the version that removed it.
+# 5. contract-gates checkCondition: a { check: CK-nnn } with a runner runs it; without one, "unverifiable" (as today).
+# 6. API + command + UI: GET /api/checks (the catalogue, runnable marked), POST /api/checks/:id/run; `checks list`,
+#    `checks run <id> [path]`; Settings → Checks.
+#
+# Proof (the map's): "a contract condition { check: CK-230 } passes on a settled shadow and fails on an open one"; plus a
+# planted forbidden thing turns CK-233 red and Nexus's own tree is green; a planted syntax error per language turns
+# CK-248 red; the old one-off guards and CK-233 agree (test-check-catalogue).
+
+## ADDENDUM 2026-10-14 — QA1 first cut built: the catalogue runs (0.60.33)
+
+# Built as mapped above (steps 1–6). Proof: test-check-catalogue 7/7 — the map's own ({ check: CK-230 } passes on a
+# settled shadow, fails on an open one, fails when settled with something absent, unverifiable when never declared);
+# each planted forbidden thing turns CK-233 red at its file:line while comments, _archive and data stay quiet; CK-233
+# and the two one-off guards use the same patterns and agree; a planted syntax error in each of 8 languages turns CK-248
+# red with that language's own tool, valid files pass, a missing tool is said and never counted.
+# First real runs: CK-233 over Nexus clean (0.6 s); CK-248 over Nexus 2489 files in 6 languages clean (77 s).
+# Regression suites unchanged (contract-gates 20/20, adapters 18/18, phase-build 8/8, chunked 15/15, shadow 16/16,
+# shadow-space 5/5, atlas-and-glass 10/10, no-compartment-label 1/1); CT0 re-checked 5/5 after the evaluator changed.
+#
+# Kept, not replaced (§0.3): test-no-compartment-label and CG-001b still run; CK-233 gathers the same patterns as data.
+# Next in QA1 (open): CK-231 half-states (a sweep), CK-234 unhandled branches, CK-235 untested surface, CK-237 free-
+# sentence conditions, CK-239 dangling edges (loom), CK-245 a retry changes something — all deterministic; each one a
+# runner file and a catalogue line.
+
+## ADDENDUM 2026-10-15 — VR1 mapped for build: one version everywhere (0.60.34)
+
+# James: "i also want versions in idearium, github, and each zip, needs to match." · "then the version thing" ·
+# "Continue." Context: he uploaded Nexus-main-6.zip and nothing in it or its name said which version it was; the coder had
+# to compare it file by file with commits to find it was 0.60.23, six versions behind main.
+#
+# Grounded (2026-10-15):
+# - lib/version.js VERSION.system is the one source (0.60.33); package.json follows it by rule, unchecked.
+# - GitHub: 0 tags, 0 releases, 0 workflows. A "Download ZIP" of main is always named <repo>-main.zip.
+# - Idearium shows no Nexus version anywhere; its log prints IdeaOS v4.35.0 (a module version), which reads like a
+#   second, different version. Clear Glass's package.json says 3.24.0 (also a module version).
+# - A zip imported into Idearium (repo.import-archive) is not read for a version; repo.export names its zip <name>.zip.
+#
+# The coder's reading, to confirm: "match" = one release number, lib/version.js system, said the same in Idearium, on
+# GitHub (tag v<version> and a release) and in/on every zip; the module versions (IdeaOS 4.35.0, Clear Glass 3.24.0) stay
+# as module versions but are labelled as such and never shown as the version.
+#
+# Build:
+# 1. lib/release-version.js: current() → { version, tag, zipName, commit }; agreement() → every place that states the
+#    version and whether it matches (package.json, CHANGELOG-<v>.md, the git tag when one is at HEAD); fromFiles(files)
+#    → the version a zip carries (VERSION, lib/version.js, package.json) and how far it is from the running one.
+# 2. CK-253 "versions agree" (catalogue + lib/checks/ck-253-versions.js) — QA1's catalogue runs it; a test in run-all.
+# 3. GitHub: .github/workflows/release.yml — on a push to main that changes lib/version.js (and by hand): check
+#    agreement, then, if v<version> is not tagged yet, tag it and publish release "Nexus <version>" with the asset
+#    nexus-<version>.zip (git archive, a VERSION file inside) and CHANGELOG-<version>.md as its notes.
+# 4. Zips Nexus writes: repo.export names the zip <repo>-<version>.zip and puts a VERSION file in it (Nexus's own repo:
+#    the release version); zips Nexus reads: repo.import-archive reads the version a zip carries, records it on the
+#    repo, and says how far it is from the running Nexus.
+# 5. Idearium: GET /api/version; the version in the top bar and Settings; `version` command.
+# Proof: agreement goes red on a planted mismatch; a zip of an older Nexus is recognised and its distance said; the
+# workflow's own steps run here (version read, zip built with VERSION inside, the name).
+
+## ADDENDUM 2026-10-15 — VR1 built: one version everywhere (0.60.34)
+
+# Built as mapped above. Proof: test-release-version 5/5 — Nexus agrees and a planted mismatch (package.json, a missing
+# changelog, a git tag at HEAD for another version) is named place by place with CK-253 red; a GitHub "Download ZIP" of
+# 0.60.23 is recognised and said to be 11 releases behind 0.60.34 (counted over the version lines — the changelogs miss
+# 0.60.23–25); the release zip is nexus-<version>.zip, every path under nexus-<version>/, VERSION inside, and Idearium's
+# own importer reads the same version back; the workflow's triggers, agreement step, tag/release/asset and the
+# already-tagged skip; Idearium's surfaces. Zip and import suites unchanged (history-import 18/18, mcoc-baseline 25/25,
+# opportunity 28/28, repo-git 11/11, decompose 15/15, repo-history 20/20).
+#
+# Found and fixed on the way: lib/zip-ingest.js dropped every file without an extension as "unlisted extension (none)"
+# — VERSION, LICENSE, Makefile, Dockerfile, .gitignore never reached a repo's chunks. Now well-known names are text.
+#
+# Not settable from here: whether GitHub runs the workflow (Actions enabled, workflow token allowed to write) — it is
+# proven by its first run on main, which should publish v0.60.34. A "Download ZIP" of a branch is still named by GitHub
+# (<repo>-main.zip); it carries lib/version.js, which Idearium reads, and the release asset is the named zip.
+
+## ADDENDUM 2026-10-15 — priority 6 written, and a regression of GT1 fixed (GT1a, 0.60.35)
+
+# James: "we added gating and chunking recursively, dynamically, like bricks. look at the contracts also and raid. i feel
+# something happened" · "yes, read it all, map it first, in the phases". RD0–RD2 (priority 6) were named here and never
+# written as phases; they are written in docs/2026-10-15-one-contract-raid-releases-phasemap.spec (RD0, RD1, BR1, GS1,
+# BR2, FR1, ST1), with the versions work (RN1–AT1) beside them. GT1 (0.60.30) refunded the attempt of a ladder climbed
+# to its end: a failing brick re-climbed every agent up to retry_limit more times. GT1a fixes it (GT-08).

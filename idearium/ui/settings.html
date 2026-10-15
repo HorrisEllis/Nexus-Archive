@@ -163,10 +163,11 @@ function renderNav() {
   const item = (on, attrs, name, tags) => `<button class="navitem${on ? ' on' : ''}" ${attrs}><span class="nm">${esc(name)}</span>${tags}</button>`;
   const originals = repos.filter(r => !r.branchOf), branches = repos.filter(r => r.branchOf);
   const tagsOf = (r) => [r.nexusSelf ? '<span class="tag warn">nexus</span>' : '', r.branchOf ? '<span class="tag acc">branch</span>' : '', r.provider ? `<span class="tag">${esc(r.provider)}</span>` : ''].join('');
-  $('nav').innerHTML = `<div class="navgroup">Idearium</div>` + item(CUR.kind === 'global', 'data-global="1"', 'Global configuration', `<span class="tag">${(CONSOLE.config.keys || []).length}</span>`)
+  $('nav').innerHTML = `<div class="navgroup">Idearium${NEXUS_VER ? ` · Nexus ${esc(NEXUS_VER)}` : ''}</div>` + item(CUR.kind === 'global', 'data-global="1"', 'Global configuration', `<span class="tag">${(CONSOLE.config.keys || []).length}</span>`)
     + item(CUR.kind === 'economy', 'data-economy="1"', 'Provider economy', '<span class="tag acc">limits · learning</span>')
     + item(CUR.kind === 'routing', 'data-routing="1"', 'Routing & fallback', '<span class="tag acc">pipeline</span>')
     + item(CUR.kind === 'access', 'data-access="1"', 'Access', '<span class="tag acc">app passwords</span>')
+    + item(CUR.kind === 'checks', 'data-checks="1"', 'Checks', '<span class="tag acc">gates · regressions</span>')   // 0.60.33 QA1
     + item(CUR.kind === 'appearance', 'data-appearance="1"', 'Appearance', `<span class="tag">${esc((window.IdeariumTheme && IdeariumTheme.current().theme) || 'nexus')}</span>`)
     + `<div class="navgroup">Repos · compartments (${originals.length})</div>` + (originals.map(r => item(CUR.uuid === r.uuid, `data-repo="${esc(r.uuid)}"`, r.name, tagsOf(r))).join('') || '<div class="kv">none match</div>')
     + (branches.length ? `<div class="navgroup">Branches (${branches.length})</div>` + branches.map(r => item(CUR.uuid === r.uuid, `data-repo="${esc(r.uuid)}"`, r.name, tagsOf(r))).join('') : '');
@@ -176,6 +177,7 @@ function renderNav() {
   const ap = $('nav').querySelector('[data-appearance]'); if (ap) ap.onclick = () => go('appearance');
   const rt = $('nav').querySelector('[data-routing]'); if (rt) rt.onclick = () => go('routing');
   const ax = $('nav').querySelector('[data-access]'); if (ax) ax.onclick = () => go('access');
+  const ck = $('nav').querySelector('[data-checks]'); if (ck) ck.onclick = () => go('checks');
 }
 $('q').oninput = () => { renderNav(); if (CUR.kind === 'global') render(); };
 
@@ -187,6 +189,9 @@ function go(kind, uuid = null) {
   load(uuid);
 }
 
+// 0.60.34 VR1 — the Nexus release in the nav header (GET /api/version)
+let NEXUS_VER = null;
+api('/api/version').then(r => { const d = r && (r.data || r); if (d && d.version) { NEXUS_VER = d.version; if (CONSOLE) try { renderNav(); } catch (_) {} } }).catch(() => {});
 async function load(uuid) {
   if (ECON) ECON._stale = true;   // §0.39.281 — the economy page re-reads guardian after a save
   try {
@@ -219,6 +224,7 @@ function render() {
   if (CUR.kind === 'appearance') return renderAppearance();
   if (CUR.kind === 'access') return renderAccess();
   if (CUR.kind === 'routing') return renderRouting();
+  if (CUR.kind === 'checks') return renderChecks();   // 0.60.33 QA1
   if (CUR.kind === 'global' || !DETAIL) return renderGlobal();
   return renderRepo();
 }
@@ -300,6 +306,50 @@ async function rtSet(key, value) {
 }
 // 0.60.20 — James: "start lean? why not just have that a toggle? i want to test it now" · "idearium for the lean toggle".
 // One switch: the services a build does not use stop now and stay stopped at every start (npm run start:all reads it).
+// 0.60.25 — James: "i have like 9 or 12 accounts … use routing each time tokens run out" · "check the accounts, account
+// routing, fallback routing." Per provider: the accounts Clear Glass knows, in the order the chain uses them; ↑↓ to order,
+// a checkbox to include; Save. An account resting at its limit is shown with when it comes back.
+const ACCT = { provider: 'claude', d: null, order: [] };
+async function acctLoad(provider) {
+  const el = document.getElementById('acct-card'); if (!el) return;
+  if (provider) ACCT.provider = provider;
+  let d; try { d = await api(`/api/accounts/chain?provider=${encodeURIComponent(ACCT.provider)}`); d = d.data || d; } catch (e) { el.innerHTML = `<h3><span class="grow">Accounts — fallback chain</span></h3><div class="empty">${esc(e.message)}</div>`; return; }
+  ACCT.d = d;
+  const known = (d.accounts || []).map(a => a.id);
+  ACCT.order = [...(d.chain || []), ...known.filter(k => !(d.chain || []).includes(k))];
+  acctPaint();
+}
+function acctPaint() {
+  const el = document.getElementById('acct-card'); const d = ACCT.d; if (!el || !d) return;
+  const label = (id) => ((d.accounts || []).find(a => a.id === id) || {}).label || id;
+  const rest = new Map((d.exhausted || []).map(x => [x.account, x]));
+  el.innerHTML = `<h3><span class="grow">Accounts — fallback chain</span><select id="acct-prov">${['claude', 'chatgpt', 'gemini', 'deepseek', 'perplexity'].map(p => `<option ${p === ACCT.provider ? 'selected' : ''}>${p}</option>`).join('')}</select></h3>
+    <div class="kv">Jobs for ${esc(ACCT.provider)} use the first account; when its tab says the limit is reached, it rests (5 h) and the next takes over. All resting → the ladder moves to the next agent. Add accounts in Clear Glass (its account picker), then order them here.</div>
+    ${d.accountsError ? `<div class="kv"><span class="tag warn">${esc(d.accountsError)}</span></div>` : ''}
+    ${ACCT.order.length ? ACCT.order.map((id, i) => `<div class="row"><div><label><input type="checkbox" data-acct-on="${esc(id)}" ${(d.chain || []).includes(id) || !(d.chain || []).length ? 'checked' : ''}> ${i + 1}. ${esc(label(id))}</label>${d.current === id ? ' <span class="tag ok">in use</span>' : ''}${rest.has(id) ? ` <span class="tag warn" title="${esc(rest.get(id).why)}">resting until ${esc(new Date(rest.get(id).until).toLocaleTimeString())}</span> <button class="ap-chip" data-acct-wake="${esc(id)}">wake</button>` : ''}</div><div class="ctl"><button class="ap-chip" data-acct-up="${i}">↑</button><button class="ap-chip" data-acct-down="${i}">↓</button></div><div class="ctl"></div></div>`).join('') : '<div class="empty">no accounts for this provider in Clear Glass yet</div>'}
+    <div class="ap-chips"><button class="ap-chip on" id="acct-save">save chain</button></div>
+    <div class="kv" id="acct-tabs">reading the account tabs…</div>`;
+  document.getElementById('acct-prov').onchange = (e) => acctLoad(e.target.value);
+  acctTabs();   // 0.60.32 PF1
+  for (const b of el.querySelectorAll('[data-acct-up],[data-acct-down]')) b.onclick = () => { const i = Number(b.dataset.acctUp ?? b.dataset.acctDown), j = b.dataset.acctUp != null ? i - 1 : i + 1; if (j < 0 || j >= ACCT.order.length) return; [ACCT.order[i], ACCT.order[j]] = [ACCT.order[j], ACCT.order[i]]; acctPaint(); };
+  for (const b of el.querySelectorAll('[data-acct-wake]')) b.onclick = async () => { try { await post('/api/accounts/rest', { provider: ACCT.provider, account: b.dataset.acctWake, clear: true }); toast('awake', 'ok'); } catch (e) { toast(e.message, 'bad'); } acctLoad(); };
+  document.getElementById('acct-save').onclick = async () => {
+    const on = new Set([...el.querySelectorAll('[data-acct-on]')].filter(x => x.checked).map(x => x.dataset.acctOn));
+    try { await post('/api/accounts/chain', { provider: ACCT.provider, accounts: ACCT.order.filter(id => on.has(id)) }); toast(`${ACCT.provider} chain saved`, 'ok'); } catch (e) { toast(`not saved: ${e.message}`, 'bad'); }
+    acctLoad();
+  };
+}
+// 0.60.32 PF1 — James: "each tab can be a different profile. that way we can use multiaccount routing." The provider's own tab
+// (and the account it runs) and every profile tab (another account, its own session); a job routed to that account runs there,
+// at the same time as the others
+async function acctTabs() {
+  const el = document.getElementById('acct-tabs'); if (!el) return;
+  let d; try { d = await api('/api/accounts/profiles'); d = d.data || d; } catch (e) { el.innerHTML = `<span class="tag warn">account tabs: ${esc(e.message)}</span>`; return; }
+  const p = (d.providers || []).find(x => x.provider === ACCT.provider);
+  el.innerHTML = `<b>Tabs</b> — ${d.enabled ? 'each account gets its own tab when a job is routed to it (a hat rule, or the chain), so accounts run at once' : '<span class="tag warn">profile tabs off (GUARDIAN_PROFILE_TABS=0)</span>'}<br>`
+    + (p ? (p.tabs || []).map(t => `<span class="tag ${t.busy ? 'warn' : 'ok'}" title="${esc(t.tabId)}">${t.profile ? esc(t.profile) : `own tab · ${esc(p.account || 'no known account')}`} — ${t.busy ? 'busy' : 'idle'}${t.limited ? ' · at its limit' : ''}</span>`).join(' ')
+      : `<span class="d">no ${esc(ACCT.provider)} tab connected</span>`);
+}
 async function leanLoad() {
   const el = document.getElementById('lean-card'); if (!el) return;
   let d; try { d = await api('/api/system/lean'); d = d.data || d; } catch (e) { el.innerHTML = `<h3><span class="grow">Lean mode</span></h3><div class="empty">could not read it: ${esc(e.message)}</div>`; return; }
@@ -314,6 +364,32 @@ async function leanLoad() {
     leanLoad();
   };
 }
+// ── 0.60.33 QA1 — the check catalogue (cos/spec/check-catalogue.spec, lib/check-catalogue.js) ──
+// James: "gates for everything to reduce workload from agents" · "im scared of regression." Every check, and the ones
+// Nexus runs now, with a Run button over Nexus (or a path inside it).
+async function renderChecks() {
+  $('title').textContent = 'Checks';
+  $('sub').innerHTML = 'Every check in <code>cos/spec/check-catalogue.spec</code>. The green ones run now — in a contract gate (<code>{ check: CK-233 }</code>), with <code>idearium checks run</code>, or here. A check that cannot run never passes.';
+  $('tabs').innerHTML = '';
+  let d; try { d = await api('/api/checks'); d = d.data || d; } catch (e) { $('body').innerHTML = `<div class="empty">Could not read the catalogue: ${esc(e.message)}</div>`; return; }
+  const s = d.summary || {};
+  const fams = [...new Set((d.checks || []).map(c => c.family))];
+  const row = (c) => `<div class="row"><div><div class="k">${esc(c.id)} · ${esc(c.name)}</div><div class="d">${esc(c.invariant || '')}</div></div><div class="ctl">${c.runnable === 'runner' ? `<button class="ap-chip on" data-ck-run="${esc(c.id)}">run</button>` : c.runnable ? '<span class="tag">import checks</span>' : `<span class="tag" title="${esc(c.exists || 'none')}">${esc(c.how)}</span>`}</div><div class="ctl" id="ck-out-${esc(c.id)}"></div></div>`;
+  $('body').innerHTML = `<div class="card"><h3><span class="grow">The catalogue</span><span class="tag ok">${s.runnable} runnable</span><span class="tag">${s.total} checks</span></h3>
+      <div class="kv">path (optional, inside Nexus) <input type="text" id="ck-path" placeholder="e.g. idearium/ui" style="width:16em"> · step for CK-230 <input type="text" id="ck-step" placeholder="phase.build" style="width:10em"></div>
+      ${(d.checks || []).filter(c => c.runnable).map(row).join('')}</div>`
+    + fams.map(f => `<div class="card"><h3><span class="grow">${esc(f)}</span><span class="tag">${(d.checks || []).filter(c => c.family === f).length}</span></h3>${(d.checks || []).filter(c => c.family === f && !c.runnable).map(row).join('') || '<div class="kv">all runnable (above)</div>'}</div>`).join('');
+  for (const b of $('body').querySelectorAll('[data-ck-run]')) b.onclick = async () => {
+    const id = b.dataset.ckRun, out = document.getElementById(`ck-out-${id}`); out.innerHTML = 'running…';
+    const p = $('ck-path').value.trim(), st = $('ck-step').value.trim();
+    try {
+      let r = await post(`/api/checks/${encodeURIComponent(id)}/run`, { ...(p ? { path: p } : {}), ...(st ? { step: st } : {}) }); r = r.data || r;
+      const items = (r.items || []).slice(0, 12).map(i => i.skipped ? `skipped ${esc(i.lang)}: ${esc(i.skipped)}` : i.error ? `${esc(i.file)}: ${esc(i.error)}` : i.file ? `${esc(i.file)}:${i.line} [${esc(i.id)}]` : esc(JSON.stringify(i))).join('<br>');
+      out.innerHTML = `<span class="tag ${r.ok ? 'ok' : 'warn'}">${r.ok ? 'passed' : r.verifiable === false ? 'could not check' : 'failed'}</span> <span class="d">${esc(r.reason || '')}${r.ms != null ? ` · ${r.ms} ms` : ''}</span>${items ? `<div class="d">${items}</div>` : ''}`;
+    } catch (e) { out.innerHTML = `<span class="tag warn">${esc(e.message)}</span>`; }
+  };
+}
+
 async function renderRouting() {
   $('title').textContent = 'Routing & fallback';
   $('sub').innerHTML = 'Which agent builds each spec chunk, and where it goes when that fails. Saved as <span class="tag">routing.*</span> in idearium\'s config (also <code>POST /api/config</code>, <code>idearium routing</code>).';
@@ -324,7 +400,7 @@ async function renderRouting() {
   const row = (k, desc, ctl) => `<div class="row"><div><div class="k">routing.${k}</div><div class="d">${desc}</div></div><div class="ctl">${ctl}</div><div class="ctl"></div></div>`;
   const num = (k, v, min, max) => `<input type="number" data-rt="${k}" value="${esc(v)}" min="${min}" max="${max}">`;
   const br = (d.breakers || []);
-  $('body').innerHTML = `<div class="card" id="lean-card"><h3><span class="grow">Lean mode</span></h3><div class="kv">reading…</div></div><div class="card"><h3><span class="grow">Mode</span><span class="tag">${esc(p.mode)}</span></h3><div class="ap-chips">${Object.entries(RT_MODES).map(([m, t]) => `<button class="ap-chip ${p.mode === m ? 'on' : ''}" data-rt-mode="${m}" title="${esc(t)}">${esc(m)}</button>`).join('')}</div><div class="kv">${esc(RT_MODES[p.mode])}</div></div>
+  $('body').innerHTML = `<div class="card" id="acct-card"><h3><span class="grow">Accounts — fallback chain</span></h3><div class="kv">reading…</div></div><div class="card" id="lean-card"><h3><span class="grow">Lean mode</span></h3><div class="kv">reading…</div></div><div class="card"><h3><span class="grow">Mode</span><span class="tag">${esc(p.mode)}</span></h3><div class="ap-chips">${Object.entries(RT_MODES).map(([m, t]) => `<button class="ap-chip ${p.mode === m ? 'on' : ''}" data-rt-mode="${m}" title="${esc(t)}">${esc(m)}</button>`).join('')}</div><div class="kv">${esc(RT_MODES[p.mode])}</div></div>
     <div class="card"><h3><span class="grow">Fallback chain</span></h3>${row('chain', 'tried in this order after the chosen agent (and the block\'s own <code>fallback:</code> in blocks.yaml)', `<input type="text" data-rt="chain" value="${esc(p.chain.join(','))}">`)}</div>
     <div class="card"><h3><span class="grow">Ollama models</span></h3>${row('ollama_models', 'each listed model is its own candidate, learned separately (e.g. qwen2.5-coder:3b,qwen2.5-coder:7b); empty = the hat\'s model', `<input type="text" data-rt="ollama_models" value="${esc((p.ollamaModels || []).join(','))}">`)}${row('learn_min_records', 'outcomes needed for a chunk type before learned mode reorders it', `<input type="number" data-rt="learn_min_records" value="${esc(p.learnMinRecords)}" min="1" max="1000">`)}
       <div id="rt-learned" class="kv">loading what has been learned…</div></div>
@@ -358,9 +434,15 @@ async function renderRouting() {
       <div class="row"><div><div class="k">routing.contract_build</div><div class="d">0.60.18 — a held plan runs as a .contract: a brick per file, independent ones at once, each pass a checkpoint a later build resumes from, the phase passing only on its proof · off: one file after another</div></div><div class="ctl"><div class="ap-chips">${['on', 'off'].map(m => `<button class="ap-chip ${(p.contractBuild !== false ? 'on' : 'off') === m ? 'on' : ''}" data-rt-cb="${m}">${m}</button>`).join('')}</div></div></div>
       ${row('contract_concurrency', 'bricks built at the same time (independent files only)', num('contract_concurrency', p.contractConcurrency || 2, 1, 8))}
       <div class="row"><div><div class="k">routing.chunk_phases</div><div class="d">without a plan: one request per file when the ladder starts on Ollama (auto), always, or never</div></div><div class="ctl"><div class="ap-chips">${['auto', 'always', 'never'].map(m => `<button class="ap-chip ${(p.chunkPhases || 'auto') === m ? 'on' : ''}" data-rt-cp="${m}">${m}</button>`).join('')}</div></div><div class="ctl"></div></div></div>
+    <div class="card" id="rt-try"><h3><span class="grow">Try a route</span><span class="tag">RT1</span></h3>
+      <div class="kv">James: "and we have intent routing? that way the complex reasoning can be done by the bigger models or agents. like claude or deepseek?" First who <b>can</b> take the job (the tools it needs, its size against each agent's window, whether Guardian says the agent can answer now), then who is <b>preferred</b> among them (the learned order, the reasoner first for reasoning work).</div>
+      <div class="row"><div><div class="k">request</div><div class="d">what you would ask; kind and tools are optional (tools: text, code, web, browser, files, shell, nexus)</div></div><div class="ctl"><input type="text" id="rt-try-msg" placeholder="design the retry policy and compare the trade-offs"></div><div class="ctl"></div></div>
+      <div class="row"><div><div class="k">kind · tools · tokens</div><div class="d">e.g. agent:browser · browser · 40000</div></div><div class="ctl"><input type="text" id="rt-try-kind" placeholder="agent:chat" style="width:9em"> <input type="text" id="rt-try-tools" placeholder="tools" style="width:8em"> <input type="number" id="rt-try-tok" placeholder="tokens" style="width:7em"> <button class="ap-chip" id="rt-try-go">route it</button></div><div class="ctl"></div></div>
+      <div id="rt-try-out" class="kv"></div></div>
     <div class="card"><h3><span class="grow">The route per block</span><span class="tag">${(d.blocks || []).length} blocks</span></h3>
       ${(d.blocks || []).map(b => `<div class="row"><div><div class="k">${esc(b.id)}</div><div class="d">${esc(b.title)}</div></div><div class="ctl">${b.route.map(r => `<span class="tag" title="${esc(r.why)}">${esc(r.provider)}</span>`).join(' → ')}${b.skipped.length ? ` <span class="kv">skipped ${b.skipped.map(x => esc(x.provider)).join(', ')}</span>` : ''}</div><div class="ctl"></div></div>`).join('')}</div>`;
   leanLoad();   // 0.60.20
+  acctLoad();   // 0.60.25
   for (const b of $('body').querySelectorAll('[data-rt-mode]')) b.onclick = () => rtSet('mode', b.dataset.rtMode);
   for (const b of $('body').querySelectorAll('[data-rt-pc]')) b.onclick = () => rtSet('plan_code', b.dataset.rtPc);   // §0.60.0 PC1
   for (const b of $('body').querySelectorAll('[data-rt-rr]')) b.onclick = () => rtSet('reason_route', b.dataset.rtRr);   // 0.60.12 intent routing for reasoning
@@ -372,6 +454,25 @@ async function renderRouting() {
   api('/api/routing/learned').then(r => { const L = (r.data || r).learned || {}; const ks = Object.keys(L).sort();
     $('rt-learned').innerHTML = ks.length ? ks.map(k => `<div><b>${esc(k)}</b> ${L[k].slice(0, 5).map(x => `<span class="tag ${x.success >= 0.5 ? 'ok' : 'warn'}" title="${x.ok} ok · ${x.failed} failed">${esc(x.provider)} ${Math.round(x.success * 100)}%</span>`).join(' ')}</div>`).join('') : 'nothing learned yet — every chunk build records its outcome'; }).catch(() => { $('rt-learned').textContent = ''; });
   $('rt-reset').onclick = async () => { try { await post('/api/routing/breaker/reset', {}); toast('breakers reset', 'ok'); renderRouting(); } catch (e) { toast(e.message, 'bad'); } };
+  $('rt-try-go').onclick = rtTry;   // 0.60.31 RT1
+}
+
+// 0.60.31 RT1 — the door's route for one request: eligible agents in order, the rejected ones and why, its record
+async function rtTry() {
+  const msg = $('rt-try-msg').value.trim(), out = $('rt-try-out');
+  if (!msg) { toast('write a request first', 'bad'); return; }
+  const tools = $('rt-try-tools').value.trim(), tok = Number($('rt-try-tok').value) || 0, kind = $('rt-try-kind').value.trim();
+  out.innerHTML = 'routing…';
+  let d;
+  try { d = await post('/api/route/assess', { message: msg, ...(kind ? { kind } : {}), ...(tools || tok ? { needs: { ...(tools ? { tools } : {}), ...(tok ? { tokens: tok } : {}) } } : {}) }); d = d.data || d; }
+  catch (e) { out.innerHTML = `<span class="tag warn">${esc(e.message)}</span>`; return; }
+  const a = d.assessment || {}, r = d.door || {}, rec = r.record || {};
+  const conf = rec.confidence ? (rec.confidence.value == null ? 'untried' : `${Math.round(rec.confidence.value * 100)}%`) : '—';
+  out.innerHTML = `<div><b>${esc(a.level || '?')}</b> → ${esc(d.kind || '')}${d.preferAgent ? ` (reasoner ${esc(d.preferAgent)})` : ''} <span class="d">${esc(d.why || '')}</span></div>`
+    + (r.ok || rec.rejected ? `<div>route: ${(r.route || []).map(h => `<span class="tag ok" title="${esc(h.why || '')}">${esc(h.provider)}</span>`).join(' → ') || '<span class="tag warn">no agent can take it</span>'} <span class="tag" title="${esc(rec.confidence ? rec.confidence.basis : '')}">confidence ${esc(conf)}</span>${rec.fallback ? ` <span class="d">fallback ${esc(rec.fallback)}</span>` : ''}</div>`
+      + ((rec.needs && ((rec.needs.tools || []).length || rec.needs.tokens)) ? `<div class="d">needs: ${esc([...(rec.needs.tools || []), rec.needs.tokens ? `~${rec.needs.tokens} tokens` : ''].filter(Boolean).join(', '))}</div>` : '')
+      + (rec.rejected || []).map(x => `<div><span class="tag warn">${esc(x.provider)}</span> <span class="d">${esc(x.requirement)}: ${esc(x.why)}</span></div>`).join('')
+      : `<div><span class="tag warn">door: ${esc(r.error || 'no route')}</span></div>`);
 }
 
 // ── §0.39.281 EC8 — the provider economy (docs/2026-09-29-provider-economy-phasemap.spec) ──

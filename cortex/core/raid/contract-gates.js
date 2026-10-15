@@ -27,6 +27,8 @@
  *     { evidence: <key>, match? }      recorded evidence under that key (and, given, matching the regex)
  *     { gate: <id> }                   that gate is PASSED
  *     { check: CK-001|CK-002|CK-060, path? }   lib/import-checks.js over a folder — clean passes
+ *     { check: CK-230|CK-233|CK-248, … }        §QA1 lib/check-catalogue.js runners (a step's shadow settled; nothing on
+ *                                              the deny list; every file passes its language's own parser)
  *   Anything else (a free sentence) is `unverifiable`: reported, never counted as proof.
  *
  *   Gate states: BLOCKED · READY · RUNNING · PASSED · FAILED · STALE. SKIPPED only for a gate marked optional by its
@@ -124,8 +126,13 @@ function checkCondition(c, { root, state, runTest }) {
   if (c.gate) { const s = state.gates && state.gates[c.gate] && state.gates[c.gate].status; return { ok: s === 'PASSED', verifiable: true, evidence: s === 'PASSED' ? { gate: c.gate } : null, reason: s === 'PASSED' ? null : `gate ${c.gate} is ${s || 'not run'}` }; }
   if (c.check) {
     const id = String(c.check).toUpperCase();
-    if (!['CK-001', 'CK-002', 'CK-060'].includes(id)) return { ok: false, verifiable: false, reason: `unverifiable: ${id} has no executable check here yet (lib/import-checks.js runs CK-001, CK-002, CK-060)` };
-    return { ok: false, verifiable: true, async: true, check: id, dir: path.join(root, c.path || '.') };
+    if (['CK-001', 'CK-002', 'CK-060'].includes(id)) return { ok: false, verifiable: true, async: true, check: id, dir: path.join(root, c.path || '.') };
+    // §QA1 0.60.33 — every other check with a runner (lib/check-catalogue.js: CK-230 shadow, CK-233 deny list, CK-248 each
+    // language's own toolchain); without one it stays unverifiable — never a pass
+    let CC = null; try { CC = require(path.join(DEFAULT_ROOT, 'lib/check-catalogue.js')); } catch (_) { CC = null; }
+    if (!CC || CC.runnable(id) !== 'runner') return { ok: false, verifiable: false, reason: `unverifiable: ${id} has no executable check here yet (lib/check-catalogue.js runners: ${CC ? CC.summary().runners.join(', ') : 'not loaded'}; lib/import-checks.js: CK-001, CK-002, CK-060)` };
+    const r = CC.run(id, c, { root });
+    return { ok: !!r.ok, verifiable: r.verifiable !== false, evidence: r.ok ? (r.evidence || { check: id }) : null, reason: r.ok ? null : r.reason };
   }
   return { ok: false, verifiable: false, reason: `unverifiable: ${JSON.stringify(c)} names no check` };
 }
@@ -302,6 +309,22 @@ function packetTokens(p, gateId, { root = DEFAULT_ROOT } = {}) {
   return Math.ceil(n / 4);
 }
 
+/** §BR2 — split one level deeper by units, within the depth bound; at the bound, or with no units, say it is indivisible
+ *  (once). → { status: 'SPLIT' | 'INDIVISIBLE', reasons } | null */
+function _splitDeeper(p, g, { maxDepth = 3, why = '' } = {}) {
+  const d = depthOf(p, g);
+  const units = unitsOf(g);
+  if (units && d < maxDepth) {
+    try { const kids = split(p, g.id, { by: 'units', units }); return { status: 'SPLIT', reasons: [`${why} — split into its own ${kids.length} steps (depth ${d + 1} of ${maxDepth})`, `into ${kids.join(', ')}`] }; }
+    catch (e) { return { status: 'INDIVISIBLE', reasons: [e.message] }; }
+  }
+  const ev = (p.state.evidence || {});
+  if (ev[`${g.id}.indivisible`]) return null;
+  const reason = d >= maxDepth ? `at the depth bound (${maxDepth}) — not split further` : 'one step that cannot be split further';
+  record(p, `${g.id}.indivisible`, reason, { by: 'scheduler:split' });
+  return { status: 'INDIVISIBLE', reasons: [`${why} — ${reason}`] };
+}
+
 /** Boundaries — what Nexus learns about how big a piece each agent handles: one JAA row per check (agent, kind, size, ok) */
 const Boundaries = {
   _db() { return require(path.join(DEFAULT_ROOT, 'cortex/memory/jaa-db.js')).jaaDB; },
@@ -346,19 +369,39 @@ function shouldSplit(p, gateId, { agent = null, budget = null, root = DEFAULT_RO
  * of its own. The parent becomes a phase that passes only when every child has — downstream gates are unchanged.
  * Recorded in p.splits (nothing lost); the parent's own conditions still have to hold.
  */
-function split(p, gateId, { by = null } = {}) {
+/**
+ * §BR2 0.60.39 — recursion, bounded. A brick with one action can still hold several steps ("export x; document it; add a
+ * test"): unitsOf() reads them out of the action's own text (sentences, ';', list items, 'then'). depthOf() counts its
+ * splits so far; split(by 'units') goes one level deeper until the bound (schedule's depth, routing.contract_depth,
+ * default 3). CK-247: a piece is never split into the same pieces it came from, and an indivisible piece says so.
+ */
+function unitsOf(g) {
+  if (!g || (g.actions || []).length !== 1) return null;
+  const parts = String(g.actions[0]).split(/(?:\.\s+(?=[A-Za-z])|;\s*|\n+\s*(?:[-*•]|\d+[.)])?\s*|\s+then\s+|,\s*then\s+)/i)
+    .map(x => x.trim().replace(/^(?:[-*•]|\d+[.)])\s*/, '').replace(/^then\s+/i, '').replace(/\.$/, '')).filter(x => x.length >= 3);
+  return parts.length >= 2 ? parts : null;
+}
+function depthOf(p, g) { let d = 0, cur = g; while (cur && cur.parent && d < 50) { d++; cur = (p.gates || []).find(x => x.id === cur.parent); } return d; }
+
+function split(p, gateId, { by = null, units = null } = {}) {
   const g = (p.gates || []).find(x => x.id === gateId);
   if (!g) throw Object.assign(new Error(`no gate ${gateId}`), { status: 404 });
   if (g.children && g.children.length) throw Object.assign(new Error(`gate ${gateId} is already split into ${g.children.join(', ')}`), { status: 409 });
   const mode = by || ((g.requires || []).length >= (g.actions || []).length ? 'requires' : 'actions');
-  const items = mode === 'requires' ? (g.requires || []) : (g.actions || []);
+  let items = mode === 'requires' ? (g.requires || []) : mode === 'units' ? (units || unitsOf(g) || []) : (g.actions || []);
+  if (mode === 'units') {
+    // CK-247 — never the same pieces again: a split whose pieces are exactly its parent's (or its own) is refused
+    const parent = g.parent ? (p.gates || []).find(x => x.id === g.parent) : null;
+    const same = (a, b) => Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((x, i) => String(x).trim() === String(b[i]).trim());
+    if (same(items, g.actions) || (parent && same(items, parent.actions))) throw Object.assign(new Error(`gate ${gateId}: its units are the pieces it already is — not split again (CK-247)`), { status: 409 });
+  }
   if (items.length < 2) throw Object.assign(new Error(`gate ${gateId} has fewer than two ${mode} — nothing to split`), { status: 400 });
   const children = items.map((it, i) => {
     const id = `${gateId}.${i + 1}`;
     const refPath = mode === 'requires' ? ((p.refs || {})[it] || {}).path : null;
     const own = (g.pass_when || []).filter(c => c && typeof c === 'object' && refPath && (c.exists === refPath || c.test === refPath));
     return { id, type: 'task', parent: gateId, requirement: g.requirement || { gate: gateId, outcome: (p.outcome && p.outcome.what) || null, actions: g.actions || [] }, depends_on: [...(g.depends_on || [])],
-      requires: mode === 'requires' ? [it] : [...(g.requires || [])], actions: mode === 'actions' ? [it] : (g.actions || []),
+      requires: mode === 'requires' ? [it] : [...(g.requires || [])], actions: mode === 'actions' || mode === 'units' ? [it] : (g.actions || []),
       pass_when: [...own, { evidence: `${id}.done` }], kind: g.kind || g.type, ...(g.run ? { run: g.run } : {}), ...(g.file ? { file: g.file } : {}) };
   });
   const at = p.gates.indexOf(g);
@@ -380,13 +423,120 @@ function split(p, gateId, { by = null } = {}) {
 
 // ── SC0 — the scheduler ───────────────────────────────────────────────────────────────────────────────────────────
 // Every READY brick with work to do runs — independent bricks at the same time — through the executors Nexus already has
+/**
+ * §GT1 2026-10-14 — gates classify before they learn (docs/2026-10-13-gates-that-learn-and-priorities-phasemap.spec GT1;
+ * folds RQ2, RQ3, RQ4, RQ24). James: "each gate can route, diagnose, and retry". 0.60.18 showed that learning from an
+ * unclassified failure poisons routing: a provider that timed out was learned as one that could not do the work.
+ *
+ * classifyFailure({ out, result }) → { cls, why } — out is what the executor returned, result what check() found.
+ *   transient     the agent never really answered (timeout, empty, down, login, rate limit)  → retry, same agent, learn nothing
+ *   context       the piece was too big for it (truncated, context / token limit)            → split; Boundaries learns
+ *   capability    it answered and the work did not meet the gate (or it refused)             → next agent; the door's order learns
+ *   spec          the gate's own condition cannot be checked (unverifiable, names a missing test) → a question, not a retry
+ *   verification  the check itself broke (its runner did not run)                            → a question, not a retry
+ *   tool          nothing here can run it (unsupported, failing tool calls)                   → blocked, said
+ */
+const FAILURE_CLASSES = Object.freeze(['transient', 'capability', 'context', 'spec', 'tool', 'verification']);
+const LEARNS_ROUTE = new Set(['capability']);              // only these change the door's learned order
+const LEARNS_BUDGET = new Set(['capability', 'context']);  // only these teach Boundaries (a size lesson)
+function classifyFailure({ out = null, result = null } = {}) {
+  const reasons = (result && result.reasons) || [];
+  if (out && out.unsupported) return { cls: 'tool', why: out.why || 'nothing here can run it' };
+  if (reasons.some(r => /^unverifiable:/.test(String(r)))) return { cls: 'spec', why: reasons.find(r => /^unverifiable:/.test(String(r))) };
+  if (reasons.some(r => /^test .+ does not exist$/.test(String(r)))) return { cls: 'spec', why: reasons.find(r => /does not exist$/.test(String(r))) };
+  if (reasons.some(r => /^test .+ exited (null|undefined|-?\d{3,})$/.test(String(r)) || /runner (crashed|failed)/i.test(String(r)))) return { cls: 'verification', why: reasons.join('; ') };
+  const failedToRun = out && (out.ok === false || out.error);
+  if (failedToRun) {
+    if (out.transient) return { cls: 'transient', why: String(out.error || 'the agent did not answer').slice(0, 300) };
+    let mode = 'unknown';
+    try { mode = require(path.join(DEFAULT_ROOT, 'lib/pipeline-routing.js')).classify({ error: String(out.error || ''), ok: false, toolErrors: out.toolErrors }); } catch (_) { /* no classifier: the text rules below */ }
+    const text = String(out.error || '');
+    if (mode === 'tool-errors') return { cls: 'tool', why: text.slice(0, 300) };
+    if (mode === 'truncated' || /context (length|window)|too (long|large|big)|token limit|maximum context/i.test(text)) return { cls: 'context', why: text.slice(0, 300) };
+    if (['timeout', 'empty', 'provider-down', 'login', 'rate-limit'].includes(mode)) return { cls: 'transient', why: `${mode}: ${text.slice(0, 280)}` };
+    return { cls: 'capability', why: text.slice(0, 300) || 'the agent failed the work' };
+  }
+  return { cls: 'capability', why: reasons.join('; ').slice(0, 300) || 'the work did not meet the gate' };
+}
+
+/**
+ * §GS1 0.60.39 — compare(p, gateId, { root, diff }) → { gate, status, stale, reasons, passedAt, commit, diff } — the gate as
+ * it is now against what passed: the evaluator's own reasons (a changed input makes it STALE), the commit it passed at,
+ * and — given the caller's diff({ gate, from, files }) (Idearium: Versionium) — what changed in its files since.
+ */
+async function compare(p, gateId, { root = DEFAULT_ROOT, diff = null } = {}) {
+  const g = (p.gates || []).find(x => x.id === gateId);
+  if (!g) throw Object.assign(new Error(`no gate ${gateId}`), { status: 404 });
+  const ev = evaluate(p, { root });
+  const now = ev.gates.find(x => x.id === gateId) || {};
+  const passedAt = [...(p.state.checkpoints || [])].reverse().find(c => c.gate === gateId) || null;
+  const files = [...new Set([g.file, ...(g.requires || []).map(r => ((p.refs || {})[r] || {}).path)].filter(Boolean))];
+  let d = null;
+  if (diff && passedAt && passedAt.commit) { try { d = await diff({ gate: g, from: passedAt.commit, files }); } catch (e) { d = { error: e.message }; } }
+  return { gate: gateId, status: now.status || null, stale: now.status === 'STALE', reasons: now.reasons || [], passedAt: passedAt ? passedAt.at : null,
+    commit: passedAt ? passedAt.commit || null : null, files, diff: d };
+}
+
 // (lib/agent-tools executeTool: the copilot's tools, Clear Glass automation and macros, run-pipeline/run-chain, nexus.command);
 // its output is recorded as evidence, its gate is checked, and the next round sees what became READY. Order is whatever
 // the dependencies allow. A brick with no executor for its kind of work is left READY and said — never faked.
 function _defaultExecutors() {
   return { tool: async (name, args) => require(path.join(DEFAULT_ROOT, 'lib/agent-tools/index.js')).executeTool(name, args || {}) };
 }
-async function schedule(p, { root = DEFAULT_ROOT, executors = null, concurrency = 4, maxRounds = 50, onEvent = () => {}, onCheckpoint = () => {} } = {}) {
+// §GT1 — what each classified outcome writes: fault-taxonomy friction (the next route reads it) and, for a capability
+// failure only, the door's learned order (a verdict: it never moves a breaker). Both best-effort, both injectable.
+function _defaultLearners() {
+  return {
+    friction: (cls, meta) => { try { return require(path.join(DEFAULT_ROOT, 'cortex/self-heal/fault-taxonomy.js')).raiseFriction(`contract.${cls}`, cls === 'transient' ? 0 : 1, meta); } catch (_) { return null; } },
+    door: (o) => { try { return require(path.join(DEFAULT_ROOT, 'lib/model-door.js')).outcome(o); } catch (_) { return null; } },
+  };
+}
+/**
+ * assess(p, gateId, { root, read, exportsOf }) — §GA1 0.60.44: before a brick spends an agent call, its gate checks with no
+ * model (docs/2026-10-15-automatic-tracking-phasemap.spec GA1). James: "gates can asses if dependacies are being met or
+ * if context is needed."
+ *   deps     each upstream brick's exports as recorded when it passed (<id>.exports) still in its file now —
+ *            not only "status PASSED". read(file) is the caller's view of the code (Idearium: the proposal overlay in
+ *            review mode); a file it cannot read is said, never counted as unmet.
+ *   context  the names this brick's planned imports take ('./a.js: x, y') that no dependency's code provides.
+ * → { gate, ready, deps: [{ gate, file, missing, unreadable }], context: { needs: [names] }, why: [] }
+ */
+function _importNames(imports) {
+  const out = [];
+  for (const i of imports || []) { const m = String(i).match(/:\s*(.+)$/); if (m) for (const n of m[1].split(',')) { const k = n.trim(); if (/^[A-Za-z_$][\w$]*$/.test(k)) out.push(k); } }
+  return out;
+}
+function assess(p, gateId, { root = DEFAULT_ROOT, read = null, exportsOf = null } = {}) {
+  const g = (p.gates || []).find(x => x.id === gateId);
+  if (!g) throw Object.assign(new Error(`no gate ${gateId}`), { status: 404 });
+  const ev = (p.state && p.state.evidence) || {};
+  const rd = read || ((f) => { try { return fs.readFileSync(path.join(root, f), 'utf8'); } catch (_) { return null; } });
+  const exOf = exportsOf || ((code) => require(path.join(DEFAULT_ROOT, 'lib/phase-plan.js')).exportsOf(code));
+  const deps = [], provided = new Set();
+  for (const d of g.depends_on || []) {
+    const dg = (p.gates || []).find(x => x.id === d);
+    if (!dg || dg.type !== 'task' || !dg.file) continue;
+    // what the dependency was SEEN to export when it passed (its recorded evidence) — never the plan's promise alone: a
+    // brick passed by an executor that records no exports is not checked (said), rather than reopened on a guess
+    let promised = null; try { promised = JSON.parse(ev[`${d}.exports`] || 'null'); } catch (_) {}
+    if (!Array.isArray(promised)) { deps.push({ gate: d, file: dg.file, missing: [], unchecked: true }); continue; }
+    let code = null; try { code = rd(dg.file); } catch (_) { code = null; }
+    if (code == null) { deps.push({ gate: d, file: dg.file, missing: [], unreadable: true }); continue; }
+    const have = new Set(exOf(code)); have.forEach(n => provided.add(n));
+    deps.push({ gate: d, file: dg.file, missing: promised.filter(n => !have.has(n)) });
+  }
+  const unreadable = deps.some(x => x.unreadable || x.unchecked);
+  const needs = unreadable ? [] : _importNames(g.requirement && g.requirement.imports).filter(n => !provided.has(n));
+  const why = [...deps.filter(x => x.missing.length).map(x => `${x.gate}: ${x.file} no longer exports ${x.missing.join(', ')}`),
+    ...(needs.length ? [`imports ${needs.join(', ')}, which no dependency provides`] : []),
+    ...deps.filter(x => x.unreadable).map(x => `${x.gate}: ${x.file} could not be read — not checked`),
+    ...deps.filter(x => x.unchecked).map(x => `${x.gate}: no exports were recorded when it passed — not checked`)];
+  return { gate: gateId, ready: !deps.some(x => x.missing.length), deps, context: { needs }, why };
+}
+
+async function schedule(p, { root = DEFAULT_ROOT, executors = null, concurrency = 4, maxRounds = 50, onEvent = () => {}, onCheckpoint = () => {}, learners = null, versioning = null, depth = null, assessing = null } = {}) {
+  const L = learners || _defaultLearners();
+  const maxDepth = Number(depth || (p.policy && p.policy.depth) || 3);   // §BR2 — how deep a brick may split   // not `learn`: inside the loop that name is the per-attempt boolean
   const ex = executors || _defaultExecutors();
   const log = [];
   // 0.60.18 EX0a — James: "the scheduler must distinguish a failed task from a task that has no available executor. The
@@ -411,21 +561,57 @@ async function schedule(p, { root = DEFAULT_ROOT, executors = null, concurrency 
         if (before === 'FAILED' && !(g.children || []).length) {
           const sp = (g.actions || []).length >= 2 ? shouldSplit(p, g.id, { root }) : { split: false };
           if (sp.split) { const kids = split(p, g.id, { by: 'actions' }); log.push({ round, gate: g.id, status: 'SPLIT', reasons: [sp.why, `into ${kids.join(', ')}`] }); onEvent({ gate: g.id, status: 'SPLIT', round }); return; }
+          // §BR2 — one action, failed twice: deeper, by the steps inside it, to the depth bound
+          if ((st0 => (st0.attempts || 0) >= 2)(p.state.gates[g.id] || {})) {
+            const deeper = _splitDeeper(p, g, { maxDepth, why: `capability: failed ${(p.state.gates[g.id] || {}).attempts} times` });
+            if (deeper) { log.push({ round, gate: g.id, status: deeper.status, reasons: deeper.reasons }); onEvent({ gate: g.id, status: deeper.status, round }); if (deeper.status === 'SPLIT') return; }
+          }
+        }
+        // §GA1 0.60.44 — the gate checks before it spends: a dependency whose promised export is gone is reopened (it re-runs;
+        // this brick waits, no attempt used); names its imports need that nothing provides are said (NEEDS_CONTEXT) and
+        // handed to the executor. A dependency is reopened at most retry_limit times, so a loop cannot form.
+        let assessment = null;
+        if (g.type === 'task' && (g.depends_on || []).length && !(g.children || []).length && assessing !== false) {
+          try { assessment = assess(p, g.id, { root, ...(assessing || {}) }); } catch (e) { assessment = null; }
+          if (assessment) {
+            record(p, `${g.id}.assessed`, JSON.stringify({ ready: assessment.ready, why: assessment.why }).slice(0, 600), { by: 'scheduler:assess' });
+            const reopen = assessment.deps.filter(x => x.missing.length && Number(((p.state.evidence || {})[`${x.gate}.reopened`]) || 0) < limit);
+            if (reopen.length) {
+              for (const x of reopen) {
+                const n = Number(((p.state.evidence || {})[`${x.gate}.reopened`]) || 0) + 1;
+                record(p, `${x.gate}.reopened`, String(n), { by: 'scheduler:assess' });
+                p.state.gates[x.gate] = { ...(p.state.gates[x.gate] || {}), status: 'STALE', reasons: [`${x.file} no longer exports ${x.missing.join(', ')} — ${g.id} needs it (GA1)`] };
+              }
+              p.state.gates[g.id] = { ...(p.state.gates[g.id] || {}), status: before === 'RUNNING' ? 'READY' : (before || 'READY') };
+              log.push({ round, gate: g.id, status: 'WAITING', reasons: assessment.why });
+              onEvent({ gate: g.id, status: 'WAITING', round, waitOn: reopen.map(x => x.gate), why: assessment.why });
+              return;
+            }
+            if (assessment.context.needs.length) {
+              log.push({ round, gate: g.id, status: 'NEEDS_CONTEXT', reasons: assessment.why });
+              onEvent({ gate: g.id, status: 'NEEDS_CONTEXT', round, needs: assessment.context.needs, why: assessment.why });
+            }
+          }
         }
         p.state.gates[g.id] = { ...(p.state.gates[g.id] || {}), status: 'RUNNING' };
         onEvent({ gate: g.id, status: 'RUNNING', round });
-        let agent = null, learn = true;
+        let agent = null, learn = true, lastOut = null;
         if (g.run) {
           const kind = g.run.tool ? 'tool' : Object.keys(g.run)[0];
           const fn = ex[kind];
           const setAside = (why) => { p.state.gates[g.id].status = before && before !== 'RUNNING' ? before : 'READY'; noExecutor.set(g.id, why); record(p, `${g.id}.blocked`, why, { by: `scheduler:${kind}` }); log.push({ round, gate: g.id, status: 'BLOCKED', reasons: [why] }); onEvent({ gate: g.id, status: 'BLOCKED', round }); };
           if (!fn) { setAside(`no executor for ${kind} work`); return; }
           let out;
-          try { out = await fn(g.run.tool || g.run[kind], g.run.args || {}, { gate: g, packet: packet(p, g.id, { root }), contract: p, root }); }
+          try { out = await fn(g.run.tool || g.run[kind], g.run.args || {}, { gate: g, packet: packet(p, g.id, { root }), contract: p, root, ...(assessment ? { assessment } : {}) }); }
           catch (e) { out = { ok: false, error: e.message }; }
+          lastOut = out;
           if (out && out.unsupported) { setAside(`unsupported: ${out.why || `nothing can run this ${kind} work`}`); return; }
           if (out && out.decompose) {
             // its pieces are its actions (a file brick's steps); refs it shares with every brick are not pieces of it
+            if ((g.actions || []).length < 2 && !(g.children || []).length) {
+              const deeper = _splitDeeper(p, g, { maxDepth, why: out.why || 'too big for the routed agents' });   // §BR2
+              if (deeper && deeper.status === 'SPLIT') { log.push({ round, gate: g.id, status: 'SPLIT', reasons: deeper.reasons }); onEvent({ gate: g.id, status: 'SPLIT', round }); return; }
+            }
             if ((g.actions || []).length >= 2 && !(g.children || []).length) { const kids = split(p, g.id, { by: 'actions' }); log.push({ round, gate: g.id, status: 'SPLIT', reasons: [out.why || 'too big for the routed agents', `into ${kids.join(', ')}`] }); onEvent({ gate: g.id, status: 'SPLIT', round }); return; }
             setAside(`unsupported: ${out.why || 'too big for every routed agent'} — and it is one piece already, so it cannot be split`); return;
           }
@@ -437,15 +623,75 @@ async function schedule(p, { root = DEFAULT_ROOT, executors = null, concurrency 
           // a transient failure (the provider never answered) says nothing about how big a piece the agent can hold
           if (out && out.transient) learn = false;
         }
-        const r = await check(p, g.id, { root, agent, learn });
-        log.push({ round, gate: g.id, status: r.status, reasons: r.reasons, ...(agent ? { agent } : {}) });
+        // §GT1 — check without learning; what is learned depends on the failure's class
+        const r = await check(p, g.id, { root, agent, learn: false });
+        let fc = null;
+        if (r.status === 'PASSED') {
+          if (learn) { try { Boundaries.record({ agent: agent || g.agent || null, kind: g.kind || g.type, tokens: packetTokens(p, g.id, { root }), ok: true }); } catch (_) {} }
+        } else if (r.status === 'FAILED') {
+          fc = classifyFailure({ out: lastOut, result: r });
+          record(p, `${g.id}.class`, fc.cls, { by: 'scheduler:classify' });
+          const st = p.state.gates[g.id];
+          st.classes = [...(st.classes || []), fc.cls].slice(-10);
+          // RQ3 — the retry carries the check's own words
+          if (r.reasons && r.reasons.length) record(p, `${g.id}.feedback`, `${fc.cls}: ${r.reasons.join('; ')}`.slice(0, 1000), { by: 'scheduler:classify' });
+          if (learn && LEARNS_BUDGET.has(fc.cls)) { try { Boundaries.record({ agent: agent || g.agent || null, kind: g.kind || g.type, tokens: packetTokens(p, g.id, { root }), ok: false }); } catch (_) {} }
+          if (LEARNS_ROUTE.has(fc.cls) && agent) {
+            // the next attempt skips this agent (escalate); the door's order learns it was not up to this kind of work
+            let excl = []; try { excl = JSON.parse((p.state.evidence || {})[`${g.id}.exclude`] || "[]"); } catch (_) {}
+            if (!excl.includes(agent)) record(p, `${g.id}.exclude`, JSON.stringify([...excl, agent]), { by: 'scheduler:classify' });
+            try { L.door({ provider: agent, kind: g.kind || g.type, ok: false, class: 'capability', verdict: 'failed', error: fc.why }); } catch (_) {}
+          }
+          try { L.friction(fc.cls, { example: { gate: g.id, agent, why: fc.why } }); } catch (_) {}
+          if (fc.cls === 'transient') {
+            // nothing was learned and nothing was tried: a transient failure does not spend the brick's retries — up to
+            // `limit` of them in a row, then it counts like any other (a provider that never answers is not retried forever)
+            // §GT1a 0.60.35 — but an executor that already climbed every agent it had (out.exhausted: a ladder walked to its
+            // end) DID try: refunding that attempt re-ran the whole climb up to `limit` more times for nothing
+            st.transients = (st.transients || 0) + 1;
+            if (st.transients <= limit && !(lastOut && lastOut.exhausted)) st.attempts = Math.max(0, (st.attempts || 1) - 1);
+          } else if (fc.cls === 'spec' || fc.cls === 'verification' || fc.cls === 'tool') {
+            // the gate itself (or its runner, or its tool) is suspect: a question for a person, never a retry loop
+            const q = `${fc.cls}: ${fc.why}`;
+            noExecutor.set(g.id, q); record(p, `${g.id}.question`, q, { by: 'scheduler:classify' });
+          } else if (fc.cls === 'context' && (g.actions || []).length >= 2 && !(g.children || []).length) {
+            const kids = split(p, g.id, { by: 'actions' });
+            log.push({ round, gate: g.id, status: 'SPLIT', reasons: [`context: ${fc.why}`, `into ${kids.join(', ')}`] });
+          } else if (fc.cls === 'context' && !(g.children || []).length) {
+            const deeper = _splitDeeper(p, g, { maxDepth, why: `context: ${fc.why}` });   // §BR2
+            if (deeper) log.push({ round, gate: g.id, status: deeper.status, reasons: deeper.reasons });
+          }
+        }
+        let commit = null;
+        log.push({ round, gate: g.id, status: r.status, reasons: r.reasons, ...(agent ? { agent } : {}), ...(fc ? { class: fc.cls } : {}) });
         if (r.status === 'PASSED') {
           // every pass is a checkpoint: what was verified, against which input hashes, by whom — the caller saves it
+          // §GS1 — and the Versionium commit it passed at (versioning.commit), so it can be rewound to and compared against
+          if (versioning && typeof versioning.commit === 'function') { try { commit = await versioning.commit({ gate: g, contract: p }); } catch (_) { commit = null; } }
+          if (commit) record(p, `${g.id}.commit`, String(commit), { by: 'scheduler:versioning' });
           p.state.checkpoints = p.state.checkpoints || [];
-          p.state.checkpoints.push({ gate: g.id, at: Date.now(), hashes: (p.state.gates[g.id] || {}).hashes || {}, ...(agent ? { agent } : {}) });
+          p.state.checkpoints.push({ gate: g.id, at: Date.now(), hashes: (p.state.gates[g.id] || {}).hashes || {}, ...(agent ? { agent } : {}), ...(commit ? { commit } : {}) });
           try { onCheckpoint(p, g.id); } catch (_) { /* the caller's save failing never fails the brick; it is in memory */ }
         }
-        onEvent({ gate: g.id, status: r.status, round });
+        // §GT2 0.60.42 — the move carries what the caller tracks: the file, the agent, the failure class, the commit it passed at
+        onEvent({ gate: g.id, status: r.status, round, file: g.file || null, ...(agent ? { agent } : {}), ...(fc ? { class: fc.cls } : {}), ...(commit ? { commit } : {}) });
+        // §QA2 0.60.43 — after the failure is said, not before: the record reads fail → rewind → retry, the order it happened.
+        // §GS1 0.60.39 — a brick that failed (and will be tried again) is put back to its last good state first: the commit
+        // its gate last passed at, else the build's own snapshot (p.state.baseCommit). The retry starts from known-good, not
+        // from the failed attempt's half-write. Only for a failure that wrote (not transient: it never answered; not a
+        // question: nothing will retry it). versioning.rewind is the caller's (Idearium: Versionium restore-file / the
+        // brick's pending proposals set aside).
+        if (r.status === 'FAILED' && fc && !['transient', 'spec', 'verification', 'tool'].includes(fc.cls) && versioning && typeof versioning.rewind === 'function') {
+          const passedAt = [...(p.state.checkpoints || [])].reverse().find(c => c.gate === g.id && c.commit);
+          const toCommit = (passedAt && passedAt.commit) || (p.state.baseCommit || null);
+          let rw = null;
+          try { rw = await versioning.rewind({ gate: g, toCommit, contract: p }); } catch (e) { rw = { ok: false, why: e.message }; }
+          if (rw) {
+            record(p, `${g.id}.rewound`, JSON.stringify({ to: toCommit, ok: rw.ok !== false, files: rw.files || [], why: rw.why || null }).slice(0, 1000), { by: 'scheduler:rewind' });
+            log.push({ round, gate: g.id, status: 'REWOUND', reasons: [rw.ok !== false ? `back to ${toCommit || 'the build snapshot'}${(rw.files || []).length ? ` — ${rw.files.join(', ')}` : ''}` : `not rewound: ${rw.why || 'no answer'}`] });
+            onEvent({ gate: g.id, status: 'REWOUND', round, to: toCommit, ok: rw.ok !== false, files: rw.files || [] });
+          }
+        }
       }));
     }
     // a gate that failed and has no retries left stops the loop from spinning on it
@@ -458,5 +704,5 @@ async function schedule(p, { root = DEFAULT_ROOT, executors = null, concurrency 
   return { rounds: maxRounds, log, complete: e3.complete, why: e3.why, blocked: aside() };
 }
 
-module.exports = { VERSION, STATES, load, save, validate, evaluate, completion, check, packet, scaffold, record, checkCondition,
-  packetTokens, Boundaries, shouldSplit, split, schedule };
+module.exports = { VERSION, STATES, load, save, validate, evaluate, completion, check, packet, scaffold, record, checkCondition, compare, unitsOf, depthOf,
+  packetTokens, Boundaries, shouldSplit, split, schedule, assess, classifyFailure, FAILURE_CLASSES };

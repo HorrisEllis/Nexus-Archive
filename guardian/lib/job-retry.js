@@ -80,7 +80,8 @@ function fingerprint({ provider, agentId, canonical, prompt }) {
  *                  maxAttempts, delays, now, setTimer })
  */
 function createJobRetry({ jobs, updateJob, bus, pool, dispatchJob, complete, readResponse = () => null, replyFor = () => null,
-                          erosAvailable = () => false, log = console, maxAttempts = undefined, delays = undefined, setTimer = setTimeout } = {}) {
+                          erosAvailable = () => false, log = console, maxAttempts = undefined, delays = undefined, setTimer = setTimeout,
+                          attention = null } = {}) {
   for (const [k, v] of Object.entries({ jobs, updateJob, dispatchJob, complete })) if (!v) throw new Error(`[${MODULE_ID}] missing dependency: ${k}`);
   // §OP1 0.57.0 — unless the caller passes them, read from guardian's options on every use (retry.max_attempts,
   // retry.first_wait_ms, retry.busy_first_wait_ms), so a change applies to the next failure without a restart
@@ -157,6 +158,12 @@ function createJobRetry({ jobs, updateJob, bus, pool, dispatchJob, complete, rea
         }
         updateJob(job.id, { attempts, needsYou: 'pick the reply with ◎ — the page no longer matches the reply selector; the prompt is not sent again' });
         _say(job, `${job.provider || 'the agent'}'s page changed: the reply could not be found on it — pick the reply with ◎ (it is saved for every job after), or wait for the chat transcript; the prompt is not sent again`, { stage: 'needs-you' });
+        // §0.60.47 — James: "it should have poped up with the claude window but didint." This branch only wrote a message on
+        // the job; the window with the picker panel opened only on the dispatch ladder's own path. Now it is shown too.
+        if (typeof attention === 'function') {
+          try { Promise.resolve(attention({ provider: job.provider, reason: 'map', jobId: job.id, agentId: job.agentId || null, stage: 'reply_not_found',
+            note: `the prompt was sent but ${job.provider || 'the agent'}'s reply cannot be found on the page — pick the reply` })).catch(() => {}); } catch (_) {}
+        }
       }
       stats.final++;
       if (c.kind !== 'pick-reply') updateJob(job.id, { attempts });
@@ -179,7 +186,8 @@ function createJobRetry({ jobs, updateJob, bus, pool, dispatchJob, complete, rea
     const delayMs = table[Math.min(attempts.length - 1, table.length - 1)];
     updateJob(job.id, { status: 'retry_wait', attempts, retryAt: Date.now() + delayMs, error: null });
     const prov = provider || job.provider;
-    try { if (pool && typeof pool.release === 'function') pool.release(prov, job.id); } catch (_) {}
+    // §PF1 0.60.32 — the slot the job holds (a profile tab's lane is provider~account)
+    try { if (pool && typeof pool.release === 'function') pool.release((typeof pool.providerOf === 'function' && pool.providerOf(job.id)) || prov, job.id); } catch (_) {}
     stats.retried++;
     log.warn && log.warn(`[guardian/retry] ${String(job.id).slice(0, 8)} → ${prov}: ${c.kind} (${String(error || gate || '').slice(0, 120)}) — trying again in ${Math.round(delayMs / 1000)}s (attempt ${attempts.length + 1} of ${_maxAttempts()})`);
     _say(job, `${c.kind}: ${String(error || gate || '').slice(0, 160)} — trying again in ${Math.round(delayMs / 1000)}s (attempt ${attempts.length + 1} of ${_maxAttempts()})`, { kind: c.kind, attempt: attempts.length + 1, delayMs });

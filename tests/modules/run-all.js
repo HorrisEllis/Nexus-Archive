@@ -345,11 +345,30 @@ const SUITES = [
   'test-accounts-picker-cos.test.js',
   'test-project-decompose.test.js',   // 0.60.5 — a project (zip or folder) decomposed into the component store, each component bundled with its require closure; the drop zone; Clear Glass in the COS window style   // 0.60.2 — account routing by hat / intent / repo (Guardian, JAA) + Clear Glass's account switch on the JAA cookie vault; the COS-window attention panel; the pick checked by Clear Glass's selector check, anchored at x/y/z and used by every userscript (field map); ChatGPT works signed out; sign-in responses untouched
   'test-contract-gates.test.js',   // 0.60.15 — .contract v2: his four acceptance conditions (legacy files, evidence, invalidation, packet)
+  'test-recursive-split.test.js', // 0.60.40 BR2 — splitting recursively to a depth bound; CK-247 runs
+  'test-releases.test.js', // 0.60.41 RN1 — releases in Versionium: tags, Nexus's backfill, a repo's releases
+  'test-gate-tracking.test.js', // 0.60.42 GT2 — each gate tags and reports its progress
+  'test-qa2-real-run.test.js', // 0.60.43 QA2 — one phase build end to end with the real Versionium
+  'test-gate-assess.test.js', // 0.60.44 GA1 — the gate assesses dependencies and context before it spends
+  'test-cg-attention-focus.test.js', // 0.60.45 — the provider tab stops fighting the person (focus, sign-in, Escape)
+  'test-ncp-half-open.test.js', // 0.60.46 — a half-open NCP tab reconnects within one heartbeat; send picks must be buttons
+  'test-reply-not-found-attention.test.js', // 0.60.47 — a reply that cannot be found opens the agent's window
+  'test-gate-versioning.test.js', // 0.60.39 GS1 — a snapshot per gate: commit, rewind before a retry, compare, replay decisions
+  'test-raid-runs-contract.test.js', // 0.60.36 RD0 — RAID runs the .contract: its gates before, bricks, verdict, self-heal
+  'test-release-version.test.js', // 0.60.34 VR1 — one version: Idearium, GitHub (tag + release + zip), every zip
+  'test-check-catalogue.test.js', // 0.60.33 QA1 — the catalogue runs: CK-230 shadow, CK-233 deny list, CK-248 every language's toolchain
+  'test-profile-tabs.test.js', // 0.60.32 PF1 — a tab per account profile: hat → account → tab, accounts at once
+  'test-route-eligibility.test.js', // 0.60.31 RT1 — eligibility then preference: tools, window, readiness; the record
   'test-contract-adapters.test.js', // 0.60.18 EX0 — agent + phase adapters: routed, budgeted, blocked≠failed, checkpoints, integration, audit
   'test-contract-phase-build.test.js', // 0.60.18 EX0e — Build through the contract scheduler on the real route: bricks, checkpoints, resume, rejected checkpoint, recovery, integration
   'test-lean-mode.test.js', // 0.60.20 — lean mode: one switch in Idearium settings, read by npm run start:all
   'test-run-watch.test.js', // 0.60.21 — no run left in limbo: stalls closed + retried once, a reject retries its phase, a finished review ends
   'test-cg-command-index.test.js', // 0.60.23 — Clear Glass's command index read 0 commands (micro-http has no _router)
+  'test-account-fallback.test.js', // 0.60.25 — account fallback chaining: a spent account rests, the next takes the job; all spent → rate-limit
+  'test-lean-quiet.test.js', // 0.60.26 — what lean mode holds is not retried against; the probe is held; relays say it once
+  'test-phase-cost.test.js', // 0.60.27 AG1a — agent calls and tokens per phase: plan/code/review, local vs remote, estimated tokens
+  'test-run-ready.test.js', // 0.60.28 PF1/PF2 — ready before run (Guardian's facts, the ladder) and a plan written without a model
+  'test-phase-mapping.test.js', // 0.60.29 PM — every phase mapped to its files (an agent, scored first) and dependencies (from the files)
   'test-contract-ct0-self.test.js',   // 0.60.15 — CT0 complete by its own contract, read by the evaluator
   'test-no-compartment-label.test.js',   // 0.60.11 — regression guard: no "compartment · …" label drawn anywhere
   'test-reasoning-route.test.js',   // 0.60.8 — intent routing for reasoning: complex chat → agent:reason with the reasoning agent; route assess

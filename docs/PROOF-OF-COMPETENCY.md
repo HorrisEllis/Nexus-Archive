@@ -100,6 +100,42 @@ These are his own earlier projects, run through NEXUS's real import routes in a 
 
 New entries go at the top: date, his words, context, what it shows, evidence.
 
+- **2026-10-14: "and we have intent routing? that way the complex reasoning can be done by the bigger models or agents. like claude or deepseek? also multiaccount routing in clearglass, each tab can be a different profile?"** · then: "yes we need to get it all working."
+  - **Context:** he was checking that two pieces he had asked for earlier actually worked end to end. They half did:
+    - Intent routing existed (0.60.8), but it only ordered agents by preference, so a high-scoring agent could still be sent work it can't do.
+    - Account routing existed (0.60.25), but on one tab per provider, so accounts took turns.
+  - **What it shows:** systems thinking. His question tied routing ("who should answer") to capacity ("who can answer at once"), and both had to be finished for the pipeline to scale. Earlier he wrote PF1's design himself ("each tab can beb a compartment or different profile"). Grounding that design found three defects that would have broken any second tab:
+    - a new tab took over every job of its provider;
+    - the provider's status showed whichever tab connected last;
+    - one tab's disconnect requeued every tab's jobs.
+  - **Evidence:**
+    - `tests/modules/test-route-eligibility.test.js` 8/8 (RT1). An agent without the browser tool is never routed browser work, even with 12 successes and even when preferred.
+    - `tests/modules/test-profile-tabs.test.js` 7/7 (PF1), a real NCP server with live tabs. Two hats answer from two accounts in two tabs at the same time, and a job for hat A never lands in hat B's tab.
+    - `CHANGELOG-0.60.31.md`, `CHANGELOG-0.60.32.md`.
+    - Not yet run on his machine.
+
+- **2026-10-14: "Build GT1 here (Recommended)"** (his choice of the map's first priority)
+  - **Context:** the map he directed ranks GT1 first: "0.60.18 showed that learning from unclassified failures poisons routing."
+  - **What it shows:** prioritising the foundation every later build runs through over the next visible feature.
+  - **Evidence:** `tests/modules/test-contract-adapters.test.js` GT-01..07. A planted failure of each type takes its own path, and only capability and context failures change routing or size limits. `CHANGELOG-0.60.30.md`.
+
+- **2026-10-13: "can we work on inventing anything that will get this pipeline going. like why doesn't this work yet?"**
+  - **Context:** after a day of fixes, he stopped asking for features and asked why the pipeline still failed. The
+    coder read every run he had pasted: the agents answered (38 ChatGPT and 16 Gemini jobs completed), but each run
+    started without knowing its parts were ready, and fell back to its hardest mode when the planner failed. The coder
+    proposed two fixes, "ready before run" and "a plan without a model", and recommended doing them in that order. He
+    chose "A then B (Recommended)".
+  - **What it shows:** asking the root-cause question instead of adding features is the judgment. Both fixes come from
+    his own rule, written down the same day: "deterministic first … a reasoning agent only plans". The pipeline had been
+    breaking that rule. The diagnosis and the design are the coder's; the question and the rule are his.
+  - **Evidence:** `tests/modules/test-contract-phase-build.test.js` runs on the real build route with only the model
+    stubbed:
+    - CP-07: with the planner behind a sign-in wall, the phase is planned without a model, built one file per request,
+      and passes its proof;
+    - CP-08: with no agent ready, nothing is sent, and the run says what to fix.
+
+    Also `tests/modules/test-run-ready.test.js` 10/10 and `CHANGELOG-0.60.28.md`. Not yet run on his machine.
+
 - **2026-10-13: "the scheduler must distinguish a failed task from a task that has no available executor. The latter should be reported as blocked or unsupported, not repeatedly retried or incorrectly marked complete."**
   - **Context:** he approved the agent and phase adapters and set the order: build and test them on their own first, then connect the Build action. He named one failure mode before any code existed.
   - **What it shows:** failure-mode thinking and specification. The distinction he named is the one a naive scheduler gets wrong: it loops on work nothing can run, or reports it done. His order (adapters alone, then integration) is why the end-to-end test could find the next defect, a learned size limit poisoned by one provider error, and point at the right module.
@@ -120,3 +156,13 @@ New entries go at the top: date, his words, context, what it shows, evidence.
   - **Context:** the decompose tool (0.60.5) turned projects into components, and he named the larger goal.
   - **What it shows:** he keeps the end state in view: a project you can keep working on, not a parts bin.
   - **Evidence:** phases PL0–PL6 in `docs/2026-10-13-projects-raid-and-gates-phasemap.spec`.
+- **2026-10-15: "i want idearium to have releases and a changelog for each version. it was added to the wrong place."**
+  - **Context:** releases existed only in Nexus's own `lib/version.js` and as GitHub tags. Versionium is the system
+    built to hold versions, yet it had no idea what a release was, and Idearium repos had none.
+  - **What it shows:** he spotted an ownership error, a capability living in the wrong system. That is systems-design
+    judgment: put each thing where the data it describes already lives.
+  - **Evidence:**
+    - `versionium/lib/releases.js` and `lib/nexus-releases.js`;
+    - `tests/modules/test-releases.test.js` (5/5);
+    - `CHANGELOG-0.60.41.md`;
+    - 250 Nexus releases are now recorded in Versionium, 210 of them with his words.

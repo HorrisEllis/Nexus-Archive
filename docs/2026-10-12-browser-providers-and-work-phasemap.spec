@@ -196,6 +196,7 @@ spec:
         lists them. A closed compartment keeps its record and its last state snapshot (rewind) until he deletes it.
       proof: "a background tab opened as a compartment, closed, reopened with its sign-in and page; its activity rows read back"
     TB4_bookmark_checklists:
+      depends_on: [TB2_a_tab_runs_as_an_account]   # mapped from the files they share: TB2_a_tab_runs_as_an_account (clear-glass/renderer/browser.js)
       layer: ui
       systems: [clear-glass]
       component: clear-glass.bookmarks
@@ -267,6 +268,7 @@ spec:
         RAID and the door can choose it by name.
       proof: "a guardian /command job with provider claude-code answers through the CLI and lands a .response node; no tab is opened"
     PV1_providers_read_from_nodes:
+      depends_on: [PV0_claude_code_is_a_guardian_provider]   # mapped from the files they share: PV0_claude_code_is_a_guardian_provider (lib/agent-providers.js)
       layer: library
       systems: [guardian, core, clear-glass]
       component: guardian.agent-facts
@@ -291,6 +293,7 @@ spec:
         file as its copy ([B]). Either way a hat can be read, diffed, versioned and dropped in as a file.
       proof: "a hat edited in the file is the hat the next dispatch wears; a revoked hat's file says so"
     PV3_input_nodes:
+      depends_on: [PV2_hats_are_nodes]   # mapped from the files they share: PV2_hats_are_nodes (guardian/lib/node-registry.js)
       layer: library
       systems: [guardian, copilot, idearium, core]
       component: lib.input-nodes
@@ -359,6 +362,7 @@ spec:
         the gig panel), with the warnings. Nothing is published; the file is his to edit and load.
       proof: "asking the copilot for a gig leaves a .gig that loads without warnings beyond the ones it reported"
     JB2_the_copilot_hat_agent_and_account:
+      depends_on: [TB2_a_tab_runs_as_an_account]   # mapped from the files they share: TB2_a_tab_runs_as_an_account (clear-glass/src/options/store.js)
       layer: ui
       systems: [clear-glass, copilot, guardian]
       component: clear-glass.copilot.hat
@@ -386,6 +390,7 @@ spec:
         empty, never guessed.
       proof: "a form the matcher misses two fields on: two clicks, then a refill of the same form fills all of them"
     JB4_resume_import:
+      depends_on: [JB0_gig_files]   # mapped from the files they share: JB0_gig_files (clear-glass/renderer/settings/sections/autofill.js)
       layer: library
       systems: [clear-glass]
       component: clear-glass.autofill.resume
@@ -412,6 +417,7 @@ spec:
         novel against it.
       proof: "two applications to similar roles get different wording with identical facts; a changed fact is refused"
     JB6_the_application_ledger:
+      depends_on: [JB4_resume_import]   # mapped from the files they share: JB4_resume_import (clear-glass/src/autofill/store.js)
       layer: library
       systems: [clear-glass]
       component: clear-glass.applications
@@ -480,6 +486,7 @@ spec:
         loom wires. Each is declared with its real edges (who requires it, what it emits) in the map that owns its area.
       proof: "loom's context graph shows each of them with at least one real wire; loom's declared-vs-served scanner finds no orphan among them"
     MX4_one_system_digest:
+      depends_on: [TB3_tabs_are_compartments, PV3_input_nodes]   # mapped from the files they share: TB3_tabs_are_compartments (lib/activity-log/compartment.js), PV3_input_nodes (lib/agent-tools/tools/nexus/command.js)
       layer: library
       systems: [core, cortex]
       component: lib.system-digest
@@ -567,3 +574,59 @@ spec:
         holds that the account lacks is saved to the account, never overwritten. Saving a session, starring and signing out
         follow through to the tab and say what they did. signedOut() signs the tab out when it runs as that account.
       proof: "clear-glass/test/provider-account-sync.test.js 9/9; then live: sign in once, restart Clear Glass, the ChatGPT tab opens signed in"
+
+## ADDENDUM 2026-10-15 — the provider tab stops fighting the person (0.60.45)
+
+# James (screenshots of the ChatGPT tab "is not connecting" and the Nexus window stuck in PICKING): "still says signed
+# out. also escape does nothing. also i can't sign in on the popup. i click login and it closes the login. like i cant
+# click anywhere without closing any popup or not letting me navigate. also popup windows in clearglass should look nice
+# like the browser, borderless windowed."
+# Root causes, read from source:
+#  1. Focus theft. attend() ran win.show() + win.focus() on EVERY attention request, even with the panel already up.
+#     Guardian's cooldown (provider-attention.js, 2 min) is reset by clear() on each connect; a provider that flaps
+#     (his Plan log: "provider 'chatgpt' disconnected mid-flight", every few seconds) re-raised it each time, so focus
+#     was pulled off his sign-in popup and any open menu — "it closes the login". Fixed: a panel already up is updated,
+#     never re-shown or re-focused; the person's input on a tab is stamped (webContents 'input-event') and for 2 min no
+#     focus is taken and a loginOptional tab on a sign-in page is not sent back to its chat (he is signing in).
+#  2. A signed-out sign-in saved. "Save sign-in to vault" saved 72 cookies from a signed-out tab; restoring it restored
+#     "signed out". capture() now refuses a tab with no sign-in cookie on the provider's own site (the same auth-cookie
+#     rule account sync uses) and says so.
+#  3. Escape. The Guardian picker's Escape listener was on document in the bubble phase; the page (Idearium closes its
+#     panels on Escape) took it first, and while picking every click is a pick — no way out. Now: Escape on window in
+#     the capture phase, right-click cancels, and the PICKING banner is a cancel button.
+#  4. The window. The provider tab's File/Edit/View/Window menu is gone and it is dark before the first paint. Fully
+#     frameless needs a Nexus title bar ABOVE the provider's page (it draws none, and an injected drag strip would cover
+#     its header): CW1, open — a chrome view stacked over the page in the provider window, verified in Clear Glass on
+#     his machine (Electron does not run in the coder's container).
+# Still open, named: why ChatGPT keeps disconnecting mid-flight (NCP) — the flapping that made the focus theft so bad.
+# Proof: test-cg-attention-focus 5/5 (AF-01..03 fail on the old code); accounts, profile-tabs, plan-code-run-attention
+# and provider-account-sync unchanged (WR-01 and the clear-glass-accounts send() check fail the same way on main).
+
+## ADDENDUM 2026-10-15 — a half-open tab reconnects within one beat (0.60.46)
+
+# From James's run log (his machine, 0.60.44): at 13:00:31 "NCP disconnected: provider=chatgpt"; the tab went on
+# working (job f53d4860 submitted and completed over HTTP after it) and heartbeating, but never reconnected — the next
+# job waited and was "cancelled — no chatgpt tab connected for 120 s", which raised the "not connecting" panel. Free
+# memory was 4–10% at that moment (resource-monitor critical at 13:00:32).
+# Root cause, read from source: the stream died half-open — Guardian saw the socket close, the tab's reader got no error,
+# so _es.onerror (the backoff) never ran; and POST /heartbeat answered a tab it no longer held with the same plain ACK,
+# so nothing told the tab. Guardian sends no keep-alive on the channel either.
+# Fixed: the ACK carries registered (does Guardian still hold this tab's channel); every provider userscript sends its
+# heartbeat through _hbPost, which reconnects at once on registered:false (unless a reconnect is already under way).
+# Recovery is one heartbeat (8 s), whatever killed the stream. Userscripts: chatgpt/claude 10.12.2, gemini/deepseek
+# 10.10.2, perplexity 10.9.2.
+# Also from his log: the picker saved "p.placeholder" (the input's placeholder) as the send button twice. A send pick
+# that is not a button (or role=button / submit input) is now refused, said on the panel.
+# Seen in the same log, named not fixed: the RAID officiator fails synthesis every 20 s ("no real agent response
+# (forAgent=ollama)") while Ollama was up; intelligence logs hundreds of trivial co-occurrence "patterns" a minute;
+# Claude's reply element not found ("needs-you"); the machine ran to 4% free memory during the first nexus-self sync.
+
+## ADDENDUM 2026-10-15 — a reply that cannot be found opens the agent's window (0.60.47)
+
+# James: "Claude's reply not found … it should have poped up with the claude window but didint." His log: "job 119a854e —
+# needs-you (claude's page changed: the reply could not be found on it — pick the reply …)", and no "[attention] claude".
+# Root cause: two paths reach "pick the reply". The dispatch ladder's picker.request raises provider-attention (the
+# window + the Nexus panel); job-retry's pick-reply branch (a watch that ended with "no reply element") only wrote the
+# message on the job. Fixed: job-retry takes an attention hook and raises it (provider, reason 'map', job, agent, stage
+# reply_not_found) after first trying the transcript and the .response; Guardian wires it to the same raise.
+# Proof: test-reply-not-found-attention 3/3 (RA-01, RA-03 fail on the old code).

@@ -92,10 +92,47 @@ export const SPEC = [
     print: (d, a, h) => printLog(d, h, null) },
   // 0.60.7 — Versionium managed per repo (lib/repo-history.js) and the import checks (lib/import-checks.js)
   // 0.60.8 — intent routing for reasoning (lib/reasoning-route.js)
-  { key: 'route.assess', usage: 'route assess <request words>', about: 'how hard a request is and where it would be routed: complex → a reasoning agent (agent:reason), simple → the usual route',
+  // 0.60.34 VR1 — James: "i also want versions in idearium, github, and each zip, needs to match."
+  // 0.60.41 RN1 — Nexus's own releases, recorded in Versionium (lib/nexus-releases.js): James's words, the proof, the commit
+  { key: 'system.releases', repo: false, usage: 'releases [--sync] [--limit n] [--version x.y.z]', about: 'every Nexus release, newest first, from Versionium: James\'s words, the git commit, the changelog; --sync records any missing',
+    req: (a) => a.flags.sync ? { method: 'POST', path: '/api/releases/sync', timeoutMs: 120000, body: {} } : { method: 'GET', path: '/api/releases' },
+    print: (d, a, h) => {
+      if (a.flags.sync) { console.log(`  ${d.releases} releases: ${h.c.mint(`${d.recorded} recorded`)} · ${d.already} already · ${d.unpinned} without a git commit in this clone${d.refused && d.refused.length ? h.c.coral(` · ${d.refused.length} refused`) : ''}`); return; }
+      let l = d.releases || [];
+      if (a.flags.version) l = l.filter(r => r.version === String(a.flags.version).replace(/^v/, ''));
+      if (!l.length) { console.log(h.c.gray('  no releases in Versionium yet — idearium releases --sync')); return; }
+      for (const r of l.slice(0, parseInt(a.flags.limit || '15', 10) || 15)) {
+        console.log(`  ${h.c.mint(r.tag.padEnd(10))} ${h.c.dim(r.gitCommit ? r.gitCommit.slice(0, 7) : 'no commit')}  ${r.changelog ? h.c.dim(r.changelog) : ''}${r.version === d.current ? h.c.amber('  ← running') : ''}`);
+        if (r.quote) console.log(`    ${h.c.sky(String(r.quote).slice(0, 180))}`);
+        if (a.flags.version && r.notes) console.log(h.c.dim(`    ${r.notes}`));
+      }
+    } },
+  { key: 'system.version', repo: false, usage: 'version', about: 'the Nexus release (lib/version.js): its GitHub tag and zip name, whether every place that states it agrees (CK-253), and the module versions, labelled',
+    req: () => ({ method: 'GET', path: '/api/version' }),
+    print: (d, a, h) => { console.log(`  ${h.c.mint(`Nexus ${d.version}`)}${d.commit ? h.c.dim(`  ${d.commit}`) : ''}  ·  GitHub ${d.tag}  ·  zip ${d.zipName}`);
+      for (const p of (d.agreement && d.agreement.places) || []) console.log(`    ${p.ok ? h.c.mint('✓') : h.c.amber('✗')} ${p.place}${p.ok ? '' : h.c.amber(`  ${p.why}`)}`);
+      if (d.modules) console.log(h.c.dim(`  modules (not the release): IdeaOS ${d.modules.ideaos || '?'} · Clear Glass ${d.modules.clearGlass || '?'}`)); } },
+  // 0.60.33 QA1 — the check catalogue: what each check is and whether Nexus runs it; run one over Nexus or a repo
+  { key: 'checks.list', repo: false, usage: 'checks list [--family=shadow] [--runnable]', about: 'the check catalogue (cos/spec/check-catalogue.spec): every check, its family and stage, and which ones Nexus can run now',
+    req: (a) => ({ method: 'GET', path: `/api/checks?${a.flags.family ? `family=${encodeURIComponent(a.flags.family)}&` : ''}${a.flags.runnable ? 'runnable=1' : ''}` }),
+    print: (d, a, h) => { const s = d.summary || {}; console.log(`  ${s.total} checks · ${s.runnable} runnable now (${(s.runners || []).concat(s.importChecks || []).join(', ')})`);
+      for (const c of d.checks || []) console.log(`  ${c.runnable ? h.c.mint(c.id) : h.c.dim(c.id)}  ${c.name}  ${h.c.dim(`${c.family} · ${c.how}`)}`); } },
+  { key: 'checks.run', repo: false, usage: 'checks run <CK-nnn> [--repo=<uuid>] [--path=dir] [--step=<step>]', about: 'run one check now: CK-233 (nothing forbidden is back), CK-248 (every file passes its language\'s own parser), CK-230 (a step\'s shadow settled)',
+    need: (a) => (a.args.length ? null : '<CK-nnn>'),
+    req: (a) => ({ method: 'POST', path: `/api/checks/${encodeURIComponent(a.args[0])}/run`, timeoutMs: 10 * 60000, body: { ...(a.flags.repo ? { repo: a.flags.repo } : {}), ...(a.flags.path ? { path: a.flags.path } : {}), ...(a.flags.step ? { step: a.flags.step } : {}) } }),
+    print: (d, a, h) => { console.log(`  ${d.ok ? h.c.mint(`${d.id} passed`) : d.verifiable === false ? h.c.amber(`${d.id} could not be checked`) : h.c.amber(`${d.id} failed`)}${d.ms != null ? h.c.dim(`  ${d.ms} ms`) : ''}`);
+      if (d.reason) console.log(h.c.dim(`  ${d.reason}`));
+      for (const i of (d.items || []).slice(0, 30)) console.log(`    ${i.skipped ? h.c.amber(`skipped ${i.lang}: ${i.skipped}`) : i.error ? `${i.file} (${i.lang}): ${i.error}` : i.file ? `${i.file}:${i.line} ${h.c.dim(`[${i.id}] ${i.text}`)}` : JSON.stringify(i)}`); } },
+  // 0.60.31 RT1 — and the door's route: who is eligible (tools, window, readiness), who was rejected and why, the record
+  { key: 'route.assess', usage: 'route assess <request words> [--kind=agent:browser] [--tools=browser,files] [--tokens=N]', about: 'how hard a request is and where it would be routed: complex → a reasoning agent (agent:reason), simple → the usual route; then the door\'s route — eligible agents in order, the rejected ones with why, confidence, fallback',
     need: (a) => (a.args.length ? null : '<request words>'),
-    req: (a) => ({ method: 'POST', path: '/api/route/assess', body: { message: a.args.join(' ') } }),
-    print: (d, a, h) => { const s = d.assessment || {}; console.log(`  ${s.level === 'complex' ? h.c.amber(s.level) : s.level}  score ${s.score} → ${d.kind}${d.preferAgent ? ` (${d.preferAgent})` : ''}`); for (const x of s.signals || []) console.log(h.c.dim(`    · ${x}`)); console.log(h.c.dim(`  ${d.why}`)); } },
+    req: (a) => ({ method: 'POST', path: '/api/route/assess', body: { message: a.args.join(' '), ...(a.flags.kind ? { kind: a.flags.kind } : {}), ...(a.flags.tools || a.flags.tokens ? { needs: { ...(a.flags.tools ? { tools: String(a.flags.tools) } : {}), ...(a.flags.tokens ? { tokens: Number(a.flags.tokens) } : {}) } } : {}) } }),
+    print: (d, a, h) => { const s = d.assessment || {}; console.log(`  ${s.level === 'complex' ? h.c.amber(s.level) : s.level}  score ${s.score} → ${d.kind}${d.preferAgent ? ` (${d.preferAgent})` : ''}`); for (const x of s.signals || []) console.log(h.c.dim(`    · ${x}`)); console.log(h.c.dim(`  ${d.why}`));
+      const r = d.door || {}; const rec = r.record || {};
+      if (!r.ok && !rec.rejected) { console.log(h.c.amber(`  door: ${r.error || 'no route'}`)); return; }
+      console.log(`  route: ${(r.route || []).map(x => x.provider).join(' → ') || h.c.amber('none eligible')}${rec.confidence ? h.c.dim(`  (confidence ${rec.confidence.value == null ? 'untried' : rec.confidence.value} — ${rec.confidence.basis})`) : ''}`);
+      if (rec.needs && ((rec.needs.tools || []).length || rec.needs.tokens)) console.log(h.c.dim(`  needs: ${[...(rec.needs.tools || []), rec.needs.tokens ? `~${rec.needs.tokens} tokens` : null].filter(Boolean).join(', ')}`));
+      for (const x of rec.rejected || []) console.log(h.c.amber(`    ✗ ${x.provider} (${x.requirement}): ${x.why}`)); } },
   // 0.60.14 — tiny amounts of code: a line range, and a copy of it to the work surface / a new file
   { key: 'repo.lines', repo: true, usage: 'repo lines <repo> <path> <from> [to]', about: 'lines from..to of a repo file, numbered (80 lines when to is left out)',
     need: (a) => (a.args.length >= 2 ? null : '<path> <from> [to]'),
@@ -150,14 +187,46 @@ export const SPEC = [
     need: (a) => (a.args.length ? null : '<file.contract>'),
     local: (a) => { const C = require('../../cortex/core/raid/contract-gates.js'); const L = C.load(a.args[0]); return require('../../cortex/core/raid/contract-adapters.js').audit(L.payload); },
     print: (d, a, h) => { for (const b of d.bricks) console.log(`  ${(b.status === 'PASSED' ? h.c.mint : h.c.amber)(String(b.status).padEnd(7))} ${b.id}${b.file ? h.c.dim(` ${b.file}`) : ''}${b.agent ? h.c.dim(` · ${b.agent}`) : ''}${b.attempts ? h.c.dim(` · ${b.attempts} attempt(s)`) : ''}${b.blocked ? h.c.amber(` · ${b.blocked}`) : ''}`); console.log(h.c.dim(`  ${d.dependencies.length} dependencies · ${d.checkpoints.length} checkpoints · ${d.gates.length} gates`)); console.log(`  ${d.complete ? h.c.mint('complete') : h.c.amber('not complete')}: ${(d.why || []).join('; ')}`); } },
-  { key: 'repo.contract', repo: true, usage: 'repo contract <repo> <phase> [--map name]', about: 'a phase build\'s contract, audited: every brick (its agent, attempts, verification), every dependency, checkpoint and gate',
+  // 0.60.39 GS1 — --gate <id>: that gate now against what passed (the evaluator's reasons, the commit it passed at, the diff since)
+  { key: 'repo.contract', repo: true, usage: 'repo contract <repo> <phase> [--map name] [--gate id]', about: 'a phase build\'s contract, audited: every brick (its agent, attempts, verification, the commit it passed at, a rewind), every dependency, checkpoint and gate; --gate compares one gate now against what passed',
     need: (a) => (a.args.length ? null : '<phase>'),
-    req: (a) => ({ method: 'GET', path: `/api/repos/${a.repo.uuid}/phases/contract?phase=${encodeURIComponent(a.args[0])}${a.flags.map ? `&map=${encodeURIComponent(a.flags.map)}` : ''}` }),
-    print: (d, a, h) => { const au = d.audit; for (const b of au.bricks) console.log(`  ${(b.status === 'PASSED' ? h.c.mint : h.c.amber)(String(b.status).padEnd(7))} ${b.file || b.id}${b.agent ? h.c.dim(` · ${b.agent}`) : ''}${b.attempts ? h.c.dim(` · ${b.attempts} attempt(s)`) : ''}${b.blocked ? h.c.amber(` · ${b.blocked}`) : ''}`); console.log(h.c.dim(`  ${au.dependencies.length} dependencies · ${au.checkpoints.length} checkpoints · ${au.gates.length} gates · ${d.file}`)); console.log(`  ${au.complete ? h.c.mint('complete') : h.c.amber('not complete')}: ${(au.why || []).join('; ')}`); } },
+    req: (a) => ({ method: 'GET', path: `/api/repos/${a.repo.uuid}/phases/contract?phase=${encodeURIComponent(a.args[0])}${a.flags.map ? `&map=${encodeURIComponent(a.flags.map)}` : ''}${a.flags.gate ? `&gate=${encodeURIComponent(a.flags.gate)}` : ''}` }),
+    print: (d, a, h) => { if (d.compare) { const c = d.compare; console.log(`  ${c.gate}: ${c.stale ? h.c.amber('STALE') : c.status}${c.commit ? h.c.dim(`  passed at ${c.commit}`) : h.c.dim('  no commit recorded')}`); for (const r of c.reasons || []) console.log(h.c.dim(`    · ${r}`)); for (const [f, dd] of Object.entries(c.diff || {})) { console.log(`  ${f}`); const pt = dd && dd.files && dd.files[0]; console.log(h.c.dim(pt && pt.patch ? String(pt.patch).split('\n').slice(0, 30).join('\n') : (dd && dd.error) || '    no change since it passed')); } return; } const au = d.audit; for (const b of au.bricks) console.log(`  ${(b.status === 'PASSED' ? h.c.mint : h.c.amber)(String(b.status).padEnd(7))} ${b.file || b.id}${b.agent ? h.c.dim(` · ${b.agent}`) : ''}${b.attempts ? h.c.dim(` · ${b.attempts} attempt(s)`) : ''}${b.tag ? h.c.dim(` · ${b.tag}`) : ''}${b.class && b.status !== 'PASSED' ? h.c.amber(` · ${b.class}`) : ''}${b.blocked ? h.c.amber(` · ${b.blocked}`) : ''}`); if (d.progress) console.log(h.c.dim(`  progress: ${d.progress.passed}/${d.progress.total} passed · ${d.progress.moves} moves${d.progress.last ? ` · last ${d.progress.last.gate} ${d.progress.last.status}` : ''}`)); console.log(h.c.dim(`  ${au.dependencies.length} dependencies · ${au.checkpoints.length} checkpoints · ${au.gates.length} gates · ${d.file}`)); console.log(`  ${au.complete ? h.c.mint('complete') : h.c.amber('not complete')}: ${(au.why || []).join('; ')}`); } },
+  // 0.60.29 PM — James: "All the phases need to be mapped to files and dependencies. With nexus and all projects."
+  { key: 'repo.map-phases', repo: true, usage: 'repo map-phases <repo> [status] [--limit n] [--no-apply] [--done] [--untrusted]', about: 'map every phase that names no files to its files (an agent, scored first on phases whose files are known) and every phase to its dependencies (from the files); written into the phasemaps where missing',
+    req: (a) => (a.args[0] === 'status' ? { method: 'GET', path: `/api/repos/${a.repo.uuid}/phases/map` }
+      : { method: 'POST', path: `/api/repos/${a.repo.uuid}/phases/map`, body: { limit: Number(a.flags.limit) || 0, apply: !a.flags['no-apply'], includeDone: !!a.flags.done, applyUntrusted: !!a.flags.untrusted } }),
+    print: (d, a, h) => {
+      if (a.args[0] === 'status') { console.log(d.running ? h.c.amber(`  running — ${d.progress ? `${d.progress.step} ${d.progress.done}/${d.progress.of}` : 'starting'}`) : '  not running'); if (d.report) console.log(`  ${d.report.line}`); if (d.report && (d.report.skipped || []).length) console.log(h.c.dim(`  skipped: ${d.report.skipped.slice(0, 5).join(' · ')}`)); return; }
+      console.log(h.c.mint(`  started on ${d.maps} map(s) — repo map-phases <repo> status shows its progress`));
+    } },
+  // 0.60.27 AG1a — "as little as possible", counted: agent calls (plan · code · review), local vs remote, tokens
+  { key: 'repo.cost', repo: true, usage: 'repo cost <repo> [phase] [--map name]', about: 'what each phase cost in agent calls and tokens: plan, code and review calls, local vs remote, tokens in and out (estimated), per run',
+    req: (a) => ({ method: 'GET', path: `/api/repos/${a.repo.uuid}/phases/cost${a.args[0] ? `?phase=${encodeURIComponent(a.args[0])}${a.flags.map ? `&map=${encodeURIComponent(a.flags.map)}` : ''}` : ''}` }),
+    print: (d, a, h) => {
+      if (d.cost) { console.log(`  ${d.phase}: ${d.line}`); for (const r of d.cost.runs) console.log(h.c.dim(`    ${r.runId} · ${r.calls} call(s) · ${Object.entries(r.byAgent).map(([k, v]) => `${k} ×${v}`).join(', ')} · ~${r.tokensIn} in / ~${r.tokensOut} out`)); if (d.cost.method) console.log(h.c.dim(`  tokens: ${d.cost.method}`)); return; }
+      console.log(`  all phases: ${d.line}`); for (const p of d.phases) console.log(`  ${String(p.phase).padEnd(12)} ${h.c.dim(p.line)}`);
+    } },
   // 0.60.20 — lean mode, the same switch as Idearium → Settings → Routing (every agent has it through nexus.command)
   { key: 'system.lean', repo: false, usage: 'system lean [on|off]', about: 'lean mode: stop the services a build does not use (now and at every start), or start them again',
     req: (a) => (a.args[0] ? { method: 'POST', path: '/api/system/lean', body: { on: a.args[0] === 'on', actor: 'command' } } : { method: 'GET', path: '/api/system/lean' }),
     print: (d, a, h) => { console.log(`  lean ${d.on ? h.c.mint('on') : h.c.amber('off')} · ${d.hold.join(', ')}`); for (const r of d.results || d.services || []) console.log(h.c.dim(`    ${r.name} ${r.running != null ? (r.running ? 'running' : 'stopped') : (r.ok ? r.status || 'ok' : `failed: ${r.error}`)}`)); if (d.note) console.log(h.c.dim(`  ${d.note}`)); } },
+  // 0.60.25 — the account fallback chain per provider (same as Idearium → Settings → Routing → Accounts)
+  // 0.60.28 PF1 — ready before run: what a phase build reads before its first agent call
+  { key: 'providers.ready', repo: false, usage: 'providers ready', about: 'can each browser agent take a job now, and if not why: a sign-in wall, every account resting, a usage limit, a reply waiting on your ◎ pick',
+    req: () => ({ method: 'GET', path: '/api/providers/ready' }),
+    print: (d, a, h) => { for (const [id, r] of Object.entries(d.providers || {})) console.log(`  ${(r.ready ? (r.order === 'last' ? h.c.amber : h.c.mint) : h.c.amber)((r.ready ? (r.order === 'last' ? 'last ' : 'ready') : 'not  ').padEnd(5))} ${id.padEnd(11)} ${h.c.dim(r.why)}`); } },
+  { key: 'accounts.chain', repo: false, usage: 'accounts chain <provider> [account1,account2,…]', about: 'a provider\'s account fallback chain: show it (and which accounts rest at their limit), or set it in order',
+    need: (a) => (a.args.length ? null : '<provider>'),
+    req: (a) => (a.args[1] ? { method: 'POST', path: '/api/accounts/chain', body: { provider: a.args[0], accounts: a.args[1].split(',').map(x => x.trim()).filter(Boolean) } } : { method: 'GET', path: `/api/accounts/chain?provider=${encodeURIComponent(a.args[0])}` }),
+    print: (d, a, h) => { console.log(`  ${d.provider}: ${(d.chain || []).join(' → ') || h.c.dim('no chain')}`); for (const x of d.exhausted || []) console.log(h.c.amber(`    resting: ${x.account} until ${new Date(x.until).toLocaleString()} — ${x.why}`)); } },
+  // 0.60.32 PF1 — James: "each tab can be a different profile". Every account tab: the provider's own (the account it runs) and
+  // each profile tab (another account, its own session), with its lane — accounts run at once, one job each
+  { key: 'accounts.profiles', repo: false, usage: 'accounts profiles', about: 'every account tab: each provider\'s own tab (and the account it runs) and its profile tabs (other accounts, in their own sessions), busy or idle — jobs for different accounts run at once',
+    req: () => ({ method: 'GET', path: '/api/accounts/profiles' }),
+    print: (d, a, h) => { if (!d.enabled) console.log(h.c.amber('  profile tabs are off (GUARDIAN_PROFILE_TABS=0)')); if (!(d.providers || []).length) { console.log(h.c.dim('  no account tab connected')); return; }
+      for (const p of d.providers) { console.log(`  ${p.provider}: own tab runs ${p.account || h.c.dim('no known account')}${(p.chain || []).length ? h.c.dim(`  (chain ${p.chain.join(' → ')})`) : ''}`);
+        for (const t of p.tabs || []) console.log(`    ${t.profile ? `profile ${t.profile}` : 'own tab'}  ${t.busy ? h.c.amber('busy') : h.c.dim('idle')}${t.limited ? h.c.amber('  at its limit') : ''}${h.c.dim(`  ${t.tabId}`)}`); } } },
   { key: 'repo.diff', repo: true, usage: 'repo diff <repo> <a> [b|working] [--path file]', about: 'what changed between two versions (b defaults to the files on disk now)',
     need: (a) => (a.args.length ? null : '<a> (a version id from repo versions)'),
     req: (a) => ({ method: 'GET', path: `/api/repos/${a.repo.uuid}/versions/diff?a=${encodeURIComponent(a.args[0])}&b=${encodeURIComponent(a.args[1] || 'working')}${a.flags.path ? `&path=${encodeURIComponent(a.flags.path)}` : ''}` }),
@@ -254,6 +323,20 @@ export const SPEC = [
       console.log(h.c.dim(`\n  ${Object.keys(c).map(k => `${c[k]} ${k}`).join(' · ')}`));
     } },
 
+  // 0.60.41 RN1 — James: "i want idearium to have releases and a changelog for each version." A release is a Versionium
+  // tag on the repo's head with the commits since the last one (lib/repo-releases.js).
+  { key: 'repo.releases', repo: true, usage: 'repo releases <repo> [--cut] [--version x.y.z] [--quote "…"] [--notes "…"]', about: 'the repo\'s releases, newest first (Versionium tags with the commits since each last one); --cut releases the head now',
+    req: (a) => a.flags.cut ? { method: 'POST', path: `/api/repos/${a.repo.uuid}/releases`, timeoutMs: 60000, body: { ...(a.flags.version ? { version: String(a.flags.version) } : {}), ...(a.flags.quote ? { quote: String(a.flags.quote) } : {}), ...(a.flags.notes ? { notes: String(a.flags.notes) } : {}) } }
+      : { method: 'GET', path: `/api/repos/${a.repo.uuid}/releases` },
+    print: (d, a, h) => {
+      const l = d.release ? [d.release] : (d.releases || []);
+      if (!l.length) { console.log(h.c.gray(`  no releases yet — idearium repo releases ${a.repo.name} --cut`)); return; }
+      for (const r of l) {
+        console.log(`  ${h.c.mint(r.tag.padEnd(10))} ${h.c.dim(when(r.at))} ${h.c.amber(String(r.commitId || '').slice(0, 12))}  ${(r.commits || []).length} commit(s)${r.already ? h.c.dim('  (already released)') : ''}`);
+        if (r.quote) console.log(`    ${h.c.sky(String(r.quote).slice(0, 160))}`);
+        if (d.release && r.notes) console.log(h.c.dim(String(r.notes).split('\n').slice(0, 12).map(x => `    ${x}`).join('\n')));
+      }
+    } },
   // ── its desktop, like VMware ──────────────────────────────────────────────────────────────────────────────────────
   { key: 'repo.desktop', repo: true, usage: 'repo desktop <repo> [status | start | stop | pause | resume | checkpoint [--label "…"] | checkpoints | rewind <tag>]', about: 'the repo\'s desktop VM: power, pause, live checkpoints, rewind',
     req: (a) => { const v = a.args[0] || 'status', base = `/api/repos/${a.repo.uuid}/desktop`;

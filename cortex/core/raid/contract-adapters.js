@@ -41,13 +41,24 @@ function doorRoute({ kind, packet }) {
  * no agent for its kind), or { decompose, why } when the brick is bigger than every routed agent has passed reliably.
  */
 function agentExecutor({ route = doorRoute, dispatch = null, boundaries = CG.Boundaries, sizeOf = null } = {}) {
-  return async (target, args, { gate, packet, contract = null, root = ROOT } = {}) => {
+  return async (target, args, { gate, packet, contract = null, root = ROOT, assessment = null } = {}) => {
     if (typeof dispatch !== 'function') return { unsupported: true, why: 'no agent dispatcher is wired here' };
     const kind = gate.kind || 'agent:build';
     let hops;
     try { hops = (await route({ kind, gate, packet, target, args })) || []; }
     catch (e) { return { unsupported: true, why: `routing ${kind} failed: ${e.message}` }; }
     if (!hops.length) return { unsupported: true, why: `no agent is available for ${kind}` };
+    // §GT1 — an agent that failed this brick on capability is skipped on the next attempt (escalate); when every routed
+    // agent has, all of them are tried again rather than none — escalation, never a silent block
+    const ev = (contract && contract.state && contract.state.evidence) || {};
+    let excluded = []; try { excluded = JSON.parse(ev[`${gate.id}.exclude`] || '[]'); } catch (_) { excluded = []; }
+    let exNote = '';
+    if (excluded.length) {
+      const rest = hops.filter(h => !excluded.includes(h.provider));
+      if (rest.length) { exNote = ` (failed it before, skipped: ${hops.filter(h => excluded.includes(h.provider)).map(h => h.provider).join(', ')})`; hops = rest; }
+      else exNote = ` (every routed agent failed it before — tried again)`;
+    }
+    const feedback = ev[`${gate.id}.feedback`] || null;   // RQ3 — the retry carries the check's own words
     const size = sizeOf ? sizeOf(gate, packet) : contract ? CG.packetTokens(contract, gate.id, { root }) : Math.ceil(JSON.stringify(packet || {}).length / 4);
     const fits = [], over = [];
     for (const h of hops) {
@@ -63,14 +74,14 @@ function agentExecutor({ route = doorRoute, dispatch = null, boundaries = CG.Bou
       overNote = ` (~${size} tokens is over every learned budget — ${over.map(h => `${h.provider} ~${h.budget}`).join(', ')} — and it is one piece, so tried anyway, largest first)`;
     }
     let out;
-    try { out = await dispatch(fits, { gate, packet, kind, target, args, size }); }
+    try { out = await dispatch(fits, { gate, packet, kind, target, args, size, ...(feedback ? { feedback } : {}), ...(assessment ? { assessment } : {}) }); }
     catch (e) { out = { ok: false, error: e.message }; }
     out = out || { ok: false, error: 'the dispatcher returned nothing' };
     if (out.unsupported) return { unsupported: true, why: out.why || 'the dispatcher could not run it' };
     const agent = out.agent || out.provider || fits[0].provider;
     const ok = out.ok !== false && !out.error;
-    return { ok, agent, ...(out.transient ? { transient: true } : {}), ...(ok ? {} : { error: String(out.error || out.state || 'failed').slice(0, 500) }), output: out.output !== undefined ? out.output : (out.state || null),
-      evidence: { [`${gate.id}.agent`]: agent, [`${gate.id}.route`]: `${fits.map(h => h.provider).join(' → ')}${overNote}`, ...(out.evidence || {}) } };
+    return { ok, agent, ...(out.transient ? { transient: true } : {}), ...(out.exhausted ? { exhausted: true } : {}), ...(ok ? {} : { error: String(out.error || out.state || 'failed').slice(0, 500) }), output: out.output !== undefined ? out.output : (out.state || null),
+      evidence: { [`${gate.id}.agent`]: agent, [`${gate.id}.route`]: `${fits.map(h => h.provider).join(' → ')}${overNote}${exNote}`, ...(out.evidence || {}) } };
   };
 }
 
@@ -105,7 +116,7 @@ function fromPhasePlan(plan, { id = null, phaseKey = 'phase', title = '', intent
     // a file the plan edits (not new) that is there now is this brick's input: changed under it → STALE
     if (!f.new && fs.existsSync(path.join(root, p))) { const rid = `src.${_id(p)}`; refs[rid] = { path: p, ...(f.component ? { component: f.component } : {}), note: 'edited by this brick' }; own.push(rid); }
     gates.push({ id: gid, type: 'task', kind: `build:file.${_ext(p)}`, file: p,
-      requirement: { phase: phaseKey, file: p, purpose: f.purpose || null, component: f.component || null, exports: (f.exports || []).map(e => e.name) },
+      requirement: { phase: phaseKey, file: p, purpose: f.purpose || null, component: f.component || null, exports: (f.exports || []).map(e => e.name), imports: f.imports || [] },
       depends_on: (deps.get(p) || []).map(d => brickOf.get(d)).filter(Boolean),
       requires: [...shared, ...own], actions: (f.steps || []).length ? f.steps : [`write ${p}`],
       pass_when: [{ evidence: `${gid}.verified`, match: '^ok' }, ...(onDisk ? [{ exists: p }] : [])],
@@ -123,6 +134,34 @@ function fromPhasePlan(plan, { id = null, phaseKey = 'phase', title = '', intent
   const problems = CG.validate(payload);
   if (problems.length) throw Object.assign(new Error(`the phase contract is not valid: ${problems.join('; ')}`), { status: 422, problems });
   const doc = require(path.join(ROOT, 'lib/node-export.js')).wrap('contract', cid, payload, { context: 'cortex/core/raid/contract-adapters.js fromPhasePlan', tags: ['v2', 'phase-build'] });
+  return { doc, payload: doc.payload || payload };
+}
+
+/**
+ * fromWholePhase({ phaseKey, title, intent, inputs, message }) — §BR1 0.60.38: a phase that names no file is still a
+ * contract — one brick (the whole phase, sent as one request to the ladder), and the phase gate that passes only on its
+ * integration (the proof run). Gated, checkpointed and run through RAID like any other; never the old ungated path.
+ */
+function fromWholePhase({ id = null, phaseKey = 'phase', title = '', intent = '', inputs = [], message = '' } = {}) {
+  const refs = {};
+  for (const inp of inputs) if (inp && inp.id && inp.path) refs[_id(inp.id)] = { path: inp.path, ...(inp.lines ? { lines: inp.lines } : {}), note: inp.note || 'an input of the phase' };
+  const shared = Object.keys(refs);
+  const gates = [
+    { id: 'work', type: 'task', kind: 'agent:build', requirement: { phase: phaseKey, title, intent: intent || null, whole: true },
+      depends_on: [], requires: [...shared], actions: [String(message || title || `build ${phaseKey}`).slice(0, 4000)],
+      pass_when: [{ evidence: 'work.verified', match: '^ok' }], run: { agent: 'phase' } },
+    { id: 'phase', type: 'phase', kind: 'phase:integrate', children: ['work'], depends_on: ['work'], requires: [...shared],
+      requirement: { phase: phaseKey, title, intent: intent || null },
+      pass_when: [{ gate: 'work' }, { evidence: 'phase.integrated', match: '^met' }], integration: 'phase.integrated', run: { integrate: phaseKey } },
+  ];
+  const cid = _id(id || `phase-${phaseKey}-whole`);
+  const planLike = { order: ['(the whole phase)'], files: [{ path: '(the whole phase)', exports: [], imports: [], steps: [String(message || '').slice(0, 200)], new: true }] };
+  const payload = { v: 2, uuid: cid, status: 'draft', intention: 'build', plan_hash: planHash(planLike), whole: true,
+    outcome: { what: title || `phase ${phaseKey}`, why: intent || '', done_when: [{ gate: 'phase' }] },
+    refs, invariants: [], gaps: [], gates, failure: { retry_limit: 3 }, state: { gates: {}, evidence: {}, checkpoints: [] } };
+  const problems = CG.validate(payload);
+  if (problems.length) throw Object.assign(new Error(`the whole-phase contract is not valid: ${problems.join('; ')}`), { status: 422, problems });
+  const doc = require(path.join(ROOT, 'lib/node-export.js')).wrap('contract', cid, payload, { context: 'cortex/core/raid/contract-adapters.js fromWholePhase', tags: ['v2', 'phase-build', 'whole'] });
   return { doc, payload: doc.payload || payload };
 }
 
@@ -166,7 +205,10 @@ function audit(p, { root = ROOT } = {}) {
   return {
     contract: p.uuid || null, plan_hash: p.plan_hash || null, complete: ev.complete, why: ev.why,
     bricks: (p.gates || []).filter(g => g.type !== 'phase').map(g => ({ id: g.id, file: g.file || null, kind: g.kind || g.type, status: status.get(g.id), agent: evd[`${g.id}.agent`] || null,
-      attempts: st(g.id).attempts || 0, verified: evd[`${g.id}.verified`] || null, blocked: evd[`${g.id}.blocked`] || null, ...(g.parent ? { parent: g.parent } : {}) })),
+      attempts: st(g.id).attempts || 0, verified: evd[`${g.id}.verified`] || null, blocked: evd[`${g.id}.blocked`] || null, ...(g.parent ? { parent: g.parent } : {}),
+      // §GS1 0.60.39 — the Versionium commit it passed at; a rewind before a retry (to what, which files); its failure class
+      commit: evd[`${g.id}.commit`] || null, tag: evd[`${g.id}.tag`] || null, class: evd[`${g.id}.class`] || null, route: evd[`${g.id}.route`] || null,
+      rewound: (() => { try { return evd[`${g.id}.rewound`] ? JSON.parse(evd[`${g.id}.rewound`]) : null; } catch (_) { return null; } })() })),
     dependencies: (p.gates || []).flatMap(g => (g.depends_on || []).map(d => ({ from: d, to: g.id }))),
     checkpoints: p.state.checkpoints || [],
     gates: ev.gates.map(g => ({ id: g.id, type: g.type, status: g.status, reasons: g.reasons })),
@@ -174,4 +216,4 @@ function audit(p, { root = ROOT } = {}) {
   };
 }
 
-module.exports = { VERSION, doorRoute, agentExecutor, planHash, fromPhasePlan, openCheckpoint, audit };
+module.exports = { VERSION, doorRoute, agentExecutor, planHash, fromPhasePlan, fromWholePhase, openCheckpoint, audit };
