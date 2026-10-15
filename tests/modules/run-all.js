@@ -18,6 +18,11 @@ const fs   = require('fs');
 const MODULES_DIR = __dirname;
 
 const SUITES = [
+  'test-build-paths.test.js',             // 0.60.67 WB0 — every build path and whether WARP is on it, measured; CK-255
+  'test-spec-pipeline.test.js',           // 0.60.66 SF1-SF3 — intent blocks, the spec framework, the spec gate + collector (phase-tagged)
+  'test-phase-map-auto.test.js',          // 0.60.65 MP1/MP2 — every phase mapped by Nexus (no model): files with evidence, requires, consumers, waits-on, specs; automatic in any repo
+  'test-phase-specs-tag.test.js',          // 0.60.63 PT1 — specs tagged per phase; the WARP / spec-framework map's files and deps declared
+  'test-lifeline-ollama-dispatch.test.js', // 0.60.62 — an Ollama job goes to the bridge, not Guardian's tab check (officiator / RAID bricks)
   'test-cg-copilot-no-api.test.js',      // 0.39.274 — the Clear Glass pane: copilot, else Ollama / Guardian directly; no API
   'test-code-intel.test.js',             // 0.39.273 — structural chunker v2, chunk cards, search, grep (lib/code-intel)
   'test-code-edit.test.js',              // 0.39.273 — edit engine, inject delete/defer, real-bytes reads (lib/code-edit.js)
@@ -37,6 +42,8 @@ const SUITES = [
   'test-guardian-json-routes.test.js',   // 0.39.282 — the real guardian answers provider/login, economy and intake once (was: json undefined, 404 then crash)
   'test-run-all-process-group.test.js',   // 0.39.282 N29 — a suite's whole process group dies with it (orphaned servers caused full-run-only failures)
   'test-step-gate.test.js',   // 0.39.282 N21 — every build step passes a gate (rule nodes); a refusal is blocked, never 'replied'; no empty file is written
+  'test-run-state.test.js',   // 0.60.50 CE1–CE5 + CE10 — the run is kept by Nexus: resume, task header, reply-on-task gate, reply tags, lost-job fallback
+  'test-run-pipeline.test.js',   // 0.60.50 CE1 + CE10 through the real repo-agent dispatch: a run per goal, a lost tab moves to the next provider, resume
   'test-shadow.test.js',   // 0.39.282 N22 — a step's shadow (what must exist after it); every absence is a gap + a liminal item; manage/plan runs read incomplete
   'test-draft-review.test.js',   // 0.39.282 N23 — each chunk in a fresh chat; an Ollama draft is reviewed by a guardian agent in one plain conversation
   'test-import-history.test.js',   // 0.39.282 N27 — release zips → one dated snapshot commit each on history/snapshots, real .git history into refs/import, provenance in trailers, resumable
@@ -351,8 +358,18 @@ const SUITES = [
   'test-qa2-real-run.test.js', // 0.60.43 QA2 — one phase build end to end with the real Versionium
   'test-gate-assess.test.js', // 0.60.44 GA1 — the gate assesses dependencies and context before it spends
   'test-cg-attention-focus.test.js', // 0.60.45 — the provider tab stops fighting the person (focus, sign-in, Escape)
+  'test-net-routes.test.js',          // 0.60.60 — net routes + Snowflake transport (CLI first): policy, fail-closed PAC, fake tor, agent read-only
+  'test-live-recording.test.js',      // 0.60.57 — a recording is a .macro node file from the first second; scroll/paging keys; survives navigation
+  'test-scroll-until.test.js',       // 0.60.56 — the slow scroll step (ErosmancerOS wheel, arrow keys, page) and the Read-one-chat template
+  'test-chat-crawl-plan.test.js',    // 0.60.55 — the personal-chat crawl plan: nothing missed, the stopping edge, pace, stop rules
+  'test-gig-ledger.test.js',         // 0.60.53 — the Fiverr ledger keeps only what checks out
+  'test-cg-toolbar-live.test.js',    // 0.60.52 — a pin changed in Settings reaches the main window live
   'test-ncp-half-open.test.js', // 0.60.46 — a half-open NCP tab reconnects within one heartbeat; send picks must be buttons
   'test-reply-not-found-attention.test.js', // 0.60.47 — a reply that cannot be found opens the agent's window
+  'test-update-script.test.js', // 0.60.48 — npm run update: the latest Nexus without a zip
+  'test-capability-spec.test.js', // 0.60.49 CS1 — a spec per capability, whose surface is the gate (CK-254)
+  'test-semantic-page-tree.test.js', // 0.60.49 SP1 — the page as a semantic tree for the browser agent
+  'test-spec-gaps-intelligence.test.js', // 0.60.49 — every spec gap goes through the intelligence gap system
   'test-gate-versioning.test.js', // 0.60.39 GS1 — a snapshot per gate: commit, rewind before a retry, compare, replay decisions
   'test-raid-runs-contract.test.js', // 0.60.36 RD0 — RAID runs the .contract: its gates before, bricks, verdict, self-heal
   'test-release-version.test.js', // 0.60.34 VR1 — one version: Idearium, GitHub (tag + release + zip), every zip
