@@ -238,3 +238,26 @@ New entries go at the top: date, his words, context, what it shows, evidence.
     instead of accepting a second, foreign one. "nexus is recursive, builds itself, using itself. the same architecture
     on every level" (his words, genesis 1.4.0) is what this decision enforces.
   - **Evidence:** `tests/modules/test-spec-pipeline.test.js` SP-08..08c; `CHANGELOG-0.60.68.md`.
+- **2026-10-16: "alright." (choosing SP2 before the gap sweep)**
+  - **Context:** two of his runs failed the same way: a provider changed its markup and the saved CSS selectors
+    stopped matching (Claude's reply not found), or a pick saved the wrong element (ChatGPT's placeholder as the send
+    button). He had already asked for a semantic tree for Clear Glass's agent; SP2 puts it under the provider fields.
+  - **What it shows:** ordering by what broke in real use. He took the fix for the failure his own log showed before
+    the bookkeeping sweep, and the address he asked for now answers both failures: class churn (found by role and name)
+    and wrong picks (refused by role).
+  - **Evidence:** `tests/modules/test-semantic-field-map.test.js` (5/5); `CHANGELOG-0.60.70.md`.
+- **2026-10-16: "its needs to use the guardian picker so i can traverse through the elements one at a time."**
+  - **Context:** the provider panel's picks took whatever was under the cursor. On chat pages that is often the wrong
+    layer (the placeholder inside the input, the icon inside the button); his own run once saved a placeholder as the
+    send button. Nexus already had a picker with traversal, used elsewhere.
+  - **What it shows:** reuse over rebuild, and judging a tool by use. He saw the problem was the interaction, not the
+    checks, and pointed at the component that already solved it. The panel now uses that picker; nothing was rewritten.
+  - **Evidence:** `tests/modules/test-guardian-field-pick.test.js` (5/5); `CHANGELOG-0.60.71.md`.
+- **2026-10-16: "i want a changelog for each change or diff. i want it all syncd with git, versionium, the zip."**
+  - **Context:** three sessions were building at once; release numbers collided and were renumbered at merges, and
+    half of the commits (maps, addenda) had no changelog. He asked for one record that git, Versionium and the zip agree on.
+  - **What it shows:** auditability as a requirement. Asking for every diff to be accounted for is what exposed real
+    bookkeeping bugs: a release pinned to another session's commit, three releases pinned to nothing, notes never read.
+  - **Evidence:** `tests/modules/test-release-notes.test.js` (6/6); a live sync in the coder's container recorded 280
+    releases, 208 with their commits; `CHANGES.md`; `CHANGELOG-0.60.72.md`.
+
