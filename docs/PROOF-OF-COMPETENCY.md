@@ -313,3 +313,12 @@ New entries go at the top: date, his words, context, what it shows, evidence.
     corrected the record when his metaphor ("brick") risked becoming a second node type ("When I said brick I was using
     a metaphor").
   - **Evidence:** `lib/work-funnel.js`; `tests/modules/test-work-funnel.test.js` (8/8); `docs/2026-10-16-agent-work-funnel-phasemap.spec`; `CHANGELOG-0.60.94.md`.
+- **2026-10-16: "the login screen for chatgpt still keeps closing immedie"**
+  - **Context:** the same symptom had been reported and "fixed" three times (0.60.45, 0.60.52, 0.60.98), each time in
+    `providers/attention.js`. He sent it a fourth time rather than accept the third fix, with the earlier lines of his message repeated.
+  - **What it shows:** not accepting a fix that has not held. A report that survives three patches to one file is evidence the
+    cause is not in that file. The coder (not James) found it in `ProviderHost._sweepIdle`: a 15 s timer that destroyed any provider
+    window idle for 2 minutes, on screen or not, with a stale idle clock that a reopened window inherited. His repeat report is what
+    moved the search out of `attention.js`.
+  - **Evidence:** `clear-glass/test/provider-idle-signin.test.js` fails 9 of 10 on 0.60.98's `host.js` and passes 10 of 10 on 0.60.99;
+    `CHANGELOG-0.60.99.md`. **Not yet proven:** the fix has not been seen running in Electron; the changelog names the log line that will show it.

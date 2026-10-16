@@ -87,10 +87,11 @@ class LoginPortal {
    * @param {object} d.session        electron session (fromPartition)
    * @param {Function} [d.emit]       (type, data) => void
    */
-  constructor({ options, vault, passwordVault = null, registry, BrowserWindow, session, emit = () => {}, accountSwitch = null, hub = null, log = () => {} } = {}) {
+  constructor({ options, vault, passwordVault = null, registry, BrowserWindow, session, emit = () => {}, accountSwitch = null, hub = null, profileTabs = null, log = () => {} } = {}) {
     if (!options || !vault || !registry || !BrowserWindow || !session) throw new Error('LoginPortal needs options, vault, registry, BrowserWindow and session');
     Object.assign(this, { options, vault, passwordVault, registry, BrowserWindow, session, emit, hub, log });
     this._as = typeof accountSwitch === 'function' ? accountSwitch : () => accountSwitch;   // the account switch (lazy: it is made after the portal)
+    this._pt = typeof profileTabs === 'function' ? profileTabs : () => profileTabs;         // §0.60.99 — profile tabs (lazy): a profile account's own tab is reloaded when its sign-in window closes
     this.portals = new Map(); // `${provider}:${accountId}` -> { win, openedAt, url }
   }
 
@@ -190,6 +191,9 @@ class LoginPortal {
     let releaseQuiet = null; if (!profile) { try { releaseQuiet = this.hub && this.hub.quiet ? this.hub.quiet(provider) : null; } catch (_) {}
     try { if (this.hub && this.hub.sessionFor) this.hub.sessionFor(provider); } catch (_) {} }
     if (as) { const b = await as.beginSignIn(provider, id, { park: true }); if (!b.ok) { try { releaseQuiet && releaseQuiet(); } catch (_) {} return { ok: false, error: b.error, code: 'session_not_ready' }; } }
+    // §0.60.99 -- the session (and its Chrome-not-Electron user agent) is made BEFORE the window: Electron's setUserAgent does not
+    // reach a webContents that already exists, so a profile account's first sign-in window used to announce itself as Electron.
+    const ses = this._ses(provider, id);
     const win = new this.BrowserWindow({
       width: 1100, height: 820, minWidth: 720, minHeight: 560,
       backgroundColor: '#08080d', autoHideMenuBar: true,   // the same dark base as window-frame.js (CS1)
@@ -215,7 +219,7 @@ class LoginPortal {
       this.emit('accounts.portal.navigated', { id, provider, url: u, onLoginPage: LOGIN_PATH_RE.test(u) });
     });
     // what happens to Google's cookies while the window is open — names and causes only, never a value (they are secrets)
-    const ses = this._ses(provider, id); const seen = []; let offCookies = null;
+    const seen = []; let offCookies = null;
     try {
       if (ses && ses.cookies && typeof ses.cookies.on === 'function') {
         const onCh = (_e, c, cause, removed) => { if (seen.length < 80 && c && /google|youtube/i.test(String(c.domain || ''))) { seen.push(`${removed ? '-' : '+'}${c.name}(${cause})`); } };
@@ -228,6 +232,9 @@ class LoginPortal {
       try { releaseQuiet && releaseQuiet(); } catch (_) {}
       try { if (seen.length) this.log(`[login-portal] ${provider} — Google cookie changes while the sign-in window was open: ${seen.join(' ')}`); } catch (_) {}
       Promise.resolve(as && as.endSignIn ? as.endSignIn(provider) : null).catch(() => {});
+      // §0.60.99 — the primary's parked tabs are reloaded by endSignIn above; a profile account's own tab (if it is open, signed out) was
+      // never reloaded, so jobs routed to the account kept finding a signed-out page after he had signed in. Reloaded, not closed: it keeps its chat.
+      if (profile) { try { const pt = this._pt(); const r = pt && typeof pt.reload === 'function' ? pt.reload(provider, id) : null; if (r && r.reloaded) this.log(`[login-portal] ${provider} — account ${id}'s own tab reloaded into the sign-in just made`); } catch (_) {} }
       this.emit('accounts.portal.closed', { id, provider });
     });
 

@@ -695,3 +695,13 @@ spec:
 # so a person at the CLI and every agent through nexus.command have the field. The driver now emits field.pointer for
 # every pointer act (as field.map and field.spotlight were). src/page/attention.js keeps, per window, page changes and the
 # field's last map, spotlight and pointer (fed from the bus by main/index.js, bus.on('*')); GET /cli/attention serves it.
+
+# ── ADDENDUM 2026-10-16 (0.60.99) — idle means nobody is using it ──
+# James: "the login screen for chatgpt still keeps closing immedie" (after three fixes in providers/attention.js: 0.60.45, 0.60.52, 0.60.98).
+# The idle sweep (host.js _sweepIdle, every 15 s, IDLE_TIMEOUT_MS = 2 min) is the one thing in Clear Glass that destroys a provider window
+# without anyone asking. Rule, supersedes the earlier "no dispatch for 2 minutes => stop()": a window is idle only if no dispatch has used it
+# for the timeout AND it is not visible, not minimised and not on a sign-in host (_inUse, _isSigningIn). stop() clears the provider's idle
+# clock (_lastUsed); start(), show() and attention.attend() count as use. The agent-tab sweep (_sweepIdleAgentTabs, 15 min) follows the same
+# rule. A hidden idle window is still stopped, so the sweep's memory-freeing purpose (0.39.x) is unchanged. Earlier text is kept (§0.3).
+# Multi-account routing: closing a profile account's sign-in window reloads that account's own tab (profile-tabs.reload), the part of
+# 0.60.98 that left a signed-out tab signed out. Proof: clear-glass/test/provider-idle-signin.test.js, signin-profile-tab-reload.test.js.

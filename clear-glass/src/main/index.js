@@ -1462,7 +1462,7 @@ async function bootstrap() {
   loginPortal = new LoginPortal({
     options: nexusOptions, vault, passwordVault, registry: () => mesh.getRegistry(),
     BrowserWindow, session, emit: (t, d) => emit(t, d),
-    accountSwitch: () => acctSwitch(), hub: sessionHub(), log: (m) => console.log(m),   // §0.60.13 — the portal signs in in the provider's ONE session
+    accountSwitch: () => acctSwitch(), hub: sessionHub(), profileTabs: () => profileTabs(), log: (m) => console.log(m),   // §0.60.13 — the portal signs in in the provider's ONE session; §0.60.99 — and reloads a profile account's own tab when its window closes
   });
   // §0.60.13 — every provider's session is attached (normal tabs mirror it live) and consolidated at boot, in the background;
   // a provider tab's first load waits for its own (hubReady, above)

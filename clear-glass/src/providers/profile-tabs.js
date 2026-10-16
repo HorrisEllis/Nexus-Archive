@@ -74,12 +74,21 @@ function createProfileTabs({ providerHost, vault, options, sessionFor, getProvid
     return rows.filter(r => String(r.agentId || '').startsWith(PROFILE_TAB) && (!provider || r.providerId === provider))
       .map(r => { const accountId = String(r.agentId).slice(PROFILE_TAB.length); return { provider: r.providerId, accountId, tabId: r.agentId, partition: partitionFor(r.providerId, accountId), idleMs: r.idleMs, visible: r.visible }; });
   }
+  /** reload(provider, accountId) — §0.60.99: the account's tab (if open) loads again, in whatever its jar now holds (a sign-in just made) */
+  function reload(provider, accountId) {
+    try {
+      const e = providerHost.agentTabs && providerHost.agentTabs.get(`${provider}::${tabIdFor(accountId)}`);
+      if (!e || !e.win || e.win.isDestroyed()) return { ok: true, reloaded: false, why: 'its tab is not open — it opens signed in on its next job' };
+      e.win.webContents.reload();
+      return { ok: true, reloaded: true };
+    } catch (err) { return { ok: false, reloaded: false, error: err.message }; }
+  }
   function close(provider, accountId) {
     try { if (typeof providerHost.closeAgentTab === 'function') providerHost.closeAgentTab(provider, tabIdFor(accountId)); return { ok: true }; }
     catch (e) { return { ok: false, error: e.message }; }
   }
 
-  return { MODULE_ID, VERSION, open, list, close, tabIdFor, partitionFor };
+  return { MODULE_ID, VERSION, open, list, close, reload, tabIdFor, partitionFor };
 }
 
 module.exports = { MODULE_ID, VERSION, PROFILE_TAB, tabIdFor, partitionFor, createProfileTabs };

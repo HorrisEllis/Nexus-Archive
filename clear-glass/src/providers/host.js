@@ -101,6 +101,8 @@ class ProviderHost {
     // it lazily on next genuine use (start(), already real) — this is a
     // real idle layer on top of both, not a third mechanism.
     this._lastUsed = new Map(); // providerId → timestamp of last real dispatch
+    // §0.60.99 -- providerId → how many of its windows are on a sign-in host right now (see _guardSignIn / _inUse)
+    this._signInDepth = new Map();
     // §0.60.12 — James: "the logins for the agent providers needs to be all the same. the accounts and sign in, isn't wired into
     // the provider tabs." main/index.js sets this to account-switch's sync(): before a tab's first page load the provider's
     // dispatch account (Accounts & sign-in) has its saved sign-in put in this session, so the tab opens signed in as it.
@@ -159,6 +161,22 @@ class ProviderHost {
    * just the NCP heartbeat would not free the dominant real cost, the
    * tab's own DOM/JS heap).
    */
+  /**
+   * §0.60.99 -- James: "the login screen for chatgpt still keeps closing immedie". The idle sweep below destroyed any provider
+   * window with no dispatch for 2 minutes WITHOUT asking whether a person was looking at it, and stop() left the idle clock
+   * behind, so a window opened for him to sign in on (attention -> start) inherited the old time and was destroyed by the next
+   * 15 s tick -- every time. "Idle" means nobody is using it: not on screen, not minimised, not on a sign-in page.
+   */
+  _inUse(win) {
+    try { return !!(win && !win.isDestroyed() && ((win.isVisible && win.isVisible()) || (win.isMinimized && win.isMinimized()))); }
+    catch (_) { return true; }   // a window that cannot say is not destroyed on a guess
+  }
+  _isSigningIn(providerId) { return (this._signInDepth.get(providerId) || 0) > 0; }
+  _signInMark(providerId, d) {
+    const n = Math.max(0, (this._signInDepth.get(providerId) || 0) + d);
+    if (n) this._signInDepth.set(providerId, n); else this._signInDepth.delete(providerId);
+  }
+
   _sweepIdle() {
     const now = Date.now();
     this._sweepIdleAgentTabs(now);
@@ -167,6 +185,7 @@ class ProviderHost {
       const last = this._lastUsed.get(providerId);
       if (last == null) continue; // never touched — a fresh pre-warm, not idle by this definition
       if (now - last < this.IDLE_TIMEOUT_MS) continue;
+      if (this._inUse(win) || this._isSigningIn(providerId)) continue;   // §0.60.99 -- on screen, minimised, or mid sign-in: someone's, not idle
       _log(`[ProviderHost] ${providerId} idle for ${Math.round((now - last) / 1000)}s — stopping to free real memory (will restart on next genuine use)`);
       this.stop(providerId).catch((e) => _logWarn(`[ProviderHost] idle-stop failed for ${providerId}:`, e.message));
     }
@@ -241,9 +260,12 @@ class ProviderHost {
   _guardSignIn(providerId, win, wc, depth = 0, immediate = false) {
     const IDP = /(^|\.)(accounts\.google\.com|login\.microsoftonline\.com|login\.live\.com|appleid\.apple\.com|auth\.openai\.com|auth0\.openai\.com)$/i;
     const onIdp = (u) => { try { return IDP.test(new URL(u).hostname); } catch (_) { return false; } };
-    let release = null, timer = null, seen = [], offCookies = null;
+    let release = null, timer = null, seen = [], offCookies = null, marked = false;
+    const mark = (d) => { try { if (typeof this._signInMark === 'function') this._signInMark(providerId, d); } catch (_) {} };
     const begin = (u) => {
-      if (release || typeof this.signInGuard !== 'function') return;
+      if (marked) return;
+      marked = true; mark(+1);   // §0.60.99 -- the idle sweep leaves a provider alone while any of its windows is on a sign-in host
+      if (typeof this.signInGuard !== 'function') { timer = setTimeout(end, 15 * 60 * 1000); if (timer.unref) timer.unref(); return; }
       try { release = this.signInGuard(providerId) || (() => {}); } catch (_) { release = null; return; }
       timer = setTimeout(end, 15 * 60 * 1000); if (timer.unref) timer.unref();   // a forgotten sign-in never freezes the jar for good
       _log(`[ProviderHost] ${providerId} -- sign-in page (${(() => { try { return new URL(u).hostname; } catch (_) { return '?'; } })()}): the provider's cookies are held still until it ends`);
@@ -257,11 +279,12 @@ class ProviderHost {
     };
     const end = () => {
       clearTimeout(timer); timer = null;
+      if (marked) { marked = false; mark(-1); }
       try { offCookies && offCookies(); } catch (_) {} offCookies = null;
       if (seen.length) { _log(`[ProviderHost] ${providerId} -- cookie changes during the sign-in: ${seen.join(' ')}`); seen = []; }
       const r = release; release = null; if (r) { try { r(); } catch (_) {} }
     };
-    const check = (u) => { if (onIdp(u)) begin(u); else if (release && u && !/^about:blank/.test(u)) end(); };
+    const check = (u) => { if (onIdp(u)) begin(u); else if (marked && u && !/^about:blank/.test(u)) end(); };
     wc.on('did-start-navigation', (a, b, _c, d) => { const u = a && a.url ? a.url : b; const main = a && a.url ? a.isMainFrame : d; if (main !== false) check(u); });
     wc.on('did-navigate', (_e, u) => check(u));
     wc.on('will-redirect', (a, b) => check(a && a.url ? a.url : b));
@@ -367,6 +390,7 @@ class ProviderHost {
     for (const [key, e] of [...this.agentTabs]) {
       if (!e.win || e.win.isDestroyed()) { this.agentTabs.delete(key); continue; }
       if (now - e.lastUsed < this.AGENT_IDLE_MS) continue;
+      if (this._inUse(e.win) || this._isSigningIn(e.providerId)) continue;   // §0.60.99 -- an account tab he is signing in on is not idle
       _log(`[ProviderHost] agent tab ${e.agentId} (${e.providerId}) idle ${Math.round((now - e.lastUsed) / 1000)}s — closing; reopens on next dispatch`);
       this.closeAgentTab(e.providerId, e.agentId); closed++;
     }
@@ -493,7 +517,7 @@ class ProviderHost {
     if (agentKey) {
       this.agentTabs.set(agentKey, { win, agentId, providerId, lastUsed: Date.now() });
       this._enforceAgentTabCap();
-    } else this.windows.set(providerId, win);
+    } else { this.windows.set(providerId, win); this.touch(providerId); }   // §0.60.99 -- a window just made is not idle (its clock was the last window's)
     if (!agentKey) this._status.set(providerId, {
       status: 'loading', url: def.url,
       providerId, name: def.name, color: def.color,
@@ -834,7 +858,7 @@ class ProviderHost {
   // ── Control ──────────────────────────────────────────────────────────────
   show(providerId) {
     const win = this.windows.get(providerId);
-    if (win && !win.isDestroyed()) { win.show(); win.focus(); return true; }
+    if (win && !win.isDestroyed()) { this.touch(providerId); win.show(); win.focus(); return true; }   // §0.60.99 -- showing it is using it
     return false;
   }
 
@@ -913,6 +937,7 @@ class ProviderHost {
     if (win && !win.isDestroyed()) { win.destroy(); }
     this.windows.delete(providerId);
     this._status.delete(providerId);
+    this._lastUsed.delete(providerId);   // §0.60.99 -- the next window is a new window, not this one's old idle time
     this.sse.emit('provider.host.stopped', { providerId, ts: Date.now() });
     return { ok: true, providerId };
   }

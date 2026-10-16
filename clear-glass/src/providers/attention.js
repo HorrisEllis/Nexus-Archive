@@ -386,6 +386,7 @@ function createAttentionHandler({ providerHost, assign, getProvider = null, acco
     }
     const { win, which } = w;
     _watch(win);
+    try { if (typeof providerHost.touch === 'function') providerHost.touch(providerId); } catch (_) {}   // §0.60.99 -- a window the person is asked to use is not idle
     const def = _def(providerId);
     const full0 = { ...rec, providerName: (def && def.name) || providerId, loginOptional: !!(def && def.loginOptional) };
     // the panel is already up on this tab: it shows the newest reason next round — never shown or focused again
