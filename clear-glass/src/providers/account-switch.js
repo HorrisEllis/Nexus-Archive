@@ -41,6 +41,19 @@ const _siteOf = (host) => String(host || '').replace(/^\./, '').split('.').slice
 function createAccountSwitch({ providerHost, vault, options, getProvider = () => null, sessionFor, hold = () => () => {}, log = () => {}, now = Date.now, reloadWaitMs = 20000 } = {}) {
   if (!providerHost || !vault || !options || typeof sessionFor !== 'function') throw new Error('account-switch needs providerHost, vault, options and sessionFor');
   const _chain = new Map();   // provider -> the switch in flight (one at a time per provider)
+  // §0.60.97 -- James: "looook at clearglass, trying to get chatgpt signed in" (Google: "We've detected a problem with your cookie
+  // settings"). A sign-in that runs INSIDE the provider's own tab (ChatGPT -> Google, or a popup of it) is in the one provider jar, and
+  // guardian dispatches to that provider all day: use()/sync() restore the account's saved cookies with replace:true and reload the
+  // tab, and settled() saves/removes vault copies -- any of which lands in the middle of Google's test-cookie round trip.
+  // freeze(provider) -> release(): while held, nothing here writes that jar or reloads its tabs.
+  const _frozen = new Map();   // provider -> count of sign-ins in flight
+  function freeze(provider) {
+    _frozen.set(provider, (_frozen.get(provider) || 0) + 1);
+    let done = false;
+    return () => { if (done) return; done = true; const n = (_frozen.get(provider) || 1) - 1; if (n > 0) _frozen.set(provider, n); else _frozen.delete(provider); };
+  }
+  const isFrozen = (provider) => (_frozen.get(provider) || 0) > 0;
+  const _FROZEN_WHY = 'a sign-in is in progress in this provider\'s tab -- its cookies are not touched until it ends';
 
   // the session's cookies are swapped for another account's: the session hub does not mirror that out to the normal tabs
   async function _held(provider, fn) { const release = hold(provider); try { return await fn(); } finally { release(); } }
@@ -89,6 +102,7 @@ function createAccountSwitch({ providerHost, vault, options, getProvider = () =>
 
   async function _use(provider, accountId, { reason = null, reload = true } = {}) {
     if (!accountId) return { ok: false, error: 'accountId required' };
+    if (isFrozen(provider)) return { ok: true, switched: false, skipped: true, provider, accountId, why: _FROZEN_WHY };
     const bad = _known(provider, accountId);
     if (bad) return { ok: false, error: bad };
     const was = current(provider);
@@ -141,6 +155,7 @@ function createAccountSwitch({ providerHost, vault, options, getProvider = () =>
    *         'skipped'   nothing to do, and why (no account, nothing saved anywhere, the tab runs as another account on purpose)
    */
   async function _sync(provider, { reload = true } = {}) {
+    if (isFrozen(provider)) return { ok: true, provider, action: 'skipped', why: _FROZEN_WHY };
     const r = options.resolveAccountForDispatch(provider, null);
     if (!r || r.error) return { ok: false, provider, action: 'skipped', why: (r && r.error) || 'no account authority' };
     const accountId = r.accountId;
@@ -264,6 +279,7 @@ function createAccountSwitch({ providerHost, vault, options, getProvider = () =>
    * restore it and undo the sign-out). Skipped while a switch is in flight.
    */
   async function settled(provider) {
+    if (isFrozen(provider)) return { ok: true, action: 'skipped', why: _FROZEN_WHY };
     if (_chain.has(provider)) return { ok: true, action: 'skipped', why: 'a switch is in flight' };
     const acct = current(provider); if (!acct) return { ok: true, action: 'skipped', why: 'the session is not marked as an account' };
     let tab = await _tabAuth(provider);
@@ -292,7 +308,7 @@ function createAccountSwitch({ providerHost, vault, options, getProvider = () =>
       known: (options.listAccounts ? options.listAccounts() : []).filter(a => (a.agentKeys || []).includes(provider)).map(a => ({ id: a.id, label: a.label })) };
   }
 
-  return { MODULE_ID, VERSION, current, capture, use, sync, signedOut, beginSignIn, endSignIn, settled, markCurrent, state };
+  return { MODULE_ID, VERSION, current, capture, use, sync, signedOut, beginSignIn, endSignIn, settled, markCurrent, state, freeze, isFrozen };
 }
 
 module.exports = { MODULE_ID, VERSION, createAccountSwitch };

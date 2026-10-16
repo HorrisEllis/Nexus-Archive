@@ -1266,6 +1266,15 @@ async function bootstrap() {
   // provider's dispatch account from Accounts & sign-in (account-switch.sync, before the first load). It cannot fail a start:
   // host.js bounds it and loads the tab as it is if the sync errors (cookie vault locked, no account yet).
   providerHost.beforeLoad = async (providerId) => { await hubReady(providerId); return acctSwitch().sync(providerId, { reload: false }); };
+  // §0.60.97 -- James: "looook at clearglass, trying to get chatgpt signed in". While a provider window (or its popup) is on a sign-in host
+  // the provider's jar is left alone: the session hub copies nothing into it from the normal tabs, and the account switch does not
+  // restore, clear, save or reload (guardian dispatches to the provider all day). When it ends the jar is saved once, after a pause.
+  providerHost.signInGuard = (providerId) => {
+    const offs = [];
+    try { offs.push(sessionHub().quiet(providerId)); } catch (_) {}
+    try { offs.push(acctSwitch().freeze(providerId)); } catch (_) {}
+    return () => { offs.forEach(f => { try { f(); } catch (_) {} }); const t = setTimeout(() => { try { acctSwitch().settled(providerId).catch(() => {}); } catch (_) {} }, 3000); if (t.unref) t.unref(); };
+  };
   // §WIRED 2026-08-22 — James: "listens for the co-pilot response and
   // injects it into the corresponding agent chat using clearglass."
   // Real close of the loop — see src/copilot/wake-relay.js for the full

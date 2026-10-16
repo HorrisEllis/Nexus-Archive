@@ -53,6 +53,13 @@ const LOGIN_PATH_RE  = /\/(login|signin|sign_in|sign-in|auth|authenticate|Servic
 // persist:mesh-<provider>-<account>, a jar nothing else read); which account the session is signed in as is account-switch's
 // (the vault keeps every account's cookies). accountId is accepted and ignored so callers keep their shape.
 function partitionFor(provider, _accountId) { return canonicalPartition(provider); }
+// §0.60.98 -- James: "it needs to have profile or hat dependant cookies. or compartment cookies. like we need multiaccount routing."
+// The provider's primary account (the one guardian dispatches to when no account is named) keeps persist:ncp-<provider>, the jar the
+// provider tab, the agent mesh and the session hub share. EVERY OTHER account signs in, and stays signed in, in its own jar --
+// persist:ncp-<provider>~<account>, the one its profile tab (providers/profile-tabs.js) already uses -- so two accounts of one provider
+// are signed in at once and nothing swaps cookies between them. A hat reaches its jar through the account its profile is linked to.
+const profilePartition = (provider, accountId) => `persist:ncp-${provider}~${String(accountId).replace(/[^A-Za-z0-9._-]/g, '_')}`;
+const stripElectronUA = (ses) => { try { const ua = ses.getUserAgent(); const clean = ua.replace(/\s+Electron\/[\d.]+/gi, '').replace(/\s+(?:Node\.js|node)\/[\d.]+/gi, '').replace(/\s+clear[\s-]?glass\/[\d.]+/gi, '').trim(); if (clean !== ua) ses.setUserAgent(clean); } catch (_) {} };
 function legacyPartitionFor(provider, accountId) { return `persist:mesh-${provider}-${accountId}`; }
 
 /** fillScript(username, password) — pre-fill only. Uses the native value setter so React/Vue inputs register it. Never submits. */
@@ -100,7 +107,15 @@ class LoginPortal {
   loginUrl(provider) { return LOGIN_URLS[provider] || this._def(provider).url; }
   _origin(provider) { try { return new URL(this.loginUrl(provider)).origin; } catch (_) { return null; } }
   _key(provider, id) { return `${provider}:${id}`; }
-  _ses(provider, id) { return this.session.fromPartition(partitionFor(provider, id)); }
+  // primary = the account the one provider jar serves (guardian's dispatch account); any other account has its own jar
+  _primary(provider) { try { const r = this.options.resolveAccountForDispatch && this.options.resolveAccountForDispatch(provider, null); if (r && !r.error && r.accountId) return r.accountId; } catch (_) {} try { return this.options.getDefaultAccount(provider) || null; } catch (_) { return null; } }
+  _isProfile(provider, id) { const p = this._primary(provider); return !!p && p !== id; }
+  _partition(provider, id) { return this._isProfile(provider, id) ? profilePartition(provider, id) : partitionFor(provider, id); }
+  _ses(provider, id) {
+    const ses = this.session.fromPartition(this._partition(provider, id));
+    if (this._isProfile(provider, id)) stripElectronUA(ses);   // the hub cleans the shared jar's UA; a profile jar is ours to clean
+    return ses;
+  }
   // 0.60.7 — James: "its saying its not signed in to the account when it is." status() read only this account's own
   // partition (persist:mesh-<provider>-<id>); he signs in in a normal tab (the <webview> in browser.html uses the app's
   // default session) or the provider tab (persist:ncp-<provider>), which it never looked at. _elsewhere() reads those two
@@ -160,18 +175,20 @@ class LoginPortal {
     const acc = this._account(id); const def = this._def(provider);
     const key = this._key(provider, id);
     const existing = this.portals.get(key);
-    if (existing && !existing.win.isDestroyed()) { existing.win.show(); existing.win.focus(); return { ok: true, reused: true, partition: partitionFor(provider, id) }; }
+    if (existing && !existing.win.isDestroyed()) { existing.win.show(); existing.win.focus(); return { ok: true, reused: true, partition: this._partition(provider, id) }; }
 
-    const partition = partitionFor(provider, id);
+    const profile = this._isProfile(provider, id);
+    const partition = this._partition(provider, id);
     // one session per provider: another account's sign-in window on it is closed (it would sign in to the wrong account), and the
     // session is made ready for THIS account — what it holds is saved first, this account's saved sign-in put in, else cleared
-    for (const [k, p] of this.portals) if (k.startsWith(`${provider}:`) && k !== key && !p.win.isDestroyed()) p.win.close();
-    const as = this._as();
+    // (a profile account has its own jar: no other account's window shares it, so nothing is closed, parked or swapped for it)
+    if (!profile) for (const [k, p] of this.portals) if (k.startsWith(`${provider}:`) && k !== key && !p.win.isDestroyed() && !p.profile) p.win.close();
+    const as = profile ? null : this._as();
     // §0.60.51 — James: Google's sign-in window said "We've detected a problem with your cookie settings". Nothing else may touch this
     // jar while the window is open: the provider's own tabs wait at about:blank (account-switch park), the normal tabs' cookies
     // are not copied in (session hub quiet), and the session is Chrome to Google, not Electron (the provider tab already was).
-    let releaseQuiet = null; try { releaseQuiet = this.hub && this.hub.quiet ? this.hub.quiet(provider) : null; } catch (_) {}
-    try { if (this.hub && this.hub.sessionFor) this.hub.sessionFor(provider); } catch (_) {}
+    let releaseQuiet = null; if (!profile) { try { releaseQuiet = this.hub && this.hub.quiet ? this.hub.quiet(provider) : null; } catch (_) {}
+    try { if (this.hub && this.hub.sessionFor) this.hub.sessionFor(provider); } catch (_) {} }
     if (as) { const b = await as.beginSignIn(provider, id, { park: true }); if (!b.ok) { try { releaseQuiet && releaseQuiet(); } catch (_) {} return { ok: false, error: b.error, code: 'session_not_ready' }; } }
     const win = new this.BrowserWindow({
       width: 1100, height: 820, minWidth: 720, minHeight: 560,
@@ -180,7 +197,7 @@ class LoginPortal {
       webPreferences: { partition, contextIsolation: true, nodeIntegration: false, sandbox: true },
     });
     const url = this.loginUrl(provider);
-    const entry = { win, openedAt: Date.now(), url, lastUrl: url };
+    const entry = { win, openedAt: Date.now(), url, lastUrl: url, profile };
     this.portals.set(key, entry);
 
     const cred = this._credentialFor(id, provider);
@@ -217,7 +234,7 @@ class LoginPortal {
     this.options.linkAgent(id, provider);
     await win.loadURL(url).catch(err => this.emit('accounts.portal.load.error', { id, provider, url, error: err.message }));
     this.emit('accounts.portal.opened', { id, provider, partition, url });
-    return { ok: true, reused: false, partition, url, prefill: !!cred };
+    return { ok: true, reused: false, partition, url, prefill: !!cred, ownJar: profile };
   }
 
   /**
@@ -231,7 +248,8 @@ class LoginPortal {
   async capture({ id, provider, identity = null, close = false, from = null }) {
     this._account(id); const def = this._def(provider);
     const ses = this._ses(provider, id);
-    const as = this._as();
+    const profile = this._isProfile(provider, id);
+    const as = profile ? null : this._as();
     const runsAs = as ? as.current(provider) : null;
     if (runsAs && runsAs !== id) return { ok: false, error: `the ${def.name} session is signed in as another account (“${runsAs}”) — press Sign in on this account first, then save` };
     // 0.60.7 — from 'default' | 'ncp': take the sign-in from where he signed in (a normal tab, the provider tab), copy it
@@ -281,7 +299,7 @@ class LoginPortal {
     const acc = this._account(id); this._def(provider);
     const portal = this.portals.get(this._key(provider, id));
     let live = 0, auth = 0;
-    const as = this._as(); const runsAs = as ? as.current(provider) : null;
+    const as = this._isProfile(provider, id) ? null : this._as(); const runsAs = as ? as.current(provider) : null;
     // the one provider session shows as this account's only while it runs as it (else it holds another account's, or nobody's)
     if (!runsAs || runsAs === id) {
       try { const c = await this._siteCookies(this._ses(provider, id), provider); live = c.length; auth = c.filter(isAuthCookie).length; }
@@ -289,7 +307,7 @@ class LoginPortal {
     }
     const sess = acc.sessions?.[provider] || null;
     return {
-      ok: true, id, provider, partition: partitionFor(provider, id), sessionRunsAs: runsAs,
+      ok: true, id, provider, partition: this._partition(provider, id), sessionRunsAs: runsAs, ownJar: this._isProfile(provider, id),
       portalOpen: !!(portal && !portal.win.isDestroyed()), portalUrl: portal?.lastUrl || null,
       liveCookies: live, authCookies: auth,
       elsewhere: await this._elsewhere(provider).catch(() => []),
@@ -312,11 +330,12 @@ class LoginPortal {
     const acc = this._account(id); this._def(provider);
     this.close({ id, provider });
     // the one provider session is cleared only if it is THIS account's (or nobody's); another account's sign-in is not touched
-    const as = this._as(); const runsAs = as ? as.current(provider) : null;
+    const profile = this._isProfile(provider, id);
+    const as = profile ? null : this._as(); const runsAs = as ? as.current(provider) : null;
     let cleared = false;
     if (!runsAs || runsAs === id) {
       await this._ses(provider, id).clearStorageData().catch(err => this.emit('accounts.portal.signout.error', { id, provider, error: err.message }));
-      if (this.hub) await this.hub.clearNormal(provider).catch(() => {});   // and the normal tabs, which mirror it
+      if (this.hub && !profile) await this.hub.clearNormal(provider).catch(() => {});   // and the normal tabs, which mirror it
       cleared = true;
     }
     const vr = this.vault.deleteAccountCookies(provider, id);
@@ -336,4 +355,4 @@ class LoginPortal {
   }
 }
 
-module.exports = { LoginPortal, LOGIN_URLS, partitionFor, legacyPartitionFor, fillScript, AUTH_COOKIE_RE };
+module.exports = { LoginPortal, LOGIN_URLS, partitionFor, profilePartition, legacyPartitionFor, fillScript, AUTH_COOKIE_RE };

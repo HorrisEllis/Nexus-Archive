@@ -105,6 +105,9 @@ class ProviderHost {
     // the provider tabs." main/index.js sets this to account-switch's sync(): before a tab's first page load the provider's
     // dispatch account (Accounts & sign-in) has its saved sign-in put in this session, so the tab opens signed in as it.
     this.beforeLoad = null;
+    // §0.60.97 -- main/index.js sets this to (providerId) => release(): called when one of the provider's windows (or a popup of
+    // it) is on a sign-in host (Google, Microsoft, Apple, OpenAI's auth); release() is called when it leaves or closes.
+    this.signInGuard = null;
     this._pending   = new Map(); // providerId → in-flight ensureStarted() promise, so concurrent callers share one real start() rather than racing two
     this.IDLE_TIMEOUT_MS = parseInt(process.env.CG_PROVIDER_IDLE_MS || '120000', 10); // 2 minutes, matching the person's own stated number
     const idleSweep = setInterval(() => this._sweepIdle(), 15_000);
@@ -232,6 +235,41 @@ class ProviderHost {
       sessionStorage.setItem('gd_agent_id', window.__NEXUS_AGENT_ID); return true; } catch (e) { return false; } })();`;
     try { return !!(await win.webContents.executeJavaScript(js)); }
     catch (e) { _logWarn(`[ProviderHost] could not stamp agentId=${agentId}: ${e.message}`); return false; }
+  }
+
+  /** _guardSignIn(providerId, win, wc) -- hold the provider's jar still while wc (or a popup it opens) is on a sign-in host */
+  _guardSignIn(providerId, win, wc, depth = 0, immediate = false) {
+    const IDP = /(^|\.)(accounts\.google\.com|login\.microsoftonline\.com|login\.live\.com|appleid\.apple\.com|auth\.openai\.com|auth0\.openai\.com)$/i;
+    const onIdp = (u) => { try { return IDP.test(new URL(u).hostname); } catch (_) { return false; } };
+    let release = null, timer = null, seen = [], offCookies = null;
+    const begin = (u) => {
+      if (release || typeof this.signInGuard !== 'function') return;
+      try { release = this.signInGuard(providerId) || (() => {}); } catch (_) { release = null; return; }
+      timer = setTimeout(end, 15 * 60 * 1000); if (timer.unref) timer.unref();   // a forgotten sign-in never freezes the jar for good
+      _log(`[ProviderHost] ${providerId} -- sign-in page (${(() => { try { return new URL(u).hostname; } catch (_) { return '?'; } })()}): the provider's cookies are held still until it ends`);
+      try {
+        const ses = wc.session;
+        if (ses && ses.cookies && typeof ses.cookies.on === 'function') {
+          const onCh = (_e, c, cause, removed) => { if (seen.length < 80 && c && /google|youtube|openai|chatgpt|microsoft|live\.com|apple/i.test(String(c.domain || ''))) seen.push(`${removed ? '-' : '+'}${c.name}(${cause})`); };
+          ses.cookies.on('changed', onCh); offCookies = () => { try { ses.cookies.removeListener('changed', onCh); } catch (_) {} };
+        }
+      } catch (_) {}
+    };
+    const end = () => {
+      clearTimeout(timer); timer = null;
+      try { offCookies && offCookies(); } catch (_) {} offCookies = null;
+      if (seen.length) { _log(`[ProviderHost] ${providerId} -- cookie changes during the sign-in: ${seen.join(' ')}`); seen = []; }
+      const r = release; release = null; if (r) { try { r(); } catch (_) {} }
+    };
+    const check = (u) => { if (onIdp(u)) begin(u); else if (release && u && !/^about:blank/.test(u)) end(); };
+    wc.on('did-start-navigation', (a, b, _c, d) => { const u = a && a.url ? a.url : b; const main = a && a.url ? a.isMainFrame : d; if (main !== false) check(u); });
+    wc.on('did-navigate', (_e, u) => check(u));
+    wc.on('will-redirect', (a, b) => check(a && a.url ? a.url : b));
+    wc.once('destroyed', end);
+    if (win && win.once) win.once('closed', end);
+    if (immediate) begin('popup');   // a window the provider's page opened is a sign-in until it navigates back to a normal page or closes
+    // a popup of the provider's window (window.open) shares its jar: guarded the same way, one level deep
+    if (depth < 2) wc.on('did-create-window', (popup) => { try { if (popup && popup.webContents) this._guardSignIn(providerId, popup, popup.webContents, depth + 1, true); } catch (_) {} });
   }
 
   async _inject(providerId, win, agentId = null) {
@@ -481,6 +519,13 @@ class ProviderHost {
       await new Promise(r => setTimeout(r, 800));
       await this._inject(providerId, win, agentId);
     });
+
+    // §0.60.97 -- James: "looook at clearglass, trying to get chatgpt signed in" -- Google's window said "We've detected a problem
+    // with your cookie settings". The sign-in runs in this tab's own jar (or a popup of it), and nothing told the rest of Nexus: the
+    // account switch restored cookies into the jar and reloaded this tab, and guardian kept dispatching to it. While any window of
+    // this provider is on a sign-in host the jar is left alone (signInGuard); the Google/OpenAI cookie changes it sees are logged by
+    // name and cause only (never a value) so a failure that still happens says which cookie went and who removed it.
+    try { this._guardSignIn(providerId, win, win.webContents); } catch (e) { _logWarn(`[ProviderHost] ${providerId} sign-in guard not attached: ${e.message}`); }
 
     // Track navigation for health monitoring
     win.webContents.on('did-navigate', (e, navUrl) => {
