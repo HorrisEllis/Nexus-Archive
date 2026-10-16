@@ -53,6 +53,12 @@ const { randomUUID } = require('crypto');
 const CG_CDP_PORT = parseInt(process.env.CG_CDP_PORT || '9333', 10);
 app.commandLine.appendSwitch('remote-debugging-port', String(CG_CDP_PORT));
 
+// 2026-10-16 — James (Google: "Couldn't sign you in — This browser or app may not be secure"): "need this fixed. completely"
+// Every session Clear Glass makes (default, provider, account, agent, popup partitions) gets the sign-in request side,
+// and every page the page side (src/contexts/google-signin.js). Registered before ready, so no session is missed.
+const GoogleSignin = require('../contexts/google-signin.js');
+app.on('session-created', (ses) => { try { GoogleSignin.applySession(ses); } catch (e) { console.warn(`[google-signin] session not covered: ${e.message}`); } });
+
 // ── SISO bus — must be first ───────────────────────────────────────────────
 const { createBus, emit, on, Event } = require('../core/bus');
 
@@ -1170,10 +1176,18 @@ async function bootstrap() {
   try { require('../network/install.js').install(bus); }
   catch (err) { console.error('[ClearGlass] network/install.js failed:', err.message); }
 
-  // 1. TLS proxy — Firefox JA4 rewrite
-  const tlsProxy = new TlsProxy({ port: TLS_PORT });
-  await tlsProxy.start();
-  console.log(`[ClearGlass] TLS proxy :${TLS_PORT}`);
+  // 1. TLS layer — §0.60.109 TLS2 (docs/2026-10-16-tls-layer-phasemap.spec). James: "fix it. i don't want the trouble again".
+  // The Node proxy (src/tls/proxy.js, superseded and kept) wrapped the browser's TLS in a second TLS and carried no HTTPS
+  // site; cg-tls-helper (Go, uTLS) gives a Firefox persona Firefox's handshake. Down or missing → sessions go direct, said.
+  const { TlsHelper, setCurrent: setTlsCurrent } = require('../tls/helper');
+  const tlsProxy = new TlsHelper({ port: TLS_PORT });
+  setTlsCurrent(tlsProxy);
+  tlsProxy.on('state', (st) => {
+    try { require('../net/service').service().setTlsLayer(st.state === 'running' ? st.port : null).catch(() => {}); } catch (_) {}
+    emit('tls.layer.state', st);
+  });
+  const tlsState = await tlsProxy.start();
+  console.log(tlsState.state === 'running' ? `[ClearGlass] TLS layer :${TLS_PORT} (cg-tls-helper, Firefox handshake; CA ${String(tlsState.caFingerprint).slice(0, 16)}…)` : `[ClearGlass] TLS layer not running — ${tlsState.why}`);
 
   // 2. Fingerprint engine
   fp = new FingerprintEngine();
@@ -1190,6 +1204,7 @@ async function bootstrap() {
   const { session: electronSession } = require('electron');
   const { applyCspBypass } = require('../contexts/session-headers');
   applyCspBypass(electronSession.defaultSession);
+  GoogleSignin.applySession(electronSession.defaultSession);   // the default session may predate 'session-created'
 
   // Scrub Electron/Node identifiers from the default session UA
   // This is a safety net — agent windows should use their own partitions,
@@ -1266,15 +1281,6 @@ async function bootstrap() {
   // provider's dispatch account from Accounts & sign-in (account-switch.sync, before the first load). It cannot fail a start:
   // host.js bounds it and loads the tab as it is if the sync errors (cookie vault locked, no account yet).
   providerHost.beforeLoad = async (providerId) => { await hubReady(providerId); return acctSwitch().sync(providerId, { reload: false }); };
-  // §0.60.97 -- James: "looook at clearglass, trying to get chatgpt signed in". While a provider window (or its popup) is on a sign-in host
-  // the provider's jar is left alone: the session hub copies nothing into it from the normal tabs, and the account switch does not
-  // restore, clear, save or reload (guardian dispatches to the provider all day). When it ends the jar is saved once, after a pause.
-  providerHost.signInGuard = (providerId) => {
-    const offs = [];
-    try { offs.push(sessionHub().quiet(providerId)); } catch (_) {}
-    try { offs.push(acctSwitch().freeze(providerId)); } catch (_) {}
-    return () => { offs.forEach(f => { try { f(); } catch (_) {} }); const t = setTimeout(() => { try { acctSwitch().settled(providerId).catch(() => {}); } catch (_) {} }, 3000); if (t.unref) t.unref(); };
-  };
   // §WIRED 2026-08-22 — James: "listens for the co-pilot response and
   // injects it into the corresponding agent chat using clearglass."
   // Real close of the loop — see src/copilot/wake-relay.js for the full
@@ -1462,7 +1468,7 @@ async function bootstrap() {
   loginPortal = new LoginPortal({
     options: nexusOptions, vault, passwordVault, registry: () => mesh.getRegistry(),
     BrowserWindow, session, emit: (t, d) => emit(t, d),
-    accountSwitch: () => acctSwitch(), hub: sessionHub(), profileTabs: () => profileTabs(), log: (m) => console.log(m),   // §0.60.13 — the portal signs in in the provider's ONE session; §0.60.99 — and reloads a profile account's own tab when its window closes
+    accountSwitch: () => acctSwitch(), hub: sessionHub(), log: (m) => console.log(m),   // §0.60.13 — the portal signs in in the provider's ONE session
   });
   // §0.60.13 — every provider's session is attached (normal tabs mirror it live) and consolidated at boot, in the background;
   // a provider tab's first load waits for its own (hubReady, above)
@@ -2708,6 +2714,7 @@ function _automationEvents(contents) {
 }
 app.on('web-contents-created', (_e, contents) => {
   try { _automationEvents(contents); } catch (_) {}
+  try { GoogleSignin.attach(contents); } catch (e) { console.warn(`[google-signin] page not covered: ${e.message}`); }
   contents.on('before-input-event', (event, input) => {
     if (!input || input.type !== 'keyDown' || input.isAutoRepeat) return;
     const accel = Shortcuts.accelFromInput(input);
@@ -2739,6 +2746,7 @@ async function shutdown() {
   if (_heartbeatInterval) clearInterval(_heartbeatInterval);
   // §0.39.264 — ErosmancerOS goes down with Clear Glass (only the one Clear Glass started)
   if (erosSupervisor) { try { erosSupervisor.stop(); } catch (_) {} }
+  try { const t = require('../tls/helper').current(); if (t) t.stop(); } catch (_) {}   // §0.60.109 TLS2 — the TLS layer goes down with Clear Glass
 
   // §NEW 2026-08-24 — closes the gap named at the end of the previous
   // commit, but scoped correctly rather than mechanically as originally

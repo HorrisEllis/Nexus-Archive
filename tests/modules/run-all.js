@@ -51,6 +51,10 @@ const SUITES = [
   'test-code-surface-state.test.js',   // 0.60.80 CE8 — the Code tab's surface kept by Nexus: the CLI reads and sets it, the tab follows (Clear Glass)
   'test-code-tab-expand.test.js',   // 0.60.81 CE7 · CV2 · CV4 · CV3 — line edits checked and proposed, the agent on a picked range, a version per diff, tagged history, run rewind
   'test-code-tab-merge.test.js',   // 0.60.82 CE6 · CE7 · CE9 · CV1 — Files merged into Code, Manage+History one menu, line actions, the bottom panels (Clear Glass)
+  'test-canvas-compartments.test.js',   // 0.60.104 CN1–CN4 — his ERAVOS canvas as a COS compartment, each tool nested; COS + workshop templates (Clear Glass, his serve.js and harness)
+  'test-reject-learn-retry.test.js',   // 0.60.105 RL1–RL4 — a rejection read for its failure mode, told, learned, then retried; the agent screen stops gutted files and lost exports
+  'test-plan-sidebar.test.js',   // 0.60.107 PS1–PS3 — the Plan panel as Progress · Plan · Context cards; context recorded per build; charter, agents, jobs their own panels (Clear Glass)
+  'test-tls-layer.test.js',   // 0.60.109 TLS1–TLS3 — cg-tls-helper (Go + uTLS): a Firefox persona's TLS handshake is Firefox's; the real binary end to end; never an orphan; never why a site fails
   'test-run-pipeline.test.js',   // 0.60.50 CE1 + CE10 through the real repo-agent dispatch: a run per goal, a lost tab moves to the next provider, resume
   'test-shadow.test.js',   // 0.39.282 N22 — a step's shadow (what must exist after it); every absence is a gap + a liminal item; manage/plan runs read incomplete
   'test-draft-review.test.js',   // 0.39.282 N23 — each chunk in a fresh chat; an Ollama draft is reviewed by a guardian agent in one plain conversation
@@ -380,6 +384,11 @@ const SUITES = [
   'test-clearglass-jobs.test.js',     // 0.60.86 — five ready-made jobs run on the real engine, network stubbed
   'test-chat-ports.test.js',          // 0.60.85 PI5b — the crawler's ports on the real automation engine, fake chat site in jsdom
   'test-chat-crawler.test.js',        // 0.60.84 PI5 — the crawler driving the plan through fake ports
+  'test-vector-memory-embed-check.test.js', // 0.60.97 — the embed check, fixed for good
+  'test-inject-screen.test.js',       // 0.60.98 — every proposal passes one screen at the door
+  'test-proposal-evidence.test.js',   // 0.60.99 — a proposal is tested before it reaches a person
+  'test-language-checks.test.js',     // 0.60.101 — every language's own parser, at the gate
+  'test-cos-vm-shell.test.js',        // 0.60.101 — `cos vm shell`: the test VM's own terminal
   'test-scroll-until.test.js',       // 0.60.56 — the slow scroll step (ErosmancerOS wheel, arrow keys, page) and the Read-one-chat template
   'test-chat-crawl-plan.test.js',    // 0.60.55 — the personal-chat crawl plan: nothing missed, the stopping edge, pace, stop rules
   'test-gig-ledger.test.js',         // 0.60.53 — the Fiverr ledger keeps only what checks out

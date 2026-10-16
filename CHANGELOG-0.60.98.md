@@ -1,32 +1,18 @@
-# 0.60.98 -- 2026-10-16
+# 0.60.98 (built on the branch as 0.60.74; renumbered at the merge with main) - 2026-10-16
 
-James: "it needs to have profile or hat dependantat cookies. or compartmenrt cookies. like we need multiaccount routing. also i
-cant sign into chatgpt, it closes the login evey time i clikc it" -- with two screenshots of Google's window: "Couldn't sign you
-in. This browser or app may not be secure."
+James: "what about generating the tests first, wouldn't that be easier and then it would help shape the expectation of the output?"
 
-Context: 0.60.97 stopped the "problem with your cookie settings" error (the jar is held still during a sign-in); this is what
-Google says next. 0.60.13 had made ONE cookie jar per provider (his "providers, accounts, and agent mesh all need to be using the
-same cookies"), switched between accounts by swapping cookies. Multi-account routing (0.60.32 profile tabs: "each tab can beb a
-compartment or different profile") needs the opposite for a second account: its own jar.
+## Why this came first
+An agent's proposal for lib/hat-seed.js (-281 +20) reached the Apply button. It did not parse (the outer seedHats() was never closed), kept a stub, and re-declared constants. The code.write step gate would have blocked it, but that gate ran only inside land(). lib/code-edit.js and two idearium API routes call RI.propose() / RI.edit() directly.
 
-## What changed
+## What changed (lib/repo-inject.js)
+- `_screen()`: code.write gate (not empty, parses for json/yaml/js), collapse guard, and a new **shrink rule for agents** (a 100+ line file cut to under a quarter is refused with both line counts).
+- Runs in `propose()` for every caller, and in `edit()` for an agent's proposal. A person's editor save is untouched.
+- The refusal text is returned to the caller, so the agent is told why.
+- tests/modules/test-inject-screen.test.js IS-01..09; the real proposal is kept as a fixture.
 
-- **Accounts sign-in, per account.** `LoginPortal`: the provider's primary account (guardian's dispatch account) keeps
-  `persist:ncp-<provider>`, exactly as before. Every other account opens, captures, reports status and signs out in
-  `persist:ncp-<provider>~<account>` -- the jar its profile tab (`providers/profile-tabs.js`) already uses, same name. For those
-  accounts nothing is parked, quieted, swapped or cleared on the shared jar; two accounts' windows stay open together; the profile
-  jar's user agent says Chrome, not Electron. Status/capture report `ownJar`. A hat reaches its jar through the account its profile
-  is linked to; no new hat -> cookie table was made.
-- **"It closes the login every time I click it."** ChatGPT's Log in is a modal on chatgpt.com: the URL is not a sign-in page. When
-  the click unloaded the page under the attention panel, `attention.js` read "not on a sign-in page" and hid the window. A window he
-  is using, or that is mid sign-in (0.60.97 freeze), is never hidden for that now. (Read from the code, not yet seen running: the
-  log line `[attention] chatgpt -- left the sign-in page (<url>)` is what confirms it.)
-- Tests: `clear-glass/test/signin-profile-jar.test.js` (new, in the clear-glass script). `test-cg-accounts-portal-settings` LP-05 and
-  LP-07 asserted the 0.60.13 rule ("opening B's sign-in closed A's window"); they now state the per-account-jar rule.
+## Not built (the larger idea, mapped)
+Tests generated from the contract's `conditions` before the build, written by a different hat (the officiator), required to fail first, run in a COS compartment via safe_apply, results shown beside the diff. .contract v2 already has executable `{test: file}` conditions, and lib/safe-apply.js already verifies in a COS branch; neither is on the Code-tab proposal path yet.
 
-## Not built
-
-- **Getting Electron past Google's "browser may not be secure".** Google refuses sign-in in embedded browsers on purpose (it
-  reads the browser's identity, not a cookie). Making Clear Glass pass means disguising it as Chrome; that is a spoof, fragile, and
-  it is Google's check, so it is not here. ChatGPT does not need Google: its email sign-in (password or emailed code) works in the
-  window, and ChatGPT also works signed out.
+## Open
+`copilot gave no route: signal is aborted without reason`, and the chatgpt `tab_busy` refusal.

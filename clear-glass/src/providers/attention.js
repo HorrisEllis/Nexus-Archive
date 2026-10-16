@@ -305,8 +305,6 @@ function createAttentionHandler({ providerHost, assign, getProvider = null, acco
   };
   const _onSignin = (url) => SIGNIN_RE.test(String(url || '')) || /accounts\.google\.com|login\.microsoftonline\.com|auth\.openai\.com|appleid\.apple\.com/.test(String(url || ''));
   const _def = (id) => { try { return getProvider ? getProvider(id) : null; } catch (_) { return null; } };
-  // §0.60.97 -- a window the host has marked as mid sign-in (account-switch freeze) is never sent back to the chat
-  const _signingIn = (id) => { try { const sw = accounts && accounts(); return !!(sw && typeof sw.isFrozen === 'function' && sw.isFrozen(id)); } catch (_) { return false; } };
   function _accountInfo(providerId) {
     const sw = accounts && accounts();
     if (!sw) return {};
@@ -323,10 +321,6 @@ function createAttentionHandler({ providerHost, assign, getProvider = null, acco
         catch (_) {   // the page navigated under the panel (a sign-in moving on): look where it is now
           await new Promise(r => setTimeout(r, 2500));
           if (win.isDestroyed()) break;
-          // §0.60.98 -- James: "i cant sign into chatgpt, it closes the login every time i click it." ChatGPT's Log in is a modal on
-          // chatgpt.com (the URL is not a sign-in page), so the page unloading under the panel read as "left the sign-in page" and the
-          // window was hidden on his click. A window he is using, or that is mid sign-in, is never hidden for that.
-          if (rec.reason === 'signin' && (_personUsing(win) || _signingIn(providerId))) continue;
           if (rec.reason === 'signin' && !_onSignin(win.webContents.getURL())) { log(`[attention] ${providerId} — left the sign-in page (${win.webContents.getURL()}); hiding the tab, the userscript connects`); win.hide(); break; }
           continue;
         }
@@ -386,14 +380,13 @@ function createAttentionHandler({ providerHost, assign, getProvider = null, acco
     }
     const { win, which } = w;
     _watch(win);
-    try { if (typeof providerHost.touch === 'function') providerHost.touch(providerId); } catch (_) {}   // §0.60.99 -- a window the person is asked to use is not idle
     const def = _def(providerId);
     const full0 = { ...rec, providerName: (def && def.name) || providerId, loginOptional: !!(def && def.loginOptional) };
     // the panel is already up on this tab: it shows the newest reason next round — never shown or focused again
     if (_active.has(win.id)) { _active.get(win.id).rec = full0; return { ok: true, window: which, already: true }; }
     // §0.60.2 — James: "chatgpt doesn't need a login currently." A provider whose chat works signed out
     // (registry loginOptional) is first sent back to its chat; the person is asked only if it lands on a sign-in page again.
-    if (rec.reason === 'signin' && def && def.loginOptional && def.url && !rec.askAnyway && !_personUsing(win) && !_signingIn(providerId)) {
+    if (rec.reason === 'signin' && def && def.loginOptional && def.url && !rec.askAnyway && !_personUsing(win)) {
       // §0.60.7 — FLAP FIX. A signed-out ChatGPT chat is a normal page: the userscript reports "signed-out" on every load,
       // and reloading it here dropped the NCP connection, which reloaded the page, which reported again — a reload every ~3 s.
       // If the tab is already off any sign-in page there is nothing to go back to: leave it alone. And never reload the same

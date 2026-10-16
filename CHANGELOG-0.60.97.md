@@ -1,33 +1,18 @@
-# 0.60.97 -- 2026-10-16
+# 0.60.97 (built on the branch as 0.60.73; renumbered at the merge with main) - 2026-10-16
 
-James: "looook at clearglass, trying to get chatgpt signed in" -- with a screenshot of Google's window, titled "Sign in - Google
-Accounts": "We've detected a problem with your cookie settings." Behind it, the Plan panel shows guardian dispatching to ChatGPT
-every few seconds (task.build / phase.escalating, ollama out of memory so each file escalates to `chatgpt`).
+James: "good embedded check isnt working, need to fix that for good."
 
-## What was wrong (read in the code; Electron cannot run here, so this is not yet seen working)
+## What was wrong
+The check ran once (or only when the queue had items), trusted the model list, and stayed decided: Ollama starting after Nexus was never noticed, "listed" meant "working" even when the model could not load, the address was hardcoded, and tf-idf and neural vectors were compared with each other.
 
-- **0.60.51 fixed the Accounts portal only.** `LoginPortal.open()` parks the provider tabs, quiets the session hub and takes the
-  jar for itself. A sign-in that starts **in the ChatGPT tab** (Log in -> Continue with Google, in the tab or a popup of it) never
-  went through the portal, so none of that applied.
-- **That sign-in runs in `persist:ncp-chatgpt`, the one provider jar, while guardian keeps using it:**
-  - `account-switch` `use()` / `sync()` restore the account's saved cookies with `replace:true` and reload the provider's tabs;
-  - `settled()` saves to, or removes from, the vault depending on what the jar holds at that moment;
-  - `attention` sends a ChatGPT window on a sign-in page back to the chat (loginOptional) unless it is focused.
-  Google sets a test cookie on one page and reads it back on the next; any of these between the two is that error.
+## What changed (lib/vector-memory.js, lib/local-vector-index.js)
+- Real probe: reachable, model pulled, and a test embedding of the right size. Each failure has its own reason, shown in status.
+- Re-check every 30 s on an unref'd timer; recovery upgrades tf-idf items to neural without a restart.
+- Every vector is tagged; search only compares like with like and reports what it skipped.
+- OLLAMA_HOST honoured; NEXUS_VECTOR_INDEX_DIR overrides the index dir.
 
-## What changed
+## Tests
+EC-01..10 against a fake Ollama that goes down and up. The pipeline test now uses a temp index.
 
-- `src/providers/account-switch.js`: `freeze(provider) -> release()` and `isFrozen()`. While frozen `use`, `sync` and `settled`
-  skip (and say why); counted, so two sign-ins in flight need two releases.
-- `src/providers/host.js`: `_guardSignIn` -- while any window of a provider (or a popup it opens) is on a sign-in host (Google,
-  Microsoft, Apple, OpenAI's auth) it calls `signInGuard(providerId)`, and releases when the window leaves, closes, or after 15
-  minutes. It logs the Google/OpenAI cookie changes by name and cause only (never a value) when the sign-in ends.
-- `src/main/index.js`: `providerHost.signInGuard` = session-hub `quiet()` + account-switch `freeze()`; one `settled()` after release.
-- `src/providers/attention.js`: a window that is mid sign-in is not bounced back to the chat.
-- `clear-glass/test/signin-in-provider-tab.test.js` (in the clear-glass test script): freeze semantics, one guard per sign-in,
-  popup guarded at once and released on close, cookie log has no values.
-
-## If it still says "cookie settings"
-
-The log line `[ProviderHost] chatgpt -- cookie changes during the sign-in: ...` names which cookie (`GAPS`, `__Host-GAPS`, ...) was
-set or removed and by what cause. That, plus whether the Plan panel kept dispatching during it, is what to look at next.
+## Limits
+Not run against real Ollama from here. A tf-idf item is upgraded from its 200-char snippet, not the full text.

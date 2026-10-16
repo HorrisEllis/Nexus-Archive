@@ -57,11 +57,8 @@ decisions:
       entry. To confirm.
     status: OPEN
 
-phases:
-  # bottom-up. backend -> API -> command -> UI (docs/CLAUDE.md order of delivery). Tested in Clear Glass, never Playwright.
-
   TL0_find_the_loss:
-    status: OPEN (needs his log or the screen it was on)
+    status: 'OPEN (a question for James, not a build — an agent cannot read his log or his screen; moved here 2026-10-16, see addendum c)'
     systems: [idearium, guardian, clear-glass]
     files: [idearium/spec-engine/index.js, lib/spec-collect.js, lib/run-state.js, guardian/lib/response-sink.js]
     depends_on: []
@@ -72,11 +69,14 @@ phases:
       as an addendum before TL1 is built.
     proof: "the lost spec's parts found on disk or proven absent, with the file paths or the gap named."
 
+phases:
+  # bottom-up. backend -> API -> command -> UI (docs/CLAUDE.md order of delivery). Tested in Clear Glass, never Playwright.
+
   TL1_chunks_land_as_they_arrive:
     status: OPEN
     systems: [core, idearium, guardian]
     files: [lib/work-journal.js (new), lib/node-export.js, idearium/spec-engine/index.js, idearium/lib/chunk-nodes.js, lib/spec-collect.js, guardian/lib/response-sink.js]
-    depends_on: [TL0_find_the_loss]
+    depends_on: []   # TL0 is a question for James (decisions), not a phase to wait on (addendum c)
     does: >-
       A piece of work is a folder of physical files, written as it happens, never only at the end:
       data/work/<repo>/<workId>/work.node (what it is, goal, status, the plan of chunks: id, title, status, hash),
@@ -177,3 +177,18 @@ not_verified:
 # His principle, recorded as his decision: all data persists; anything hardcoded has to earn its place. The coder applies it
 # to the open maps: TL1/TL2 (the rest of this map) and IH1 (docs/2026-10-16-intent-hat-agent-chain-phasemap.spec, where the
 # hardcoded VERB_TO_HAT becomes .intent nodes) are the next places it bites.
+
+# ## ADDENDUM 2026-10-16 (b) — TL1 is the same work as GW27 and FN3: build it once (no phase dropped, §0.3)
+# James: "marge with main, if additive. then whats next?"
+# Found on main after the merge: three open phases write the same thing, a node file per piece of work the moment it exists:
+#   TL1 here (each chunk a .chunk as it arrives), GW27 in docs/2026-10-15-gate-held-work-phasemap.spec (.input before dispatch,
+#   .response after on every backend, .output when it lands, .deps per plan), FN3 in docs/2026-10-16-agent-work-funnel-phasemap.spec
+#   (the funnel's answers as nodes). The coder's recommendation, his call: GW27 is the owner (it has the widest taxonomy, his
+#   decision (k) on chunk kinds, and the trace already reads it); TL1 and FN3 are marked "see GW27" when it lands, and TL2 (resume
+#   at boot) reads those files. The 17-chunk loss is the .response half: an answer saved only when its final file lands.
+
+# ## ADDENDUM 2026-10-16 (c) — TL0 is a question, not a build: moved under decisions (kept whole, §0.3)
+# James's screenshot (2026-10-16): "Build phase TL0_find_the_loss" RUNNING, attempt 9, 20 steps, 0 changed. TL0 asks which
+# screen and log lost his 17 chunks; only he has that, so an agent can search the repo forever and change nothing. The coder
+# had written it as a phase. Moved, unchanged, under decisions: (the scanner marks entries there kind: decision, which no build
+# picks). TL1 no longer waits on it. His answer still goes there.

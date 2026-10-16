@@ -32,7 +32,7 @@ const { loadVaultKey, encryptWith, decryptWithFallback } = require(path.join(CG,
 const CookieVault = require(path.join(CG, 'src/cookies/vault.js'));
 const { PasswordVault } = require(path.join(CG, 'src/passwords/vault.js'));
 const NexusOptions = require(path.join(CG, 'src/options/store.js'));
-const { LoginPortal, partitionFor, profilePartition } = require(path.join(CG, 'src/accounts/login-portal.js'));
+const { LoginPortal, partitionFor } = require(path.join(CG, 'src/accounts/login-portal.js'));
 
 // ── fake electron ──────────────────────────────────────────────────────────
 function fakeElectron() {
@@ -198,7 +198,7 @@ const REGISTRY = [{ id: 'claude', name: 'Claude', url: 'https://claude.ai', colo
     assert.strictEqual(opts.getAccount(A.id).sessions.claude.authCookies, 1);
   });
   await test('LP-05', 'an identity already owned by another account is refused BEFORE anything is written', async () => {
-    E.session.fromPartition(profilePartition('claude', B.id))._cookies.push({ name: 'sessionKey', value: 'b' });   // 0.60.98: B is not claude's primary account -- its own jar
+    E.session.fromPartition(partitionFor('claude', B.id))._cookies.push({ name: 'sessionKey', value: 'b' });
     const r = await portal.capture({ id: B.id, provider: 'claude', identity: { email: 'james@rheon.world' } });
     assert.strictEqual(r.ok, false); assert.ok(/already linked/.test(r.error));
     assert.strictEqual(vault.accountMeta('claude', B.id).stored, false, 'vault untouched on refusal');
@@ -216,7 +216,7 @@ const REGISTRY = [{ id: 'claude', name: 'Claude', url: 'https://claude.ai', colo
   await test('LP-07', 'status reports live cookies, vault copy, identity, credential and default', async () => {
     opts.setDefaultAccount('claude', A.id);
     const s = await portal.status({ id: A.id, provider: 'claude' });
-    assert.ok(s.portalOpen, '0.60.98: B is not the primary account, so B signs in in its own jar and A\'s window stays open'); assert.ok(!s.ownJar && (await portal.status({ id: B.id, provider: 'claude' })).ownJar, 'A is on the provider jar, B on its own'); assert.ok(portal.list().some(p => p.id === B.id)); assert.strictEqual(s.liveCookies, 2); assert.ok(s.vault.stored); assert.strictEqual(s.identity.accountId, 'james@rheon.world'); assert.ok(s.isDefault);
+    assert.ok(!s.portalOpen, '0.60.13: one session per provider — opening B\'s sign-in closed A\'s window'); assert.ok(portal.list().some(p => p.id === B.id)); assert.strictEqual(s.liveCookies, 2); assert.ok(s.vault.stored); assert.strictEqual(s.identity.accountId, 'james@rheon.world'); assert.ok(s.isDefault);
     const sb = await portal.status({ id: B.id, provider: 'claude' });
     assert.strictEqual(sb.credential.username, 'b@x.io');
   });
