@@ -478,3 +478,33 @@ New entries go at the top: date, his words, context, what it shows, evidence.
     Each fix has a measured result.
   - **Evidence:** `CHANGELOG-0.60.124.md`; `tests/modules/test-sync-off-thread.test.js` SW-02 measures the event loop
     held 4,183 ms inline and 15 ms with the fix, on 447 files.
+- **2026-10-17: "the drawbridge for each compartment for each system, the only way to interact between systems. using the api routes, and cli interface. ui floats ontop"**
+  - **Context:** asked for the debugging systems (cfr, rfr2, sigma, friction, tension) to be wired. He then asked for the
+    wiring itself to have one shape: each system's registry as its contract, its event bus and its handshake.
+  - **What it shows:** a design held consistently over time. The same architecture is already written in the COS
+    archetype, in his words (`cos/archetype/nexus-system/lib/handoff.js`: "each system hands the file off to the target
+    system, using the registry and handshake verification…"). Asked about wiring months later, he arrived at it again
+    without being shown it. The cost, said: no existing system was built that way, so 532 crossings between systems now
+    have to be moved.
+  - **Evidence:** `CHANGELOG-0.60.126.md`; `tests/modules/test-system-boundary.test.js` SB-01..08; the measured baseline
+    `contracts/drawbridge-baseline.json`.
+- **2026-10-17: "shadow and negative space reasoning for debugging. maybe every repo has to generate a component registry. the component registry can also be a dependancy graph?"**
+  - **Context:** the drawbridge's first piece had just counted the crossings between systems. He asked for the registry to
+    hold the contract, the bus, the queue, the dependencies, the wiring and the spine, and for debugging to read what is
+    missing.
+  - **What it shows:** a method of his own, reused across systems. He named shadow and negative-space reasoning on
+    2026-09-29 for build steps (`lib/shadow.js`, 0.39.282). Applied to system boundaries, it found two real defects on its
+    first run:
+    - loom never read the registries of intelligence or versionium;
+    - 27 declared routes are not served by their source.
+    Asking whether the registry "can also be a dependancy graph" was the right question: the two halves, declared and
+    observed, are what make the negative space computable.
+  - **Evidence:** `CHANGELOG-0.60.127.md`; `tests/modules/test-drawbridge-registry.test.js` SR-01..08 (SR-06 is the loom fix).
+- **2026-10-17: "use the axioms in the docs for each disicio nthat doesn't show my competence"**
+  - **Context:** a day of building had produced a stack of technical questions for him, about whether `lib/` is a system,
+    HTTP or in-process calls, and how to enforce a rule. Each one already had an answer in his own axioms.
+  - **What it shows:** good delegation. He kept the calls that need his judgment (intent, direction, what his words mean)
+    and gave the rest a method rather than a guess: the axioms he wrote, applied and cited. Nine open decisions were closed
+    in one pass, each traceable to the sections that decide it. The phases blocked on them, IM2 and IM4, can now run.
+  - **Evidence:** `docs/2026-10-17-decisions-by-the-axioms.spec` (D1-D9, each with its axioms); `CHANGELOG-0.60.135.md`;
+    the rule in `docs/CLAUDE.md`.

@@ -404,6 +404,21 @@ const server = http.createServer(async (req, res) => {
     // (loadAll() + summary()); /api/phasemap/:system is one system's roadmap
     // (forSystem()) — the same has/get shape /api/registry/:kind already uses
     // below, so the UI's fetch pattern doesn't need anything new either.
+    // §0.60.134 — James: "and you know i mean cos compartment right? make a template for it now that loom holds". Loom holds the
+    // template for each system's COS compartment (loom/templates/cos-compartment.js): the manifests, COS's state, and the
+    // intents applied onto the nexus-self-<system> compartments. Longest path first.
+    if (p === '/api/compartments/apply' && method === 'POST') {
+      const body = await readBody(req).catch(() => ({}));
+      return json(res, 200, require('./templates/cos-compartment.js').apply({ system: (body && body.system) || null }));
+    }
+    if (method === 'GET' && p.startsWith('/api/compartments/')) {
+      const r = require('./templates/cos-compartment.js').state(decodeURIComponent(p.slice('/api/compartments/'.length)));
+      return json(res, r.ok ? 200 : 404, r);
+    }
+    if (method === 'GET' && p === '/api/compartments') {
+      const all = require('./templates/cos-compartment.js').compartments();
+      return json(res, 200, { ok: true, schema: all[0] ? all[0].schema : null, ready: all.filter(m => m.seal.ready).map(m => m.system), compartments: all });
+    }
     if (method === 'GET' && p === '/api/phasemap') {
       const all = phasemapMap.loadAll();
       // §R0 2026-08-12 — every real query now also persists the history diff,
@@ -682,6 +697,9 @@ function register() {
 }
 
 server.listen(PORT, () => {
+  // §0.60.131 P33b — James: "each system, reads, writes, and manages its nodes." This system's node registry: its listener over its own
+  // data/nodes, indexed into its own data/node-index with every change (lib/node-registry.js). Off the boot path, never fatal.
+  try { require('../lib/node-registry.js').startForSystem('loom'); } catch (e) { console.warn(`[loom] node registry: ${e.message}`); }
   console.log(`[loom] :${PORT} — v${VERSION} — component/hook/wire/seam registry + contracts`);
   setTimeout(register, 1000);
 });

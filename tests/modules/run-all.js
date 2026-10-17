@@ -393,10 +393,18 @@ const SUITES = [
   'test-inject-screen.test.js',       // 0.60.98 — every proposal passes one screen at the door
   'test-repo-procedures.test.js',     // 0.60.118 DK1 — replayable procedures, .procedure files
   'test-expectation-tests.test.js',   // 0.60.119 TF1 — a file's expectation from the plan, before the code
+  'test-system-boundary.test.js',   // 0.60.126 DB1 — every require() across a system boundary, and the ratchet that only shrinks
+  'test-drawbridge-registry.test.js',   // 0.60.127 DB9/DB10 — a system's registry as its dependency graph, and its negative space
+  'test-system-tunnel.test.js',   // 0.60.128 DB13/DB14 — his lib/system-registry.js as the tunnel: routes, commands, toasts, heartbeat over routes
+  'test-system-node-relations.test.js',   // 0.60.129 DB18 — a system's nodes in relation to it: meta.system, .wire per dependency
+  'test-node-registry-system.test.js',   // 0.60.130 P33a — any system's node registry: its own database, all the history, the listener
+  'test-sovereign-systems.test.js',   // 0.60.133 IM1/IM5/IM6 — a system made sovereign: its own store, another reached through its route; the census
+  'test-cos-compartment-template.test.js',   // 0.60.134 — the template for each system's COS compartment, held by loom
   'test-code-dock.test.js',           // 0.60.118 DK2 — the dock: separate panels on the right edge (Clear Glass)
   'test-plan-pieces.test.js',         // 0.60.123 PP1–PP4 — the Plan's bar is its pieces; every run with its log; a piece/run points the dock (Clear Glass)
   'test-prevention.test.js',          // 0.60.123 MP — a memory crisis recorded becomes a prevention: heavy work waits for headroom; Ollama unloads when idle
   'test-sync-off-thread.test.js',     // 0.60.124 SW1–SW3 — the self-sync's pipeline in its own thread; Guardian holds jobs behind a sign-in wall; COS map EPERM
+  'test-phase-deps-gate.test.js',     // 0.60.125 DG1 — a phase build is refused while its depends_on are open (his decisions by their question); --anyway is the override
   'test-ui-editor.test.js',           // 0.60.122 UE0/UE1 — the UI editor: GrapesJS vendored, a repo page opened, edited, saved back (Clear Glass)
   'test-proposal-evidence.test.js',   // 0.60.99 — a proposal is tested before it reaches a person
   'test-language-checks.test.js',     // 0.60.101 — every language's own parser, at the gate

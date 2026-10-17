@@ -746,7 +746,7 @@ async function _phaseSetStatus(repo, { map, phase, status, force = false, reason
 // the call's own backend when there is no ladder ('ollama' when it names one), for shouldChunk
 function paramsOfBackend(backend, rungs) { return rungs.length ? null : backend || null; }
 
-async function _phaseBuild(repo, dir, { map, phase, backend = null, agent = null, provider = null, note = '', replan = false }) {
+async function _phaseBuild(repo, dir, { map, phase, backend = null, agent = null, provider = null, note = '', replan = false, anyway = false }) {
   const PH = await import('../repo/phases.js');
   const view = PH.managerView({ repo, repoDir: dir, runs: [] });
   const node = view.phases.find(p => p.map === map && p.phase_key === phase);
@@ -754,6 +754,14 @@ async function _phaseBuild(repo, dir, { map, phase, backend = null, agent = null
   if (node.status === 'complete') return { ok: false, status: 409, error: `${phase} is already complete`, extra: { code: 'ALREADY_COMPLETE' } };
   const { maps, scope } = PH.mapsFor({ repo, repoDir: dir });
   const mapText = (maps.find(m => m.path === map) || {}).text || '';
+  // §0.60.125 DG1 — James chose "Refuse, say why": a phase whose depends_on are still open (a decision not taken, a phase
+  // not complete) is not built. PC1 was built twelve times by five agents while his three decisions were open. anyway:
+  // true is his override, said on the run.
+  let depsGate = null;
+  try { depsGate = _require('../../lib/phase-deps-gate.js').openDeps({ phase, mapText, phases: view.phases }); } catch (e) { depsGate = { open: [], unknown: [], checked: false, why: e.message }; }
+  if (depsGate.open.length && !anyway) {
+    return { ok: false, status: 409, error: `not built: ${_require('../../lib/phase-deps-gate.js').line(depsGate, phase)}`, extra: { code: 'DEPS_OPEN', open: depsGate.open, unknown: depsGate.unknown } };
+  }
 
   // which repo builds it: this one, or for all of NEXUS the system that owns the files it names
   let target = repo;
@@ -776,7 +784,8 @@ async function _phaseBuild(repo, dir, { map, phase, backend = null, agent = null
   }
   const runStartTs = Date.now();
   const runId = `phrun-${runStartTs.toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
-  const base = { runId, repoUuid: repo.uuid, targetRepo: target.uuid, map, phase, phaseUuid: node.uuid, title: node.title };
+  const base = { runId, repoUuid: repo.uuid, targetRepo: target.uuid, map, phase, phaseUuid: node.uuid, title: node.title,
+    ...(depsGate && depsGate.open.length ? { depsOverride: depsGate.open.map(o => o.key) } : {}) };   // §0.60.125 DG1 — built anyway: what was still open, on every row
 
   // (1) snapshot first — never write without one
   const snap = await _commitRepoSnapshotFor(target.uuid, { message: `before phase ${phase} (${map.split('/').pop()})`, causedBy: `idearium.phases.build:${runId}` });
@@ -2761,6 +2770,12 @@ const ROUTE_CAP = {
   'system.lean': CAPS.READ_IDEAS, 'system.lean.set': CAPS.ADMIN,   // 0.60.20 lean mode
   'system.version': CAPS.READ_IDEAS,   // 0.60.34 VR1 — the one release version
   'system.prevention.clear': CAPS.ADMIN,   // 0.60.123 MP
+  'system.drawbridge': CAPS.READ_IDEAS,   // 0.60.126 DB1 — the crossings between systems, and the ratchet
+  'system.homes': CAPS.READ_IDEAS,   // 0.60.129 DB17
+  'system.sovereign': CAPS.READ_IDEAS,   // 0.60.133 IM1
+  'system.nodes': CAPS.READ_IDEAS,   // 0.60.130 P33a
+  'system.tunnel': CAPS.READ_IDEAS, 'system.tunnel.one': CAPS.READ_IDEAS, 'system.heartbeat': CAPS.READ_IDEAS,   // 0.60.128 DB13/DB14
+  'system.registry': CAPS.READ_IDEAS, 'system.registry.one': CAPS.READ_IDEAS, 'system.registry.settle': CAPS.WRITE_IDEAS,   // 0.60.127 DB9/DB10
   'providers.ready': CAPS.READ_IDEAS,   // 0.60.28 PF1
   'accounts.chain': CAPS.READ_IDEAS, 'accounts.chain.set': CAPS.ADMIN, 'accounts.rest': CAPS.ADMIN,   // 0.60.25 account fallback chain
   'accounts.profiles': CAPS.READ_IDEAS,   // 0.60.32 PF1 — every account tab and its lane
@@ -3047,6 +3062,16 @@ function matchRoute(method, url) {
     ['GET',    ['api','system','lean'],   'system.lean'],        // 0.60.20 — lean mode: what is held, saved for the next boot
     ['GET',    ['api','version'],         'system.version'],     // 0.60.34 VR1 — the release (lib/version.js), where it is stated, the module versions labelled
     ['POST',   ['api','system','prevention','clear'], 'system.prevention.clear'],   // 0.60.123 MP — a person ends a prevention early
+    ['GET',    ['api','system','drawbridge'], 'system.drawbridge'],   // 0.60.126 DB1 — every require() that crosses a system boundary; ?new=1 the ratchet's drift only
+    ['GET',    ['api','system','homes'], 'system.homes'],
+    ['GET',    ['api','system','sovereign'], 'system.sovereign'],   // 0.60.133 IM1 — which systems are sovereign, and what stands in each one's way (?system=)
+    ['GET',    ['api','system','nodes',':system'], 'system.nodes'],   // 0.60.130 P33a — a system's own node database: per type, its files, its index, its history; ?type= lists, &id= one node's history   // 0.60.129 DB17 — files in shared folders that belong to one system (a census: nothing moves)
+    ['GET',    ['api','system','tunnel'], 'system.tunnel'],   // 0.60.128 DB13 — every system's tunnel: where it runs, its routes, the commands that reach it, its toasts
+    ['GET',    ['api','system','tunnel',':name'], 'system.tunnel.one'],   // 0.60.128 DB13/DB14 — one system's tunnel, with its heartbeat asked over its health route
+    ['GET',    ['api','system','heartbeat'], 'system.heartbeat'],   // 0.60.128 DB14 — every system asked over its health route: up, degraded, down
+    ['GET',    ['api','system','registry'], 'system.registry'],   // 0.60.127 DB9 — every system and the crossings between them: the dependency graph
+    ['GET',    ['api','system','registry',':system'], 'system.registry.one'],   // 0.60.127 DB9/DB10 — one system's generated registry: declared, observed, negative space
+    ['POST',   ['api','system','registry',':system','settle'], 'system.registry.settle'],   // 0.60.127 DB10 — the shadow settled: each absence a gap
     ['POST',   ['api','system','lean'],   'system.lean.set'],    // 0.60.20 — { on } stops/starts the held services now and saves it
     ['POST',   ['api','repos',    ':uuid','system',':op'],  'repo.system.control'],      // §0.39.372 NC2 — restart | stop | start, through the supervisor
     ['GET',    ['api','repos',    ':uuid','run'],            'repo.run'],           // §0.60.0 RS1 — the repo's run state: playing | paused
@@ -5268,6 +5293,60 @@ async function handle(req, res, route, query, body) {
       const cur = R.current();
       return ok(res, { ...cur, agreement: R.agreement(), github: `https://github.com/HorrisEllis/Nexus/releases/tag/${cur.tag}`,
         modules: { ideaos: modVer('idearium/package.json'), clearGlass: modVer('clear-glass/package.json') } });
+    }
+    case 'system.nodes': {   // 0.60.130 P33a — James: "each system has a database for each index of nodes with all the history."
+      const SR = _require('../../lib/system-registry.js'), NR = _require('../../lib/node-registry.js');
+      const root = path.dirname(_require.resolve('../../package.json'));
+      const sys = String(params.system || ''), folder = SR.folderOf(sys) || sys;
+      if (!fs.existsSync(path.join(root, folder, 'data', 'nodes'))) return err(res, 404, `${sys} has no data/nodes folder`);
+      if (!fs.existsSync(path.join(root, folder, 'data', 'node-index'))) {   // a read creates nothing: no database yet is said
+        const types = {};
+        for (const t of fs.readdirSync(path.join(root, folder, 'data', 'nodes'), { withFileTypes: true }).filter(e => e.isDirectory() && e.name !== '_archive')) types[t.name] = { files: fs.readdirSync(path.join(root, folder, 'data', 'nodes', t.name)).filter(f => !f.startsWith('.') && f !== '_ledger.jsonl').length, indexed: 0, history: 0 };
+        return ok(res, { system: folder, nodesDir: `${folder}/data/nodes`, store: null, types, said: `${folder} has no node database yet: the next node sync (at boot) writes ${folder}/data/node-index` });
+      }
+      const reg = NR.createNodeRegistry({ system: folder, root, fresh: true });   // a reader in another process: read from disk now
+      if (query && query.type && query.id) return ok(res, { system: folder, type: query.type, id: query.id, node: reg.get(query.type, query.id), history: reg.history(query.type, query.id) });
+      if (query && query.type) return ok(res, { system: folder, type: query.type, nodes: reg.list(query.type).map(n => ({ id: n.id, summary: n.summary || null, updatedAt: n.updatedAt || null })) });
+      return ok(res, reg.stats());
+    }
+    case 'system.sovereign': {   // 0.60.133 IM1 — James: "need to get the systems soveriegn again like we were talking about."
+      const SB = _require('../../lib/system-boundary.js');
+      return ok(res, SB.sovereignty({ root: path.dirname(_require.resolve('../../package.json')), system: (query && query.system) || null }));
+    }
+    case 'system.homes': {   // 0.60.129 DB17 — James: "all system relevant files should stay with the system."
+      const SB = _require('../../lib/system-boundary.js');
+      const h = SB.homes({ root: path.dirname(_require.resolve('../../package.json')) });
+      return ok(res, { ...h, list: query && query.system ? h.list.filter(x => x.home === query.system) : h.list });
+    }
+    case 'system.tunnel':
+    case 'system.tunnel.one':
+    case 'system.heartbeat': {   // 0.60.128 DB13 + DB14 (docs/2026-10-17-system-drawbridge-phasemap.spec, addendum b): his lib/system-registry.js as the tunnel
+      const SYS = _require('../../lib/system-registry.js');
+      if (action === 'system.heartbeat') {
+        const beats = await Promise.all(SYS.list().map(s => SYS.heartbeat(s.name)));
+        return ok(res, { at: new Date().toISOString(), up: beats.filter(b => b.status === 'up').length, systems: beats });
+      }
+      const { SPEC } = await import('../cli/route-commands.js');
+      if (action === 'system.tunnel') return ok(res, SYS.tunnels({ commands: SPEC }));
+      const t = SYS.tunnel(String(params.name || ''), { commands: SPEC });
+      if (!t.ok) return err(res, 404, t.error);
+      return ok(res, { ...t, heartbeat: await SYS.heartbeat(t.name) });
+    }
+    case 'system.registry':
+    case 'system.registry.one':
+    case 'system.registry.settle': {   // 0.60.127 DB9 + DB10 (docs/2026-10-17-system-drawbridge-phasemap.spec, addendum a)
+      const SR = _require('../../lib/drawbridge-registry.js');
+      if (action === 'system.registry') return ok(res, SR.graph({}));
+      const r = action === 'system.registry.settle' ? SR.settle(String(params.system || '')) : SR.registryOf(String(params.system || ''));
+      return r.ok ? ok(res, r) : err(res, 404, r.error);
+    }
+    case 'system.drawbridge': {   // 0.60.126 DB1 (docs/2026-10-17-system-drawbridge-phasemap.spec)
+      const SB = _require('../../lib/system-boundary.js');
+      const root = path.dirname(_require.resolve('../../package.json'));
+      const ck = SB.check({ root });
+      if (query && (query.new === '1' || query.new === 'true')) return ok(res, { check: ck });
+      const cs = SB.census({ root });
+      return ok(res, { census: { files: cs.files, total: cs.total, byKind: cs.byKind, pairs: cs.pairs.slice(0, 60) }, check: { ok: ck.ok, counts: ck.counts, added: ck.added.slice(0, 40), closed: ck.closed.slice(0, 40), why: ck.why } });
     }
     case 'system.prevention.clear': {
       const cls = String((body && body.cls) || 'memory_pressure');
@@ -8361,7 +8440,7 @@ async function handle(req, res, route, query, body) {
         if (hits.length !== 1) return err(res, hits.length ? 409 : 404, hits.length ? `${phase} is in ${hits.length} phasemaps — name one: ${hits.map(h => h.map).join(', ')}` : `no phase ${phase} in this repo`);
         map = hits[0].map;
       }
-      const r = await _phaseBuild(repo, dir, { map, phase, backend: body.backend || null, agent: body.agent || null, provider: body.provider || null, note: body.note || '', replan: body.replan === true });
+      const r = await _phaseBuild(repo, dir, { map, phase, backend: body.backend || null, agent: body.agent || null, provider: body.provider || null, note: body.note || '', replan: body.replan === true, anyway: body.anyway === true });
       if (!r.ok) return err(res, r.status, r.error, r.extra);
       return ok(res, r.data);
     }
@@ -9821,6 +9900,9 @@ export function startAPI() {
   server.listen(PORT, BINDING, async () => {
     // ESM: use createRequire for CJS modules
     const _require = createRequire(import.meta.url);
+    // §0.60.131 P33b — James: "each system, reads, writes, and manages its nodes." This system's node registry: its listener over its own
+    // data/nodes, indexed into its own data/node-index with every change (lib/node-registry.js). Off the boot path, never fatal.
+    try { _require('../../lib/node-registry.js').startForSystem('idearium', { bus: { emit: (e, d) => getIdeaOS().emit(e, d) } }); } catch (e) { console.warn(`[idearium/api] node registry: ${e.message}`); }
     // §CT8 0.39.352 — copilot reports each tool call of a repo agent here, as it happens (the Code tab's live activity)
     try { _require('../../lib/repo-agent.js').setToolEventSink(`http://127.0.0.1:${PORT}`); } catch (e) { console.warn(`[idearium/api] live tool events not wired: ${e.message}`); }
     try { const n = _reconcileRuns().length; if (n) console.log(`[idearium/api] ${n} run(s) left in flight by the last process — marked interrupted`); } catch (e) { console.warn(`[idearium/api] runs not reconciled: ${e.message}`); }

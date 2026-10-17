@@ -51,9 +51,41 @@ const FILES = [
   ['lib/repo-procedures.js', I('lib/repo-procedures.js'), [I('lib/node-export.js'), I('lib/run-state.js'), I('idearium/lib/data-dir.cjs')]],   // §0.60.118 DK1: .procedure files, replayed through an injected tool runner
   ['idearium/ui/js/ui-editor-doc.js', I('idearium/ui/js/ui-editor-doc.js'), []],   // §0.60.122 UE1: the page ↔ editor round trip (pure)
   ['idearium/ui/js/ui-editor.js', I('idearium/ui/js/ui-editor.js'), [I('idearium/ui/js/ui-editor-doc.js')]],   // §0.60.122 UE1: the editor page on vendored GrapesJS (idearium/ui/vendor/grapesjs, BSD-3-Clause)
+  ['lib/system-boundary.js', I('lib/system-boundary.js'), []],
+  ['loom/templates/cos-compartment.js', I('loom/templates/cos-compartment.js'), [I('lib/system-registry.js'), I('lib/system-boundary.js'), I('lib/cos-bridge.js')]],   // §0.60.134 the template for each system's COS compartment
+  ['lib/system-store.js', I('lib/system-store.js'), [I('lib/jaa-store.js')]],   // §0.60.133 IM6: a system's own database, its tables brought home from cortex's once
+  ['lib/node-registry.js', I('lib/node-registry.js'), [I('lib/jaa-store.js'), I('lib/node-index.js'), I('lib/node-export.js'), I('lib/node-schemas.js')]],   // §0.60.130 P33a: any system's node registry into its own store, with the history and the listener
+  ['lib/jaa-store.js', I('lib/jaa-store.js'), []],   // §0.60.130: moved from guardian/jaa-store.js (re-exported there) — the kernel's store
+  ['lib/system-registry.js', I('lib/system-registry.js'), [I('lib/component-registry.js'), I('lib/cos-bridge.js')]],   // §0.60.128 DB13/DB14: his 2026-09-06 runtime registry, extended as the tunnel (tunnel/heartbeat/tunnels); reads each system's registry-components.js by path (the registry is the door)
+  ['lib/drawbridge-registry.js', I('lib/drawbridge-registry.js'), [I('lib/system-boundary.js'), I('loom/scanners/capability-map.js'), I('lib/shadow.js')]],   // §0.60.127 DB9/DB10: a system's registry generated as its dependency graph; the negative space through lib/shadow.js   // §0.60.126 DB1: every require() across a system boundary; the ratchet holds contracts/drawbridge-baseline.json
   ['idearium/ui/js/code-dock.js', I('idearium/ui/js/code-dock.js'), [I('idearium/ui/js/work-surface.js'), I('idearium/ui/js/repo-tasks.js'), I('idearium/ui/js/plan-panel.js')]],   // §0.60.118 DK2: the dock — _wsCard, _rtTree/_rtRow, _ppContext reused (page globals)
 ];
 const CONSUMERS = [
+  [I('idearium/api/index.js'),                    I('lib/system-boundary.js'), '§DB1 0.60.126 GET /api/system/drawbridge → census() + check() (lazy require in the case)'],
+  [I('orchestrator/orchestrator.js'), I('lib/node-registry.js'), '§P33b 0.60.131 startForSystem at boot: this system\'s own node listener, its own store'],
+  [I('cortex/boot.js'), I('lib/node-registry.js'), '§P33b 0.60.131 startForSystem at boot: this system\'s own node listener, its own store'],
+  [I('guardian/server.js'), I('lib/node-registry.js'), '§P33b 0.60.131 startForSystem at boot: this system\'s own node listener, its own store'],
+  [I('idearium/api/index.js'), I('lib/node-registry.js'), '§P33b 0.60.131 startForSystem at boot: this system\'s own node listener, its own store'],
+  [I('architect/service.js'), I('lib/node-registry.js'), '§P33b 0.60.131 startForSystem at boot: this system\'s own node listener, its own store'],
+  [I('diagnostic/nexus-diagnostic.js'), I('lib/node-registry.js'), '§P33b 0.60.131 startForSystem at boot: this system\'s own node listener, its own store'],
+  [I('intelligence/server.js'), I('lib/node-registry.js'), '§P33b 0.60.131 startForSystem at boot: this system\'s own node listener, its own store'],
+  [I('ollama/server.js'), I('lib/node-registry.js'), '§P33b 0.60.131 startForSystem at boot: this system\'s own node listener, its own store'],
+  [I('versionium/server.js'), I('lib/node-registry.js'), '§P33b 0.60.131 startForSystem at boot: this system\'s own node listener, its own store'],
+  [I('copilot/server.js'), I('lib/node-registry.js'), '§P33b 0.60.131 startForSystem at boot: this system\'s own node listener, its own store'],
+  [I('loom/server.js'), I('lib/node-registry.js'), '§P33b 0.60.131 startForSystem at boot: this system\'s own node listener, its own store'],
+  [I('clear-glass/src/main/index.js'), I('lib/node-registry.js'), '§P33b 0.60.131 startForSystem at boot: this system\'s own node listener, its own store'],
+  [I('loom/server.js'),                           I('loom/templates/cos-compartment.js'), '§0.60.134 GET /api/compartments[/:system], POST /api/compartments/apply'],
+  [I('nexus-healer/api/index.js'),                I('lib/system-store.js'), '§0.60.133 healer_proposals in its own store (was cortex/memory/jaa-db.js)'],
+  [I('nexus-healer/api/index.js'),                I('lib/system-registry.js'), '§0.60.133 the tunnel: where intelligence is, to ask its forge route'],
+  [I('idearium/api/index.js'),                    I('lib/system-boundary.js'), '§IM1 0.60.133 GET /api/system/sovereign → sovereignty()'],
+  [I('lib/system-nodes.js'),                      I('lib/node-registry.js'), '§P33a 0.60.130 sync(): each system scanned into its own store (guardian runs its own)'],
+  [I('idearium/api/index.js'),                    I('lib/node-registry.js'), '§P33a 0.60.130 GET /api/system/nodes/:system'],
+  [I('guardian/jaa-store.js'),                    I('lib/jaa-store.js'), '§0.60.130 the old path re-exports the moved store'],
+  [I('lib/system-nodes.js'),                      I('lib/system-boundary.js'), '§DB18 0.60.129 plan(): the .wire nodes and depends_on/consumed_by from scan() (lazy require)'],
+  [I('idearium/api/index.js'),                    I('lib/system-boundary.js'), '§DB17 0.60.129 GET /api/system/homes → homes()'],
+  [I('idearium/api/index.js'),                    I('lib/system-registry.js'), '§DB13/DB14 0.60.128 GET /api/system/tunnel[/:name], /api/system/heartbeat (commands handed in from idearium/cli/route-commands.js SPEC)'],
+  [I('idearium/api/index.js'),                    I('lib/drawbridge-registry.js'), '§DB9/DB10 0.60.127 GET /api/system/registry[/:system], POST …/:system/settle (lazy require in the case)'],
+  [I('tests/modules/test-system-boundary.test.js'), I('lib/system-boundary.js'), '§DB1 0.60.126 SB-06: the ratchet over Nexus itself'],
   [I('lib/step-gate.js'),                           I('lib/checks/ck-248-toolchain.js'), 'checkText(): the code.write gate parses every language the table knows with that language\'s own tool; a missing tool is not a pass (0.60.77)'],
   [I('lib/proposal-evidence.js'),                   I('lib/checks/ck-248-toolchain.js'), 'compare(): syntax status per file — checked, or NOT checked and why (0.60.77)'],
   [I('lib/code-edit.js'),                           I('lib/proposal-evidence.js'), '§FR2 0.60.115 promoteTested(): gatherBatch — a staged batch tested together in the repo\'s own tree before promote'],

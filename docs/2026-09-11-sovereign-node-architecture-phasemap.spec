@@ -1015,7 +1015,18 @@ spec:
   phases_added_2026_10_10:
     P33_every_system_runs_its_node_registry:
       systems: [core, cortex, guardian, idearium, copilot, intelligence, versionium, cos, loom, orchestrator, architect, diagnostic, eravos, clear-glass, ollama, emerge, warp]
-      status: open
+      status: "PARTLY BUILT 0.60.131 — P33a (0.60.130) lib/node-registry.js; P33b (0.60.131) every system with its own process starts its own listener at boot (orchestrator, cortex, guardian, idearium, architect, diagnostic, intelligence, ollama, versionium, copilot, loom, clear-glass), guardian onto the shared registry and its own store, one writer per database (the boot sync indexes only cos, emerge, nexus-healer, sentinel, warp). OPEN: the .store node; the systems with no data/nodes (they need a registry first, P8)."
+      addendum_2026_10_17: >-
+        James, 2026-10-17: "each system, reads, writes, and manages its nodes. each system has a database for each index of
+        nodes with all the history. listener, schemas for all the  node types, the database. nodes for all persistant data.
+        ... all of this and more is phased already." Built as P33a (docs/2026-10-17-system-drawbridge-phasemap.spec addendum
+        d): lib/node-registry.js createNodeRegistry({ system }) keeps guardian/lib/node-registry.js's per-file rules (parse,
+        folder type, schema check, ledger line, index, bus event) as an instance per system, indexed into
+        <system>/data/node-index (nodes_<type> + nodes_<type>_ledger); lib/system-nodes.js sync() scans each system into its
+        own store (guardian excepted: its own registry runs). guardian/jaa-store.js moved to lib/jaa-store.js (kernel; the old
+        path re-exports). Found: guardian's registry indexes into the CENTRAL cortex store, not its own; cortex's 9
+        failure_mode nodes carry gapUuid null where schema.failure_mode says string (refused by the check, said, schema not
+        changed). GET /api/system/nodes/:system, `system nodes <system> [<type> [<id>]]`; tests NR-01..08.
       depends_on: [P3_per_system_node_schemas, P5_data_folder_completion]
       description: |
         The architecture spec's AS1, made the rule: guardian/lib/node-registry.js's pattern (a watcher per node type, a

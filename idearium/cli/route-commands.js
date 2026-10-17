@@ -324,6 +324,72 @@ export const SPEC = [
       console.log(`  all phases: ${d.line}`); for (const p of d.phases) console.log(`  ${String(p.phase).padEnd(12)} ${h.c.dim(p.line)}`);
     } },
   // 0.60.20 — lean mode, the same switch as Idearium → Settings → Routing (every agent has it through nexus.command)
+  // 0.60.126 DB1 — the crossings between systems: what the drawbridge must become the only way for (docs/2026-10-17-system-drawbridge-phasemap.spec)
+  // 0.60.134 — the template for each system's COS compartment, held by loom (reached through loom's own routes)
+  { key: 'system.compartment', repo: false, usage: 'system compartment [<system>] [--apply]', about: 'each system\'s COS compartment from loom\'s template (nexus-self-<system>): its intent (end state: sovereign; conditions; the genesis axioms), runtime, mounts (its folder, the kernel read-only), drawbridge, store, and its seal — ready only when it is sovereign; --apply writes the intents onto the compartments COS holds',
+    req: (a) => (a.flags && a.flags.apply ? { system: 'loom', method: 'POST', path: '/api/compartments/apply', body: a.args[0] ? { system: a.args[0] } : {} } : { system: 'loom', method: 'GET', path: a.args[0] ? `/api/compartments/${encodeURIComponent(a.args[0])}` : '/api/compartments' }),
+    print: (d, a, h) => {
+      if (d.results) { for (const r of d.results) console.log(`  ${(r.ok ? h.c.mint('applied') : h.c.amber('not yet'))} ${String(r.system).padEnd(16)} ${h.c.dim(r.compartment || '')} ${h.c.dim(r.said || r.error || (r.seal ? 'seal ready' : 'seal open'))}`); return; }
+      const one = (m) => console.log(`  ${(m.seal.ready ? h.c.mint('ready ') : h.c.amber('open  '))} ${m.system.padEnd(16)} ${h.c.dim(m.cos.name)}  ${h.c.dim(m.seal.why)}${m.live ? h.c.dim(m.live.exists ? ' · in COS' : ' · ' + m.live.said) : ''}`);
+      if (d.compartments) { d.compartments.forEach(one); console.log(h.c.dim(`  ready to move in: ${(d.ready || []).join(', ') || '—'}`)); return; }
+      one(d); for (const c of [...d.cos.intent.endState, ...d.cos.intent.conditions]) console.log(h.c.dim(`    ${c.says}`)); for (const m of d.mounts) console.log(h.c.dim(`    mount ${m.mode} ${m.path} — ${m.why}`));
+    } },
+  // 0.60.133 IM1 — "need to get the systems soveriegn again": which systems are, and what stands in each one's way
+  { key: 'system.sovereign', repo: false, usage: 'system sovereign [<system>]', about: 'which systems are sovereign (nothing they require is in another system\'s folder; lib/ is the kernel) and, for each that is not, what is in the way: its data kept in cortex\'s store, a shared primitive in another system, or another system\'s capability required as a file',
+    req: (a) => ({ method: 'GET', path: `/api/system/sovereign${a.args[0] ? `?system=${encodeURIComponent(a.args[0])}` : ''}` }),
+    print: (d, a, h) => {
+      for (const r of d.systems || []) {
+        console.log(`  ${(r.sovereign ? h.c.mint('sovereign') : h.c.amber('not yet  '))} ${r.system.padEnd(16)} ${h.c.dim(`out ${r.out} · in ${r.in} · kernel ${r.kernel}`)}${r.sovereign ? '' : h.c.dim(`  — data ${r.blockers.data} · primitive ${r.blockers.primitive} · capability ${r.blockers.capability}`)}`);
+        if (r.list) for (const [k, xs] of Object.entries(r.list)) for (const x of xs) console.log(h.c.dim(`      ${k.padEnd(10)} ${x.from} → ${x.to}`));
+      }
+      console.log(h.c.dim(`  ${(d.sovereign || []).length} sovereign: ${(d.sovereign || []).join(', ') || '—'}`));
+    } },
+  // 0.60.130 P33a — a system's own node database: each index with all its history
+  { key: 'system.nodes', repo: false, usage: 'system nodes <system> [<type> [<id>]]', about: 'a system\'s own node database (<system>/data/node-index): each node type with its files, its index and its history; with a type, its nodes; with an id, that node and every change it went through',
+    req: (a) => ({ method: 'GET', path: `/api/system/nodes/${encodeURIComponent(a.args[0] || '')}${a.args[1] ? `?type=${encodeURIComponent(a.args[1])}${a.args[2] ? `&id=${encodeURIComponent(a.args[2])}` : ''}` : ''}` }),
+    print: (d, a, h) => {
+      if (d.history) { console.log(`  ${d.system} · ${d.type}/${d.id} ${d.node ? '' : h.c.amber('(not in the index)')}`); for (const x of d.history) console.log(`  ${new Date(x.ts).toLocaleString()}  ${x.action}`); return; }
+      if (d.nodes) { for (const n of d.nodes) console.log(`  ${n.id}  ${h.c.dim(n.summary || '')}`); console.log(h.c.dim(`  ${d.nodes.length} ${d.type} node(s) in ${d.system}'s index`)); return; }
+      console.log(`  ${d.system} · nodes ${d.nodesDir} · database ${d.store || h.c.amber('none yet')}`); if (d.said) console.log(h.c.amber(`  ${d.said}`));
+      for (const [t, v] of Object.entries(d.types || {})) console.log(`  ${t.padEnd(18)} ${String(v.files).padStart(5)} files · ${String(v.indexed).padStart(5)} indexed · ${String(v.history).padStart(6)} history ${v.files !== v.indexed ? h.c.amber('· not all indexed') : ''}`);
+    } },
+  // 0.60.129 DB17 — "all system relevant files should stay with the system": which files in lib/, hooks/, service/ … belong to one system
+  { key: 'system.homes', repo: false, usage: 'system homes [<system>]', about: 'files in the shared folders (lib/, hooks/, service/, contracts/ …) that belong to one system: used only by it, or named for it in hooks/ and service/. A census: nothing moves',
+    req: (a) => ({ method: 'GET', path: `/api/system/homes${a.args[0] ? `?system=${encodeURIComponent(a.args[0])}` : ''}` }),
+    print: (d, a, h) => { console.log(`  ${d.moves} of ${d.files} files in shared folders belong to one system · ${d.unused.length} are required by nothing (by a static path)`); if (!a.args[0]) console.log(h.c.dim(`  ${Object.entries(d.byHome).sort((x, y) => y[1].length - x[1].length).map(([k, v]) => `${k} ${v.length}`).join(' · ')}`)); for (const m of (a.args[0] ? d.list : d.list.slice(0, 25))) console.log(`  ${m.file.padEnd(48)} → ${h.c.mint(m.home)} ${h.c.dim(m.why)}`); } },
+  // 0.60.128 DB13 + DB14 — his lib/system-registry.js as the tunnel: through it the CLI, the routes, the toasts, and the heartbeat over routes
+  { key: 'system.tunnel', repo: false, usage: 'system tunnel [<system>]', about: 'the tunnel into each system (lib/system-registry.js): where it runs, the routes it declares, the commands that reach them, its toasts and compartment, and what is missing; with a system, its heartbeat asked over its own health route',
+    req: (a) => ({ method: 'GET', path: a.args[0] ? `/api/system/tunnel/${encodeURIComponent(a.args[0])}` : '/api/system/tunnel' }),
+    print: (d, a, h) => {
+      if (d.systems) { for (const t of d.systems) console.log(`  ${t.name.padEnd(22)} ${h.c.dim(t.runtime && t.runtime.port ? `:${t.runtime.port}` : 'no port').padEnd(8)} ${String(t.routes.length).padStart(4)} routes · ${String(t.commands.length).padStart(3)} commands ${t.said.length ? h.c.amber('· ' + t.said.length + ' missing') : ''}`); console.log(h.c.dim(`  ${d.commands.through_a_declared_route} of ${d.commands.total} commands reach a declared route; ${d.commands.undeclared.length} reach routes no registry declares`)); return; }
+      const hb = d.heartbeat || {};
+      console.log(`  ${d.name} · ${(hb.status === 'up' ? h.c.mint : h.c.amber)(hb.status || '?')} ${h.c.dim(hb.why || '')}${hb.ms != null ? h.c.dim(` (${hb.ms} ms)`) : ''}`);
+      if (d.runtime) console.log(h.c.dim(`  port ${d.runtime.port || '—'} · ${d.runtime.healthUrl || 'no health route'} · v${d.runtime.version || '?'} · data ${d.runtime.dataDir || '—'}`));
+      console.log(`  ${d.routes.length} routes declared${d.registry ? ` in ${d.registry.file}` : ''} · ${d.commands.length} commands reach them`);
+      for (const c of d.commands.slice(0, 12)) console.log(h.c.dim(`    ${c.command}  →  ${c.route}`));
+      for (const x of d.said) console.log(h.c.amber(`  ${x}`));
+    } },
+  { key: 'system.heartbeat', repo: false, usage: 'system heartbeat', about: 'every system asked over its own health route, now: up, degraded (answered badly or slowly), down, with why',
+    req: () => ({ method: 'GET', path: '/api/system/heartbeat' }),
+    print: (d, a, h) => { for (const b of d.systems || []) console.log(`  ${(b.status === 'up' ? h.c.mint : h.c.amber)(b.status.padEnd(8))} ${b.name.padEnd(22)} ${h.c.dim(`${b.ms != null ? b.ms + ' ms · ' : ''}${b.why}`)}`); console.log(h.c.dim(`  ${d.up} of ${(d.systems || []).length} up`)); } },
+  // 0.60.127 DB9 + DB10 — a system's registry generated as its dependency graph, and its negative space (what is declared and not there, what is there and not declared)
+  { key: 'system.registry', repo: false, usage: 'system registry [<system>] [--settle]', about: 'with no system: every system and what it depends on (the dependency graph). With one: its registry generated from the source — what it declares (routes, served), what it depends on and who consumes it, and the negative space: declared routes the source does not serve, and files other systems reach into directly. --settle records each absence as a gap',
+    req: (a) => (!a.args[0] ? { method: 'GET', path: '/api/system/registry' } : a.flags && a.flags.settle ? { method: 'POST', path: `/api/system/registry/${encodeURIComponent(a.args[0])}/settle`, body: {} } : { method: 'GET', path: `/api/system/registry/${encodeURIComponent(a.args[0])}` }),
+    print: (d, a, h) => {
+      if (d.systems) { for (const s of d.systems.filter(s => s.depends_on.length || s.consumed_by.length)) console.log(`  ${s.id.padEnd(16)} ${h.c.dim(s.declared.registry ? `${s.declared.served}/${s.declared.routes} routes served` : 'no registry')} → ${s.depends_on.join(', ') || '—'}`); console.log(h.c.dim(`  ${d.systems.length} systems · ${d.edges.length} dependency edges`)); return; }
+      const o = d.observed, n = d.negative;
+      console.log(`  ${d.system} · ${d.declared.file ? `${d.declared.served}/${d.declared.routes} declared routes served` : h.c.amber('no registry-components.js')}`);
+      console.log(`  depends on   ${o.depends_on.map(x => `${x.system} ${x.edges}`).join(' · ') || '—'}`);
+      console.log(`  consumed by  ${o.consumed_by.map(x => `${x.system} ${x.edges}`).join(' · ') || '—'}`);
+      for (const x of n.absent.routes) console.log(h.c.amber(`  absent  ${x.route}  ${h.c.dim(x.id)}`));
+      for (const x of n.absent.wires) console.log(h.c.amber(`  absent  wire ${x.from} → ${x.target}  ${h.c.dim(x.why)}`));
+      for (const x of n.extra.reached_directly.slice(0, 15)) console.log(`  ${h.c.amber('past')}    ${x.file} ${h.c.dim(`${x.consumers} file(s) in ${x.from.join(', ')}`)}`);
+      if (n.extra.reached_directly.length > 15) console.log(h.c.dim(`  … ${n.extra.reached_directly.length - 15} more reached directly`));
+      if (d.settled) console.log(h.c.dim(`  settled: ${d.settled.absent} absent, ${d.settled.gaps} gap(s) recorded`));
+    } },
+  { key: 'system.drawbridge', repo: false, usage: 'system drawbridge [--new]', about: 'every require() that crosses from one system into another, by pair and kind (system, upward from lib/, kernel), and the ratchet: crossings new since the baseline fail; --new shows only those',
+    req: (a) => ({ method: 'GET', path: `/api/system/drawbridge${a.flags && a.flags.new ? '?new=1' : ''}` }),
+    print: (d, a, h) => { const ck = d.check || {}; if (d.census) { const c = d.census; console.log(`  ${c.total} crossings in ${c.files} files · system ${c.byKind.system} · upward ${c.byKind.upward} · kernel ${c.byKind.kernel}`); for (const p of c.pairs.filter(p => p.kind !== 'kernel').slice(0, 20)) console.log(`  ${String(p.count).padStart(4)} ${p.pair.padEnd(32)} ${h.c.dim(p.kind)}`); } if (ck.why) console.log(h.c.amber(`  ${ck.why}`)); else console.log((ck.ok ? h.c.mint : h.c.amber)(`  ratchet: ${ck.counts.now} held of ${ck.counts.baseline} at the baseline · ${ck.counts.added} new · ${ck.counts.closed} closed`)); for (const x of ck.added || []) console.log(h.c.amber(`  new  ${x.edge}`)); } },
   { key: 'system.lean', repo: false, usage: 'system lean [on|off]', about: 'lean mode: stop the services a build does not use (now and at every start), or start them again',
     req: (a) => (a.args[0] ? { method: 'POST', path: '/api/system/lean', body: { on: a.args[0] === 'on', actor: 'command' } } : { method: 'GET', path: '/api/system/lean' }),
     print: (d, a, h) => { console.log(`  lean ${d.on ? h.c.mint('on') : h.c.amber('off')} · ${d.hold.join(', ')}`); for (const r of d.results || d.services || []) console.log(h.c.dim(`    ${r.name} ${r.running != null ? (r.running ? 'running' : 'stopped') : (r.ok ? r.status || 'ok' : `failed: ${r.error}`)}`)); if (d.note) console.log(h.c.dim(`  ${d.note}`)); } },
@@ -481,10 +547,10 @@ export const SPEC = [
       }
       console.log(h.c.dim('\n  build one: idearium repo phase <repo> <phase> build'));
     } },
-  { key: 'repo.phase', repo: true, usage: 'repo phase <repo> <phase> [build [--map name] [--provider ollama|claude-code|claude|…] [--note "…"] [--replan]]', about: 'one phase: its runs (and why one stopped), or build it now as a background task (a build started again keeps its saved plan and resumes; --replan plans it again)',
+  { key: 'repo.phase', repo: true, usage: 'repo phase <repo> <phase> [build [--map name] [--provider ollama|claude-code|claude|…] [--note "…"] [--replan] [--anyway]]', about: 'one phase: its runs (and why one stopped), or build it now as a background task (a build started again keeps its saved plan and resumes; --replan plans it again)',
     need: (a) => (a.args[0] ? null : '<phase>'),
     req: (a) => (a.args[1] === 'build'
-      ? { method: 'POST', path: `/api/repos/${a.repo.uuid}/phases/build`, body: { phase: a.args[0], ...(a.flags.map ? { map: a.flags.map } : {}), ...(a.flags.provider ? { provider: a.flags.provider } : {}), ...(a.flags.note ? { note: a.flags.note } : {}), ...(a.flags.replan ? { replan: true } : {}) }, timeoutMs: 120000 }
+      ? { method: 'POST', path: `/api/repos/${a.repo.uuid}/phases/build`, body: { phase: a.args[0], ...(a.flags.map ? { map: a.flags.map } : {}), ...(a.flags.provider ? { provider: a.flags.provider } : {}), ...(a.flags.note ? { note: a.flags.note } : {}), ...(a.flags.replan ? { replan: true } : {}), ...(a.flags.anyway ? { anyway: true } : {}) }, timeoutMs: 120000 }
       : { method: 'GET', path: `/api/repos/${a.repo.uuid}/phases/runs?phase=${encodeURIComponent(a.args[0])}` }),
     print: (d, a, h) => {
       if (a.args[1] === 'build') {
