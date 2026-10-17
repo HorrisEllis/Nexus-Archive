@@ -283,10 +283,21 @@ import { interruptedRows as _interruptedRows } from '../repo/run-reconcile.js'; 
 // §0.39.361 AR2 — James: "Failure modes and faults are still first class data." Every phase-run row that is a fault
 // (no snapshot, failed and why, wrote nothing, missed files, blocked, tool errors, unproven, every rung tried) is also
 // its own fault_log record (lib/phase-faults.js → lib/fault-log.js logFault), here where every such row is written.
+function _postPhaseFailure(row, client = null) {
+  const FP = _require('../../lib/failure-post.js');
+  if (!FP.phaseRunFailed(row)) return;
+  const base = String(row.runId || '').replace(/-(review|proof)$/, '');
+  let flight = null;
+  try { flight = _require('../../lib/flight-data.js').flight(loadTable('idearium_phase_runs').filter(r => r && String(r.runId || '').replace(/-(review|proof)$/, '') === base)); } catch (_) {}
+  return FP.post(FP.fromPhaseRun(row, flight), client ? { client } : {});
+}
 function appendRow(table, row) {
   const out = _appendRowRaw(table, row);
   if (table === 'idearium_phase_runs') { try { _require('../../lib/phase-faults.js').log(row); } catch (_) { /* a fault that cannot be logged never fails the build */ } }
   if (table === 'idearium_phase_runs') { try { _repoActivity().phaseRow(row); } catch (_) { /* §0.39.366 — the background tasks panel never fails a build */ } }
+  // §FMR2 0.60.146 — a phase run that ends without landing reaches the .failure_mode record (cortex, by its route), with its
+  // flight (lib/flight-data.js): STUCK runs arrive under the failure mode their agents shared. Fire-and-forget.
+  if (table === 'idearium_phase_runs') { try { _postPhaseFailure(row); } catch (_) { /* reporting a failure never fails a build */ } }
   return out;
 }
 // §0.40.0 VR1 — every change to a repo's files settles into one versionium commit (lib/repo-versions.js), through the
@@ -624,6 +635,23 @@ function _toolsBrief(r) {
 // latest row of each runId is the run.
 // 0.60.27 AG1a — every row, unmerged: _phaseRuns keeps one row per run (its latest state), and a count of agent calls
 // needs each call's own row (lib/phase-cost.js)
+// §0.60.146 FR6 — CFR's delta from intelligence, by route (the drawbridge): pairs in, a lookup out; null when it is not reached.
+async function _cfrDeltaFor(pairs) {
+  if (!pairs || !pairs.length) return null;
+  const key = (p, c) => `${p.type}|${p.ts}|${c.type}|${c.ts}`;
+  try {
+    const r = await _nexusClient.post('intelligence', '/api/intelligence/cfr/delta', { pairs: pairs.slice(0, 5000) }, { timeout: 5000 });
+    if (!r || !Array.isArray(r.deltas)) return null;
+    const m = new Map(); pairs.slice(0, 5000).forEach(([p, c], i) => { if (r.deltas[i]) m.set(key(p, c), r.deltas[i]); });
+    return (p, c) => m.get(key(p, c)) || null;
+  } catch (_) { return null; }
+}
+// the phase-run rows grouped per run (a run's -review and -proof rows with it), as lib/flight-data.js groups them
+function _groupRunRows(rows) {
+  const by = new Map();
+  for (const r of rows) { if (!r || !r.runId) continue; const k = String(r.runId).replace(/-(review|proof)$/, ''); if (!by.has(k)) by.set(k, []); by.get(k).push(r); }
+  return by;
+}
 function _phaseRows(repoUuid) { return loadTable('idearium_phase_runs').filter(r => r && r.repoUuid === repoUuid); }
 // §FN0/FN1 — the agent work funnel for a request in a repo: its own tree and maps (Nexus: the live tree and every phasemap)
 async function _funnelFor(repo, dir, request, intent = null) {
@@ -2171,6 +2199,7 @@ function _reconcileRuns({ bootAt = _BOOT_AT, now = Date.now() } = {}) {
   return rows;
 }
 export function _reconcileRunsForTest(opts) { return _reconcileRuns(opts); }
+export function _postPhaseFailureForTest(row, client) { return _postPhaseFailure(row, client); }   // §FMR2 0.60.146
 export function _agentAskForTest(prompt, opts) { return _agentAsk(prompt, opts); }   // §CT1 — its test drives the real route walk
 export function _learnFromRejectionForTest(repo, n, reason, opts) { return _learnFromRejection(repo, n, reason, opts); }   // §0.60.105 RL2
 export function _verdictForTest(chunk, kind, ok, cls, why) { const by = _builtBy(chunk); _verdict(by, kind, ok, cls, why); return by; }   // §CT2
@@ -2807,6 +2836,8 @@ const ROUTE_CAP = {
   'projects.overview': CAPS.READ_IDEAS,   // §0.60.74 COSA10
   'repo.funnel': CAPS.READ_IDEAS,   // §FN0 — reads only: the four answers for a request
   'repo.changes': CAPS.READ_IDEAS, 'repo.change.get': CAPS.READ_IDEAS,   // §FR1 0.60.114 — reads only: one record per change
+  'repo.flight': CAPS.READ_IDEAS, 'repo.flight.get': CAPS.READ_IDEAS, 'repo.failures': CAPS.READ_IDEAS, 'repo.failure.get': CAPS.READ_IDEAS,   // §FMR3 0.60.146 reads only
+    // §FR6 0.60.144 — reads only: each run read whole (lib/flight-data.js)
   'repo.carve': CAPS.WRITE_IDEAS,   // §CV1 0.60.112 — makes a repo
   'raid.held': CAPS.READ_IDEAS, 'raid.held.unpark': CAPS.WRITE_IDEAS,   // §0.60.78 RT1
   'repo.activity': CAPS.READ_IDEAS,   // §0.39.368 AL1
@@ -3270,6 +3301,10 @@ function matchRoute(method, url) {
     ['POST',   ['api','repos',    ':uuid','architecture'],          'repo.architecture.write'],   // §0.39.284 W3 — changed files as diffs + tools
     ['GET',    ['api','repos',    ':uuid','changes'],               'repo.changes'],        // §FR1 0.60.114 one record per change (lib/change-record.js)
     ['GET',    ['api','repos',    ':uuid','changes',':id'],         'repo.change.get'],
+    ['GET',    ['api','repos',    ':uuid','flight'],                'repo.flight'],         // §FR6 0.60.144 every run: landed, stuck, what it cost, what was wasted
+    ['GET',    ['api','repos',    ':uuid','flight',':runId'],       'repo.flight.get'],     // §FR6 0.60.144 one run read whole
+    ['GET',    ['api','repos',    ':uuid','failure-modes'],         'repo.failures'],       // §FMR3 0.60.146 the repo's failure modes, from cortex by route
+    ['GET',    ['api','repos',    ':uuid','failure-modes',':id'],   'repo.failure.get'],    // §FMR3 0.60.146 one failure mode's report, from cortex by route
     ['GET',    ['api','repos',    ':uuid','injects'],               'repo.inject.list'],
     ['POST',   ['api','repos',    ':uuid','injects'],               'repo.inject.create'],
     ['GET',    ['api','repos',    ':uuid','injects',':id'],         'repo.inject.get'],
@@ -8159,6 +8194,49 @@ async function handle(req, res, route, query, body) {
           batch: r.batch ? { files: r.batch.files, ran: r.batch.ran, linked: r.batch.linked, regressions: r.batch.regressions } : null,   // §FR2 0.60.114
           landed: r.landed.map(c => c.commitId), undo: r.undo.possible, holes: r.holes.map(h => h.what) }));
       return ok(res, { repoUuid: params.uuid, changes, count: changes.length });
+    }
+    // §FR6 0.60.144 — James: "we need to continue building the flight recorder. look at rfr2, and cfr for friction and tension."
+    // Each run read whole from the rows it already wrote: the ladder of agents, its cost, its faults, what was spent on attempts
+    // that never landed, friction (failed / total) and CFR tension step to step, and a verdict. A projection; nothing stored.
+    // §0.60.146 — CFR's delta through intelligence's route (POST /api/intelligence/cfr/delta), never a require across the boundary.
+    // One call per request, every step at once; intelligence down → null, and the flight says tension is unavailable (§1.2).
+    case 'repo.flight':
+    case 'repo.flight.get': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const FD = _require('../../lib/flight-data.js');
+      const rows = _phaseRows(params.uuid);
+      if (action === 'repo.flight.get') {
+        const id = String(params.runId).replace(/-(review|proof)$/, '');
+        const mine = rows.filter(r => r && String(r.runId || '').replace(/-(review|proof)$/, '') === id);
+        if (!mine.length) return err(res, 404, `no run ${params.runId} in this repo`);
+        const f = FD.flight(mine, { delta: await _cfrDeltaFor(FD.transitions(mine)) });
+        return ok(res, { flight: f, lines: FD.lines(f) });
+      }
+      const limit = Math.max(1, Math.min(200, parseInt(query.limit, 10) || 30));
+      const s = FD.summary(rows, { delta: await _cfrDeltaFor([..._groupRunRows(rows).values()].flatMap(rs => FD.transitions(rs))) });
+      const flights = s.flights.slice(0, limit).map(f => ({ runId: f.runId, phase: f.phase, map: f.map, verdict: f.verdict, why: f.why, landed: f.landed,
+        ended: f.ended, attempts: f.attempts, wallMs: f.wallMs, ladder: f.ladder.map(a => a.agent), calls: f.cost.calls, wasted: f.wasted,
+        friction: f.friction, tension: f.tensionKnown ? f.tension.max : null, startedAt: f.startedAt }));
+      const { flights: _all, ...totals } = s;
+      return ok(res, { repoUuid: params.uuid, totals, lines: FD.summaryLines(s), flights, count: s.runs });
+    }
+    // §FMR3 0.60.146 — James: "failure mode report thats also a macro to import into a cos test env." The repo's failure modes
+    // and one report, read from cortex by its route (lib/nexus-client.js): the Debug tab asks Idearium, Idearium asks cortex.
+    // Nexus's own repo (nexus-self) sees every failure mode; another repo, those that name it. Cortex down → said, not empty.
+    case 'repo.failures':
+    case 'repo.failure.get': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      try {
+        if (action === 'repo.failure.get') {
+          const r = await _nexusClient.get('cortex', `/api/failure-modes/${encodeURIComponent(params.id)}/report`, { timeout: 8000 });
+          return ok(res, { report: r.report, lines: r.lines || [] });
+        }
+        const self = !!repo.nexusSelf;   // a Nexus system as a repo (idearium/repo/nexus-self.js)
+        const r = await _nexusClient.get('cortex', `/api/failure-modes?limit=${Math.max(1, Math.min(200, parseInt(query.limit, 10) || 50))}${self ? '' : `&repo=${encodeURIComponent(params.uuid)}`}`, { timeout: 8000 });
+        return ok(res, { repoUuid: params.uuid, scope: self ? 'all of Nexus' : 'this repo', failureModes: r.failureModes || [], count: r.count || 0 });
+      } catch (e) { return err(res, 503, `cortex did not answer: ${e.message}`); }
     }
     case 'repo.funnel': {
       const repo = getRepoLayer().get(params.uuid);
