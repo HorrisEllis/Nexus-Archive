@@ -100,6 +100,77 @@ These are his own earlier projects, run through NEXUS's real import routes in a 
 
 New entries go at the top: date, his words, context, what it shows, evidence.
 
+- **2026-10-17: "Okay. Keep going."** (FR4a: the flight recorder on its own)
+  - **Context:** a product has to run without the system it was built in. This is the first time the flight recorder
+    did, from a copy carved out of Nexus.
+  - **What it shows:** his product boundary (2026-10-17) paying off on the first real use. Testing from the copy, not
+    from Nexus, found two defects a test inside Nexus would not have shown: data lost on exit, and a missing file. A
+    third, which also affected Idearium, was fixed for both.
+  - **Evidence:** `CHANGELOG-0.60.118.md`; `products/flight-recorder/`; `tests/modules/test-flight-recorder-standalone.test.js`
+    FS-01..06.
+
+- **2026-10-17: "Next and Merge."** (FR3: undo any change, keeping later edits)
+  - **Context:** the product's promise is undo. The existing revert could only undo the newest change, because any later
+    edit to the file blocked it.
+  - **What it shows:** finishing the promise at its hard edge. Undoing an older change while keeping newer work is
+    what makes the undo usable. Where it cannot be done safely (two changes on the same lines), the system refuses and
+    names the lines instead of guessing.
+  - **Evidence:** `CHANGELOG-0.60.117.md`; `versionium/lib/merge3.js`; `tests/modules/test-undo-any-change.test.js`
+    UN-01..06 (UN-02 is the phasemap's proof).
+
+- **2026-10-17: "Okay so where is the product being made? Or are we building the capability first, then branching?"** · then: "I agree, with the recommendation"
+  - **Context:** two product phases had been built inside Nexus on the coder's assumption, and nobody had decided where
+    the product lives.
+  - **What it shows:** asking the structural question at the right time. His question surfaced an undecided architecture
+    choice, and answering it honestly exposed a real defect: the branched copy was missing the very pieces just built.
+    The choice he made (build in Nexus, branch at each release, with a boundary that checks itself) avoids maintaining
+    two copies of the code.
+  - **Evidence:** `docs/2026-10-16-repo-carve-phasemap.spec` (`decision_where_the_product_is_built`);
+    `CHANGELOG-0.60.116.md`; `tests/modules/test-repo-carve.test.js` CV-13, CV-14.
+
+- **2026-10-17: "merge. then next phase."** (FR2: tested before it lands)
+  - **Context:** the product promise is that an agent's change is tested before it lands. Checking that promise against
+    the code showed it held only for Nexus's own files.
+  - **What it shows:** keeping the claim honest. Two gaps the system's own tests did not show were found by reading the
+    code against the claim: other repos' changes were tested against Nexus, and staged batches were never tested. Both
+    are closed, and a test now proves the subtle case: a change that looks broken file by file but is correct as a batch.
+  - **Evidence:** `CHANGELOG-0.60.115.md`; `tests/modules/test-tested-before-lands.test.js` TB-01..05.
+
+- **2026-10-16: "next"** (FR1, the flight recorder's first piece)
+  - **Context:** the coder proposed an order (FR1 one record per change, then tested before it lands, undo, standalone,
+    the demo) and named FR1 as its pick. He said go.
+  - **What it shows:** sequencing by dependency. The undo and the demo both read the record, so the record came first.
+    It is a projection of data Nexus already writes, so no second store had to be built. The one piece that was missing
+    (which task wrote a change) was fixed at the source, not guessed after the fact.
+  - **Evidence:** `CHANGELOG-0.60.114.md`; `lib/change-record.js`; `tests/modules/test-change-record.test.js` CR-01..06.
+
+- **2026-10-16: "expand it."** (the flight recorder, just branched out of Nexus)
+  - **Context:** he had a 217-file copy of the product and a claim that it was tangled into the rest of Nexus.
+  - **What it shows:** pushing past "it's copied" to "does it work alone". The answer is now measured, not guessed:
+    168 files, 8 systems, and every one of its own files loads in an empty folder. The first attempt failed that check,
+    on a data folder no require mentions; the check is why it was found.
+  - **Evidence:** `CHANGELOG-0.60.113.md`; `docs/2026-10-16-repo-carve-phasemap.spec` (CV2, FR1-FR5);
+    `tests/modules/test-repo-carve.test.js` CV-09..12.
+
+- **2026-10-16: "look at rfr2. versionium. event ledgers. causal graph. cos test env. its a product?"** · then: "can you branch it into a idearium repo?"
+  - **Context:** months of separate systems (a version store, a causal toolkit, ledgers, a VM test environment). He
+    looked across them and asked whether together they are something people would pay for.
+  - **What it shows:** product thinking. He saw that pieces built to run his own system add up to one thing others
+    need: trust in what AI coding agents change, plus a way to undo it. Then he asked for it as its own project, not a
+    rewrite. The carve that followed measured, rather than guessed, how far it is from standing alone: 217 files,
+    15 systems.
+  - **Evidence:** `CHANGELOG-0.60.112.md`; `docs/2026-10-16-repo-carve-phasemap.spec`;
+    `tests/modules/test-repo-carve.test.js` CV-01..08.
+
+- **2026-10-16: "please fix this. the naming in github doesn't even match that..."**
+  - **Context:** COS refused his GitHub downloads ("Nexus-main", "Nexus v0.60.110") because their folder names were
+    not `<project>-<version>`. A fix for that was already on main (0.60.103), yet his COS still refused them.
+  - **What it shows:** testing the real artifact rather than the source. He used the exe, not the code, and that
+    exposed a delivery gap. The COS exe never rebuilt after 0.1.0, so a merged fix had not reached him. The workflow
+    now fails when the exe's files change without a version bump.
+  - **Evidence:** `CHANGELOG-0.60.111.md`; `tests/modules/test-cos-app-store.test.js` CA-15;
+    `tests/modules/test-cos-app-build.test.js` BD-06; cos-app run 38891061643 (cos-v0.1.0 built at 0.60.96).
+
 - **2026-10-14: "and we have intent routing? that way the complex reasoning can be done by the bigger models or agents. like claude or deepseek? also multiaccount routing in clearglass, each tab can be a different profile?"** · then: "yes we need to get it all working."
   - **Context:** he was checking that two pieces he had asked for earlier actually worked end to end. They half did:
     - Intent routing existed (0.60.8), but it only ordered agents by preference, so a high-scoring agent could still be sent work it can't do.
@@ -118,6 +189,19 @@ New entries go at the top: date, his words, context, what it shows, evidence.
   - **Context:** the map he directed ranks GT1 first: "0.60.18 showed that learning from unclassified failures poisons routing."
   - **What it shows:** prioritising the foundation every later build runs through over the next visible feature.
   - **Evidence:** `tests/modules/test-contract-adapters.test.js` GT-01..07. A planted failure of each type takes its own path, and only capability and context failures change routing or size limits. `CHANGELOG-0.60.30.md`.
+- **2026-10-13: "Do this task here: 'Build one Nexus phase to proven on this PC'" · "ask me for it again."**
+  - **Context:** after a day of fixes that had only run in tests, he asked for a real build. When the coder's first try
+    to use the Claude Code CLI as the agent was interrupted, he asked to be asked properly. Offered "test then build"
+    with the cost stated, he chose it.
+  - **What it shows:** he holds the work to proof, not to claims. Insisting on consent before an action that spends his
+    account's usage is the same judgment. The result is the first phase build ever to reach `proven` with a real agent.
+  - **Evidence:** phase NT1_notes, built in 50 seconds.
+    - A real Versionium snapshot came first (vtm-82eaa81b).
+    - Claude Code proposed `lib/notes.js` and `tests/notes.test.js`.
+    - The proof ran `node tests/notes.test.js` against the proposals: exit 0, 1 of 1 condition met.
+    - Recorded in the LIVE RUN note of `docs/2026-10-13-gates-that-learn-and-priorities-phasemap.spec`.
+
+    It ran on the cloud copy, not on his PC.
 
 - **2026-10-13: "can we work on inventing anything that will get this pipeline going. like why doesn't this work yet?"**
   - **Context:** after a day of fixes, he stopped asking for features and asked why the pipeline still failed. The
@@ -355,3 +439,42 @@ New entries go at the top: date, his words, context, what it shows, evidence.
   - **What it shows:** reviewing evidence over status. A gate that checked names but not substance was found from one look
     at a diff, and is now closed at the one door every proposal passes.
   - **Evidence:** `CHANGELOG-0.60.110.md`; `tests/modules/test-inject-screen.test.js` IS-10..14.
+- **2026-10-17: "i want the panels completely seperate from each other, collapasable, organized and updated in real time ... i want to eb able to open all of them, or none of them."**
+  - **Context:** he was looking at the Code tab and the Plan panel's three cards. Instead of asking for more features, he
+    specified the interaction model: separate panels, each with its own edge tab, any number open, live, plus replayable
+    procedures.
+  - **What it shows:** interface design by composition. Five panels that each reuse an existing renderer, one rail, and
+    one rule for real time (only open panels reload, on their own events). The replayable procedures turn ad-hoc tool
+    calls into reusable, persisted recipes.
+  - **Evidence:** `CHANGELOG-0.60.118.md`; `tests/modules/test-code-dock.test.js` (driven in Clear Glass);
+    `lib/repo-procedures.js`.
+- **2026-10-17: "Need nexus to hold as much of the complexity as possible, and let the right agent for the job, be in charge."**
+  - **Context:** after his mentor's review ("too personal, too big", the ideas solid). He dropped an idea he did not
+    understand (stateless pieces) and kept the rule he could judge.
+  - **What it shows:** taking criticism and narrowing scope. He did not defend the idea he couldn't explain; he kept a rule
+    he can check against results. The first slice of that rule is built: each brick goes to the agent with the best record
+    on that kind of file.
+  - **Evidence:** `CHANGELOG-0.60.119.md`; `tests/modules/test-agent-record.test.js` RA-01..05.
+- **2026-10-17: "each chunk/dependancy a piece of the progress indication. progress shows for each task with a full run history, and log to make it explicit. like the panels should remain interconnected. so strip the context from the plan panel since we have a dedicated one now."**
+  - **Context:** the Plan panel's bar showed six pipeline gates, the same for every phase. The Context card was drawn
+    twice, once in the Plan panel and once in the dock. He sent a sketch of the panel he wanted and asked for the panels
+    to work together, not side by side.
+  - **What it shows:**
+    - Progress measured in the units the work is actually made of: one segment per planned file, with its attempts,
+      its agent and what it depends on.
+    - Removing a duplicate instead of adding a feature.
+    - Asking for the panels to be connected is what exposed a real defect. The Plan panel sat on top of the dock, so a
+      click in one opened something unreachable behind it.
+  - **Evidence:** `CHANGELOG-0.60.123.md`; `tests/modules/test-plan-pieces.test.js` PP-01..04. PP-03 fails if the Plan
+    panel overlaps the dock column, and it found the overlap.
+- **2026-10-17: three screenshots and a full boot log, no words.**
+  - **Context:** after merging 0.60.123 he ran a fresh copy. Instead of describing what looked wrong, he sent the
+    evidence: the screens as he saw them, and the whole log beside them.
+  - **What it shows:** reporting a failure with complete evidence. The log let three root causes be found without a
+    single guess:
+    - the self-sync holding Idearium silent;
+    - Guardian's flush loop into a sign-in page;
+    - a Windows rename race.
+    Each fix has a measured result.
+  - **Evidence:** `CHANGELOG-0.60.124.md`; `tests/modules/test-sync-off-thread.test.js` SW-02 measures the event loop
+    held 4,183 ms inline and 15 ms with the fix, on 447 files.

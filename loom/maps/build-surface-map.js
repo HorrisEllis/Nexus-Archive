@@ -46,6 +46,29 @@ const FILES = [
     I('nexus/nexus-bus.js'),                                    // require — emit idearium.spec.collected
   ]],
   // 0.60.94 FN0 — James: "Every thing the agents do. Needs to determine dependancies, spec, phase, then chunk." No model.
+  // §FR4a 0.60.118 — the flight recorder on its own (products/flight-recorder)
+  ['products/flight-recorder/bin/flight-recorder.js', I('products/flight-recorder/bin/flight-recorder.js'), [
+    I('products/flight-recorder/lib/project.js'), I('products/flight-recorder/lib/versions.js'),
+    I('lib/run-state.js'), I('lib/repo-activity.js'), I('lib/activity-log/compartment.js'),   // require (lazy) — --why, show
+  ]],
+  ['products/flight-recorder/lib/project.js', I('products/flight-recorder/lib/project.js'), [
+    I('lib/repo-inject.js'), I('lib/code-edit.js'), I('lib/change-record.js'), I('lib/proposal-evidence.js'), I('lib/repo-versions.js'),
+    I('guardian/jaa-store.js'),                                   // require — flushAllStores before the command exits
+  ]],
+  ['products/flight-recorder/lib/versions.js', I('products/flight-recorder/lib/versions.js'), [
+    I('versionium/lib/engine.js'), I('versionium/lib/files.js'), I('versionium/lib/store.js'),   // in-process versions
+  ]],
+  // §FR3 0.60.117 — undo any change, keeping later edits
+  ['versionium/lib/merge3.js', I('versionium/lib/merge3.js'), [
+    I('versionium/lib/text-diff.js'),                         // require — MAX_LCS_CELLS, the same size limit
+  ]],
+  // §FR1 0.60.114 — one record per change an agent makes (docs/2026-10-16-repo-carve-phasemap.spec)
+  ['lib/change-record.js', I('lib/change-record.js'), [
+    I('versionium/lib/text-diff.js'),                         // require — the lines added and removed
+    I('lib/run-state.js'),                                    // require (lazy) — runIdFor: a task's session → its run
+  ]],
+  // §CV1 0.60.112 — a part of Nexus branched into its own Idearium repo (docs/2026-10-16-repo-carve-phasemap.spec)
+  ['lib/repo-carve.js', I('lib/repo-carve.js'), []],   // fs/path only: it reads Nexus's files; Idearium's repo.ingest makes the repo
   ['lib/work-funnel.js', I('lib/work-funnel.js'), [
     I('lib/phase-map-auto.js'),                                 // require — mapPhase / mapPhases / envFromTree (deps, owning specs, phases)
     I('lib/phase-files.js'),                                    // require — phasesOf (the repo's phases, with status)
@@ -72,7 +95,14 @@ const FILES = [
   ['idearium/repo/spec-plan.js', I('idearium/repo/spec-plan.js'), [
     I('loom/scanners/phasemap-map.js'),                         // parsePhasemapText — the one phasemap parser
   ]],
-  ['idearium/repo/build-plan.js', I('idearium/repo/build-plan.js'), []],
+  ['idearium/repo/build-plan.js', I('idearium/repo/build-plan.js'), [
+    I('lib/run-watch.js'), I('lib/phase-plan.js'),              // §0.60.123 PP1/PP2 createRequire — runsOf/isFinal (an open run), depsOf (what a piece uses)
+  ]],
+  // §0.60.124 SW1 — the import pipeline in its own thread (the self-sync no longer holds idearium)
+  ['idearium/repo/import-pipeline-worker.js', I('idearium/repo/import-pipeline-worker.js'), [I('idearium/repo/import-pipeline.js')]],   // import { runImportPipeline }
+  // §0.60.123 MP — a failure mode that happened becomes a prevention; heavy work asks before it starts
+  ['lib/prevention.js', I('lib/prevention.js'), [I('lib/resource-monitor.js'), I('lib/test-sandbox.js')]],   // heavyAllowedHere → shared monitor; fileOf → sandbox.ensure
+  ['ollama/lib/idle-unload.js', I('ollama/lib/idle-unload.js'), [I('ollama/lib/model-inventory.js'), I('lib/prevention.js')]],
   ['idearium/api/build-surface.js', I('idearium/api/build-surface.js'), [
     I('idearium/repo/file-state.js'), I('idearium/repo/deviation.js'), I('idearium/repo/spec-plan.js'), I('idearium/repo/build-plan.js'),
     I('idearium/repo/snapshot-files.js'), I('idearium/repo/snapshot.js'), I('idearium/repo/phases.js'),   // import()
@@ -128,6 +158,17 @@ const FILES = [
 
 // Consumers the scanner sees as files but not these edges: [consumer id, dependency id, where].
 const CONSUMERS = [
+  [I('lib/repo-inject.js'), I('versionium/lib/merge3.js'), '§FR3 0.60.117 revert({ merge }): undo a change keeping later edits (lazy require in _revertMerged)'],
+  [I('idearium/cli/route-commands.js'), I('idearium/api/index.js'), '§FR3 0.60.117 the repo.undo row → POST /api/repos/:uuid/injects/:id/revert'],
+  [I('idearium/api/index.js'), I('lib/change-record.js'), '§FR1 0.60.114 repo.changes / repo.change.get: GET /api/repos/:uuid/changes(/:id) — the inject joined with activity, runs, versions'],
+  [I('lib/repo-inject.js'), I('lib/repo-activity.js'), '§FR1 0.60.114 propose() keeps the task it was written in (current())'],
+  [I('idearium/cli/route-commands.js'), I('idearium/api/index.js'), '§FR1 0.60.114 the repo.record row → GET /api/repos/:uuid/changes(/:id)'],
+  [I('idearium/ui/js/code-tab-panels.js'), I('idearium/api/index.js'), '§FR1 0.60.114 the Code tab changes panel — HTTP GET /api/repos/:uuid/changes(/:id)'],
+  [I('idearium/api/index.js'), I('lib/repo-carve.js'), '§CV1 0.60.112 repo.carve: POST /api/repos/carve — plan, build, then repo.ingest with Nexus as parent'],
+  [I('idearium/api/index.js'), I('lib/repo-notes.js'), '§CV1 0.60.112 repo.carve writes his words (quote) and the carve (decision) as notes on the new repo'],
+  [I('idearium/api/index.js'), I('lib/release-version.js'), '§CV1 0.60.112 repo.carve records the Nexus version and commit it was carved at'],
+  [I('idearium/cli/route-commands.js'), I('idearium/api/index.js'), '§CV1 0.60.112 the repo.carve row → POST /api/repos/carve'],
+  [I('idearium/ui/js/projects.js'), I('idearium/api/index.js'), '§CV1 0.60.112 My projects → Branch from Nexus — HTTP POST /api/repos/carve (Preview, Create)'],
   [I('idearium/ui/js/code-tab-panels.js'), I('idearium/api/index.js'), '§FN4 0.60.95 cxWorkLoad — HTTP POST /api/repos/:uuid/funnel: the Code tab work panel'],
   [I('idearium/api/index.js'), I('lib/work-funnel.js'), '§FN1 0.60.95 repo.code.assist runs _funnelFor before the agent edits the picked lines'],
   [I('idearium/api/index.js'), I('lib/work-funnel.js'), '§FN0 0.60.94 repo.funnel: POST /api/repos/:uuid/funnel — the four answers for a request'],
@@ -205,6 +246,17 @@ const CONSUMERS = [
   [I('idearium/api/index.js'), I('lib/phase-plan.js'), '0.60.28 PF2 derivePlan when no planner is ready or it failed'],
   [I('idearium/api/index.js'), I('idearium/repo/phase-mapping.js'), '0.60.29 PM POST/GET /phases/map (await import) — runMapping'],
   [I('idearium/ui/js/phases.js'), I('idearium/api/index.js'), '0.60.29 PM HTTP POST/GET /api/repos/:uuid/phases/map — the Phases tab button'],
+  // §0.60.123 MP — who records a prevention, and who asks heavyAllowed before heavy work
+  [I('lib/resource-monitor.js'), I('lib/prevention.js'), '0.60.123 MP a critical transition records memory_pressure (lazy require)'],
+  [I('cortex/self-heal/escalation.js'), I('lib/prevention.js'), '0.60.123 MP justEnteredFailureMode → record(faultClass)'],
+  [I('idearium/api/index.js'), I('lib/prevention.js'), '0.60.123 MP _guardedSync heavyAllowedHere; GET /system/lean prevention; POST /system/prevention/clear'],
+  [I('clear-glass/src/main/index.js'), I('lib/prevention.js'), '0.60.123 MP Eros and the NCP prewarm held under prevention'],
+  [I('cortex/core/raid/officiator.js'), I('lib/prevention.js'), '0.60.123 MP the tick asks heavyAllowedHere'],
+  [I('nexus/autopilot.js'), I('lib/prevention.js'), '0.60.123 MP the loom refresh waits for heavyAllowed'],
+  [I('ollama/server.js'), I('ollama/lib/idle-unload.js'), '0.60.123 MP startIdleUnload after listen (keep_alive:0 on idle)'],
+  [I('idearium/repo/import-pipeline.js'), I('idearium/repo/import-pipeline-worker.js'), '0.60.124 SW1 runImportPipelineOffThread — new Worker(new URL(./import-pipeline-worker.js))'],
+  [I('idearium/repo/nexus-self.js'), I('idearium/repo/import-pipeline.js'), '0.60.124 SW1 _syncSystem + parent: await runImportPipelineOffThread'],
+  [I('guardian/server.js'), I('guardian/lib/provider-login.js'), '0.60.124 SW2 flushQueuedJobs asks holdsJobs(provider); a reported sign-in flushes'],
 ];
 
 function mapBuildSurface(driver) {

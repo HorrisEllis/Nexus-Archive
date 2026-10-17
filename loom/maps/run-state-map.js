@@ -21,7 +21,7 @@ const FILES = [
   ['clear-glass/src/chats/crawler.js', I('clear-glass/src/chats/crawler.js'), [I('lib/chat-crawl-plan.js'), I('lib/chat-crawl-settings.js')]],   // §0.60.84 PI5
   ['clear-glass/src/chats/ports.js', I('clear-glass/src/chats/ports.js'), [I('clear-glass/src/downloads/chat-ledger.js')]],   // §0.60.85 PI5b
   ['clear-glass/src/chats/service.js', I('clear-glass/src/chats/service.js'), [I('clear-glass/src/chats/crawler.js'), I('clear-glass/src/chats/ports.js'), I('lib/chat-crawl-settings.js')]],
-  ['cos/app/store.js', I('cos/app/store.js'), [I('lib/zip.js')]],   // §0.60.87 COSA1
+  ['cos/app/store.js', I('cos/app/store.js'), [I('lib/zip.js'), I('lib/release-version.js')]],   // §0.60.87 COSA1; 0.60.111 names a zip from its contents
   ['cos/app/runtime.js', I('cos/app/runtime.js'), []],   // §0.60.88 COSA2/3
   ['cos/app/switch.js', I('cos/app/switch.js'), [I('cos/app/store.js'), I('cos/app/runtime.js')]],   // §0.60.88 COSA4
   ['clear-glass/src/releases/deliver.js', I('clear-glass/src/releases/deliver.js'), []],   // §0.60.93 COSA7
@@ -48,10 +48,17 @@ const FILES = [
   ['clear-glass/src/preload/google-signin.js', I('clear-glass/src/preload/google-signin.js'), []],   // §0.60.108 GS4: the sign-in page reads as Firefox, no debugger   // §0.60.106 GS1: Google's sign-in as Firefox, consistently
   ['clear-glass/src/tls/helper.js', I('clear-glass/src/tls/helper.js'), []],   // §0.60.109 TLS2: runs cg-tls-helper (clear-glass/tls-helper, Go + uTLS); its CA trust for personas
   ['lib/gig-ledger-listener.js', I('lib/gig-ledger-listener.js'), [I('lib/gig-ledger.js'), I('lib/run-state.js'), I('nexus/nexus-bus.js')]],
+  ['lib/repo-procedures.js', I('lib/repo-procedures.js'), [I('lib/node-export.js'), I('lib/run-state.js'), I('idearium/lib/data-dir.cjs')]],   // §0.60.118 DK1: .procedure files, replayed through an injected tool runner
+  ['idearium/ui/js/ui-editor-doc.js', I('idearium/ui/js/ui-editor-doc.js'), []],   // §0.60.122 UE1: the page ↔ editor round trip (pure)
+  ['idearium/ui/js/ui-editor.js', I('idearium/ui/js/ui-editor.js'), [I('idearium/ui/js/ui-editor-doc.js')]],   // §0.60.122 UE1: the editor page on vendored GrapesJS (idearium/ui/vendor/grapesjs, BSD-3-Clause)
+  ['idearium/ui/js/code-dock.js', I('idearium/ui/js/code-dock.js'), [I('idearium/ui/js/work-surface.js'), I('idearium/ui/js/repo-tasks.js'), I('idearium/ui/js/plan-panel.js')]],   // §0.60.118 DK2: the dock — _wsCard, _rtTree/_rtRow, _ppContext reused (page globals)
 ];
 const CONSUMERS = [
   [I('lib/step-gate.js'),                           I('lib/checks/ck-248-toolchain.js'), 'checkText(): the code.write gate parses every language the table knows with that language\'s own tool; a missing tool is not a pass (0.60.77)'],
   [I('lib/proposal-evidence.js'),                   I('lib/checks/ck-248-toolchain.js'), 'compare(): syntax status per file — checked, or NOT checked and why (0.60.77)'],
+  [I('lib/code-edit.js'),                           I('lib/proposal-evidence.js'), '§FR2 0.60.115 promoteTested(): gatherBatch — a staged batch tested together in the repo\'s own tree before promote'],
+  [I('idearium/repo/code-api.js'),                  I('lib/code-edit.js'), '§FR2 0.60.115 POST code/promote → promoteTested (409 with the batch on a regression)'],
+  [I('idearium/api/index.js'),                      I('lib/repo-inject.js'), '§FR2 0.60.115 setEvidenceRoot(): a change is tested in its own repo\'s folder, not Nexus\'s tree'],
   [I('lib/repo-inject.js'),                         I('lib/proposal-evidence.js'), 'attachEvidence()/evidenceNow(): an agent\'s proposal is compared and its linked tests run on the file as it is and as proposed; apply() refuses a regression (0.60.75 PE3)'],
   [I('lib/repo-inject.js'),                         I('lib/step-gate.js'), '_screen(): the code.write gate and the collapse/shrink guards at propose() and edit(), whoever calls (0.60.74)'],
   [I('idearium/api/index.js'),                      I('lib/proposal-evidence.js'), '_rejectionContext(): a rejected proposal\'s evidence goes to the agent and into the retry note (0.60.75 PE4)'],
@@ -73,6 +80,13 @@ const CONSUMERS = [
   [I('lib/repo-agent.js'),                          I('lib/gig-ledger-listener.js'), 'attach() before a run begins: a finished run files a deliverable claim with its changed files as evidence (0.60.53 PF0)'],
   [I('lib/repo-agent.js'),                          I('lib/run-state.js'),  'begin() a run (resume on the same goal; a brick\'s run by its brick key, 0.60.77 GW2) before dispatch, finish() it after; lost-job and door fallbacks carry the brick; header() on a resumed Ollama run (0.60.50 CE1, CE10; 0.60.77 GW2)'],
   [I('idearium/api/index.js'),                      I('lib/run-state.js'),  'runIdFor({ brick }) + load(): each brick\'s run in the contract trace (0.60.77 GW2)'],
+  [I('idearium/api/index.js'),                      I('lib/repo-procedures.js'), 'GET/POST /api/repos/:uuid/procedures, /from-run, /:id/replay, DELETE /:id: list/save/fromRun/replay/remove (0.60.118 DK1)'],
+  [I('idearium/api/index.js'),                      I('lib/repo-agent.js'), 'POST /api/repos/:uuid/agent/tools/run and every procedure step: runTool() — copilot /api/tools/run with the repo\'s scope (0.60.118 DK1)'],
+  [I('idearium/ui/js/code-surface.js'),             I('idearium/ui/js/ui-editor.js'), 'an open .html file → "edit UI" opens /ui-editor.html?repo=&path= (0.60.122 UE1)'],
+  [I('idearium/ui/js/plan-panel.js'),               I('idearium/ui/js/code-dock.js'), 'planTabSync() → dockSync(): the Plan\'s tab is the dock rail\'s first (0.60.118 DK2)'],
+  [I('idearium/ui/js/plan-panel.js'),               I('idearium/ui/js/code-dock.js'), 'ppFocusPiece/ppFocusRun → dockFocus + dockToggle: a piece narrows Changes/Outputs, a run opens Context (0.60.123 PP3)'],
+  [I('idearium/ui/js/code-dock.js'),                I('idearium/ui/js/plan-panel.js'), '_ppContext(steps, { runId }) and openPlanPanel({ focus }): the run picked, and the way back (0.60.123 PP3)'],
+  [I('idearium/ui/js/app.js'),                      I('idearium/ui/js/code-dock.js'), 'SSE idearium.repo.task → dockTaskIn (no fetch); refreshOnEvent → dockOnEvent (only open panels reload) (0.60.118 DK2)'],
   [I('idearium/api/index.js'),                      I('idearium/lib/surface-state.cjs'), 'GET / PUT /api/repos/:uuid/surface: get() / set(); a set emits idearium.surface.changed (0.60.79 CE8)'],
   [I('idearium/api/index.js'),                      I('lib/run-state.js'),  'list({ repoUuid })[0]: the repo\'s latest run on the surface (0.60.79 CE8)'],
   [I('idearium/ui/js/code-surface.js'),             I('idearium/lib/surface-state.cjs'), 'csPublish() PUTs the surface as it changes; csFollow() opens what the CLI set (idearium.surface.changed) and where it was left (0.60.79 CE8)'],

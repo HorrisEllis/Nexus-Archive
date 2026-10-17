@@ -700,7 +700,7 @@ button.tb-conn:hover{border-color:var(--b2);color:var(--text)}
 /* §0.39.282 N25 — the Manage workbench is styled by css/file-manage.css (.mg-*). The old .manage-modal/.manage-act/.manage-hit rules (0.39.280) styled a modal that no longer exists; the class names stay on the new markup only as stable hooks for tests. */
 /* §0.39.280 BS11 — the plan panel and the build-start card */
 #plan-panel{position:fixed;top:90px;right:18px;width:420px;height:min(78vh,760px);min-width:300px;min-height:220px;resize:both;overflow:hidden;z-index:250;display:none;flex-direction:column;background:var(--nx-card);border:1px solid var(--nx-rim);border-radius:12px;box-shadow:0 18px 50px rgba(0,0,0,.55);font-family:var(--mono)}
-#plan-panel.open{display:flex}#plan-panel.wide{width:min(900px,92vw)}
+#plan-panel.open{display:flex}body.dock-col-on #plan-panel{right:min(calc(min(420px,46vw) + 44px),calc(100vw - 320px))}#plan-panel.wide{width:min(900px,92vw)}
 /* §0.39.353 — the pulse .pp-g.cur (the current gate, BS11) always named and nothing defined; defined, it pulses */
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 /* §0.39.353 CT9 — the Plan's pull tab on the right edge while the panel is closed */
@@ -709,6 +709,52 @@ button.tb-conn:hover{border-color:var(--b2);color:var(--text)}
 #plan-tab .pp-tab-label{writing-mode:vertical-rl;transform:rotate(180deg);text-transform:uppercase;color:var(--text)}
 #plan-tab .pp-tab-n{writing-mode:vertical-rl;transform:rotate(180deg);color:var(--text3);font-weight:400}
 #plan-tab .pp-tab-dot{width:6px;height:6px;border-radius:50%;background:var(--sky);animation:pulse 1.2s ease-in-out infinite}
+/* §0.60.118 DK2 — the dock (idearium/ui/js/code-dock.js): a tab per panel on the right edge, the open ones stacked beside it */
+#dock-rail{position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:249;display:flex;flex-direction:column;gap:4px;align-items:stretch}
+#dock-rail[hidden],#dock-col[hidden]{display:none}
+#dock-rail .dk-tab{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 5px 9px 6px;background:var(--nx-card,var(--bg2));border:1px solid var(--nx-rim,rgba(255,255,255,.12));border-right:0;border-radius:8px 0 0 8px;color:var(--text2);font:600 10px var(--mono);letter-spacing:.08em;cursor:pointer;box-shadow:-6px 0 18px rgba(0,0,0,.35);transition:padding-right .15s,color .15s,background .15s}
+#dock-rail .dk-tab:hover{color:var(--text);padding-right:9px}
+#dock-rail .dk-tab.on{color:var(--text);background:var(--nx-card-hi,rgba(59,130,246,.18));border-color:var(--accent,#3b82f6)}
+#dock-rail .dk-l{writing-mode:vertical-rl;transform:rotate(180deg);text-transform:uppercase}
+#dock-rail .dk-n{writing-mode:vertical-rl;transform:rotate(180deg);color:var(--text3);font-weight:400}
+#dock-rail .dk-n.warn{color:var(--amber,#fbbf24)}
+.dk-dot{width:6px;height:6px;border-radius:50%;background:var(--sky,#38bdf8);animation:pulse 1.2s ease-in-out infinite;display:inline-block}
+#dock-rail .dk-foot{display:flex;flex-direction:column;gap:2px;margin-top:4px}
+#dock-rail .dk-all{background:none;border:1px solid var(--nx-rim,rgba(255,255,255,.12));border-right:0;border-radius:6px 0 0 6px;color:var(--text3);font:9px var(--mono);padding:4px 3px;cursor:pointer}
+#dock-rail .dk-all:hover{color:var(--text)}
+#dock-col{position:fixed;top:90px;right:34px;bottom:14px;width:min(420px,46vw);z-index:240;display:flex;flex-direction:column;gap:8px;overflow-y:auto;font-family:var(--mono);padding-right:2px}
+#dock-col .dk-panel{flex:0 0 auto;display:flex;flex-direction:column;max-height:70vh;background:var(--nx-card,var(--bg2));border:1px solid var(--nx-rim,rgba(255,255,255,.12));border-radius:10px;box-shadow:0 12px 34px rgba(0,0,0,.45);overflow:hidden}
+#dock-col .dk-panel.folded{max-height:none}
+#dock-col .dk-head{display:flex;align-items:center;gap:6px;padding:7px 9px;border-bottom:1px solid var(--nx-rim,rgba(255,255,255,.08));font-size:11px;color:var(--text)}
+#dock-col .dk-panel.folded .dk-head{border-bottom:0}
+#dock-col .dk-about{color:var(--text3);font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#dock-col .dk-grow{flex:1}
+#dock-col .dk-n{color:var(--text3);font-size:10px}#dock-col .dk-n.warn{color:var(--amber,#fbbf24)}
+#dock-col .dk-fold,#dock-col .dk-x{background:none;border:0;color:var(--text3);cursor:pointer;font:12px var(--mono);padding:0 3px}
+#dock-col .dk-fold:hover,#dock-col .dk-x:hover{color:var(--text)}
+#dock-col .dk-body{overflow-y:auto;padding:8px 10px;font-size:11px;color:var(--text2);min-height:40px}
+#dock-col .dk-sec{margin:8px 0 4px;color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:.06em}
+#dock-col .dk-sec:first-child{margin-top:0}
+#dock-col .dk-empty{color:var(--text3);font-size:11px;padding:4px 0}
+#dock-col .dk-bad{color:var(--coral,#f87171)}
+#dock-col .dk-dim{color:var(--text3)}
+#dock-col .dk-row{padding:3px 0;border-bottom:1px dashed rgba(255,255,255,.05);word-break:break-all}
+#dock-col .dk-row a{color:var(--text)}
+#dock-col .dk-why{display:inline}
+#dock-col .dk-st{display:inline-block;min-width:58px;font-size:9px;text-transform:uppercase;color:var(--text3)}
+#dock-col .st-modified,#dock-col .st-proposed,#dock-col .st-staged,#dock-col .st-running{color:var(--amber,#fbbf24)}
+#dock-col .st-new,#dock-col .st-applied,#dock-col .st-done,#dock-col .st-committed{color:var(--mint,#34d399)}
+#dock-col .st-deleted,#dock-col .st-rejected,#dock-col .st-failed,#dock-col .st-reverted{color:var(--coral,#f87171)}
+#dock-col .dk-art summary{cursor:pointer;padding:3px 0}#dock-col .dk-art pre,#dock-col .dk-out{max-height:240px;overflow:auto;background:rgba(0,0,0,.25);padding:6px;border-radius:6px;font-size:10px;white-space:pre-wrap}
+#dock-col .dk-btns{display:flex;flex-wrap:wrap;gap:4px}
+#dock-col .dk-tool{background:rgba(255,255,255,.04);border:1px solid var(--nx-rim,rgba(255,255,255,.12));border-radius:6px;color:var(--text2);font:10px var(--mono);padding:3px 6px;cursor:pointer}
+#dock-col .dk-tool:hover{color:var(--text);border-color:var(--accent,#3b82f6)}#dock-col .dk-tool.off{opacity:.4;cursor:not-allowed}
+#dock-col .dk-run textarea{width:100%;box-sizing:border-box;background:rgba(0,0,0,.3);color:var(--text);border:1px solid var(--nx-rim,rgba(255,255,255,.12));border-radius:6px;font:11px var(--mono);padding:6px}
+#dock-col .dk-acts{display:flex;gap:6px;margin:5px 0;flex-wrap:wrap}#dock-col .dk-acts .action-btn{font-size:10px;padding:3px 8px}
+#dock-col .dk-proc{padding:6px 0;border-bottom:1px dashed rgba(255,255,255,.06)}
+#dock-col .dk-mini{background:none;border:1px solid var(--nx-rim,rgba(255,255,255,.12));border-radius:5px;color:var(--text2);font:9px var(--mono);padding:1px 5px;cursor:pointer}
+#dock-col .dk-q{width:100%;box-sizing:border-box;font-size:11px;margin-bottom:4px}
+#dock-col .dk-sel{font-size:11px;padding:2px 4px;max-width:220px}
 .pp-head{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.07);cursor:move;user-select:none}
 .pp-title{font:600 13px system-ui,sans-serif;color:var(--nx-bright)}.pp-sub{font-size:10px;color:var(--text3)}.pp-grow{flex:1}
 .pp-map{max-width:150px;background:var(--nx-card2);color:var(--text2);border:1px solid rgba(255,255,255,.1);border-radius:6px;font:10px var(--mono);padding:2px 4px}
@@ -733,6 +779,21 @@ button.tb-conn:hover{border-color:var(--b2);color:var(--text)}
 .pp-mark{width:14px;text-align:center;color:var(--text3)}.pp-task.done .pp-mark{color:var(--text2)}.pp-task.cur .pp-mark{color:var(--sky)}
 .pp-name{flex:1;font:12.5px/1.35 system-ui,sans-serif;color:var(--nx-text);min-width:0}.pp-task.done .pp-name{text-decoration:line-through;color:var(--text3)}
 .pp-layer{font-size:9px;color:var(--violet);text-transform:uppercase}
+/* §0.60.123 PP1–PP3 — a phase's bar is its pieces; expanded, its pieces and every run's log; the dock follows the Plan's focus */
+.pp-pcount{font-size:9.5px;color:var(--text3);margin-left:auto;margin-right:5px;font-variant-numeric:tabular-nums}
+.pp-pieces{display:flex;gap:2px;flex:0 0 74px;min-width:40px}.pp-pc{flex:1 1 0;min-width:3px;height:5px;border-radius:1px;background:rgba(255,255,255,.12);cursor:pointer}
+.pp-pc:hover{outline:1px solid rgba(255,255,255,.45)}.pp-pc.st-running{background:var(--sky);animation:pulse 1.2s ease-in-out infinite}.pp-pc.st-written{background:#7c8cff}
+.pp-pc.st-failed{background:var(--coral,#f87171)}.pp-pc.st-proven,.pp-pc.st-done{background:var(--mint)}
+.pp-pclist{display:flex;flex-direction:column;gap:1px;margin:2px 0 6px}.pp-pcrow{display:flex;flex-wrap:wrap;gap:0 6px;align-items:baseline;font-size:10px;padding:2px 4px;border-radius:3px;cursor:pointer}
+.pp-pcrow:hover{background:rgba(255,255,255,.05)}.pp-pcg{width:10px;text-align:center}.pp-pcrow.st-proven .pp-pcg,.pp-pcrow.st-done .pp-pcg{color:var(--mint)}.pp-pcrow.st-failed .pp-pcg{color:var(--coral,#f87171)}
+.pp-pcrow.st-running .pp-pcg{color:var(--sky)}.pp-pcrow.st-written .pp-pcg{color:#7c8cff}.pp-pcp{color:var(--text1,#e5e7eb)}.pp-pcs,.pp-pcu{color:var(--text3)}.pp-pcw{flex-basis:100%;padding-left:16px;color:var(--coral,#f87171);opacity:.85}
+.pp-run{border-bottom:1px solid rgba(255,255,255,.05);padding:2px 0}.pp-run>summary{cursor:pointer;display:flex;flex-wrap:wrap;align-items:center;gap:2px;list-style:none;font-size:10px}
+.pp-run>summary::-webkit-details-marker{display:none}.pp-runctx{margin-left:auto;font-size:9px;padding:0 6px;border:1px solid rgba(255,255,255,.15);border-radius:3px;background:none;color:var(--text2);cursor:pointer}
+.pp-log{font-family:var(--mono,monospace);font-size:9.5px;max-height:240px;overflow:auto;margin:3px 0 4px;padding:3px 4px;background:rgba(0,0,0,.25);border-radius:4px}
+.pp-log-r{display:grid;grid-template-columns:56px 110px minmax(0,1fr) auto;gap:0 6px;padding:1px 0;color:var(--text2)}.pp-log-n{grid-column:2/-1;color:var(--text3);white-space:pre-wrap}
+.pp-log-n:empty{display:none}.pp-log-t{color:var(--text3)}.pp-log-r.st-failed .pp-log-s,.pp-log-r.st-incomplete .pp-log-s,.pp-log-r.st-blocked .pp-log-s,.pp-log-r.st-unproven .pp-log-s{color:var(--coral,#f87171)}
+.pp-log-r.st-replied .pp-log-s,.pp-log-r.st-proven .pp-log-s,.pp-log-r.st-contract-complete .pp-log-s{color:var(--mint)}.pp-log-f{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pp-log-cut{font-size:9.5px;color:var(--text3);padding:2px 0}
+.dk-focus{font-size:10px;padding:4px 6px;margin:0 0 6px;border-radius:4px;background:rgba(124,140,255,.12);color:var(--text2)}.dk-focus a{margin-left:6px;color:var(--sky)}
 .pp-gates{display:flex;gap:2px}.pp-g{width:9px;height:4px;border-radius:1px;background:rgba(255,255,255,.1)}.pp-g.on{background:var(--mint)}.pp-g.cur{background:var(--sky);animation:pulse 1.2s ease-in-out infinite}.pp-g.bad{background:var(--coral)}
 .pp-detail{margin:2px 0 8px 26px;padding:6px 8px;border-left:2px solid rgba(56,189,248,.35);font-size:10.5px;color:var(--text2)}
 .pp-meta{color:var(--text3);margin-bottom:6px}.pp-go{background:var(--sky);color:#04121c;border:0;border-radius:6px;font:700 10px var(--mono);padding:4px 10px;cursor:pointer;margin-bottom:6px}
@@ -2604,6 +2665,7 @@ async function saveToIdearium(){
 <script src="js/agent-options.js"></script>   <!-- §0.47.0 OS4 every agent option in the Agent tab; its proposals (OS7) -->
 <script src="js/code-surface.js"></script>
 <script src="js/code-tab-panels.js"></script>   <!-- §0.60.81 CE6 · CE7 · CE9 — the Files tab's work, the picked lines with an action, the bottom panels -->   <!-- §0.39.349 CT3 — the Code tab is the work surface -->
+<script src="js/code-dock.js"></script>   <!-- §0.60.118 DK2 — the dock: outputs · changes · tasks · context · tools, each its own panel and edge tab -->
 <script src="js/file-versions.js"></script>
 <script src="js/components-panel.js"></script>
 <script src="js/repo-versions.js"></script>

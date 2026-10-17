@@ -23,6 +23,11 @@ const SUITES = [
   'test-projects-overview.test.js',       // 0.60.74 COSA10 — every project on one list; no two API routes share a method and path
   'test-contract-trace.test.js',          // 0.60.75 GW3 — a contract traced end to end; holes named, never filled
   'test-context-budget.test.js',          // 0.60.76 GW24 — the dependencies' code ranked and cut to the agent's budget; the cut said
+  'test-flight-recorder-standalone.test.js', // 0.60.118 FR4a — the flight recorder on its own, run from a carved copy
+  'test-undo-any-change.test.js',         // 0.60.117 FR3 — undo any change, keeping later edits (merge3, route, command, Clear Glass Undo)
+  'test-tested-before-lands.test.js',     // 0.60.115 FR2 — tested in its own tree; a staged batch tested together before it lands
+  'test-change-record.test.js',           // 0.60.114 FR1 — one record per change an agent makes (join, holes, route, command, Clear Glass panel)
+  'test-repo-carve.test.js',              // 0.60.112 CV1 — a part of Nexus as its own Idearium repo (closure, route, command, Clear Glass UI)
   'test-work-funnel.test.js',             // 0.60.94 FN0 — dependencies, spec, phase, chunks, in his order; each stop planted
   'test-spec-pipeline.test.js',           // 0.60.66 SF1-SF3 — intent blocks, the spec framework, the spec gate + collector (phase-tagged)
   'test-phase-map-auto.test.js',          // 0.60.65 MP1/MP2 — every phase mapped by Nexus (no model): files with evidence, requires, consumers, waits-on, specs; automatic in any repo
@@ -386,6 +391,13 @@ const SUITES = [
   'test-chat-crawler.test.js',        // 0.60.84 PI5 — the crawler driving the plan through fake ports
   'test-vector-memory-embed-check.test.js', // 0.60.97 — the embed check, fixed for good
   'test-inject-screen.test.js',       // 0.60.98 — every proposal passes one screen at the door
+  'test-repo-procedures.test.js',     // 0.60.118 DK1 — replayable procedures, .procedure files
+  'test-expectation-tests.test.js',   // 0.60.119 TF1 — a file's expectation from the plan, before the code
+  'test-code-dock.test.js',           // 0.60.118 DK2 — the dock: separate panels on the right edge (Clear Glass)
+  'test-plan-pieces.test.js',         // 0.60.123 PP1–PP4 — the Plan's bar is its pieces; every run with its log; a piece/run points the dock (Clear Glass)
+  'test-prevention.test.js',          // 0.60.123 MP — a memory crisis recorded becomes a prevention: heavy work waits for headroom; Ollama unloads when idle
+  'test-sync-off-thread.test.js',     // 0.60.124 SW1–SW3 — the self-sync's pipeline in its own thread; Guardian holds jobs behind a sign-in wall; COS map EPERM
+  'test-ui-editor.test.js',           // 0.60.122 UE0/UE1 — the UI editor: GrapesJS vendored, a repo page opened, edited, saved back (Clear Glass)
   'test-proposal-evidence.test.js',   // 0.60.99 — a proposal is tested before it reaches a person
   'test-language-checks.test.js',     // 0.60.101 — every language's own parser, at the gate
   'test-cos-vm-shell.test.js',        // 0.60.101 — `cos vm shell`: the test VM's own terminal

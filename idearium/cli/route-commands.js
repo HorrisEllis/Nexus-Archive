@@ -41,6 +41,24 @@ export const SPEC = [
     print: (d, a, h) => { const s = d.settings || d; h.header(`${a.repo.name} — its agent`); for (const k of ['provider', 'backend', 'injectMode', 'toolScope', 'ollamaModel']) if (s[k] != null) console.log(`  ${k.padEnd(12)} ${h.c.bold(String(s[k]))}`); if (s.providers) console.log(h.c.dim(`  providers: ${s.providers.join(' · ')}`)); console.log(''); } },
 
   // ── what its agent proposed ───────────────────────────────────────────────────────────────────────────────────────
+  // §0.60.118 DK1 — James: "maybe buttons for agent tools, for the repo, to execute. replayable proceedures?" The same as the
+  // Code tab's tools panel: one tool through the agent's door (this repo's scope), and .procedure files replayed in order.
+  { key: 'repo.tool', repo: true, usage: 'repo tool <repo> <tool-name> [--args \'{"path":"README.md"}\']', about: 'run one agent tool for this repo, as a person (the agent\'s door, the repo\'s scope)',
+    need: (a) => (a.args[0] ? null : '<tool-name>'),
+    req: (a) => { let args = {}; try { args = a.flags.args ? JSON.parse(String(a.flags.args)) : {}; } catch (_) { args = { __bad: String(a.flags.args) }; } return { method: 'POST', path: `/api/repos/${a.repo.uuid}/agent/tools/run`, body: { name: a.args[0], args }, timeoutMs: 60000 }; },
+    print: (d, a, h) => { const r = d.result || {}; console.log(`${r.ok === false || r.error ? h.c.coral('✗') : h.c.mint('✓')} ${d.name} ${h.c.dim(`${d.ms} ms`)}`); console.log(String(JSON.stringify(r.result !== undefined ? r.result : r, null, 2)).slice(0, 4000)); } },
+  { key: 'repo.procedures', repo: true, usage: 'repo procedures <repo>', about: 'the repo\'s replayable procedures (tool calls kept as .procedure files)',
+    req: (a) => ({ method: 'GET', path: `/api/repos/${a.repo.uuid}/procedures` }),
+    print: (d, a, h) => { const l = d.procedures || []; if (!l.length) { console.log(h.c.gray('  no procedures — `repo procedure <repo> from-run <runId>` keeps a run\'s tool calls')); return; } for (const p of l) { const last = (p.runs || []).slice(-1)[0]; console.log(`  ${p.id}  ${p.name}  ${h.c.dim(`${p.steps.length} steps · ${p.runCount || 0} runs${last ? ` · last ${last.ok ? 'ok' : `stopped at ${last.stoppedAt}`}` : ''}`)}`); } } },
+  { key: 'repo.procedure', repo: true, usage: 'repo procedure <repo> replay <id> | from-run <runId> [--name "…"] | remove <id>', about: 'replay a procedure in order (the first failure stops it), keep a run\'s tool calls as one, or archive one',
+    need: (a) => (['replay', 'from-run', 'remove'].includes(a.args[0]) && a.args[1] ? null : 'replay <id> | from-run <runId> | remove <id>'),
+    req: (a) => a.args[0] === 'replay' ? { method: 'POST', path: `/api/repos/${a.repo.uuid}/procedures/${encodeURIComponent(a.args[1])}/replay`, body: {}, timeoutMs: 600000 }
+      : a.args[0] === 'remove' ? { method: 'DELETE', path: `/api/repos/${a.repo.uuid}/procedures/${encodeURIComponent(a.args[1])}` }
+      : { method: 'POST', path: `/api/repos/${a.repo.uuid}/procedures/from-run`, body: { runId: a.args[1], ...(a.flags.name ? { name: String(a.flags.name) } : {}) } },
+    print: (d, a, h) => {
+      if (d.run) { console.log(`${d.ok ? h.c.mint('✓ replayed') : h.c.coral(`✗ stopped at step ${d.run.stoppedAt} of ${d.run.of}`)} ${d.procedure.name}`); for (const r of d.run.results) console.log(`  ${r.ok ? h.c.mint('✓') : h.c.coral('✗')} ${r.tool}${r.error ? h.c.coral(` — ${r.error}`) : ''}`); return; }
+      if (d.procedure) { console.log(`${h.c.mint('✓ saved')} ${d.procedure.id} ${d.procedure.name} ${h.c.dim(`${d.procedure.steps.length} steps`)}`); if ((d.cut || []).length) console.log(h.c.amber(`  left out (their arguments were cut when the run kept them): ${d.cut.map(c => `#${c.n} ${c.tool}`).join(', ')}`)); return; }
+      console.log(d.archived ? `archived: ${d.archived}` : JSON.stringify(d)); } },
   { key: 'repo.changes', repo: true, usage: 'repo changes <repo> [--status proposed|applied|…] [--prove]', about: 'the agent\'s proposals; --prove checks them on a scratch copy against the charter',
     req: (a) => a.flags.prove ? { method: 'POST', path: `/api/repos/${a.repo.uuid}/worksurface/prove`, body: {}, timeoutMs: 600000 } : { method: 'GET', path: `/api/repos/${a.repo.uuid}/injects${qs(a.flags, ['status'])}` },
     print: (d, a, h) => {
@@ -281,6 +299,23 @@ export const SPEC = [
       if ((d.toBuild || []).length) { console.log(`  ${d.toBuild.length} to build`); for (const x of d.toBuild) console.log(`    · ${x.path}  ${h.c.dim(String(x.purpose || '').slice(0, 140))}`); }
       if (d.skipped.length) { console.log(h.c.amber(`  ${d.skipped.length} skipped`)); for (const x of d.skipped) console.log(`    - ${x.path}  ${h.c.dim(x.why)}`); }
     } },
+  // §0.60.123 PP1/PP2 — the plan as the Plan panel shows it: each phase's pieces (its progress), or one phase's runs and their logs
+  { key: 'repo.plan', repo: true, usage: 'repo plan <repo> [phase] [--map name]', about: 'the build plan: each phase with its pieces (one per planned file: pending, running, written, failed, proven) — or one phase with every run and its log',
+    req: (a) => ({ method: 'GET', path: `/api/repos/${a.repo.uuid}/plan${a.flags.map ? `?map=${encodeURIComponent(a.flags.map)}` : ''}` }),
+    print: (d, a, h) => {
+      const glyph = { pending: '·', running: '◌', written: '◆', failed: '✗', proven: '✓', done: '✓' };
+      const steps = (d.steps || []).filter(s => !a.args[0] || s.key === a.args[0] || String(s.key).startsWith(`${a.args[0]}_`));
+      for (const s of steps) {
+        const pcs = s.pieces || [];
+        console.log(`  ${String(s.key).padEnd(28)} ${pcs.map(p => glyph[p.state] || '?').join('')}  ${h.c.dim(`${pcs.filter(p => ['proven', 'done'].includes(p.state)).length}/${pcs.length} pieces · ${s.status}`)}`);
+        if (!a.args[0]) continue;
+        for (const p of pcs) console.log(h.c.dim(`    ${(glyph[p.state] || '?')} ${p.path} · ${p.state}${p.attempts ? ` · ${p.attempts} attempt(s)` : ''}${p.agent ? ` · ${p.agent}` : ''}${p.uses.length ? ` · uses ${p.uses.join(', ')}` : ''}${p.why ? ` · ${p.why}` : ''}`));
+        for (const r of (s.history && s.history.runs) || []) {
+          console.log(`    run ${r.runId} · ${new Date(r.startedAt).toLocaleString()} · ${r.end} · ${r.agents.join(', ') || 'no agent'}`);
+          for (const l of r.log) console.log(h.c.dim(`      ${new Date(l.ts).toLocaleTimeString()} ${l.part ? `${l.part} ` : ''}${l.state}${l.file ? ` ${l.file}` : ''}${l.provider ? ` · ${l.provider}` : ''}${l.note ? ` — ${l.note}` : ''}`));
+        }
+      }
+    } },
   // 0.60.27 AG1a — "as little as possible", counted: agent calls (plan · code · review), local vs remote, tokens
   { key: 'repo.cost', repo: true, usage: 'repo cost <repo> [phase] [--map name]', about: 'what each phase cost in agent calls and tokens: plan, code and review calls, local vs remote, tokens in and out (estimated), per run',
     req: (a) => ({ method: 'GET', path: `/api/repos/${a.repo.uuid}/phases/cost${a.args[0] ? `?phase=${encodeURIComponent(a.args[0])}${a.flags.map ? `&map=${encodeURIComponent(a.flags.map)}` : ''}` : ''}` }),
@@ -293,6 +328,10 @@ export const SPEC = [
     req: (a) => (a.args[0] ? { method: 'POST', path: '/api/system/lean', body: { on: a.args[0] === 'on', actor: 'command' } } : { method: 'GET', path: '/api/system/lean' }),
     print: (d, a, h) => { console.log(`  lean ${d.on ? h.c.mint('on') : h.c.amber('off')} · ${d.hold.join(', ')}`); for (const r of d.results || d.services || []) console.log(h.c.dim(`    ${r.name} ${r.running != null ? (r.running ? 'running' : 'stopped') : (r.ok ? r.status || 'ok' : `failed: ${r.error}`)}`)); if (d.note) console.log(h.c.dim(`  ${d.note}`)); } },
   // 0.60.25 — the account fallback chain per provider (same as Idearium → Settings → Routing → Accounts)
+  // 0.60.123 MP — James: "failure modes are to prevent problems". What is being prevented now, and why
+  { key: 'system.prevention', repo: false, usage: 'system prevention [clear <fault class>]', about: 'the failure modes preventing now (a memory crisis makes heavy work wait for headroom for a day), and whether heavy work may run; clear ends one early',
+    req: (a) => (a.args[0] === 'clear' ? { method: 'POST', path: '/api/system/prevention/clear', body: { cls: a.args[1] || 'memory_pressure' } } : { method: 'GET', path: '/api/system/lean' }),
+    print: (d, a, h) => { if (d.cleared) { console.log(h.c.mint(`  cleared ${d.cleared}`)); return; } for (const p of d.prevention || []) console.log(`  ${h.c.amber(p.cls)} since ${new Date(p.since).toLocaleString()} · ${p.count}× · until ${new Date(p.until).toLocaleString()} ${h.c.dim(p.why || '')}`); if (!(d.prevention || []).length) console.log(h.c.mint('  nothing is being prevented')); if (d.heavy) console.log(h.c.dim(`  heavy work: ${d.heavy.ok ? 'may run' : 'waits'} — ${d.heavy.why}`)); } },
   // 0.60.28 PF1 — ready before run: what a phase build reads before its first agent call
   { key: 'providers.ready', repo: false, usage: 'providers ready', about: 'can each browser agent take a job now, and if not why: a sign-in wall, every account resting, a usage limit, a reply waiting on your ◎ pick',
     req: () => ({ method: 'GET', path: '/api/providers/ready' }),
@@ -347,6 +386,40 @@ export const SPEC = [
     need: (a) => (a.args.length ? null : '<request…>'),
     req: (a) => ({ method: 'POST', path: `/api/repos/${a.repo.uuid}/funnel`, body: { request: a.args.join(' '), ...(a.flags.intent ? { intent: String(a.flags.intent) } : {}) } }),
     print: (d, a, h) => { for (const l of d.lines || []) console.log(/^stopped/.test(l) ? `  ${h.c.amber(l)}` : `  ${l}`); } },
+  // FR1 0.60.114 — the flight recorder's first piece: one record per change an agent makes (lib/change-record.js). Not
+  // 'repo.changes': that row (the agent's proposals, --prove) already exists, and a second key is silently shadowed
+  { key: 'repo.record', repo: true, usage: 'repo record <repo> [<change id>] [--status applied|proposed|reverted|rejected] [--limit n]', about: 'each change an agent made: what (lines), who, why (its task and run), what was checked, the version it landed in, whether it can be undone, and any missing link named',
+    req: (a) => (a.args[0]
+      ? { method: 'GET', path: `/api/repos/${a.repo.uuid}/changes/${encodeURIComponent(a.args[0])}` }
+      : { method: 'GET', path: `/api/repos/${a.repo.uuid}/changes?limit=${parseInt(a.flags.limit, 10) || 30}${a.flags.status ? `&status=${encodeURIComponent(String(a.flags.status))}` : ''}` }),
+    print: (d, a, h) => {
+      if (d.change) { for (const l of d.lines || []) console.log(/^missing/.test(l) ? `  ${h.c.amber(l)}` : `  ${l}`); return; }
+      if (!(d.changes || []).length) { console.log('  no changes yet'); return; }
+      for (const c of d.changes) console.log(`  ${c.id.slice(0, 8)}  ${String(c.status).padEnd(9)} ${c.path}${c.lines ? ` +${c.lines.added} −${c.lines.removed}` : ''}  ${c.agent || ''}${c.goal ? ` — ${String(c.goal).slice(0, 60)}` : ''}${c.landed.length ? `  @${c.landed[0]}` : ''}${c.holes.length ? h.c.amber(`  missing: ${c.holes.join(', ')}`) : ''}`);
+    } },
+  // FR3 0.60.117 — undo any change an agent made, keeping later edits (versionium/lib/merge3.js); a clash is refused, named
+  { key: 'repo.undo', repo: true, usage: 'repo undo <repo> <change id> [--no-merge] [--force]', about: 'undo one change: what was there before is put back and every later edit is kept; if a later change touched the same lines, nothing changes and the lines are named. --no-merge refuses whenever the file moved on; --force discards later edits',
+    need: (a) => (a.args[0] ? null : '<change id>'),
+    req: (a) => ({ method: 'POST', path: `/api/repos/${a.repo.uuid}/injects/${encodeURIComponent(a.args[0])}/revert`, body: { ...(a.flags['no-merge'] ? { merge: false } : {}), ...(a.flags.force ? { force: true } : {}) } }),
+    print: (d, a, h) => { const n = d.inject || {}; console.log(`  ${h.c.green('undone')} ${n.path || ''}${d.merged ? ' — merged: the later edits were kept' : ''}`); } },
+  // CV1 0.60.112 — James: "can you branch it into a idearium repo?" (lib/repo-carve.js): a part of Nexus as its own repo, Nexus its parent
+  { key: 'repo.carve', repo: false, usage: 'repo carve <name> <path…> | repo carve --preset flight_recorder [--name n] [--cut optional|optional,lazy|none] [--verify] [--dry-run]', about: 'copy a part of Nexus (files or folders) into a new Idearium repo with everything it requires; says what pulled each file in, the npm it needs, and requires that resolve to nothing. Nothing in Nexus moves',
+    need: (a) => (a.flags.preset || a.args.length >= 2 ? null : '<name> <path…> (or --preset flight_recorder)'),
+    req: (a) => {
+      const extra = { ...(a.flags.cut != null ? { cut: String(a.flags.cut) === 'none' ? [] : String(a.flags.cut).split(/[,+]/).filter(Boolean) } : {}), ...(a.flags.verify ? { verify: true } : {}) };
+      return { method: 'POST', path: '/api/repos/carve', body: a.flags.preset
+        ? { preset: String(a.flags.preset), ...(a.flags.name ? { name: String(a.flags.name) } : {}), dryRun: !!(a.flags['dry-run'] || a.flags.dryRun), ...extra }
+        : { name: a.args[0], seeds: a.args.slice(1), dryRun: !!(a.flags['dry-run'] || a.flags.dryRun), ...extra } };
+    },
+    print: (d, a, h) => {
+      console.log(`  ${d.dryRun ? 'would carve' : `carved ${h.c.green(d.repo && d.repo.uuid ? d.repo.uuid.slice(0, 8) : '')}`} ${d.name}: ${d.files} files (${d.seeded} named, ${d.pulledIn} pulled in), ${d.lines} lines${d.parent ? ` · parent ${d.parent.name}` : ''}`);
+      console.log(`  by system: ${Object.entries(d.bySystem || {}).sort((x, y) => y[1] - x[1]).map(([k, n]) => `${k} ${n}`).join(', ')}`);
+      console.log(`  npm: ${Object.keys(d.npm || {}).join(', ') || 'none'}${(d.npmNamedOnly || []).length ? ` · named only: ${d.npmNamedOnly.join(', ')}` : ''}`);
+      if ((d.missing || []).length) console.log(`  ${h.c.amber(`${d.missing.length} require(s) resolve to nothing`)}: ${d.missing.slice(0, 4).map(m => `${m.from} → ${m.spec}`).join('; ')}`);
+      if ((d.cut || []).length) console.log(`  left out (${d.cut.join(', ')}): ${(d.leftOut || []).length} link(s)`);
+      for (const t of (d.tangle || []).slice(0, 6)) console.log(`  tangle: ${String(t.files).padStart(3)} file(s) via ${t.from} → ${t.to} (${t.kind})`);
+      if (d.verified) console.log(`  ${d.verified.ok ? h.c.green('loads alone') : h.c.amber('does NOT load alone')}: ${d.verified.loaded}/${d.verified.of}${(d.verified.failed || []).map(f => `\n    ✗ ${f.path}: ${f.error}`).join('')}`);
+    } },
   // 0.60.78 RT1 — what RAID's officiator holds back (the agents' wait, each staged drop's tries and why) and clearing it
   { key: 'raid.parked', repo: false, usage: 'raid parked', about: 'what the officiator holds back: the agents\' wait (no agent answered) and each staged drop\'s tries, why, and when it is tried next',
     req: () => ({ system: 'cortex', method: 'GET', path: '/api/raid/officiator' }),
