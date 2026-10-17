@@ -250,3 +250,44 @@ addendum_e:
 # every version stated inside, and the folder's when it has one, must agree. The project is package.json's name, else the folder's.
 # Root cause of the delay: the 0.60.103 store fix never reached an exe, because COS stayed 0.1.0 and cos-app.yml only watched
 # version.js. COS is now 0.1.1, the workflow watches every file the exe is built from, and a change without a bump fails, said.
+#
+# ADDENDUM 2026-10-17 — his projects folder (COSA14), and COS that says it is out of date
+# James, 2026-10-17, with screenshots of COS refusing a release zip and of D:\Projects (38 folders, more inside some): "also can
+# you fix cos for me? the zip doesn't have nested folders anymore. these are all my projects i have so far. way more. in some
+# folders. i was hoping to use idearium and cos to manage them"
+# - COS: his COS was 0.1.0; the root-layout zip has been read since COS 0.1.1 (cos-v0.1.1, 2026-10-16). COS 0.1.2 (Nexus
+#   0.60.137) says when a newer COS is out (cos/app/app-update.js); Clear Glass's delivery picks the newest v<x.y.z>, not the
+#   repo's "latest" (a cos-v release had been it).
+# - COSA14_his_projects_folder (BUILT 0.60.139): idearium/lib/projects-folder.cjs scans the folder he names (projects by their
+#   markers, also inside group folders; a folder of files is a project too, marked weak; an empty folder is said), and brings the
+#   ones he ticks into Idearium — each zipped from his disk with the import's own skip rules and caps and imported through
+#   repo.import-archive, the same door as an uploaded zip, so each gets its repo, chunks, index and COS container as any import
+#   does. The folder is read, never changed. Routes GET/POST /api/my-projects/folder, POST /api/my-projects/folder/import;
+#   commands `projects folder [<dir>]`, `projects import <path…>`; My projects → "Projects folder" in Idearium.
+#   Open: COSA15 — a project's own runs and versions in COS (start, stop, its branches), as Nexus's are.
+#
+# ADDENDUM 2026-10-17 (b) — who brings his projects in
+# Context: the coder's summary of 0.60.139 told him how to point Idearium at D:\Projects and said the scan was tested only on a
+# test folder. James, 2026-10-17: "no. ill import them" · "no with the idearium. make it a feature if you want to do that"
+# - Decided (his): he imports his projects himself, with Idearium. The coder does not import them for him.
+# - The folder scan stays what 0.60.139 built: a feature of Idearium (My projects → "Projects folder", the routes and commands
+#   above), run by him. Nothing was imported by the coder; the coder has no access to D:\Projects.
+# - Reading, to confirm: "make it a feature if you want to do that" is read as "the folder scan belongs in Idearium as its own
+#   feature, not a one-off the coder runs" — which is how it was built. If he meant something more (a separate feature page,
+#   a watch on the folder), that is open.
+#
+# ADDENDUM 2026-10-17 (c) — sync first; the projects folder out of Idearium until then (0.60.140)
+# James, 2026-10-17, after addendum (b) read his "make it a feature" as already done: "im saying add a sync feature to idearium.
+# remove it from idearium unntil then"
+# - Decided (his): Idearium gets a SYNC feature. Until it exists, the projects-folder feature (COSA14, 0.60.139) is not in
+#   Idearium. Addendum (b) is kept and superseded here (§0.3): the coder's reading there was wrong.
+# - Done (0.60.140): idearium/lib/projects-folder.cjs and its test archived to _archive/2026-10-17-projects-folder-until-sync/;
+#   the routes, the two commands, the UI section, the run-all row and the loom wires removed. COSA14 status: ARCHIVED.
+# - COSA16_idearium_sync (OPEN, mapped, not built):
+#     reading, to confirm: a project in Idearium stays in step with its folder on his disk. He picks the folder; Idearium
+#     brings in what changed (new files, edits, removals said, never silent) as a new version of that repo, not a new repo.
+#     His folder is not written unless he asks for that direction.
+#     substrate (§8.6): the archived scan and zip; repo.import-archive; the repo's versions (`repo versions`, `repo diff`).
+#     open questions for him, only if the axioms do not settle them: one-way (disk → Idearium) or both ways; on demand or
+#     watched.
+#     order (his rule): backend, route, command, UI, in one phase.
