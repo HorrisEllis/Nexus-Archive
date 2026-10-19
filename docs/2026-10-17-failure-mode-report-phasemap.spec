@@ -216,6 +216,7 @@ spec:
       status: OPEN
       owned_by: "FM3's pushback (failure-reproduction); the genesis skeleton gains it so every new system has one"
       depends_on: [FMR4_the_macro_bundle]
+      files: [guardian/server.js, guardian/lib/replay-mode.js, versionium/server.js, versionium/routes/system.js]   # 0.60.147 DG2: given so the phase has a graph (the coder's placement, each in the system it serves, to confirm)
       does: >-
         A sealed replay mode (NEXUS_REPLAY=1): no outbound calls, the Ollama tape in replay, guardian pointed at a fake tab,
         clocks from the macro. Each system: POST /replay { events } that feeds its own bus through the same entry its real
@@ -226,9 +227,9 @@ spec:
       status: OPEN
       owned_by: "FM3 (failure-reproduction) + SN1 (snapshot as compartment)"
       depends_on: [FMR5_replay_routes, "SN0_one_branch (snapshot-compartments)"]
-      files: [cos/testenv/index.js, lib/failure-replay.js]
+      files: [cos/testenv/index.js, cos/testenv/replay.js]   # 0.60.147 DG2: moved into cos, the system it serves (addendum b)
       does: >-
-        lib/failure-replay.js run(macro): open the snapshot as a lazy branch (SN0's mechanism), start the systems the macro
+        cos/testenv/replay.js run(macro): open the snapshot as a lazy branch (SN0's mechanism), start the systems the macro
         names in replay mode inside the compartment (process backend by default, VM when the macro needs a guest), start
         the fake tab with its profile and the tape, feed the events through the replay routes, drive the ui steps with
         Clear Glass's driver (clear-glass/src/driver/glass.js — the same engine the tests use), watch for expect, then
@@ -307,3 +308,15 @@ spec:
   # missed by this map's sweep. Kept and extended (one answer per path, §10.3), never a second route.
   built_a: [FMR0 (built), FMR2 (partly), FMR3 (built), FMR8 (the report section)]
   next_a: [FMR2 rest (gate FAILED, error-log, Clear Glass errors), FMR1, FMR4 (the macro, IM1 first), FMR5, FMR6, FMR7]
+
+  # ── ADDENDUM 2026-10-18 (b) — every open phase's dependency graph, before any of it is built ─────────────────────
+  # James, 2026-10-18: "each phase, has to have a dependany graph before executing." (DG2, 0.60.147; docs/CLAUDE.md)
+  # Run on this map with lib/phase-graph.js before writing any more code for it. What the graphs said, and what changed:
+  #   - FMR5 had no graph: it named no file and none could be found. Given files, each in the system it serves: guardian
+  #     first (FMR0c), then versionium. The placement is the coder's; to confirm.
+  #   - FMR6 planned lib/failure-replay.js, which requires cos/testenv: a new upward crossing that the graph cannot see for a
+  #     file that does not exist yet. The coder caught it reading the graph. Moved to cos/testenv/replay.js (D1: lib/ is the
+  #     kernel and never reaches up). The earlier name stays in the comment beside it (§0.3).
+  #   - FMR1, FMR4, FMR10: graphs ready. Every crossing they show is already in the ratchet's baseline; none would be new.
+  #   - FMR11: its graph is mapped from words ("evidence") and pulls in files the phase only mentions. Its files are to be
+  #     declared before it is built.

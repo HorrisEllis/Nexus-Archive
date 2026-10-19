@@ -4250,13 +4250,43 @@ const AGENT_TRANSCRIPT = new Map(); // repoUuid -> [{ role, text, meta }]
 const AGENT_FEED = new Map();   // repoUuid -> { rows: [], anchor, mutations, generating, jobId, provider, text, textLen, updated }
 const AGENT_FEED_MAX = 120;
 function _agentFeedState(uuid) {
-  if (!AGENT_FEED.has(uuid)) AGENT_FEED.set(uuid, { rows: [], anchor: null, mutations: null, generating: null, jobId: null, provider: null, text: '', textLen: 0, updated: 0 });
+  if (!AGENT_FEED.has(uuid)) { AGENT_FEED.set(uuid, { rows: [], anchor: null, mutations: null, generating: null, jobId: null, provider: null, text: '', textLen: 0, updated: 0 }); _agentFeedRestore(uuid); }
   return AGENT_FEED.get(uuid);
+}
+// §0.60.143 TL1b — James: "We need persistent data look at the last commit." The feed above lived only in this page: a reload or a
+// restart lost the reply and the thinking so far. Idearium now keeps every frame on disk (lib/work-journal.js); the first time
+// this page looks at a repo it reads the newest job back, unless a live frame has already arrived.
+async function _agentFeedRestore(uuid) {
+  let job = null;
+  try {
+    const d = await api(`/api/repos/${encodeURIComponent(uuid)}/agent/feed?limit=1`);
+    const top = (d.jobs || [])[0]; if (!top) return;
+    job = (await api(`/api/repos/${encodeURIComponent(uuid)}/agent/feed?job=${encodeURIComponent(top.jobId)}`)).job || top;
+    // §0.60.144 TL1c — a reply under a gate: which attempt of that gate it was
+    if (job.brick) {
+      const g = ((await api(`/api/repos/${encodeURIComponent(uuid)}/agent/feed?gate=${encodeURIComponent(job.brick)}`)).gates || []).find(x => x.brick === job.brick);
+      if (g) { const a = g.attempts.find(x => x.jobId === job.jobId); job.attempt = { n: a ? a.attempt : g.attempts.length, of: g.attempts.length }; }
+    }
+  } catch (_) { return; }   // no journal (an older Idearium, or none yet): the live feed is all there is
+  const st = AGENT_FEED.get(uuid);
+  if (!st || !job || (st.jobId && (st.jobId !== job.jobId || st.text))) return;   // live frames win
+  Object.assign(st, { jobId: job.jobId, provider: job.provider, text: job.text || '', textLen: job.textLen || 0, thinking: job.thinking || '', thinkingLen: job.thinkingLen || 0,
+    generating: job.generating && job.status === 'responding', gate: job.gate || null, mutations: job.mutations, restored: job.status, updated: job.updatedAt || 0,
+    brick: job.brick || null, attempt: job.attempt || null, textFrom: job.textFrom || null });
+  st.rows = (job.timeline || []).filter(e => e.event !== 'chunk' && !(e.event === 'progress' && e.stage === 'dom')).slice(-AGENT_FEED_MAX).map(e => ({
+    ts: e.ts, ev: e.event === 'gate' ? `gate ${e.label || e.gate || ''} · ${e.state || ''}` : e.stage ? `${e.event}:${e.stage}` : e.event,
+    detail: [e.detail, e.how, e.reason, e.error].filter(Boolean).join(' · '), bad: e.event === 'error' || e.event === 'timeout' || (e.event === 'gate' && e.state === 'failed') }));
+  st.rows.push({ ts: Date.now(), ev: 'restored', detail: `from disk — ${job.status} · reply ${job.textLen || 0}ch${job.thinkingLen ? ` · thinking ${job.thinkingLen}ch` : ''}`, bad: job.status === 'stale' });
+  if (CURRENT_API_REPO && CURRENT_API_REPO.uuid === uuid) _agentFeedPaint(uuid);
+  if (typeof agentLivePaint === 'function') agentLivePaint(uuid);
+  if (typeof wsLivePaint === 'function') wsLivePaint(uuid);
 }
 function _agentFeedIn(p) {
   if (!p || !p.repoUuid) return;
   const st = _agentFeedState(p.repoUuid);
-  if (p.jobId && p.jobId !== st.jobId) { st.jobId = p.jobId; st.text = ''; st.textLen = 0; st.anchor = null; st.mutations = null; st.gate = null; st.thinking = ''; st.thinkingLen = 0; }
+  st.restored = null;
+  if (p.jobId && p.jobId !== st.jobId) { st.jobId = p.jobId; st.text = ''; st.textLen = 0; st.anchor = null; st.mutations = null; st.gate = null; st.thinking = ''; st.thinkingLen = 0; st.brick = null; st.attempt = null; }
+  if (p.brick) st.brick = p.brick;   // §0.60.144 TL1c — the contract gate this reply works on
   // §0.60.142 LV1 — the model's thinking, streamed while its reply is still empty (gemini thinks for minutes): kept whole
   if (typeof p.thinking === 'string' && p.thinking) { st.thinking = p.thinking.slice(-12000); st.thinkingLen = p.thinkingLen || p.thinking.length; }
   if (p.provider) st.provider = p.provider;
@@ -4339,6 +4369,8 @@ function agentLiveHtml(uuid) {
   const attrs = a && a.attrs ? Object.entries(a.attrs).map(([k, v]) => `${k}=${v}`).join(' ') : '';
   return `<div class="al-head"><span class="al-dot${st.generating ? ' on' : ''}"></span><b>${st.generating ? 'writing' : 'idle'}</b>
       ${st.provider ? `<span>${escapeHtml(st.provider)}</span>` : ''}<span class="al-dim">job ${escapeHtml(String(st.jobId).slice(0, 8))}</span>
+      ${st.brick ? `<span class="al-dim" data-brick="${escapeHtml(st.brick)}" title="${escapeHtml(st.brick)}">gate ${escapeHtml(st.brick.split('::').slice(1).join(' · '))}${st.attempt ? ` · attempt ${st.attempt.n} of ${st.attempt.of}` : ''}</span>` : ''}
+      ${st.restored ? `<span class="al-dim" data-restored="${escapeHtml(st.restored)}">restored from disk · ${escapeHtml(st.restored)}${st.textFrom === 'chat-ledger' ? ' · read from Clear Glass\'s chat ledger' : ''}</span>` : ''}
       ${st.mutations != null ? `<span class="al-dim">mutations ${st.mutations}</span>` : ''}
       ${a ? `<span class="al-anchor" title="${escapeHtml(attrs)}">⌖ ${escapeHtml(a.path || a.tag || '')}</span>` : ''}
       <span class="al-dim">${st.textLen || st.text.length}ch${st.thinkingLen ? ` · thinking ${st.thinkingLen}ch` : ''}</span>
@@ -4790,6 +4822,8 @@ const AGENT_CLI_HELP = [
   '  /graph [file]                 how the project connects; with a file, what it imports and what imports it',
   '  /context on|off               include this project\'s code and graph with your questions (on by default)',
   '  /recall <words>               search EVERY memory system and graph (chats, fixes, gaps, learned facts, specs, changelogs, this graph)',
+  '  /find <words>                 every context source asked at once (the context stream): each piece with its source and kind, what none covered named',
+  '  /lattice <node | words>       the nodes joined to it in the node lattice, each edge typed (causal, wire, reference, temporal)',
   '  /atlas                        where NEXUS keeps memory: every table with its size and the tool that reads it',
   '',
   'RUN & CHECK',
@@ -4896,6 +4930,23 @@ async function agentCommand(line) {
         const r = await api(`/api/repos/${uuid}/context?q=${encodeURIComponent(arg)}&limit=15`);
         _cli(uuid, r.hits.length ? r.hits.map(h => `[${h.source}${h.id ? ' ' + String(h.id).slice(0, 40) : ''}] ${h.snippet}`).join('\n\n') : `nothing matched "${arg}" (searched ${r.searched.length} sources)`,
           `${r.total} match(es) across ${Object.keys(r.bySource).length} source(s)`); break;
+      }
+      // §0.60.157 GM4 — the node lattice (intelligence, through Idearium): what is joined to a node, each edge typed
+      case 'lattice': {
+        if (!arg) { _cli(uuid, 'usage: /lattice <node-id | words> — the nodes joined to it: causal, wire, reference, temporal'); break; }
+        const r = await api('/api/lattice/neighbours', { method: 'POST', body: JSON.stringify(/\s/.test(arg) ? { text: arg } : { node: arg, text: arg }) }, 60000);
+        const lines = r.neighbours.map(n => `[${n.kind} ${n.score}] ${n.key}${n.text && n.text !== n.id ? `\n  ${String(n.text).slice(0, 180)}` : ''}`);
+        for (const f of r.stats.systems.failed) lines.push(`✗ ${f.system}: ${f.why}`);
+        _cli(uuid, lines.join('\n') || 'nothing joined to it', `${r.neighbours.length} neighbour(s) of ${r.seeds.length} seed(s) · lattice ${r.stats.nodes} nodes`); break;
+      }
+      // §0.60.156 GM5 — the context stream: every source asked at once; what none covered is named (lib/context-stream.js)
+      case 'find': {
+        if (!arg) { _cli(uuid, 'usage: /find <words> — every context source asked at once; e.g. /find contract ledger per gate'); break; }
+        const r = await api(`/api/repos/${uuid}/context/find`, { method: 'POST', body: JSON.stringify({ text: arg }) }, 60000);
+        const lines = r.pieces.slice(0, 15).map(p => `[${p.from} ${p.kind} ${p.score.toFixed(2)}] ${p.id}\n  ${p.text.replace(/\s+/g, ' ').slice(0, 200)}`);
+        for (const f of r.residue.failed) lines.push(`✗ ${f.source}: ${f.why}${f.phase ? ` (built by ${f.phase})` : ''}`);
+        if (r.residue.absent.length) lines.push(`asked, nobody home: ${r.residue.absent.join(', ')}`);
+        _cli(uuid, lines.join('\n\n') || 'nothing found', `${r.pieces.length} piece(s) from ${new Set(r.pieces.map(p => p.from)).size} source(s) · covered ${r.covered.length}/${r.request.need.length}${r.residue.need.length ? ` · not found: ${r.residue.need.join(' · ')}` : ''}`); break;
       }
       case 'atlas': {
         const d = await api('/api/context/directory');

@@ -84,7 +84,7 @@ spec:
       builds_on: "versionium (snapshots, history import, 0.60.7) · repo notes · the ledgers · nodes"
       does: "A checkpoint per passed gate (a Versionium snapshot + the contract's state), so work resumes from the last passed block after any crash, restart or provider switch. A census of what a repo keeps where, and what does not persist yet."
     CX0_context_from_dependencies:
-      status: "OPEN"
+      status: "SUPERSEDED by CX1 (one build of context-from-dependencies; GA1 0.60.44 fetches a dependency excerpt today) — the gating census 2026-10-18. Was: OPEN"
       james: '"mapping, gathering context from the dependancies"'
       builds_on: "lib/component-store.js closure · loom wires · lib/project-decompose.js"
       does: "A block's context is its dependencies' contracts (exports, signatures) from the component store and loom — not their files."
@@ -93,7 +93,7 @@ spec:
       james: '"all the phases from today and yesterday that will idearium working"'
       does: "The open phases of 2026-10-12/13 that make Idearium work end to end, in order — request spine (RQ), projects (PL1, PL5), identities (ID1, TB1), then CT0 → GT0 → MEM0 — run as a contract through the pipeline itself."
     PF0_profiles_linked_to_hats:
-      status: "OPEN — mapped as ID1 in docs/2026-10-13-identities-tabs-and-automation-phasemap.spec; his 0.60.13 session hub is its base"
+      status: "FOLDED into ID1 (one phase, not two) — the gating census 2026-10-18. Was: OPEN — mapped as ID1 in docs/2026-10-13-identities-tabs-and-automation-phasemap.spec; his 0.60.13 session hub is its base"
       james: '"profiles in clearlgas that can link to hats. multiaccunt setup in clearglass, using porofiles?"'
     CT2_ingestion_as_contracts:
       status: "OPEN"
@@ -161,4 +161,18 @@ spec:
 #   and the next brick read as "too big". It is fixed and recorded in CHANGELOG-0.60.18.
 # - Registration: contract-gates (owed since 0.60.15), contract-adapters, model-door and phase-plan are now in
 #   loom/maps/raid-events-and-tools-map.js with their real edges, plus idearium/api as their consumer.
+
+# ## ADDENDUM 2026-10-18 — the gates, solid (0.60.158)
+# James, 2026-10-18: "Need to get the gates solid." The coder probed cortex/core/raid/contract-gates.js (CT0's executable
+# contract) for a gate or a contract that reads done when it is not. Six holes, each proven on the code first, each closed:
+#   H1 an outcome condition that was not { gate } was never looked at: a contract completed with its done_when unmet
+#   H2 a gate whose required file was deleted after it passed stayed PASSED (only a changed hash made it STALE)
+#   H6 an invariant stayed 'verified' after its gate went stale: verified once, verified forever
+#   H3 an invariant checked by a file or by evidence could never be verified (only a gate check set it)
+#   H4 a condition naming CK-006 or CK-008 could never pass: this file kept its own list of the import checks (three of five)
+#   H5 a match that was not a regex threw out of check()
+# Now: holds(cond) reads whether a condition holds NOW (a gate by its current status, a file or evidence directly);
+# completion() asks it of every invariant and every outcome condition; a test or catalogue check named there holds only as
+# verifyOutcome() last ran it. The import checks are the catalogue's list. Test: tests/modules/test-gates-solid.test.js 7/7;
+# test-contract-gates 20/20 unchanged.
 

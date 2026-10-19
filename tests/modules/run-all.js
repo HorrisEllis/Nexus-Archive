@@ -411,8 +411,24 @@ const SUITES = [
   'test-prevention.test.js',          // 0.60.123 MP — a memory crisis recorded becomes a prevention: heavy work waits for headroom; Ollama unloads when idle
   'test-sync-off-thread.test.js',     // 0.60.124 SW1–SW3 — the self-sync's pipeline in its own thread; Guardian holds jobs behind a sign-in wall; COS map EPERM
   'test-phase-deps-gate.test.js',     // 0.60.125 DG1 — a phase build is refused while its depends_on are open (his decisions by their question); --anyway is the override
+  'test-phase-graph.test.js',             // 0.60.147 DG2 — a phase has a dependency graph before it executes (gate, route, command, Phases tab in Clear Glass)
   'test-test-first.test.js',          // 0.60.141 TF2 — the phase's test is written first (by the planner, never the coder), seen failing, then shapes the plan and proves it
   'test-live-everywhere.test.js',     // 0.60.142 LV1/LV4 — thinking streams before the reply (5 userscripts, guardian); picked selectors kept stable
+  'test-work-journal.test.js',        // 0.60.143 TL1b — the agent's reply and thinking on disk as they stream; back after a reload or restart
+  'test-gate-context.test.js',        // 0.60.145 TL2a — a gate's context from what was kept; its finished or in-flight reply reused, once
+  'test-context-stream.test.js',      // 0.60.156 GM5 — context as a SISO stream: every source at once, the residue named, the model asked only the residue
+  'test-node-lattice.test.js',        // 0.60.157 GM4 — every data node, one lattice: causal, wire, reference, temporal (when it happened)
+  'test-checks-layer-one.test.js',    // 0.60.157 QA1 — CK-231, CK-237, CK-239, CK-252 run; each red on a planted defect
+  'test-gates-solid.test.js',         // 0.60.158 — six holes in contract-gates, each proven then closed (three false completes)
+  'test-cg-network-ui.test.js',       // 0.60.160 — Settings → Network: the Tor·Snowflake transport UI, driven in Clear Glass over the real net service
+  'test-cg-gig-autofill.test.js',     // 0.60.161 GA1 — co-pilot fills the Fiverr gig editor (the engine, not a chat); written gig, else draft from profile+offer, else ask
+  'test-pipeline-nodes.test.js',      // 0.60.162 — the pipeline is persistent: derivePlan names each phase's files (DG2), and phase/graph/gate are node-export types
+  'test-model-fit-ladder.test.js',    // 0.60.163 MF1 — the ladder leaves off local models that can't fit free RAM up front (byFit/fittingModels); ollama-first on a small box
+  'test-project-registry.test.js',    // 0.60.164 CR1 — the contract build wires every built file into the project's component store with resolved edges (the spine)
+  'test-economy-resume.test.js',    // 0.60.165 AB1 — a build that exhausted only on time-bound holds (economy/rate-limit/no-RAM) is retried when the slot frees; never a real failure
+  'test-cos-run-target.test.js',     // 0.60.166 CT1 — the gate's test runs inside COS's process sandbox (clean env, timeout, output cap); portable, no KVM needed
+  'test-tf-already-done.test.js',      // 0.60.167 — a phase whose files already exist is not stuck forever on test_first:require (TF.decide: passes-already+exists = already satisfied)
+  'test-readme-generate.test.js',    // 0.60.153 — the README: every system, module and file; every phase; the data; Idearium; every release; under 512 KiB
   'test-ui-editor.test.js',           // 0.60.122 UE0/UE1 — the UI editor: GrapesJS vendored, a repo page opened, edited, saved back (Clear Glass)
   'test-proposal-evidence.test.js',   // 0.60.99 — a proposal is tested before it reaches a person
   'test-language-checks.test.js',     // 0.60.101 — every language's own parser, at the gate

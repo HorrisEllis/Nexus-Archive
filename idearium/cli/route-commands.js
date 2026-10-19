@@ -93,6 +93,38 @@ export const SPEC = [
     } },
 
   // ── what is happening, and what happened ──────────────────────────────────────────────────────────────────────────
+  // §0.60.143 TL1b — James: "We need persistent data look at the last commit." The agent's replies as they streamed, from disk
+  { key: 'repo.feed', repo: true, usage: 'repo feed <repo> [<job id>] [--gate <map>::<phase>[::<gate>]] [--gates] [--contract <map>::<phase>] [--limit n]', about: 'the agent\'s replies and thinking as they streamed, kept on disk: newest jobs, one job with its timeline, or per contract gate every attempt',
+    req: (a) => ({ method: 'GET', path: a.flags.contract ? `/api/repos/${a.repo.uuid}/agent/feed?contract=${encodeURIComponent(a.flags.contract)}` : a.flags.gate ? `/api/repos/${a.repo.uuid}/agent/feed?gate=${encodeURIComponent(a.flags.gate)}` : a.flags.gates ? `/api/repos/${a.repo.uuid}/agent/feed?gates=1` : a.args[0] ? `/api/repos/${a.repo.uuid}/agent/feed?job=${encodeURIComponent(a.args[0])}` : `/api/repos/${a.repo.uuid}/agent/feed?limit=${Number(a.flags.limit) || 20}` }),
+    print: (d, a, h) => {
+      if (d.ledger) {   // §0.60.146 — one contract's ledger
+        console.log(`  ${h.c.sky(d.ledger.contract)}  ${h.c.dim(`${d.ledger.jobs.length} job(s) · ${d.ledger.lines} line(s) · ${d.ledger.file}`)}`);
+        for (const j of d.ledger.jobs) console.log(h.c.dim(`    ${String(j.brick || '').split('::').pop().padEnd(22)} ${j.status.padEnd(10)} ${String(j.jobId).slice(0, 18)} ${j.provider || ''} · reply ${j.textLen}ch (${j.textFrom})${j.handled ? ` · handled ${j.handled.state || ''}` : ''}`));
+        return;
+      }
+      if (d.gates) {   // §0.60.144 TL1c — per gate
+        if (!d.gates.length) { console.log(h.c.gray(`  no reply kept under a gate${d.ungated ? ` (${d.ungated} without one)` : ''}`)); return; }
+        for (const g of d.gates) {
+          console.log(`  ${h.c.sky(g.brick)}  ${h.c.dim(`${g.attempts.length} attempt(s) · last ${g.last.status} · ${g.last.provider || ''}`)}`);
+          for (const t of g.attempts) console.log(h.c.dim(`      ${t.attempt}. ${t.status.padEnd(10)} ${String(t.jobId).slice(0, 18)} ${t.provider || ''} · reply ${t.textLen}ch · thinking ${t.thinkingLen}ch`));
+        }
+        if (d.ungated) console.log(h.c.dim(`\n  ${d.ungated} job(s) with no gate known (a chat, or a reply from before 0.60.144)`));
+        // §0.60.145 TL2a — one gate: what its next attempt is told, and what it would reuse
+        if (d.note) console.log(h.c.dim(`\n  what its next attempt is told:\n  ${d.note.replace(/\n/g, '\n  ')}`));
+        if (d.reusable) console.log(h.c.amber(`\n  ↺ its next attempt reuses job ${d.reusable.jobId} (${d.reusable.inflight ? 'still being written — waited for' : 'finished'}) instead of asking again`));
+        return;
+      }
+      const head = (j) => `${j.status === 'error' || j.status === 'timeout' || j.status === 'stale' ? h.c.coral(j.status) : j.status === 'complete' ? h.c.mint(j.status) : h.c.sky(j.status)} ${h.c.dim(String(j.jobId).slice(0, 24))} ${j.provider || ''} ${h.c.dim(`reply ${j.textLen}ch · thinking ${j.thinkingLen}ch · ${new Date(j.updatedAt).toISOString().slice(0, 19)}`)}`;
+      if (d.job) {
+        const j = d.job; console.log(`  ${head(j)}`);
+        if (j.thinking) console.log(h.c.dim(`\n  thinking (tail)\n  ${j.thinking.slice(-600).replace(/\n/g, '\n  ')}`));
+        if (j.text) console.log(`\n  reply (tail)\n  ${j.text.slice(-1500).replace(/\n/g, '\n  ')}`);
+        for (const e of (j.timeline || []).filter(e => e.event !== 'chunk').slice(-20)) console.log(h.c.dim(`  ${new Date(e.ts).toISOString().slice(11, 19)} ${e.event}${e.stage ? `:${e.stage}` : ''}${e.label ? ` ${e.label}` : ''}${e.state ? ` · ${e.state}` : ''}${e.error ? ` — ${e.error}` : ''}`));
+        return;
+      }
+      if (!(d.jobs || []).length) { console.log(h.c.gray('  no journaled replies')); return; }
+      for (const j of d.jobs) console.log(`  ${head(j)}`);
+    } },
   { key: 'repo.tasks', repo: true, usage: 'repo tasks <repo> [--running] [--failed]', about: 'background tasks: every call of the agent wearing its hat, runs, setup',
     req: (a) => ({ method: 'GET', path: `/api/repos/${a.repo.uuid}/tasks?limit=120` }),
     print: (d, a, h) => {
@@ -240,6 +272,33 @@ export const SPEC = [
     need: (a) => (a.args.length ? null : '<file.contract>'),
     local: (a) => { const C = require('../../cortex/core/raid/contract-gates.js'); const L = C.load(a.args[0]); const r = C.evaluate(L.payload); if (!r.legacy) C.save(a.args[0], L); return r; },
     print: (d, a, h) => { if (d.legacy) { console.log(h.c.dim(`  ${d.why}`)); return; } for (const p of d.problems || []) console.log(h.c.amber(`  ! ${p}`)); for (const g of d.gates) console.log(`  ${(g.status === 'PASSED' ? h.c.mint : g.status === 'READY' ? (x) => x : h.c.amber)(g.status.padEnd(8))} ${g.id.padEnd(16)} ${h.c.dim(g.type)}${g.reasons.length ? h.c.dim(`  — ${g.reasons.join('; ')}`) : ''}`); console.log(`  ${d.complete ? h.c.mint('complete') : h.c.amber('not complete')}: ${d.why.join('; ')}`); } },
+  // §0.60.157 GM4 — the node lattice (intelligence): every data node of every system, edges typed
+  { key: 'lattice.neighbours', repo: false, usage: 'lattice neighbours <node-id | words> [--kinds=causal,reference,temporal] [--window=ms] [--limit=n]', about: 'the nodes joined to a node (or to what the words find), each edge typed — causal, wire, reference, or temporal (when they happened, never a cause)',
+    need: (a) => (a.args.length ? null : '<node-id | words>'),
+    req: (a) => { const q = a.args.join(' '); return { system: 'intelligence', method: 'POST', path: '/api/intelligence/lattice/neighbours', timeoutMs: 60000,
+      body: { ...(/\s/.test(q) ? { text: q } : { node: q, text: q }), ...(a.flags.kinds ? { kinds: String(a.flags.kinds).split(',').map(x => x.trim()) } : {}), ...(a.flags.window ? { window: parseInt(a.flags.window, 10) } : {}), ...(a.flags.limit ? { limit: parseInt(a.flags.limit, 10) } : {}) } }; },
+    print: (d, a, h) => {
+      console.log(`  ${h.c.mint(`${d.neighbours.length} neighbour(s)`)} of ${d.seeds.length} seed(s)${h.c.dim(`  · lattice ${d.stats.nodes} nodes, ${d.stats.edges.reference} reference / ${d.stats.edges.causal} causal / ${d.stats.edges.wire} wire edges`)}`);
+      for (const n of d.neighbours) console.log(`  ${h.c.dim(`[${n.kind} ${n.score}]`)} ${n.key}  ${h.c.dim(String(n.text).slice(0, 100))}`);
+      for (const f of d.stats.systems.failed) console.log(h.c.amber(`  ✗ ${f.system}: ${f.why}`));
+    } },
+  { key: 'lattice.nodes', repo: false, usage: 'lattice nodes', about: 'the node lattice: how many nodes and edges of each kind, which systems were read and which could not be',
+    req: () => ({ system: 'intelligence', method: 'GET', path: '/api/intelligence/lattice/nodes' }),
+    print: (d, a, h) => { console.log(`  ${d.nodes} nodes · edges ${JSON.stringify(d.edges)} · ${d.timed} with their own time · ${d.dangling} causes naming no node`); console.log(h.c.dim(`  read: ${d.systems.read.join(', ')}`)); for (const f of d.systems.failed) console.log(h.c.amber(`  ✗ ${f.system}: ${f.why}`)); } },
+  // §0.60.156 GM5 — the context stream: every source in lib/context-sources.js asked at once; what none covered is named
+  { key: 'context.find', repo: false, usage: 'context find <text> [--need=a|b|c] [--repo=<uuid>] [--gate=<map::phase::brick>] [--sources=atlas,vector]', about: 'what Nexus already holds for a request — every context source asked at once (non-linear), each piece with its source and kind; the need nothing covered is named, and is all a build would be asked',
+    need: (a) => (a.args.length || a.flags.need ? null : '<text>'),
+    req: (a) => ({ method: 'POST', path: a.flags.repo ? `/api/repos/${encodeURIComponent(a.flags.repo)}/context/find` : '/api/context/find', timeoutMs: 60000,
+      body: { text: a.args.join(' '), ...(a.flags.need ? { need: String(a.flags.need).split('|').map(x => x.trim()).filter(Boolean) } : {}), ...(a.flags.gate ? { gate: String(a.flags.gate) } : {}), ...(a.flags.sources ? { sources: String(a.flags.sources).split(',').map(x => x.trim()).filter(Boolean) } : {}) } }),
+    print: (d, a, h) => {
+      console.log(`  ${h.c.mint(`${d.pieces.length} piece(s)`)} · covered ${d.covered.length}/${d.request.need.length}${d.residue.need.length ? h.c.amber(` · not found: ${d.residue.need.join(' · ')}`) : ''}`);
+      for (const p of d.pieces.slice(0, 15)) console.log(`  ${h.c.dim(`[${p.from} ${p.kind} ${p.score.toFixed(2)}]`)} ${p.id}  ${h.c.dim(p.text.replace(/\s+/g, ' ').slice(0, 140))}`);
+      for (const f of d.residue.failed) console.log(h.c.amber(`  ✗ ${f.source}: ${f.why}${f.phase ? ` (built by ${f.phase})` : ''}`));
+      if (d.residue.absent.length) console.log(h.c.dim(`  asked, nobody home: ${d.residue.absent.join(', ')}`));
+    } },
+  { key: 'context.sources', repo: false, usage: 'context sources', about: 'the context stream\'s sources: each row\'s signature, system, cost (free | model | build) and kinds — joining is a row, never a line in the finder',
+    req: () => ({ method: 'GET', path: '/api/context/sources' }),
+    print: (d, a, h) => { for (const r of d.sources) console.log(`  ${r.signature.padEnd(12)} ${r.system.padEnd(13)} ${r.cost.padEnd(6)} ${h.c.dim((r.kinds || []).join(','))}${r.phase ? h.c.amber(`  (built by ${r.phase})`) : ''}  ${h.c.dim(r.about || '')}`); } },
   { key: 'contract.packet', repo: false, usage: 'contract packet <file.contract> <gate>', about: 'the smallest context one gate needs (its refs resolved, upstream evidence, its gaps) — what an agent is handed',
     need: (a) => (a.args.length >= 2 ? null : '<file.contract> <gate>'),
     local: (a) => { const C = require('../../cortex/core/raid/contract-gates.js'); return C.packet(C.load(a.args[0]).payload, a.args[1]); },
@@ -587,6 +646,11 @@ export const SPEC = [
       }
       console.log(h.c.dim('\n  build one: idearium repo phase <repo> <phase> build'));
     } },
+  // §0.60.147 DG2 — James, 2026-10-18: "each phase, has to have a dependany graph before executing."
+  { key: 'repo.phase-graph', repo: true, usage: 'repo phase-graph <repo> <phase> [--map name]', about: 'a phase\'s dependency graph, the one a build is refused without: the files it changes, what they use, who uses them (what a change can break), the systems, any crossing between systems, what it waits on, its specs',
+    need: (a) => (a.args[0] ? null : '<phase>'),
+    req: (a) => ({ method: 'GET', path: `/api/repos/${a.repo.uuid}/phases/graph?phase=${encodeURIComponent(a.args[0])}${a.flags.map ? `&map=${encodeURIComponent(String(a.flags.map))}` : ''}` }),
+    print: (d, a, h) => { for (const l of d.lines || []) console.log(/^(NEW CROSSING|  missing)|NO DEPENDENCY GRAPH/.test(l) ? `  ${h.c.amber(l)}` : `  ${l}`); } },
   { key: 'repo.phase', repo: true, usage: 'repo phase <repo> <phase> [build [--map name] [--provider ollama|claude-code|claude|…] [--note "…"] [--replan] [--anyway]]', about: 'one phase: its runs (and why one stopped), or build it now as a background task (a build started again keeps its saved plan and resumes; --replan plans it again)',
     need: (a) => (a.args[0] ? null : '<phase>'),
     req: (a) => (a.args[1] === 'build'

@@ -1,73 +1,87 @@
-# 0.60.145 — 2026-10-17
+# 0.60.145 — 2026-10-18
 
-James: "failure mode report thats also a macro to import into a cos test env. nexus nerve, spotlight and interaction field
-for debugging. like look deeply at those systems. so this is a good direction?"
+James: "alright the gates need context. needs persistence, needs to survive restarts, reuse contracts, jobs and responses."
 
-James: "lets do it. map it all, be thorough. there is probably more lurking around nexus that is useful"
+Then, while it was being built: "its also in clearglass, cleardriver"
 
-This release is mapped, not built. No source code changed.
+Mapped first in `docs/2026-10-16-durable-work-timeline-phasemap.spec` addendum (f), as TL2a.
 
-## The map
+## Read first: what a gate already kept across a restart
 
-`docs/2026-10-17-failure-mode-report-phasemap.spec` 1.0.0 maps phases FMR0 to FMR11.
+| What | Where | Since |
+|---|---|---|
+| The **contract**: its plan, its passed gates (by hash), and re-running only what went stale | `cortex/core/raid/contract-gates.js` openCheckpoint; `savedPlan` | TL1a |
+| The **failure**: what the gate's last check said, which goes with the next try | the carry box | TF1 |
+| The **steps**: the brick's run state (tool calls, files read and changed) | `lib/run-state.js` | GW2 |
+| The **replies**: every attempt at the gate | `lib/work-journal.js` | 0.60.143–144 |
 
-Every failure becomes a `.failure_mode` (cortex's record, with one writer) with a report, plus an executable `.debug_macro`.
-The macro bundles:
+Contracts were already reused, so nothing changed there.
 
-- the code snapshot and its environment;
-- the events that led in, cut by RFR2's clip;
-- the agents' parts: the Ollama tape for local models, a fake-tab profile for remote ones;
-- the UI steps, addressed by semantic-tree address;
-- the expected failure.
+## What was missing
 
-The macro replays in a sealed COS compartment, where RFR2's `validateClipStability` judges whether the failure was
-reproduced. The same macro then proves the fix and stays as a regression test.
+- **Context.** The next attempt was told what the check said, but not what the attempts before it wrote, thought or changed.
+  An agent outside the tool loop never saw the run state at all.
+- **Reuse.** If a gate's reply was finished, or still being written in its tab, when Idearium stopped, the next build asked
+  for it again from nothing: a second job, and the first reply wasted.
 
-Nerve and the interaction field are the **view**: the timeline and the spotlight replay. By his own Nerve invariant, they
-are never the evidence.
+## TL2a
 
-## The sweep: what was lurking
+- **`lib/gate-context.js`**:
+  - **`context` and `note`.** One block, capped at 2600 characters, built from the journal and the brick's run state:
+    - each attempt before this one, and how it ended;
+    - the files already changed;
+    - the last steps;
+    - the tail of the last reply.
 
-- **His own design from 2026-09-12 already exists:** `cortex/self-heal/failure-mode-forensics.js` writes `.failure_mode`
-  nodes (causal chain, sigma delta, ripple/wave/tidal class) and `.debug_macro` nodes. The macro is marked
-  `executable: false`, "no general executor exists yet". The 10-05 reproduction map never named it and planned a second
-  macro file. Now joined (addendum there).
-- **Agent failures can be replayed offline today:**
-  - `ollama/lib/tape.js` replays local model calls with Ollama stopped;
-  - `tests/sim/fake-tab.js` speaks Guardian's real protocol in slow, silent, error, partial and other modes;
-  - `guardian/lib/chat-transcripts.js` holds every remote reply.
-- **The pieces it builds on already exist:**
-  - `lib/cos-debug-report.js` reads a failed test into frames and code;
-  - `cos/playground/compare.js` compares branches;
-  - the semantic tree gives addresses that survive class renames;
-  - `clear-glass/src/automation/nodes.js` already bundles what a workflow needs to run elsewhere;
-  - the Debug tab is where the report lands.
+    It goes in the gate's next message, after any restart and on any agent.
+  - **`reuse`.** Runs before an attempt dispatches. It takes the gate's newest Guardian job that no attempt has handled:
+    - if it is **finished**, its reply is adopted from Clear Glass's Responses index, through `repo-agent` `findLate` and
+      `adoptLate`. That is the same `_finish` a dispatch runs, and it runs once per `responseId`.
+    - if it is **still being written**, it is waited for (up to 10 minutes), then adopted.
+    - if it is still being written after that, the gate is asked again, and the attempt says why.
+  - **The run log as a second witness.** If the gate has an outcome row after the job started, that reply was already
+    judged and is not taken again. This covers replies journaled before the handled marks existed.
+  - **`handled`.** After every attempt, the gate's jobs so far are marked handled (`work-journal` `mark`), so a reply is
+    never used twice.
+- **Route:** `GET /api/repos/:uuid/agent/feed?gate=<key>` now also returns the note the next attempt carries, and the reply
+  it would reuse.
+- **Command:** `repo feed <repo> --gate <key>` prints both.
+- **UI:** a reused attempt's row in the Plan's run history says "↺ reused" and "reused job …'s reply — not asked again",
+  plus "carried this gate's context (N ch)" when the context went with it.
+- **Not reused:** Ollama replies. They are not in the Responses index.
+- **Loom:** new wires from `lib/gate-context.js` to `lib/work-journal.js`, `lib/run-state.js` and `lib/repo-agent.js`; from
+  `idearium/api/index.js` to `lib/gate-context.js`; and from `lib/gate-context.js` to Clear Glass's Responses index.
 
-## Found
+## "its also in clearglass" — a duplicate, his call (TL2a-4)
 
-- **All 9 `.failure_mode` nodes in the tree are hollow:** `memory_pressure`, no root, no conditions, no compound class,
-  no macro.
-  - Only the self-heal ladder writes them. A failed test, a stuck phase or a failed gate never becomes one.
-- **Only 72 of 1,467 tracked ledger rows (4.9%) carry `causedBy`,** so RFR2 has nothing to walk. This is a sample from git,
-  not his live machine; FMR0 measures there.
-- **Intelligence crystallises boot events as "failure precursors"** (his log: "component: registered … 161×"):
-  co-occurrence without causal edges.
-- **The forensics module says RFR2's kernel is absent.** It has existed since 07-24.
-- **No system has an event replay route.**
-- **The first proof case is IM1.** The caller waits 300,000 ms (`lib/repo-agent.js:724`), Guardian waits 900,000 ms,
-  and Gemini thinks longer than the caller waits. It reproduces with the fake tab, offline.
+Clear Glass already keeps every chat's reply and thinking as it streams: `clear-glass/src/downloads/chat-ledger.js`, since
+0.39.278, in `<downloads root>/ledgers/<chatKey>.jsonl`. It is append-only and sits beside the `.response` files.
 
-## Decisions
+The work journal from 0.60.143 keeps the same text again, per job, on Idearium's side. It was built without reading the
+ledger first, which misses §8.6 (reuse before build). So one stream now has two records.
 
-- **Decided by his axioms:**
-  - macros can leave the machine, always masked at cut time;
-  - Guardian gets the first replay route, then versionium;
-  - Nerve is the view, never the evidence (his invariant).
-- **His:** FMR0a, whether every failure replays automatically or only on request. The coder recommends: on request, plus
-  automatically on recurrence or STUCK.
+The coder's recommendation, to be decided by him:
+
+- the journal stays as the per-gate **index**: job, gate, attempt, handled, status;
+- the ledger is the text's one home: the journal points at its `chatKey` and turn;
+- reuse falls back to the ledger when Guardian's `.response` is missing.
 
 ## Proof
 
-- The map and both addenda parse as YAML.
-- All 62 paths the map cites exist in the tree.
-- Every count was made in this session on the 0.60.144 tree.
+| test | result |
+|---|---|
+| `test-gate-context` | 6/6 |
+| `test-work-journal` | 4/4 |
+| `test-contract-phase-build` | 14/14 |
+| `test-test-first` | 5/5 |
+| `test-repo-agent-late` | 17/17 |
+| `test-qa2-real-run` | 5/5 |
+
+What `test-gate-context` covers:
+
+- **GC-01:** the note is rebuilt after a restart.
+- **GC-02:** a finished reply is reused once, from the real Responses index.
+- **GC-03:** a reply still being written is waited for, then reused; past the wait, the gate is asked again.
+- **GC-04:** a reply the gate already judged is not reused.
+- **GC-05:** the wiring in `makeAttempt`.
+- **GC-06:** the Plan's history row.

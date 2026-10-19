@@ -549,7 +549,7 @@ New entries go at the top: date, his words, context, what it shows, evidence.
   - **What it shows:** commercial judgment that sets the engineering order. The claim had to be checkable before it was
     made. It also shows debugging from a real log: his IM1 run, read whole, shows three agents failing the same way. That
     points at the brief, not the agents, and the code now says so on its own.
-  - **Evidence:** `CHANGELOG-0.60.144.md`; `tests/modules/test-flight-data.test.js` (his IM1 run is the fixture: STUCK,
+  - **Evidence:** `CHANGELOG-0.60.148.md`; `tests/modules/test-flight-data.test.js` (his IM1 run is the fixture: STUCK,
     7 of 7 calls wasted, 62 min); the same release fixed Flight Recorder's standalone command (0/6 → 6/6).
 - **2026-10-17: "we need to add this all to nexus, there is boundaries mapping it"**
   - **Context:** asked to build the failure-mode report, he reminded the coder that Nexus has a boundary census. Checking it
@@ -557,5 +557,164 @@ New entries go at the top: date, his words, context, what it shows, evidence.
     intelligence. The ratchet went from 540 to 541, and two boundary tests failed.
   - **What it shows:** architectural governance that holds. His rule (systems cross only by route, enforced by a ratchet)
     caught a real defect the coder had shipped, before anything was built on top of it.
-  - **Evidence:** `CHANGELOG-0.60.146.md`; `tests/modules/test-system-boundary.test.js` SB-06/SB-08 (failing on 0.60.144,
+  - **Evidence:** `CHANGELOG-0.60.150.md`; `tests/modules/test-system-boundary.test.js` SB-06/SB-08 (failing on 0.60.144,
     passing on 0.60.146); `tests/modules/test-flight-data.test.js` FD-09; `tests/modules/test-failure-modes.test.js` FM-07.
+- **2026-10-18: "We need persistent data look at the last commit."**
+  - **Context:** the release before had just made the agent's work visible live. He looked at what it had shipped and saw
+    that live is not the same as kept.
+  - **What it shows:** reviewing his own release for its failure mode rather than its feature. A stream that exists only
+    in memory looks right until a reload, and then it is gone. This is the same class of loss as the 17 spec chunks a
+    restart took on 2026-10-16. He named it from the commit before he had seen it happen there.
+  - **Evidence:** `CHANGELOG-0.60.143.md`; `tests/modules/test-work-journal.test.js`. WJ-01 drops memory and reads the
+    reply and thinking back byte-identical; WJ-03 shows it on a freshly opened page in Clear Glass.
+- **2026-10-18: "You got it persistent per gate"**
+  - **Context:** the release before kept every agent reply on disk, but per job. He pointed at the unit the work resumes at.
+  - **What it shows:** knowing the unit of recovery. Since 0.60.77 a build resumes per gate, on whatever chat or agent is
+    free, so a reply kept per job could not be found again where it was needed. Checking it also exposed a real defect:
+    two gates building at once could file each other's replies.
+  - **Evidence:** `CHANGELOG-0.60.144.md`; `tests/modules/test-work-journal.test.js` WJ-04 runs two attempts at one gate
+    through the real router, then a restart, then two gates at once.
+- **2026-10-18: "the gates need context ... reuse contracts, jobs and responses" · "its also in clearglass, cleardriver"**
+  - **Context:** replies were kept per gate, but no gate used them. He named what a gate needs: its history as context, and
+    reuse of the work already paid for, across restarts.
+  - **What it shows:** two things.
+    - **Treating paid-for work as an asset.** A reply that finished while the system was down is now adopted rather than
+      bought again.
+    - **Knowing his own system's map better than the coder that day.** He pointed out that Clear Glass already keeps the
+      stream, which exposed a duplicate store the coder had built (0.60.143).
+  - **Evidence:** `CHANGELOG-0.60.145.md`; `tests/modules/test-gate-context.test.js` GC-02 and GC-03, which reuse a finished
+    and an in-flight reply from the real Responses index; the duplicate is named in the TL map, addendum (f), as TL2a-4.
+- **2026-10-18: "okay only one record. maybe use it as a contract ledger for each contract."**
+  - **Context:** a duplicate store had been found: two records of the same reply stream, one in Clear Glass and one in
+    Idearium. The coder recommended making one an index into the other.
+  - **What it shows:** single source of truth as a rule, not a preference. He also gave the remaining record a structural
+    home, the contract, the same unit that holds the gates, checkpoints and plan, so a contract's work can be read back in
+    one place.
+  - **Evidence:** `CHANGELOG-0.60.146.md`; `tests/modules/test-work-journal.test.js` WJ-05. A reply linked to its chat
+    ledger turn is never copied, and is read back from the chat ledger after a restart.
+- **2026-10-18: "have a full section of for each of the 15 systems, each module and all the files … use all the changelogs"**
+  - **Context:** he asked for the README to hold everything, built from the record rather than written from memory.
+  - **What it shows:** documentation as a projection of the system, not a second copy of it. The inventory regenerates from
+    the tree, the phasemaps and the release notes, so it cannot drift. Building it also exposed a defect: the atlas page
+    resolved only its first 2,000 references.
+  - **Evidence:** `CHANGELOG-0.60.153.md`; `tests/modules/test-readme-generate.test.js` (every file of the 15 systems is named,
+    every phase is counted, and the README stays under 512 KiB); `tests/modules/test-nexus-atlas-refs.test.js` 49/49, where it
+    had 4 failing before.
+
+- **2026-10-18 — 0.60.154: he caught a ladder in a design that was meant to be associative.**
+  - **His words:** "it needs to be non linear and agnostic" · "look at siso".
+  - **Context:** the coder had mapped context-finding as six rungs in a fixed order, with every store named in code. He
+    pointed back at his own foundation instead of at a patch.
+  - **What it shows:** systems design, keeping one primitive across the whole stack. The fix needed nothing new. SISO's
+    Event → Gate → Stream already gives:
+    - fan-out by signature;
+    - residue for what nothing answers;
+    - order coming from cost, not sequence.
+    Any store can join as a table row.
+  - **Evidence:** `docs/2026-10-18-gate-memory-phasemap.spec` addendum (b); `CHANGELOG-0.60.154.md`; every phase graph ready,
+    with no new crossing.
+
+- **2026-10-18 — 0.60.155: "bottom up" applied to the record itself.**
+  - **His words:** "look at all of the phases that mention gates" · "need to get them done bottom up. really need it all
+    working."
+  - **Context:** 75 open gate phases across 20 maps.
+  - **What it shows:** failure-mode thinking. Checking the claims against the code, rather than trusting the status lines,
+    found that the status record was wrong:
+    - a scanner defect hid six built phases;
+    - four phases were stale;
+    - CHANGELOG hits under the same id came from other maps' phases.
+
+    The same work turned out to be mapped many times over. The gate record was mapped four times, the rewind five times and the
+    precommit gate four times.
+  - **Evidence:** `docs/2026-10-18-gating-census-phasemap.spec`; test PM-INLINE; `CHANGELOG-0.60.155.md`.
+
+- **2026-10-18 — 0.60.156: his call to "look at siso" became the design.**
+  - **What was built:** context-finding as Event → Gate → Stream. Every source is asked at once, and what nothing answers is
+    residue. A new store joins by adding one table row.
+  - **Credit:** SISO is credited to Jonathan Bailey in `siso/spec/siso.spec`. The call to build this subsystem on it, unchanged,
+    was James's.
+  - **What it shows:** keeping one foundation across the whole stack, so a new part compounds on it rather than standing beside
+    it.
+  - **Evidence:** `tests/modules/test-context-stream.test.js`. Three arrival orders give one answer, and a fourth source joins
+    with no line of the finder changed.
+
+- **2026-10-18 — 0.60.158: "solid" taken as a claim to attack, not a status to report.**
+  - **His words:** "Need to get the gates solid."
+  - **Context:** the gate tests were mostly green.
+  - **What it shows:** failure-mode thinking. Probing the gate machinery for ways a contract could read done when it is not found
+    three false completes that no green test had caught. Two more conditions could never pass, and one input threw.
+  - **Evidence:** `tests/modules/test-gates-solid.test.js` holds one case per hole. Each was demonstrated on the code before the
+    fix.
+
+- **2026-10-18 — 0.60.160: the missing UI step, found by his own eye.**
+  - **His words:** "can you add snowflake to the ui. it doesn't show up as a plugin."
+  - **Context:** the Tor-with-Snowflake transport had backend, routes and a CLI, but its UI step had never been built, so it was
+    invisible in the app. He noticed the gap from the UI, which is exactly the order-of-delivery rule he set ("build the ui").
+  - **What it shows:** his order of delivery catches exactly this — a capability that is real but unreachable because its last
+    step was skipped. Naming it "not a plugin" was also right: it's a transport, and forcing it into the plugins list would have
+    mixed two kinds of thing.
+  - **Evidence:** `tests/modules/test-cg-network-ui.test.js` (driven in Clear Glass, against the real net service); `CHANGELOG-0.60.160.md`.
+
+- **2026-10-19 — 0.60.161: he debugged his own product from a screenshot, and was right.**
+  - **His words:** "need help with the autofill for fiverr." · "yes."
+  - **Context:** he saw co-pilot answer "fill this in for me" with a chat reply instead of filling, and named it as an autofill
+    problem. The code confirmed it exactly: the fill engine existed and worked, but co-pilot had no tool to reach it, so the
+    request fell through to the model. His read of the symptom was precise.
+  - **What it shows:** reading a failure to its cause from the surface. The fix was one tool wired to an engine that was already
+    there, not a rebuild — the leverage he asks for.
+  - **Evidence:** `tests/modules/test-cg-gig-autofill.test.js`; `CHANGELOG-0.60.161.md`; the map for the learn-loop he also asked
+    for, `docs/2026-10-19-gig-autofill-and-learn-phasemap.spec`.
+
+- **2026-10-19 — 0.60.162: he read a stall to the gate, and named the missing taxonomy.**
+  - **His words:** "the red error in the second image." · "look at the node taxonomy at .spec" · "yes it should all be
+    persistent."
+  - **Context:** a build was stalling with a red DG2 error. The gate (his own rule, "each phase has to have a dependency graph")
+    was correct; the fallback planner behind it wrote every phase with no files, so the graph could never be built — the plan
+    "landed" but could not run. He also pointed straight at the real durability gap: the pipeline's units (phase, graph, gate)
+    were not node types, so they did not survive a restart.
+  - **What it shows:** two kinds of systems judgment at once. First, trusting the gate and looking past it to the plan — the
+    failure was upstream of where it surfaced. Second, seeing that "make it persistent" is a taxonomy question, not a storage
+    one: the fix was three new node types on the store that already existed, not a new store (reuse before build, §8.6).
+  - **Evidence:** `tests/modules/test-pipeline-nodes.test.js` (PN 4/4); `CHANGELOG-0.60.162.md`; the addendum on
+    `docs/2026-09-29-nex-node-store-phasemap.spec`.
+
+- **2026-10-19 — 0.60.163 (MF1): he set the constraint that made the design correct.**
+  - **His words:** "ollama first, but nexus should be learning… as long as local and free can handle it." · "do not add apis. i
+    dont have money for that." · (hardware) "3700x 16gb of ram gtx 1650."
+  - **Context:** the build was leaning on rate-limited browser agents and churning on out-of-memory local models. He named the
+    real constraint — no paid APIs, a small local box — and the architecture principle: dumb components + a smart spine, so a small
+    local model can carry the volume and guardian is reserved for reasoning.
+  - **What it shows:** constraint-first systems thinking. The "no APIs, small box" limit isn't a compromise he settled for — it's
+    what forces the right design (dynamic chunking + registry spine + model-fit so local is viable). He also corrected the coder's
+    over-absolutism ("complex reasoning needs guardian") — tier-matching, not local-purism.
+  - **Evidence:** `tests/modules/test-model-fit-ladder.test.js` (MF 5/5); `CHANGELOG-0.60.163.md`; the bottom-up foundation map
+    `docs/2026-10-19-solid-build-foundation-phasemap.spec`.
+
+- **2026-10-19 — 0.60.164 (CR1): his one-line architecture principle was the fix.**
+  - **His words:** "the component registry is vital for each project becuase its the spine that makes components dumb."
+  - **Context:** the coder had proposed splitting large files to fit local models (DC1). Mapping it showed the contract splitter
+    can't chunk a single file (its children would overwrite the same path). James's principle pointed at the real lever: you make
+    components small by decomposing against the registry spine, not by splitting files mid-build.
+  - **What it shows:** a correct architecture intuition that redirected the build. The registry isn't bookkeeping — it's what
+    lets a small free local model carry the work (dumb components), which is the whole local-first bet. The coder found the gap
+    (contract builds never joined the store — looking-glass had no registry) and closed it by reuse.
+  - **Evidence:** `tests/modules/test-project-registry.test.js` (CR 5/5); `CHANGELOG-0.60.164.md`; the bundle's missing
+    `component.json`/graph; `lib/project-registry.js` wired into loom.
+
+- **2026-10-19 — 0.60.165 (AB1): he was right that it doesn't resume, against the coder's first claim.**
+  - **His words:** "fix the economy time out also like retries when the time runs out." · "i dont think it resumes."
+  - **Context:** the coder had earlier told him a rate-limited phase "resumes once a slot frees." Checked against the code, it
+    does not — a hold over 30 s is cancelled, the ladder exhausts, and the phase goes terminal with no retry path and no setting.
+    His instinct corrected a wrong claim.
+  - **What it shows:** trusting his own read of the system over the coder's reassurance — exactly the "failure modes are
+    first-priority data" discipline. The fix reused the existing retry machine rather than adding a scheduler, and its safety
+    (never auto-retry a real failure) is the part that got the test.
+  - **Evidence:** `tests/modules/test-economy-resume.test.js` (AB 5/5); `CHANGELOG-0.60.165.md`.
+
+- **2026-10-19 — 0.60.166 (CT1): his "cos to work for test env" was reuse, not a build.**
+  - **His words:** "then we need cos to work for test env." · "do not add apis."
+  - **Context:** COS already had a real isolated runner (process sandbox + an optional VM), but it was wired only to the manual
+    Run menu — the automated gate ran tests on the host. The direction named the exact missing wire.
+  - **What it shows:** knowing the system already had the capability and asking for it to be connected, not rebuilt — "use what
+    you already have." The coder also stated the honest limit (no KVM here → process isolation, not a VM) rather than overclaiming.
+  - **Evidence:** `tests/modules/test-cos-run-target.test.js` (CT 5/5, real sandbox runs incl. a clean-env leak check); `CHANGELOG-0.60.166.md`.

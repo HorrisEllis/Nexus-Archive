@@ -48,14 +48,14 @@ decisions:
       a: "per piece of work (a spec being written, a phase build, a contract): its chunks, checkpoints and gates."
       b: "per repo: every piece of work in the repo on one line."
     coder_recommends: "a, stored per piece of work; b is a view over every a in the repo (no second record). To confirm."
-    status: OPEN
+    status: "DECIDED 2026-10-18 by his axioms (D22, docs/2026-10-17-decisions-by-the-axioms.spec addendum c): coder_recommends, as written. Was: OPEN"
   TL0b_rewind_scope:
     asked: "what does rewinding to a gate put back?"
     coder_recommends: >-
       the files (to the commit the checkpoint holds) and the work's state (chunks after the point go back to pending; the
       gate is open again). Later entries are kept and marked superseded, never deleted (§0.3). The rewind is itself an
       entry. To confirm.
-    status: OPEN
+    status: "DECIDED 2026-10-18 by his axioms (D23, docs/2026-10-17-decisions-by-the-axioms.spec addendum c): coder_recommends, as written. Was: OPEN"
 
   TL0_find_the_loss:
     status: 'OPEN (a question for James, not a build — an agent cannot read his log or his screen; moved here 2026-10-16, see addendum c)'
@@ -192,3 +192,104 @@ not_verified:
 # screen and log lost his 17 chunks; only he has that, so an agent can search the repo forever and change nothing. The coder
 # had written it as a phase. Moved, unchanged, under decisions: (the scanner marks entries there kind: decision, which no build
 # picks). TL1 no longer waits on it. His answer still goes there.
+
+# ## ADDENDUM 2026-10-18 (d) — TL1b built (0.60.143): the agent's reply and thinking are on disk as they stream
+# James, 2026-10-18: "We need persistent data look at the last commit." (The last commit was 0.60.142 LV1–LV4, which streamed
+# the agent's thinking and reply into Code › changes and the open file.)
+# Found (read in code): every live frame lived only in the page (idearium/ui/js/app.js AGENT_FEED) and in lib/repo-activity.js's
+# in-memory tasks. guardian/lib/response-sink.js writes the .response node only when the reply ENDS. So a reload, an Idearium
+# restart or a Clear Glass close mid-reply lost the reply and the thinking so far. That is the .response half named in addendum
+# (b), the same loss as TL0's 17 chunks, on the path he was looking at.
+# Built (TL1's first slice, for the agent-reply path; the spec-writing path and GW27's .input/.output stay open):
+#   lib/work-journal.js — data/work/<repo>/<job>/reply.response (a .response node, rewritten atomically, tmp + rename, on every
+#   frame that changes it; a dom pulse is not a write) and timeline.jsonl (append-only, one line per event, no text).
+#   Both feed doors record (guardian's onFeed in idearium/api/index.js, Ollama's POST /api/repos/:uuid/agent/stream).
+#   GET /api/repos/:uuid/agent/feed[?job=&limit=] · `repo feed <repo> [job]` · the page restores the newest job when it opens
+#   ("restored from disk · <status>"), and a live frame wins. An open job with no frame for 15 min reads 'stale', never 'live'.
+# Proof: tests/modules/test-work-journal.test.js 3/3 (WJ-01 the reply and thinking back byte-identical after a restart; WJ-03
+# the page in Clear Glass).
+# Not done, said: TL2 (resume at boot — the next request carrying what was written) does not read the journal yet; the journal
+# is per guardian/Ollama job, not yet tied to a work id across a phase's attempts (the id question in
+# docs/2026-10-18-debugging-product-phasemap.spec); lib/repo-activity.js's tasks are still memory plus the exchange log.
+
+# ## ADDENDUM 2026-10-18 (e) — TL1c built (0.60.144): kept per gate
+# James, 2026-10-18, after 0.60.143: "You got it persistent per gate"
+# The coder's reading, to confirm: that the reply should persist per gate (the contract's brick), not only per job — the unit a
+# build resumes at since GW2 (0.60.77: "use a different chat or agent each gate"). As 0.60.143 stood, it was not: a guardian
+# frame carries only its jobId, and a gate's jobId reaches Idearium only after the reply.
+# Built: the task a frame is picked onto (lib/repo-activity.js) carries its brick (<map>::<phase>::<gate>, from repo-agent's
+# dispatch); the journal files each reply under it with its phase run; work-journal gates() gives every attempt at a gate in
+# order, failed attempts included; GET agent/feed?gate= (a <map>::<phase> prefix for a whole phase) / ?gates=1; `repo feed
+# --gate|--gates`; the live header shows the gate and the attempt. Fixed: a frame with no session went to the newest running
+# task, so concurrent gates could swap replies; it now goes to the task that took its job, else one with no job yet.
+# Proof: test-work-journal WJ-04 (real router, a restart, two gates at once), WJ-03 (Clear Glass).
+# Still open: the key is the brick id, b<n>.<file>, which is positional — DBG1 (docs/2026-10-18-debugging-product-phasemap.spec)
+# names it for what it is; a reply that came back with no task running (late, after its task ended) is kept, ungated, and said.
+
+# ## ADDENDUM 2026-10-18 (f) — TL2a: a gate's context, and its contract, job and reply reused across a restart (mapped, then built 0.60.145)
+# James, 2026-10-18: "alright the gates need context. needs persistence, needs to survive restarts, reuse contracts, jobs and
+# responses."
+# Read in code first (§8.6). What a gate already keeps across a restart:
+#   contract — the plan, the passed gates and their hashes, re-run only when STALE (contract-gates openCheckpoint; savedPlan, TL1a);
+#   the failure — what the gate's last check said is on the contract and seeds the next try (feedback → the carry box, TF1);
+#   the steps — run-state per brick (tool calls, files read and changed, attempt), header to a tool-loop agent (GW2);
+#   the replies — every attempt per gate (work-journal, TL1b/c).
+# What it lacked:
+#   context — the next attempt was not told what the attempts before it wrote, or thought, or which files they changed (only the
+#     check's words), and an agent without the tool loop never saw the run-state at all;
+#   reuse — a gate whose reply was finished (or still being written in its tab) when Idearium stopped was asked again from
+#     nothing on the next build: a second job, the first reply wasted.
+# Mapped:
+#   TL2a-1 lib/gate-context.js context(repo, brick) and note(): from the stores above, one block — each attempt before (agent,
+#     how it ended), the files changed, the last reply's tail, its thinking's tail — carried in the gate's next message (size-capped).
+#   TL2a-2 reuse: before an attempt dispatches, the gate's newest job that no attempt handled is reused — finished: its reply is
+#     adopted (repo-agent findLate + adoptLate: the same _finish a dispatch runs, idempotent per responseId); still being
+#     written: waited for, then adopted. Each attempt marks the gate's jobs handled when it ends (work-journal mark), so a reply
+#     is never used twice. Guardian replies only: an Ollama reply is not in the Responses index (said, not reused).
+#   TL2a-3 the route, the command and the screen say it: GET agent/feed?gate= returns the context; the run row says "reused".
+# Built 0.60.145 as mapped: lib/gate-context.js (context, note, reuse, handled), work-journal mark()/reusable(), makeAttempt wired
+# (the note in the message; reuse before dispatch, with the run log as a second witness so a reply journaled before handled marks
+# existed is not taken twice; the gate's jobs marked handled after); GET agent/feed?gate= returns the note and what would be
+# reused; `repo feed --gate`; the Plan's run row says "↺ reused". Proof: tests/modules/test-gate-context.test.js 6/6.
+# Contracts were already reused across restarts (savedPlan, checkpoints, STALE re-runs, TL1a): nothing changed there.
+# Found while building, his to decide (a problem, not a technical call): James, 2026-10-18: "its also in clearglass, cleardriver".
+#   Clear Glass already keeps every chat's reply and thinking as it streams (clear-glass/src/downloads/chat-ledger.js, 0.39.278:
+#   <downloads root>/ledgers/<chatKey>.jsonl, append-only, beside the .response files). lib/work-journal.js (0.60.143) keeps the
+#   same stream again, per job and gate, on Idearium's side — built without reading the ledger first (§8.6 missed). Two records
+#   of one stream. The coder's recommendation: keep the journal as the per-gate INDEX (job, gate, attempt, handled, status) and
+#   make the ledger the text's one home — the journal points at the ledger's chatKey and turn, and reads the reply from it;
+#   reuse falls back to the ledger when Guardian's .response is missing. TL2a-4, open until he says.
+
+# ## ADDENDUM 2026-10-18 (g) — TL2a-4 decided (his): one record; the journal becomes a ledger per contract (mapped, then built 0.60.146)
+# James, 2026-10-18, answering TL2a-4 (the coder had recommended: the journal as the per-gate index, Clear Glass's chat ledger
+# as the text's one home): "okay only one record. maybe use it as a contract ledger for each contract."
+# His decision: one record of a reply, not two. And the journal is used as a ledger for each contract.
+# The coder's reading of the details, to confirm:
+#   one ledger per contract — data/work/<repo>/<map>::<phase>.ledger.jsonl (safe-named), append-only like the chat ledger; a job
+#     with no gate (an Agent tab chat) goes in the repo's agent.ledger.jsonl. Lines: job (its gate, attempt, run, session,
+#     provider, and the chat ledger turn it is written in: chatKey + turn), frame (event, lengths, gate state — no text), text
+#     (only when no other record holds it), end, handled.
+#   the text has one home — a browser agent's reply and thinking: Clear Glass's chat ledger (the page writes it there as it
+#     streams; the job carries chatId + turn, so it is read from there and never written here). When the job ends and that turn
+#     is not in the chat ledger (a tab outside Clear Glass), the reply is written once here instead. An Ollama reply has no chat
+#     ledger: its exact deltas are this ledger's text lines.
+#   guardian's .response (the Responses index) stays guardian's own record of the job's answer, read by reuse (§10.1: each
+#     system writes its own); it is not copied here.
+#   nothing lost (§0.3): the per-job folders written by 0.60.143-145 (data/work/<repo>/<job>/reply.response) are still read.
+# Needs: the five userscripts send chatId and turn on GUARDIAN_CHUNK; guardian's ncp-handler passes them (and chatUrl) on.
+# Built 0.60.146 as mapped. lib/work-journal.js 2.0.0: one append-only ledger per contract (jobs.index.json a rebuildable
+# projection); a linked reply's text and thinking are read from Clear Glass's chat ledger and never written here; a turn the chat
+# ledger lacks is written once, 3 s after the job ends; a job whose gate becomes known moves (a 'moved' line, then a snapshot in
+# the contract's ledger); 0.60.143 folders still read. GET agent/feed?contract=, `repo feed --contract`; a restored reply says
+# "read from Clear Glass's chat ledger". The five userscripts send chatId + turn (chatgpt/claude 10.12.4, deepseek/gemini 10.10.4,
+# perplexity 10.9.4); ncp-handler passes them on.
+# Found while building: guardian/server.js _FEED_KEYS (the /events whitelist) dropped `thinking` — 0.60.142's streamed thinking
+# reached guardian's bus but never Idearium; its tests checked each side, not the hop. Fixed here (thinking, thinkingLen, chatId,
+# turn). And three pins the coder broke in 0.60.142-0.60.144 without running their suites (test-agent-feed AF-09, AF-11;
+# test-live-stream-and-gates GS-10) — updated to the lines as they are, their intent kept.
+# Proof: test-work-journal 5/5 (WJ-05 one record), test-gate-context 6/6.
+# Then, 2026-10-18 — James: "is that all added to the pipeline?" The contract builds (routing.contract_build on, the default) had it;
+# the builds outside the contract (the whole phase, or its files one by one) had no gate. Fixed in 0.60.146: each attempt has a
+# gateKey (<map>::<phase>::file.<file>, or ::phase); the dispatch names it (gate), the task carries it, the contract ledger, context
+# and reuse follow. And the drawbridge: the chat ledger is read through Clear Glass's route, not its code (SB-06 caught it).
+# CI runs no tests (release.yml checks the zip); whether it should is his call.

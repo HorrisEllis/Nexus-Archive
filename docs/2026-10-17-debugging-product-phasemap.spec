@@ -277,3 +277,7 @@ spec:
   #   - G4 reproduced = FMR6; G7 proven = FMR7; G1/G2 read FMR3's report; DP2 (one gap door) and FMR2 (every failure
   #     reaches the record) are the two roads in, and both dedup by signature.
   #   - DP6 is carried by FMR4–FMR6 (not FM2/FM3 directly).
+
+# ## ADDENDUM 2026-10-18 (merge) — a second map for the same request: docs/2026-10-18-debugging-product-phasemap.spec (main)
+# Kept beside this one, not collapsed: they agree on no shared uuid and one gap door, and differ on how a chunk is named (D10 here,
+# D13 there). That map adds DBG4 (gaps mapped from dependency edges) and DBG1 (a derived key). Which naming stands is his call.

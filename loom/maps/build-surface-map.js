@@ -62,6 +62,23 @@ const FILES = [
   ['versionium/lib/merge3.js', I('versionium/lib/merge3.js'), [
     I('versionium/lib/text-diff.js'),                         // require — MAX_LCS_CELLS, the same size limit
   ]],
+  // §DG2 0.60.147 — James, 2026-10-18: "each phase, has to have a dependany graph before executing."
+  ['lib/phase-graph.js', I('lib/phase-graph.js'), [
+    I('lib/system-boundary.js'),                              // require (lazy) — systems() and readBaseline(): the census's own rule
+  ]],
+  ['idearium/ui/js/phase-graph-view.js', I('idearium/ui/js/phase-graph-view.js'), [I('idearium/api/index.js')]],   // HTTP GET /api/repos/:uuid/phases/graph
+  // §0.60.162 — James, 2026-10-19: "yes it should all be persistent." The pipeline's units as node-export types (.phase .graph .gate)
+  ['lib/pipeline-nodes.js', I('lib/pipeline-nodes.js'), [
+    I('lib/node-export.js'),                                  // require — wrap/validate/toYaml the envelope, and KNOWN_TYPES
+  ]],
+  // §CR1 0.60.164 — James: "the component registry is vital for each project becuase its the spine that makes components dumb."
+  ['lib/project-registry.js', I('lib/project-registry.js'), [
+    I('lib/component-store.js'),                              // require — put(): store each built file with its resolved require edges
+  ]],
+  // §CT1 0.60.166 — James: "then we need cos to work for test env." The gate's test runs in COS's process sandbox.
+  ['cos/testenv/run-target.js', I('cos/testenv/run-target.js'), [
+    I('cos/testenv/index.js'),                               // require — TE.run (process backend) → SandboxRunner: clean env, timeout, output cap
+  ]],
   // §FMR0/FMR2/FMR3 0.60.146 — every failure reaches the .failure_mode record; its report; causality measured
   // (docs/2026-10-17-failure-mode-report-phasemap.spec)
   ['cortex/self-heal/failure-intake.js', I('cortex/self-heal/failure-intake.js'), [
@@ -118,6 +135,33 @@ const FILES = [
   ['idearium/repo/build-plan.js', I('idearium/repo/build-plan.js'), [
     I('lib/run-watch.js'), I('lib/phase-plan.js'),              // §0.60.123 PP1/PP2 createRequire — runsOf/isFinal (an open run), depsOf (what a piece uses)
   ]],
+  // §0.60.153 — the README's generated half (every system, module and file; every phase; the data; Idearium; every release)
+  ['lib/readme-generate.js', I('lib/readme-generate.js'), [I('lib/atlas-generate.js'), I('lib/nexus-self/systems.js'), I('lib/context-atlas.js'), I('lib/node-export.js')]],   // §0.60.156 the phases are handed in, no longer required from loom (SB-06)
+  [I('scripts/generate-atlases.js'), I('lib/readme-generate.js'), '0.60.153 generate() before syncReadme: the atlas, then README.md'],
+  [I('scripts/generate-atlases.js'), I('loom/scanners/phasemap-map.js'), '0.60.156 loadAll() handed to generate({ phasemaps })'],
+  // §0.60.156 GM5 — context as a SISO stream: every source in the table asked at once, the residue named
+  ['lib/context-sources.js', I('lib/context-sources.js'), [I('lib/context-atlas.js'), I('lib/component-store.js'), I('lib/gate-context.js'), I('lib/vector-memory.js'), I('lib/nexus-client.js')]],   // the rows' asks; intelligence and cortex by route
+  ['lib/context-stream.js', I('lib/context-stream.js'), [I('lib/context-sources.js'), I('siso/index.js'), I('lib/context-atlas.js')]],   // rows · Event/Gate/Stream/StreamLog (import()) · qtokens
+  [I('idearium/api/index.js'), I('lib/context-stream.js'), '0.60.156 makeAttempt: the stream note per gate; POST /api/context/find, /api/repos/:uuid/context/find'],
+  [I('idearium/api/index.js'), I('lib/context-sources.js'), '0.60.156 GET /api/context/sources'],
+  // §0.60.157 GM4 — the node lattice: every data node of every system, edges typed; read by route, never the files
+  ['lib/node-edges.js', I('lib/node-edges.js'), [I('lib/node-export.js')]],   // importFromFile — each node read from its file
+  ['intelligence/lattice/node-lattice.js', I('intelligence/lattice/node-lattice.js'), [I('lib/nexus-client.js')]],   // Idearium's GET /api/system/nodes(/:system?edges=1)
+  [I('intelligence/routes.js'), I('intelligence/lattice/node-lattice.js'), '0.60.157 POST /api/intelligence/lattice/neighbours · GET /api/intelligence/lattice/nodes'],
+  [I('idearium/api/index.js'), I('lib/node-edges.js'), '0.60.157 GET /api/system/nodes/:system?edges=1'],
+  // §0.60.157 QA1 — four more catalogue checks run (the gating census, layer 1)
+  ['lib/checks/ck-231-half-states.js', I('lib/checks/ck-231-half-states.js'), [I('lib/run-watch.js')]],   // stalled/runsOf — one definition of ended
+  ['lib/checks/ck-237-verifiable.js', I('lib/checks/ck-237-verifiable.js'), [I('lib/node-export.js')]],
+  ['lib/checks/ck-239-two-ends.js', I('lib/checks/ck-239-two-ends.js'), []],
+  ['lib/checks/ck-252-primitive.js', I('lib/checks/ck-252-primitive.js'), []],
+  [I('lib/check-catalogue.js'), I('lib/checks/ck-231-half-states.js'), '0.60.157 RUNNERS CK-231'],
+  [I('lib/check-catalogue.js'), I('lib/checks/ck-237-verifiable.js'), '0.60.157 RUNNERS CK-237'],
+  [I('lib/check-catalogue.js'), I('lib/checks/ck-239-two-ends.js'), '0.60.157 RUNNERS CK-239'],
+  [I('lib/check-catalogue.js'), I('lib/checks/ck-252-primitive.js'), '0.60.157 RUNNERS CK-252'],
+  // §0.60.145 TL2a — a gate's context, and its kept reply reused instead of asking again
+  ['lib/gate-context.js', I('lib/gate-context.js'), [I('lib/work-journal.js'), I('lib/run-state.js'), I('lib/repo-agent.js')]],   // gates/get/reusable/mark · load/runIdFor · findLate/adoptLate
+  // §0.60.143 TL1b — the agent's reply and thinking on disk as they stream
+  ['lib/work-journal.js', I('lib/work-journal.js'), [I('lib/node-export.js')]],   // §0.60.146 the contract ledger: legacy .response folders read (node-export); a linked reply's text from Clear Glass's route, below
   // §0.60.141 TF2 — the phase's test is written first and shapes the plan
   ['lib/test-first.js', I('lib/test-first.js'), [I('lib/proposal-evidence.js')]],   // validate: shadow + runOne
   // §0.60.125 DG1 — a phase is not built while what it depends on is open
@@ -184,6 +228,12 @@ const FILES = [
 const CONSUMERS = [
   [I('lib/repo-inject.js'), I('versionium/lib/merge3.js'), '§FR3 0.60.117 revert({ merge }): undo a change keeping later edits (lazy require in _revertMerged)'],
   [I('idearium/cli/route-commands.js'), I('idearium/api/index.js'), '§FR3 0.60.117 the repo.undo row → POST /api/repos/:uuid/injects/:id/revert'],
+  [I('idearium/api/index.js'), I('lib/phase-graph.js'), '§DG2 0.60.147 _phaseBuild refuses NO_GRAPH and writes the graph before the build; repo.phases.graph: GET /api/repos/:uuid/phases/graph'],
+  [I('idearium/api/index.js'), I('lib/pipeline-nodes.js'), '§0.60.162 _phaseBuild writes the graph and its phase as .graph/.phase nodes at the DG2 point (require, §1.2 non-fatal)'],
+  [I('idearium/api/index.js'), I('lib/project-registry.js'), '§CR1 0.60.164 on contract-complete, wireBuilt stores every built file in the project component store with resolved edges (the spine)'],
+  [I('idearium/cli/route-commands.js'), I('idearium/api/index.js'), '§DG2 0.60.147 the repo.phase-graph row → GET /api/repos/:uuid/phases/graph'],
+  [I('idearium/ui/js/phases.js'), I('idearium/ui/js/phase-graph-view.js'), '§DG2 0.60.147 the detail pane → pgSlot(p): the dependency graph section'],
+  [I('idearium/ui/js/plan-panel.js'), I('idearium/api/index.js'), '§DG2 0.60.147 phaseBuildPost: NO_GRAPH held with its remedy, never offered "anyway"'],
   [I('cortex/self-heal/index.js'), I('cortex/self-heal/failure-intake.js'), '§FMR2 0.60.146 _enterFailureMode writes through write(): one insert into failure_modes'],
   [I('cortex/boot.js'), I('cortex/self-heal/failure-intake.js'), '§FMR2 0.60.146 POST /api/failure-modes record(); GET list(); GET /:id get()'],
   [I('cortex/boot.js'), I('cortex/self-heal/failure-report.js'), '§FMR3 0.60.146 GET /api/failure-modes/:id/report — report(), lines()'],
@@ -295,6 +345,15 @@ const CONSUMERS = [
   [I('ollama/server.js'), I('ollama/lib/idle-unload.js'), '0.60.123 MP startIdleUnload after listen (keep_alive:0 on idle)'],
   [I('idearium/repo/import-pipeline.js'), I('idearium/repo/import-pipeline-worker.js'), '0.60.124 SW1 runImportPipelineOffThread — new Worker(new URL(./import-pipeline-worker.js))'],
   [I('idearium/repo/nexus-self.js'), I('idearium/repo/import-pipeline.js'), '0.60.124 SW1 _syncSystem + parent: await runImportPipelineOffThread'],
+  [I('lib/work-journal.js'), I('clear-glass/src/ipc/bridge.js'), '0.60.146 read(): GET :7701/cli/downloads/ledgers/:chatKey — a linked reply\'s text from Clear Glass\'s chat ledger, through its route (the drawbridge), never its code'],
+  [I('guardian/server.js'), I('guardian/lib/ncp-handler.js'), '0.60.146 /events _FEED_KEYS: thinking, thinkingLen, chatId, turn pass through (the thinking had been dropped since 0.60.142)'],
+  [I('idearium/api/index.js'), I('lib/gate-context.js'), '0.60.145 TL2a makeAttempt: note(context) in the message; reuse() before dispatch (judged by the run log); handled() after; GET agent/feed?gate= context'],
+  [I('lib/gate-context.js'), I('clear-glass/src/downloads/artifact-chat-index.js'), '0.60.145 TL2a through repo-agent findLate/adoptLate: the reply read from Clear Glass\'s Responses index'],
+  [I('lib/repo-agent.js'), I('lib/repo-activity.js'), '0.60.144 TL1c RAct.run({ brick }): the task carries its contract gate'],
+  [I('idearium/api/index.js'), I('lib/repo-activity.js'), '0.60.144 TL1c feed() returns the task a frame belongs to (by its job first); its brick goes to the journal'],
+  [I('idearium/api/index.js'), I('lib/work-journal.js'), '0.60.143 TL1b _journal: guardian onFeed + POST agent/stream record each frame; GET agent/feed list/get'],
+  [I('idearium/ui/js/app.js'), I('idearium/api/index.js'), '0.60.143 TL1b _agentFeedRestore: GET /api/repos/:uuid/agent/feed (the newest job, its timeline)'],
+  [I('idearium/cli/route-commands.js'), I('idearium/api/index.js'), '0.60.143 TL1b repo feed → GET /api/repos/:uuid/agent/feed'],
   [I('idearium/ui/js/code-surface.js'), I('idearium/ui/js/work-surface.js'), '0.60.142 LV2 Code › changes and the open file: _wsFormingHtml, wsFormingFileHtml (live, from the feed)'],
   [I('idearium/ui/js/code-surface.js'), I('idearium/ui/js/app.js'), '0.60.142 LV2 agentLiveHtml in Code › changes: the agent writing and thinking'],
   [I('idearium/ui/js/code-dock.js'), I('idearium/ui/js/plan-panel.js'), '0.60.142 LV3 the Plan docked as the column\'s first panel (#plan-panel moved in; PLANP.popout, planDockToggle)'],
