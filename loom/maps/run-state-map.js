@@ -40,6 +40,28 @@ const FILES = [
   ['clear-glass/src/net/transport-host.js', I('clear-glass/src/net/transport-host.js'), []],   // §0.60.60 NP1
   ['clear-glass/src/net/service.js', I('clear-glass/src/net/service.js'), [I('clear-glass/src/net/policy.js'), I('clear-glass/src/net/transport-host.js')]],
   ['lib/agent-tools/tools/clear-glass/net.js', I('lib/agent-tools/tools/clear-glass/net.js'), []],   // §0.60.60 NP9: read-only agent view
+  ['clear-glass/src/net/installer.js', I('clear-glass/src/net/installer.js'), [I('clear-glass/src/releases/deliver.js')]],   // §0.60.168 Tor Expert Bundle setup (his upload, mapped 0.60.178)
+  ['clear-glass/src/net/bridge-sources.js', I('clear-glass/src/net/bridge-sources.js'), [I('clear-glass/src/net/installer.js')]],   // §0.60.178 SF2 real bridge lines (Tor Browser, bundle, package example; Tor Project only when asked)
+  ['clear-glass/src/net/https-only.js', I('clear-glass/src/net/https-only.js'), []],   // §0.60.178 SF4 his "optional encryption" (reading): http upgraded or refused in routed windows
+  ['clear-glass/src/net/compartment.js', I('clear-glass/src/net/compartment.js'), []],   // §0.60.178 SF3 a routed window is one in-memory compartment, page and shell
+  ['clear-glass/src/plugins/context-items.js', I('clear-glass/src/plugins/context-items.js'), []],   // §0.60.169 the display half of 'context-menu-item' (his upload, mapped 0.60.178)
+  ['clear-glass/plugins/snowflake/index.js', I('clear-glass/plugins/snowflake/index.js'), []],   // §0.60.169 NP11/NP12 "Open link with Snowflake": emits net.open on the bus, decides nothing
+  ['clear-glass/src/net/magnet.js', I('clear-glass/src/net/magnet.js'), []],   // §0.60.179 CD1 a magnet link parsed, pure
+  ['clear-glass/src/net/quarantine.js', I('clear-glass/src/net/quarantine.js'), [I('clear-glass/src/net/magnet.js')]],   // §0.60.179 CD2 the compartment's download manager
+  ['clear-glass/src/net/qbittorrent.js', I('clear-glass/src/net/qbittorrent.js'), []],   // §0.60.179 CD3 the verified torrent hand-off (MR12)
+  ['clear-glass/src/net/kill-switch.js', I('clear-glass/src/net/kill-switch.js'), []],   // §0.60.179 CD4 kill on disconnect
+  ['clear-glass/src/import/firefox.js', I('clear-glass/src/import/firefox.js'), []],   // §0.60.179 BS1 Firefox profiles, cookies, bookmarks, persona (node:sqlite)
+  ['clear-glass/src/main/float-cli.js', I('clear-glass/src/main/float-cli.js'), []],   // §0.60.179 BS6 the floating CLI's own content-protected window
+  ['clear-glass/renderer/shell/menus.js', I('clear-glass/renderer/shell/menus.js'), []],   // §0.60.179 BS3 menu bar + ☰ from one model
+  ['clear-glass/renderer/shell/extensions.js', I('clear-glass/renderer/shell/extensions.js'), []],   // §0.60.179 BS4 🧩 plugins with icons
+  ['clear-glass/renderer/shell/downloads.js', I('clear-glass/renderer/shell/downloads.js'), []],   // §0.60.179 BS5 ⬇ panel (the Library's store + the quarantine)
+  ['clear-glass/renderer/shell/shell.js', I('clear-glass/renderer/shell/shell.js'), []],   // §0.60.179 BS2/BS6 popovers, identity, shortcuts, float CLI button
+  ['clear-glass/renderer/float-cli.js', I('clear-glass/renderer/float-cli.js'), []],   // §0.60.179 BS6 the floating CLI page
+  ['clear-glass/src/driver/cg-stub.js', I('clear-glass/src/driver/cg-stub.js'), []],   // §0.60.179 test-only window.ClearGlass from the preload's namespaces
+  ['clear-glass/renderer/shell/icons.js', I('clear-glass/renderer/shell/icons.js'), []],   // §0.60.180 BS8 the drawn icon set (no emoji, no font)
+  ['clear-glass/renderer/shell/agents.js', I('clear-glass/renderer/shell/agents.js'), []],   // §0.60.180 BS9 Guardian's agents in one place
+  ['clear-glass/renderer/shell/newtab.js', I('clear-glass/renderer/shell/newtab.js'), []],   // §0.60.180 BS10 the start page over a blank tab
+  ['lib/agent-tools/tools/clear-glass/firefox.js', I('lib/agent-tools/tools/clear-glass/firefox.js'), [I('lib/agent-tools/tools/clear-glass/net.js')]],   // §0.60.179 BS7 profiles listed for agents
   ['idearium/lib/surface-state.cjs', I('idearium/lib/surface-state.cjs'), [I('idearium/lib/data-dir.cjs')]],   // §0.60.80 CE8: the Code tab's surface, one for the tab, the CLI and agents
   ['cos/archetype/eravos.js', I('cos/archetype/eravos.js'), []],   // §0.60.104 CN1/CN2: his ERAVOS canvas, tools and domains as COS archetypes (read from cos/archetype/eravos-*/)
   ['lib/canvas-compartments.js', I('lib/canvas-compartments.js'), [I('lib/cos-bridge.js'), I('lib/file-tree-plan.js'), I('cos/archetype/eravos.js')]],   // §0.60.104 CN3: a canvas compartment, each tool nested
@@ -52,6 +74,16 @@ const FILES = [
   ['idearium/ui/js/ui-editor-doc.js', I('idearium/ui/js/ui-editor-doc.js'), []],   // §0.60.122 UE1: the page ↔ editor round trip (pure)
   ['idearium/ui/js/ui-editor.js', I('idearium/ui/js/ui-editor.js'), [I('idearium/ui/js/ui-editor-doc.js')]],   // §0.60.122 UE1: the editor page on vendored GrapesJS (idearium/ui/vendor/grapesjs, BSD-3-Clause)
   ['lib/system-boundary.js', I('lib/system-boundary.js'), []],
+  ['lib/data-clearup.js', I('lib/data-clearup.js'), []],   // §0.60.177 DL0/DL1 census + clear-up tool; its rules are docs/data-layout.spec ownership: (read at run time, not a require)
+  ['emerge/compiler/phase-specs.js', I('emerge/compiler/phase-specs.js'), [I('emerge/compiler/kg-builder.js'), I('lib/phase-dag.js'), I('lib/phase-graph.js'), I('lib/phase-map-auto.js'), I('lib/pipeline-nodes.js'), I('lib/phase-plan.js')]],   // §0.60.176 PS1 each phase specced again: .phase + .graph (dag slice) beside its owner
+  ['lib/upload-placement.js', I('lib/upload-placement.js'), []],   // §0.60.173 UP1/UP2 a zip's files placed against a repo (strip, exists, same bytes, folders, intent, his learned rules); requires/requiredBy
+  ['idearium/ui/js/upload-intent.js', I('idearium/ui/js/upload-intent.js'), [I('idearium/ui/js/code-tab-panels.js')]],   // §0.60.173 UP4 the Code tab's upload panel (page globals: CX, _cxPaintPanel, api)
+  ['lib/phase-dag.js', I('lib/phase-dag.js'), [I('loom/scanners/phasemap-map.js')]],   // §0.60.172 DG3 the whole DAG of every phasemap
+  ['lib/verify-first.js', I('lib/verify-first.js'), [I('lib/phase-plan.js'), I('cos/testenv/run-target.js')]],   // §0.60.171 VF1 a file checked as it is, no model, before any agent
+  ['lib/coder-brief.js', I('lib/coder-brief.js'), [I('lib/verify-first.js')]],   // §0.60.171 CB1 Gemini's five-part brief with AXIOMS v3.1
+  ['lib/agent-self-model.js', I('lib/agent-self-model.js'), []],   // §0.60.171 SM1 each agent's model of itself; interrogation → proposals
+  ['lib/safe-watch.js', I('lib/safe-watch.js'), []],   // §0.60.170 RC1: an fs.watch whose async EPERM cannot take the process down; re-arms
+  ['lib/path-guard.js', I('lib/path-guard.js'), []],   // §0.60.170 RC4: a file name from an agent's reply is checked (chat label, cut short, prose) before it is written
   ['lib/system-shape.js', I('lib/system-shape.js'), []],   // §0.60.138 does a system match genesis, role by role
   ['diagnostic/cli.js', I('diagnostic/cli.js'), [I('diagnostic/registry-components.js'), I('diagnostic/config.js')]],   // §0.60.138 diagnostic's genesis cli
   ['diagnostic/server.js', I('diagnostic/server.js'), [I('diagnostic/nexus-diagnostic.js')]],   // §0.60.138 diagnostic's genesis entry
@@ -64,6 +96,37 @@ const FILES = [
   ['idearium/ui/js/code-dock.js', I('idearium/ui/js/code-dock.js'), [I('idearium/ui/js/work-surface.js'), I('idearium/ui/js/repo-tasks.js'), I('idearium/ui/js/plan-panel.js')]],   // §0.60.118 DK2: the dock — _wsCard, _rtTree/_rtRow, _ppContext reused (page globals)
 ];
 const CONSUMERS = [
+  [I('emerge/compiler/phase-specs.js'), I('emerge/compiler/kg-builder.js'), '§0.60.176 PS1 specIds(): what a spec declares, through emerge\'s own knowledge-graph build'],
+  [I('emerge/compiler/phase-specs.js'), I('lib/phase-dag.js'), '§0.60.176 PS1 the whole DAG and each phase\'s slice'],
+  [I('emerge/compiler/phase-specs.js'), I('lib/phase-graph.js'), '§0.60.176 PS1 graphFor(): files with roles and crossings'],
+  [I('emerge/compiler/phase-specs.js'), I('lib/phase-map-auto.js'), '§0.60.176 PS1 mapPhase() over envFromTree()'],
+  [I('emerge/compiler/phase-specs.js'), I('lib/pipeline-nodes.js'), '§0.60.176 PS1 phaseNode / graphNode (graphNode now keeps the dag slice)'],
+  [I('emerge/compiler/phase-specs.js'), I('lib/phase-plan.js'), '§0.60.176 PS1 targetSystem(): the owner of each phase'],
+  [I('idearium/api/index.js'), I('lib/upload-placement.js'), '§0.60.173 UP3 repo.uploads.{create,list,get,answer}: plan → needs-you; his answer → repo-inject propose/apply (text) and writeSourceBytes (binaries); learn()'],
+  [I('idearium/api/index.js'), I('lib/zip-ingest.js'), '§0.60.173 UP3 the uploaded zip read with the importer\'s own bounds (project-import.config ZIP)'],
+  [I('idearium/api/index.js'), I('lib/repo-inject.js'), '§0.60.173 UP3 an upload\'s text files land through propose() and apply() — the one door'],
+  [I('idearium/ui/js/code-tab-panels.js'), I('idearium/ui/js/upload-intent.js'), '§0.60.173 UP4 the upload panel: cxUploadLoad / _cxUpload (page globals, loaded by index.html — not a require)'],
+  [I('idearium/api/index.js'), I('lib/phase-dag.js'), '§0.60.172 DG3 build gate (DAG_INVALID), slice on the phase graph, repo.phases.graph lines, repo.phases.dag route'],
+  [I('idearium/cli/route-commands.js'), I('lib/phase-dag.js'), '§0.60.172 DG3 `repo dag <repo> [phase]` through the route'],
+  [I('idearium/api/index.js'), I('lib/verify-first.js'), '§0.60.171 VF1 runPlanned file loop + runContract brick dispatch: check() before the ladder; an existing test reused only when it proves the files'],
+  [I('idearium/api/index.js'), I('lib/coder-brief.js'), '§0.60.171 CB1 compose() is the brief of every file/brick sent to a coder'],
+  [I('idearium/api/index.js'), I('lib/pipeline-routing.js'), '§0.60.171 CB2 preferFirst() after the learned order (both build paths)'],
+  [I('idearium/api/index.js'), I('lib/path-guard.js'), '§0.60.171 RC4b repairTree() at the start of a phase build'],
+  [I('orchestrator/orchestrator.js'), I('lib/safe-watch.js'), '§0.60.170 RC1 UI hotswap watcher and auth hotswap watcher'],
+  [I('guardian/lib/node-registry.js'), I('lib/safe-watch.js'), '§0.60.170 RC1 a watcher per node type folder'],
+  [I('lib/node-registry.js'), I('lib/safe-watch.js'), '§0.60.170 RC1 every system\'s node listener'],
+  [I('lib/node-index-watcher.js'), I('lib/safe-watch.js'), '§0.60.170 RC1'],
+  [I('lib/queue.js'), I('lib/safe-watch.js'), '§0.60.170 RC1 the input folder watcher'],
+  [I('lib/ico.js'), I('lib/safe-watch.js'), '§0.60.170 RC1'],
+  [I('auth/index.js'), I('lib/safe-watch.js'), '§0.60.170 RC1 policy and client-key watchers'],
+  [I('architecture-spec/registry/watcher.js'), I('lib/safe-watch.js'), '§0.60.170 RC1'],
+  [I('cos/foundation/file-browser.js'), I('lib/safe-watch.js'), '§0.60.170 RC1'],
+  [I('diagnostic/nexus-diagnostic.js'), I('lib/safe-watch.js'), '§0.60.170 RC1 the ledger folder watcher'],
+  [I('emerge/emerge-kernel.js'), I('lib/safe-watch.js'), '§0.60.170 RC1'],
+  [I('idearium/repo/watcher.js'), I('lib/safe-watch.js'), '§0.60.170 RC1 (ESM import) the drop folder watcher'],
+  [I('lib/repo-inject.js'), I('lib/path-guard.js'), '§0.60.170 RC4 propose(): check(path, { exists }) before anything else; a change is kept as pathNote'],
+  [I('lib/pipeline-nodes.js'), I('lib/node-export.js'), '§0.60.170 RC3 writeNode names the file with fileIdOf (Windows-safe)'],
+  [I('lib/node-registry.js'), I('lib/node-export.js'), '§0.60.170 RC3 removal matches a file by fileIdOf(id); RC2 one index map per type per scan'],
   [I('idearium/api/index.js'),                    I('lib/system-boundary.js'), '§DB1 0.60.126 GET /api/system/drawbridge → census() + check() (lazy require in the case)'],
   [I('orchestrator/orchestrator.js'), I('lib/node-registry.js'), '§P33b 0.60.131 startForSystem at boot: this system\'s own node listener, its own store'],
   [I('cortex/boot.js'), I('lib/node-registry.js'), '§P33b 0.60.131 startForSystem at boot: this system\'s own node listener, its own store'],
@@ -150,6 +213,28 @@ const CONSUMERS = [
   [I('guardian/lib/response-sink.js'),              I('lib/reply-kind.js'), 'kind: tag on every response node (0.60.50 CE4)'],
   [I('clear-glass/src/downloads/artifact-chat-index.js'), I('lib/run-state.js'),  'Library index rows carry run_id / step / attempt (0.60.50 CE4)'],
   [I('clear-glass/src/downloads/artifact-chat-index.js'), I('lib/reply-kind.js'), 'Library index rows carry reply_kind (0.60.50 CE4)'],
+  [I('clear-glass/src/net/compartment.js'),         I('clear-glass/src/net/https-only.js'), '§0.60.178 SF3/SF4 harden() attaches HTTPS-only to the compartment session (lazy require)'],
+  [I('clear-glass/src/contexts/manager.js'),        I('clear-glass/src/net/compartment.js'), '§0.60.178 SF3 create({ via }): partitionFor + harden, register under that partition; destroy() disposes (lazy require)'],
+  [I('clear-glass/src/main/index.js'),              I('clear-glass/src/net/compartment.js'), '§0.60.178 SF3 openAgentWindow({ via }): page and shell on the compartment partition, forced at will-attach-webview; onContents() WebRTC policy (lazy require)'],
+  [I('clear-glass/src/ipc/bridge.js'),              I('clear-glass/src/net/bridge-sources.js'), '§0.60.178 SF1/SF2 locate() for detect, /cli/net/bridge/find and /bridge/builtin (lazy require)'],
+  [I('clear-glass/src/ipc/bridge.js'),              I('clear-glass/src/net/installer.js'), '§0.60.168 /cli/net/setup: TorInstaller (lazy require)'],
+  [I('clear-glass/src/plugins/webrequest-adapter.js'), I('clear-glass/src/net/https-only.js'), '§0.60.178 SF4 runs ses.__cgPreRequest (set by https-only.attach) before any content filter — a session property, not a require'],
+  [I('clear-glass/plugins/snowflake/index.js'),     I('clear-glass/src/ipc/bridge.js'), '§0.60.169 net.open on the bus, answered by bridge._netOpenVia (the bus, not a require)'],
+  [I('clear-glass/src/net/service.js'),             I('clear-glass/src/net/quarantine.js'), '§0.60.179 CD2 ensureQuarantine (lazy require)'],
+  [I('clear-glass/src/net/service.js'),             I('clear-glass/src/net/qbittorrent.js'), '§0.60.179 CD3 qbit() (lazy require)'],
+  [I('clear-glass/src/net/service.js'),             I('clear-glass/src/net/kill-switch.js'), '§0.60.179 CD4 setOnDisconnect RUNGS (lazy require)'],
+  [I('clear-glass/src/ipc/bridge.js'),              I('clear-glass/src/net/kill-switch.js'), '§0.60.179 CD4 armed with the transport host (lazy require)'],
+  [I('clear-glass/src/ipc/bridge.js'),              I('clear-glass/src/import/firefox.js'), '§0.60.179 BS7 /cli/firefox/profiles and /import (lazy require)'],
+  [I('clear-glass/src/main/index.js'),              I('clear-glass/src/main/float-cli.js'), '§0.60.179 BS6 register() of the floating CLI IPC'],
+  [I('clear-glass/src/main/index.js'),              I('clear-glass/src/net/service.js'), '§0.60.179 CD2 a compartment window gets the quarantine; magnets watched (lazy require)'],
+  [I('lib/agent-tools/index.js'),                   I('lib/agent-tools/tools/clear-glass/firefox.js'), '§0.60.179 BS7 registerTool(clear_glass_firefox)'],
+  [I('clear-glass/renderer/browser.js'),            I('clear-glass/renderer/shell/menus.js'), '§0.60.179 BS3 the ☰ menu draws window.CGMenus rows (page globals, loaded by browser.html — not a require)'],
+  [I('clear-glass/renderer/shell/downloads.js'),    I('clear-glass/src/ipc/bridge.js'), '§0.60.179 BS5 /cli/net/quarantine* over :7702 (HTTP, not a require)'],
+  [I('clear-glass/renderer/shell/agents.js'),      I('clear-glass/src/ipc/bridge.js'), '§0.60.180 BS9 providers:list/start/stop/show and mesh:list over IPC (cg.providers, cg.mesh — not a require)'],
+  [I('clear-glass/renderer/shell/newtab.js'),      I('clear-glass/renderer/shell/agents.js'), '§0.60.180 BS10 the agent cards read window.CGAgents.list (page global)'],
+  [I('clear-glass/renderer/shell/extensions.js'),  I('clear-glass/renderer/shell/icons.js'), '§0.60.180 BS8 plugin icons drawn by window.CGIcons.plugin (page global)'],
+  [I('clear-glass/src/ipc/bridge.js'),              I('clear-glass/src/net/service.js'), '§0.60.180 SF7 _ensureBridge before every start (service.ensureBridge)'],
+  [I('clear-glass/renderer/float-cli.js'),          I('clear-glass/renderer/copilot-cli.js'), '§0.60.179 BS6 CGCopilotCLI.create: the route bar, slash commands, history (page global)'],
 ];
 
 function mapRunState(driver) { return declareMap(driver, { key: 'run-state', uuidTag: '2026-1015-050', files: FILES, consumers: CONSUMERS }); }

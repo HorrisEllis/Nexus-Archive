@@ -106,7 +106,8 @@
   if (wvPreload) wv.setAttribute('preload', wvPreload);
   // §0.39.265 — automation pages run in their own session (persist:automation)
   const wvPartition = params.get('wvPartition') || '';
-  if (wvPartition && /^persist:[\w-]{1,60}$/.test(wvPartition)) wv.setAttribute('partition', wvPartition);
+  // SF3 (0.60.178) — or a routed window's in-memory compartment (cg-snow-<id>), so the page shares the shell's routed session
+  if (wvPartition && (/^persist:[\w-]{1,60}$/.test(wvPartition) || /^cg-snow-[\w-]{1,64}$/.test(wvPartition))) wv.setAttribute('partition', wvPartition);
 
   // §NEW 2026-07-04: main process navigates this window in place when the
   // orchestrator's wire /open call targets the already-open default window
@@ -435,19 +436,14 @@ ${alt ? `<p>Did you mean <a style="color:#00f5ff" href="${esc(alt)}">${esc(alt)}
     const list = document.getElementById('tab-list');
 
     function render() {
+      // BS2 (0.60.179) — classes, not inline styles (shell/shell.css draws them), and the title ESCAPED: it is the page's own <title>,
+      // and before this a page could put markup into the browser's tab strip
+      const esc = (x) => String(x == null ? '' : x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
       list.innerHTML = tabs.map(t => `
-        <div class="tab-item${t.id === activeId ? ' active' : ''}" data-tid="${t.id}" style="
-          display:flex;align-items:center;gap:5px;padding:0 10px 0 12px;height:28px;
-          border-radius:6px 6px 0 0;font-size:11px;cursor:pointer;white-space:nowrap;
-          background:${t.id===activeId?'#14141f':'transparent'};
-          color:${t.id===activeId?'#d8dae4':'#6a6d82'};
-          border:${t.id===activeId?'1px solid rgba(255,255,255,.08)':'1px solid transparent'};
-          border-bottom:${t.id===activeId?'1px solid #14141f':'none'};
-          min-width:80px;max-width:180px;
-        ">
-          ${t.loading ? '<span style="width:8px;height:8px;border-radius:50%;border:1.5px solid #00f5ff;border-top-color:transparent;animation:spin .6s linear infinite;flex-shrink:0"></span>' : ''}
-          <span style="flex:1;overflow:hidden;text-overflow:ellipsis">${t.title}</span>
-          <span class="tab-close" data-tid="${t.id}" style="opacity:.4;font-size:13px;padding:0 2px;flex-shrink:0" title="Close tab">✕</span>
+        <div class="tab-item${t.id === activeId ? ' active' : ''}${t.loading ? ' loading' : ''}" data-tid="${t.id}" role="tab" aria-selected="${t.id === activeId}" title="${esc(t.title)}">
+          ${t.loading ? '<span class="tab-spin"></span>' : (t.favicon ? `<img class="tab-favicon" src="${esc(t.favicon)}" alt="">` : '<span class="tab-favicon tab-favicon-none"></span>')}
+          <span class="tab-title">${esc(t.title)}</span>
+          <span class="tab-close" data-tid="${t.id}" title="Close tab (Ctrl+W)">✕</span>
         </div>`).join('');
 
       list.querySelectorAll('.tab-item').forEach(el => {
@@ -518,6 +514,11 @@ ${alt ? `<p>Did you mean <a style="color:#00f5ff" href="${esc(alt)}">${esc(alt)}
   document.getElementById('btn-new-tab').addEventListener('click', () => _tabs.newTab());
 
   // Wire webview events into tab state
+  // BS2 (0.60.179) — the tab shows the site's icon, as Firefox does (http/https/data icons only)
+  wv.addEventListener('page-favicon-updated', (e) => {
+    const t = _tabs.tabs.find(x => x.id === _tabs.activeId); const f = (e.favicons || []).find(u => /^(https?:|data:image\/)/.test(u));
+    if (t && f !== t.favicon) { t.favicon = f || null; _tabs.render(); }
+  });
   wv.addEventListener('page-title-updated', (e) => {
     _tabs.setTitle(_tabs.activeId, e.title);
     document.title = e.title + ' — Clear Glass';
@@ -582,10 +583,10 @@ ${alt ? `<p>Did you mean <a style="color:#00f5ff" href="${esc(alt)}">${esc(alt)}
       if (optProvList) {
         optProvList.innerHTML = providers.map(p => `
           <div style="display:flex;align-items:center;gap:8px;padding:4px 0;">
-            <span style="width:8px;height:8px;border-radius:50%;background:${p.hosted ? 'var(--green)' : 'var(--text-dim)'};flex-shrink:0;"></span>
+            <span style="width:8px;height:8px;border-radius:50%;background:${(p.running || p.hosted) ? 'var(--green)' : 'var(--text-dim)'};flex-shrink:0;"></span>
             <span style="flex:1;font-size:11px;">${p.name}</span>
-            <button class="opt-link-btn prov-opt-btn" data-id="${p.id}" data-hosted="${p.hosted}">
-              ${p.hosted ? 'Active ✓' : 'Start'}
+            <button class="opt-link-btn prov-opt-btn" data-id="${p.id}" data-hosted="${!!(p.running || p.hosted)}">
+              ${(p.running || p.hosted) ? 'Active ✓' : 'Start'}
             </button>
           </div>`).join('');
         optProvList.querySelectorAll('.prov-opt-btn').forEach(btn => {
@@ -667,17 +668,18 @@ ${alt ? `<p>Did you mean <a style="color:#00f5ff" href="${esc(alt)}">${esc(alt)}
     openOptionsPanel();
   });
 
-  // Firefox profile import
+  // Firefox profile import — BS7 (0.60.179): this used to send the co-pilot a chat message and import nothing. It now runs the real import
+  // (src/import/firefox.js through /cli/firefox/import): cookies into the everyday session, bookmarks, and the profile's user agent.
   document.getElementById('opt-ff-import-btn')?.addEventListener('click', async () => {
     const profilePath = document.getElementById('opt-ff-profile-path')?.value?.trim();
-    if (!profilePath) { addMsg('assistant', 'Enter a Firefox profile path first.'); return; }
-    // Notify via copilot message — fingerprint engine handles the import
-    await cg.copilot.send({
-      message: `Import Firefox profile from path: ${profilePath} for agent ${agentId}`,
-      agentId,
-      systemExtra: `Execute: context.fp.switch({ agentId: "${agentId}", mode: "firefox", profilePath: "${profilePath}" })`,
-    }).catch(() => {});
-    addMsg('assistant', `Firefox profile import requested for ${agentId}.`);
+    addMsg('assistant', `Importing from Firefox${profilePath ? ` (${profilePath})` : ' (default profile)'}…`);
+    try {
+      const r = await fetch('http://127.0.0.1:7702/cli/firefox/import', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profile: profilePath || '', cookies: true, bookmarks: true, persona: true, agentId }) }).then(x => x.json());
+      if (r.ok === false && !r.cookies) { addMsg('assistant', `Firefox import failed: ${r.error || (r.errors || []).join('; ')}`); return; }
+      const c = r.cookies, b = r.bookmarks;
+      addMsg('assistant', `Firefox "${r.profile}": ${c ? `${c.imported} of ${c.read} cookies imported` : 'no cookies'}${b ? `, ${b.added} bookmarks added` : ''}${r.persona && r.persona.userAgent ? ', its user agent applied' : ''}.${(r.errors || []).length ? ` Problems: ${r.errors.join('; ')}` : ''}`);
+    } catch (err) { addMsg('assistant', `Firefox import failed: ${err.message}`); }
   });
 
   // ── Element picker ─────────────────────────────────────────────────
@@ -1126,12 +1128,12 @@ ${alt ? `<p>Did you mean <a style="color:#00f5ff" href="${esc(alt)}">${esc(alt)}
     _micRecorder.onstop = async () => {
       stream.getTracks().forEach(t => t.stop());
       _micRecording = false;
-      copilotMicBtn.textContent = '🎤';
+      _setMic('mic');
       copilotMicBtn.title = 'Voice input (real, local, offline speech-to-text)';
 
       const blob = new Blob(_micChunks, { type: 'audio/webm' });
       const arrayBuffer = await blob.arrayBuffer();
-      copilotMicBtn.textContent = '⏳';
+      _setMic('busy');
       try {
         const result = await cg.speech.transcribeBuffer(new Uint8Array(arrayBuffer), 'webm');
         if (result?.error) {
@@ -1144,11 +1146,11 @@ ${alt ? `<p>Did you mean <a style="color:#00f5ff" href="${esc(alt)}">${esc(alt)}
       } catch (err) {
         addMsg('assistant', `Voice input error: ${err.message}`);
       }
-      copilotMicBtn.textContent = '🎤';
+      _setMic('mic');
     };
     _micRecorder.start();
     _micRecording = true;
-    copilotMicBtn.textContent = '⏹';
+    _setMic('stop');
     copilotMicBtn.title = 'Click to stop recording';
   });
 
@@ -1384,7 +1386,7 @@ ${alt ? `<p>Did you mean <a style="color:#00f5ff" href="${esc(alt)}">${esc(alt)}
   document.getElementById('btn-mesh')?.addEventListener('click', async (e) => {
     const panel = document.getElementById('agent-mesh-panel');
     if (panel.style.display !== 'none') { panel.style.display = 'none'; return; }
-    const rect = e.target.getBoundingClientRect();
+    const rect = (e.currentTarget || e.target).getBoundingClientRect();
     panel.style.top = `${rect.bottom + 4}px`;
     panel.style.right = `${window.innerWidth - rect.right}px`;
     panel.innerHTML = '<div style="padding:8px;color:var(--text-dim,#999);font-size:11px">loading…</div>';
@@ -1419,7 +1421,7 @@ ${alt ? `<p>Did you mean <a style="color:#00f5ff" href="${esc(alt)}">${esc(alt)}
   });
   document.addEventListener('click', (e) => {
     const panel = document.getElementById('agent-mesh-panel');
-    if (panel && panel.style.display !== 'none' && !panel.contains(e.target) && e.target.id !== 'btn-mesh') panel.style.display = 'none';
+    if (panel && panel.style.display !== 'none' && !panel.contains(e.target) && !(e.target.closest && e.target.closest('#btn-mesh'))) panel.style.display = 'none';   // 0.60.180: the button now holds an svg
   });
 
   // ── Diag button ────────────────────────────────────────────────────
@@ -1565,7 +1567,7 @@ ${alt ? `<p>Did you mean <a style="color:#00f5ff" href="${esc(alt)}">${esc(alt)}
     paint(); stateNote(); titleIn.focus(); titleIn.select();
 
     const close = () => { box.remove(); document.removeEventListener('mousedown', outside, true); };
-    const outside = (e) => { if (!box.contains(e.target) && e.target.id !== 'btn-bookmark') close(); };
+    const outside = (e) => { if (!box.contains(e.target) && !(e.target.closest && e.target.closest('#btn-bookmark'))) close(); };
     setTimeout(() => document.addEventListener('mousedown', outside, true), 0);
     box.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); if (e.key === 'Enter' && e.target === titleIn) save.click(); });
     cancel.addEventListener('click', close);
@@ -1830,10 +1832,14 @@ ${alt ? `<p>Did you mean <a style="color:#00f5ff" href="${esc(alt)}">${esc(alt)}
   document.getElementById('bookmark-mgr-btn').addEventListener('click', async (e) => {
     const panel = document.getElementById('bookmark-mgr-panel');
     if (panel.style.display !== 'none') { panel.style.display = 'none'; return; }
-    const rect = e.target.getBoundingClientRect();
+    const rect = (e.currentTarget || e.target).getBoundingClientRect();
     panel.style.top = `${rect.bottom + 4}px`;
     panel.style.right = `${window.innerWidth - rect.right}px`;
+    // BS3 (0.60.179) — Firefox's ☰ order: new tab / window / Snowflake first, then bookmarks and the panels, then add-ons, import,
+    // print, find, zoom and Settings (renderer/shell/menus.js), then the tools and Customize. The rows below keep their own handlers.
+    const _am = window.CGMenus;
     panel.innerHTML = `
+      ${_am ? _am.appMenuHTML('top') + '<div class="menu-sep"></div>' : ''}
       <div id="menu-agent-identity-target"></div>
       <div class="menu-sep"></div>
       <div class="menu-section">
@@ -1858,12 +1864,16 @@ ${alt ? `<p>Did you mean <a style="color:#00f5ff" href="${esc(alt)}">${esc(alt)}
            and its Tools row here; a real, single, unambiguous "Settings"
            entry (→ cg.window.openSettings(), the actual Settings window)
            now lives at btn-settings, in this same Tools row list. -->
+      ${_am ? '<div class="menu-sep"></div>' + _am.appMenuHTML('mid') : ''}
+      <div class="menu-sep"></div>
+      <div class="menu-section-label">More tools</div>
       ${_renderToolMenuRows()}
       <div class="menu-sep"></div>
       <div class="menu-item" data-action="customize-toolbar">🧰 Customize Toolbar…</div>
     `;
     panel.style.display = 'block';
     _wireToolMenuRows(panel);
+    if (_am) _am.wire(panel, () => { panel.style.display = 'none'; });
     panel.querySelector('[data-action="customize-toolbar"]').addEventListener('click', () => {
       panel.style.display = 'none';
       _openToolbarEditor();
@@ -1928,7 +1938,7 @@ ${alt ? `<p>Did you mean <a style="color:#00f5ff" href="${esc(alt)}">${esc(alt)}
   });
   document.addEventListener('click', (e) => {
     const panel = document.getElementById('bookmark-mgr-panel');
-    if (panel.style.display !== 'none' && !panel.contains(e.target) && e.target.id !== 'bookmark-mgr-btn') {
+    if (panel.style.display !== 'none' && !panel.contains(e.target) && !(e.target.closest && e.target.closest('#bookmark-mgr-btn'))) {   // 0.60.180: a click on the drawn icon is a click on the button
       // Put the real agent/identity elements back into their hidden home
       // before closing, so they're not silently lost from the DOM if the
       // menu is never reopened before the next reference to them.
@@ -2448,14 +2458,14 @@ ${alt ? `<p>Did you mean <a style="color:#00f5ff" href="${esc(alt)}">${esc(alt)}
         const item = document.createElement('div');
         item.className = 'prov-item';
         item.innerHTML = `
-          <div class="prov-dot ${p.hosted ? 'active' : ''}"></div>
+          <div class="prov-dot ${p.running || p.hosted ? 'active' : ''}"></div>
           <span class="prov-name">${p.name}</span>
-          <button class="prov-btn ${p.hosted ? 'active' : ''}" data-id="${p.id}">
-            ${p.hosted ? 'Show' : 'Start'}
-          </button>`;
+          <button class="prov-btn ${p.running || p.hosted ? 'active' : ''}" data-id="${p.id}">
+            ${p.running || p.hosted ? 'Show' : 'Start'}
+          </button>`;   // BS9 (0.60.180): the host sends running (never hosted), so every agent read as Start
         item.querySelector('button').addEventListener('click', async (e) => {
           e.stopPropagation();
-          if (p.hosted) {
+          if (p.running || p.hosted) {
             await cg.providers.show(p.id);
           } else {
             addMsg('assistant', `Starting ${p.name} provider...`);
@@ -2894,7 +2904,7 @@ ${alt ? `<p>Did you mean <a style="color:#00f5ff" href="${esc(alt)}">${esc(alt)}
       ctx.font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`; return ctx.measureText(t || input.placeholder || '').width; };
     function fit() {
       const cs = getComputedStyle(input), pad = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0) + 24;
-      if (!wrap.dataset.manual) wrap.style.flex = `0 0 ${Math.round(Math.min(room() - offset, Math.max(MIN, textW(input.value) + pad + 40)))}px`;
+      if (!wrap.dataset.manual) wrap.style.flex = `0 0 ${Math.round(Math.min(room() - offset, Math.max(MIN, room() * 0.62, textW(input.value) + pad + 40)))}px`;   // BS8 (0.60.180): starts at most of the row, as Firefox's does; still grows and drags
       applyOffset(offset);
     }
     function applyOffset(px) {
@@ -3231,6 +3241,8 @@ ${alt ? `<p>Did you mean <a style="color:#00f5ff" href="${esc(alt)}">${esc(alt)}
   // via wv.executeJavaScript, so it needs the page's own numbers, not
   // the window-adjusted ones.
   let ctxPageXY = null;
+  // §0.60.169 — the http(s) link the last page right-click landed on, or null (drives "Open link with Snowflake")
+  let ctxLinkURL = null;
 
   function _findPinnedCommandAt(target) {
     return TOOLBAR_COMMANDS.find(c => {
@@ -3263,11 +3275,25 @@ ${alt ? `<p>Did you mean <a style="color:#00f5ff" href="${esc(alt)}">${esc(alt)}
     e.preventDefault();
     ctxPinTarget = _findPinnedCommandAt(e.target);
     ctxIsChrome = true;
+    ctxLinkURL = null; renderPluginCtxItems([]);
     ctxPageXY = null; // a chrome-bar right-click has no page point
     showCtxMenu(e.clientX, e.clientY);
   });
 
-  wv.addEventListener('context-menu', (e) => {
+  // §0.60.169 NP11 — rows plugins contribute to the menu. Built with textContent (a plugin's label is data, never HTML).
+  function renderPluginCtxItems(items) {
+    const host = document.getElementById('ctx-plugin-items'); if (!host) return;
+    host.textContent = '';
+    for (const it of items) {
+      const row = document.createElement('div');
+      row.className = 'ctx-item'; row.dataset.action = 'plugin-item'; row.dataset.sig = it.id;
+      row.textContent = `${it.icon ? it.icon + ' ' : ''}${it.label}`;
+      host.appendChild(row);
+    }
+    if (items.length) { const sep = document.createElement('div'); sep.className = 'ctx-item sep'; host.appendChild(sep); }
+  }
+
+  wv.addEventListener('context-menu', async (e) => {
     e.preventDefault();
     ctxPinTarget = null; // page content is never a pinned toolbar command
     ctxIsChrome = false;
@@ -3289,6 +3315,8 @@ ${alt ? `<p>Did you mean <a style="color:#00f5ff" href="${esc(alt)}">${esc(alt)}
     const r = wv.getBoundingClientRect();
     const p = e.params || e;
     ctxPageXY = { x: p.x, y: p.y };
+    ctxLinkURL = /^https?:\/\//i.test(p.linkURL || '') ? p.linkURL : null;
+    renderPluginCtxItems(await cg.plugins.contextItems(ctxLinkURL ? 'link' : 'page').catch(() => []));
     showCtxMenu(r.left + p.x, r.top + p.y);
   });
 
@@ -3298,6 +3326,12 @@ ${alt ? `<p>Did you mean <a style="color:#00f5ff" href="${esc(alt)}">${esc(alt)}
     hideCtxMenu();
 
     switch (action) {
+      case 'plugin-item': {
+        // §0.60.169 NP11 — a plugin's row: fire its signature with the link (or page) it was opened on; the plugin's own Gate does the rest and tells the person by toast
+        const sig = e.target.closest('[data-sig]')?.dataset.sig; if (!sig) break;
+        cg.plugins.invoke(sig, { url: ctxLinkURL || wv.getURL(), agentId }).catch(err => addMsg('assistant', `Plugin action failed: ${err.message}`));
+        break;
+      }
       case 'customize-toolbar': {
         _openToolbarEditor();
         break;
@@ -3497,4 +3531,24 @@ ${alt ? `<p>Did you mean <a style="color:#00f5ff" href="${esc(alt)}">${esc(alt)}
     return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
   }
 
+
+  // BS3 (0.60.179) — the window's own actions, once, for the menu bar, the ☰ menu and the floating CLI (renderer/shell/*.js). Each is the
+  // function this file already uses; nothing here is a second implementation.
+  window.CGShell = {
+    cg, agentId, wv, navigate, normalizeUrl,
+    newTab: (url) => _tabs.newTab(url), closeTab: () => _tabs.closeTab(_tabs.activeId), reopenClosed: () => _tabs.reopenClosed(),
+    find: () => openFindBar(), print: () => cg.driver.exec({ action: 'print', agentId }),
+    zoom: (d) => applyZoom(d === 'in' ? _zoomFactor + 0.1 : d === 'out' ? _zoomFactor - 0.1 : 1.0), zoomPct: () => Math.round(_zoomFactor * 100),
+    history: () => _openPanelFromMenu('history-panel', () => _renderHistoryPanel('')),
+    siteSettings: () => _openPanelFromMenu('site-settings-panel', _renderSiteSettingsPanel),
+    bgTabs: () => _openPanelFromMenu('bgtabs-panel', _renderBgTabsPanel),
+    library: (area) => _openLibrary(area), customize: () => _openToolbarEditor(),
+  };
+
+  // BS11 (0.60.180) — the mic's three states as drawn icons (the composer hides text glyphs)
+  function _setMic(kind) {
+    const b = document.getElementById('copilot-mic-btn'); if (!b) return;
+    const name = kind === 'stop' ? 'stop' : kind === 'busy' ? 'history' : 'mic';
+    if (window.CGIcons) { b.innerHTML = window.CGIcons.svg(name, { size: 18 }); b.classList.toggle('rec', kind === 'stop'); } else b.textContent = kind === 'stop' ? '⏹' : kind === 'busy' ? '⏳' : '🎤';
+  }
 })();

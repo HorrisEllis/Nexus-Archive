@@ -341,6 +341,23 @@ export const SPEC = [
     // 0.60.75 GW3 --trace: the contract end to end, oldest first, then each brick and every hole in the record
     print: (d, a, h) => { if (d.trace) { for (const l of d.lines || []) console.log(`  ${l}`); console.log(''); for (const b of d.trace.bricks) console.log(`  ${(b.status === 'PASSED' ? h.c.mint : h.c.amber)(String(b.status).padEnd(7))} ${b.id}${b.files.length ? h.c.dim(` ${b.files.join(', ')}`) : ''}${b.agents.length ? h.c.dim(` · ${b.agents.join(', ')}`) : ''}${b.commits.length ? h.c.dim(` · @${b.commits.map(c => String(c).slice(0, 12)).join(' @')}`) : ''}`); for (const x of d.trace.holes) console.log(`  ${h.c.amber('hole')} ${x.gate}: ${x.what}`); if (!d.trace.holes.length) console.log(h.c.dim('  no holes in the record')); return; }
       if (d.compare) { const c = d.compare; console.log(`  ${c.gate}: ${c.stale ? h.c.amber('STALE') : c.status}${c.commit ? h.c.dim(`  passed at ${c.commit}`) : h.c.dim('  no commit recorded')}`); for (const r of c.reasons || []) console.log(h.c.dim(`    · ${r}`)); for (const [f, dd] of Object.entries(c.diff || {})) { console.log(`  ${f}`); const pt = dd && dd.files && dd.files[0]; console.log(h.c.dim(pt && pt.patch ? String(pt.patch).split('\n').slice(0, 30).join('\n') : (dd && dd.error) || '    no change since it passed')); } return; } const au = d.audit; for (const b of au.bricks) console.log(`  ${(b.status === 'PASSED' ? h.c.mint : h.c.amber)(String(b.status).padEnd(7))} ${b.file || b.id}${b.agent ? h.c.dim(` · ${b.agent}`) : ''}${b.attempts ? h.c.dim(` · ${b.attempts} attempt(s)`) : ''}${b.tag ? h.c.dim(` · ${b.tag}`) : ''}${b.class && b.status !== 'PASSED' ? h.c.amber(` · ${b.class}`) : ''}${b.blocked ? h.c.amber(` · ${b.blocked}`) : ''}`); if (d.progress) console.log(h.c.dim(`  progress: ${d.progress.passed}/${d.progress.total} passed · ${d.progress.moves} moves${d.progress.last ? ` · last ${d.progress.last.gate} ${d.progress.last.status}` : ''}`)); console.log(h.c.dim(`  ${au.dependencies.length} dependencies · ${au.checkpoints.length} checkpoints · ${au.gates.length} gates · ${d.file}`)); console.log(`  ${au.complete ? h.c.mint('complete') : h.c.amber('not complete')}: ${(au.why || []).join('; ')}`); } },
+  // 0.60.172 DG3 — James: "every phasemap phase needs extensive dag, that needs to start being standard."
+  { key: 'repo.phases.dag', repo: true, usage: 'repo dag <repo> [phase] [--map path] [--cross]', about: "the whole dependency DAG of the repo's phasemaps (cycles, dangling depends_on, phases with no depends_on line, layers, ready, critical path, file conflicts) — or one phase's place in it",
+    req: (a) => ({ method: 'GET', path: `/api/repos/${a.repo.uuid}/phases/dag?${a.args[0] ? `phase=${encodeURIComponent(a.args[0])}&` : ''}${a.flags.map ? `map=${encodeURIComponent(a.flags.map)}&` : ''}${a.flags.cross ? 'cross=1' : ''}` }) },
+  // §0.60.173 UP3 — James: "upload zip with an intent, have it map to nexus using a tool, then ask me with the option to edit the location"
+  { key: 'repo.upload', repo: true, usage: 'repo upload <repo> <zip> --intent "what these files are for"', about: 'upload a zip into a repo with an intent: every file is placed against the repo (its folders, its systems, who requires what, his earlier answers) and the upload WAITS for his answer — nothing is written yet',
+    need: (a) => (!a.args.length ? '<zip>' : !a.flags.intent ? '--intent "what these files are for"' : null),
+    req: (a) => ({ method: 'POST', path: `/api/repos/${a.repo.uuid}/uploads`, body: { name: require('path').basename(a.args[0]), intent: String(a.flags.intent), contentBase64: require('fs').readFileSync(a.args[0]).toString('base64') } }),
+    print: (d, a, h) => _printUpload(d, h) },
+  { key: 'repo.uploads', repo: true, usage: 'repo uploads <repo> [upload-id]', about: 'the uploads waiting for his answer (and the answered ones), or one upload with every file\'s proposed place, why, its system and registry neighbours',
+    req: (a) => ({ method: 'GET', path: `/api/repos/${a.repo.uuid}/uploads${a.args[0] ? `/${encodeURIComponent(a.args[0])}` : ''}` }),
+    print: (d, a, h) => { if (d.plan) return _printUpload(d, h); for (const u of d.uploads || []) console.log(`  ${u.state === 'needs-you' ? h.c.amber('⚑ needs you') : h.c.dim('answered  ')}  ${u.uuid}  ${u.name}  ${h.c.dim(`${(u.stats && u.stats.files) || 0} file(s) · "${u.intent}"`)}`); if (!(d.uploads || []).length) console.log(h.c.dim('  (no uploads)')); if ((d.rules || []).length) console.log(h.c.dim(`  learned from his answers: ${d.rules.length} rule(s)`)); } },
+  { key: 'repo.upload-answer', repo: true, usage: 'repo upload-answer <repo> <upload-id> [--to "from=path,from=path"] [--skip "from,from"] [--no-apply]', about: 'his answer to an upload: keep the proposed places, move files (--to), skip some (--skip); only then is anything written (text through the proposal door, binaries through the source layer). His moves are learned',
+    need: (a) => (a.args.length ? null : '<upload-id>'),
+    req: (a) => { const rows = []; for (const kv of String(a.flags.to || '').split(',').map(s => s.trim()).filter(Boolean)) { const i = kv.indexOf('='); if (i > 0) rows.push({ from: kv.slice(0, i), to: kv.slice(i + 1) }); }
+      for (const f of String(a.flags.skip || '').split(',').map(s => s.trim()).filter(Boolean)) rows.push({ from: f, skip: true });
+      return { method: 'POST', path: `/api/repos/${a.repo.uuid}/uploads/${encodeURIComponent(a.args[0])}/answer`, body: { rows, apply: !a.flags['no-apply'] } }; },
+    print: (d, a, h) => { console.log(`  ${h.c.mint(`${d.written} written`)} · ${(d.skipped || []).length} skipped${(d.errors || []).length ? ` · ${h.c.coral(`${d.errors.length} failed`)}` : ''}`); for (const r of d.results || []) console.log(`  ${r.ok ? '✓' : h.c.coral('✗')} ${r.from} → ${r.to}${r.edited ? h.c.dim(' (his path)') : ''}${r.error ? h.c.coral(`  ${r.error}`) : r.note ? h.c.dim(`  ${r.note}`) : ''}`); for (const s of d.skipped || []) console.log(h.c.dim(`  – ${s.from}: ${s.why}`)); } },
   // 0.60.29 PM — James: "All the phases need to be mapped to files and dependencies. With nexus and all projects."
   { key: 'repo.map-phases', repo: true, usage: 'repo map-phases <repo> [status] [--limit n] [--no-apply] [--done] [--untrusted]', about: 'map every phase that names no files to its files (an agent, scored first on phases whose files are known) and every phase to its dependencies (from the files); written into the phasemaps where missing',
     req: (a) => (a.args[0] === 'status' ? { method: 'GET', path: `/api/repos/${a.repo.uuid}/phases/map` }
@@ -849,6 +866,25 @@ export const SPEC = [
       const rows = d.results || [d];
       for (const r of rows) console.log(`  ${r.ok === false ? h.c.coral('✗') : h.c.mint('✓')} ${(r.provider || a.args[0] || '').padEnd(11)} ${r.action || ''}${r.accountId ? h.c.dim(`  as ${r.accountId}`) : ''}${r.why || r.error ? h.c.dim(`  ${r.why || r.error}`) : ''}`);
     } },
+  // §0.60.175 PM5 — James: "parse the dom, index each element as blocks … synthesize a fucking map in relation to the weboage to use as a
+  // map or reference point for inputs from the cli or the intent. learns over time." Same route as `field` (POST /cli/driver).
+  { key: 'page', repo: false, usage: 'page [--on <window>] [--max n]', about: 'the page map of a Clear Glass window: regions, forms (fields, required, submit), actions and headings as short lines, and what changed since the last visit to this kind of page (it learns per site)',
+    req: (a) => _fieldReq(a, { action: 'pageMap', ...(a.flags.max ? { maxBlocks: +a.flags.max } : {}) }),
+    print: (d, a, h) => { const m = d.result || {}; console.log(h.c.dim(`  ${d.agentId} · ${m.site || m.url || ''} · ${(m.stats && m.stats.blocks) || 0} blocks · visit ${m.visits || 1} · ${m.feel || ''}`)); for (const l of m.lines || []) console.log(`  ${l}`); if (m.note) console.log(h.c.amber(`  ${m.note}`)); console.log(h.c.dim('\n  next: idearium page find <intent…> · idearium page chunks [query] · idearium page scrape')); } },
+  { key: 'page.find', repo: false, usage: 'page find <intent…> [--on <window>] [--fresh]', about: 'intent → the blocks on the page to act on, ranked, each with its selector, address, centre (x,y) and why (words, kind, covered, stable here, worked before)',
+    need: (a) => (a.args.length ? null : '<intent> (e.g. "type my email", "click apply")'),
+    req: (a) => _fieldReq(a, { action: 'pageFind', intent: a.args.join(' '), fresh: !!a.flags.fresh }),
+    print: (d, a, h) => { const r = d.result || {}; console.log(h.c.dim(`  ${r.site || ''} · "${r.intent}"${(r.verbs || []).length ? ` · wants ${r.verbs.join('/')}` : ''}`)); (r.targets || []).forEach((t, i) => console.log(`  ${i === 0 ? h.c.mint('→') : ' '} ${h.c.bold(`${t.role}${t.name ? ` "${t.name}"` : ''}`)}  ${h.c.dim(`${t.cx != null ? `(${t.cx},${t.cy}) ` : ''}${t.selector || ''}  ${t.score}`)}\n      ${h.c.dim(`${t.id} · ${t.why.join(' · ')}`)}`)); if (!(r.targets || []).length) console.log(h.c.dim('  (nothing matches)')); console.log(h.c.dim(`\n  after acting: idearium page outcome "${r.intent}" <id> ok|fail`)); } },
+  { key: 'page.outcome', repo: false, usage: 'page outcome <intent> <block-id> ok|fail [--on <window>]', about: 'tell the page map what happened when a found block was acted on — it learns for this intent on this kind of page',
+    need: (a) => (a.args.length >= 3 ? null : '<intent> <block-id> ok|fail'),
+    req: (a) => _fieldReq(a, { action: 'pageOutcome', intent: a.args.slice(0, -2).join(' '), id: a.args[a.args.length - 2], ok: !/^(fail|failed|no|false|0)$/i.test(a.args[a.args.length - 1]) }),
+    print: (d, a, h) => { const r = d.result || {}; console.log(r.ok ? h.c.mint(`  learned: "${r.intent}" → ${r.blockId} (${r.score > 0 ? '+' : ''}${r.score})`) : h.c.amber(`  ${r.why}`)); } },
+  { key: 'page.chunks', repo: false, usage: 'page chunks [query…] [--on <window>] [--max-chars n]', about: 'the page as chunks of text by section — or only the chunks a query hits (reading, analysing, reverse engineering)',
+    req: (a) => _fieldReq(a, { action: 'pageChunks', ...(a.args.length ? { query: a.args.join(' ') } : {}), ...(a.flags['max-chars'] ? { maxChars: +a.flags['max-chars'] } : {}) }),
+    print: (d, a, h) => { const r = d.result || {}; for (const c of r.chunks || []) { console.log(h.c.bold(`  ${c.id} ${c.title}`) + h.c.dim(`  ${c.blocks.length} block(s)`)); console.log(String(c.text || '').split('\n').slice(0, 8).map(l => `    ${l}`).join('\n')); } if (!(r.chunks || []).length) console.log(h.c.dim('  (no chunks)')); } },
+  { key: 'page.scrape', repo: false, usage: 'page scrape [--json] [--on <window>] [--out file]', about: 'the whole page as markdown by section (or --json: blocks + chunks + map) — the web scraper; --out writes it to a file',
+    req: (a) => _fieldReq(a, { action: 'pageScrape', format: a.flags.json ? 'json' : 'md' }),
+    print: (d, a, h) => { const r = d.result || {}; const text = r.markdown != null ? r.markdown : JSON.stringify(r, null, 2); if (a.flags.out && a.flags.out !== true) { require('fs').writeFileSync(String(a.flags.out), text); console.log(h.c.mint(`  written: ${a.flags.out} (${text.length} chars)`)); } else console.log(text); } },
   { key: 'field.windows', repo: false, usage: 'field windows', about: 'what the field is doing in each Clear Glass window: its last map, spotlight and pointer, and how lately the page changed',
     req: () => ({ system: 'clear-glass', method: 'GET', path: '/cli/attention' }),
     print: (d, a, h) => _printWindows(d.windows || [], h) },
@@ -966,10 +1002,33 @@ export const SPEC = [
       if (d.ok === false) { console.log(`${h.c.amber('✗')} ${d.error || 'failed'}`); return; }
       if (d.action) { console.log(d.action === 'delivered' ? `  delivered ${d.version} (${(d.bytes / 1048576).toFixed(1)} MB) · ${d.reason}` : `  nothing to do: ${d.reason}`); return; }
       console.log(`  latest ${d.latest}${d.publishesChecksum ? '' : ' (publishes no SHA256SUMS)'} · COS has ${d.installed.length ? d.installed.join(', ') : 'nothing'}${d.current ? ` (current ${d.current})` : ''} · inbox ${d.inboxPending} waiting\n  a fetch would: ${d.would}`); } },
-  { key: 'net', repo: false, usage: 'net <status|routes|resolve <url>|add <id> --via V [--provider p] [--url pattern] [--origin host] [--caller c] [--protocols https,wss] [--on-failure block]|rm <id>|default <via>|start|stop [--wipe]|detect|bridge <line>|paths --tor P --snowflake P|test>',
+  // BS7 (0.60.179) — James: "can you build a import for firefox profiles and cookies for clearglass.?" Listing is open; importing is his (cookies are sign-ins).
+  { key: 'firefox', repo: false, usage: 'firefox <profiles|import [profile name or folder] [--no-cookies] [--bookmarks] [--persona] [--into default|ncp-<provider>]>',
+    about: 'Firefox profiles on this machine, and a real import into Clear Glass: cookies (into the everyday session or a provider tab), bookmarks, and the profile\'s user agent',
+    personOnly: (a) => (a.args[0] === 'import' ? 'importing Firefox cookies brings in his sign-ins: a person\'s act. Ask him to run it.' : null),
+    req: (a) => {
+      const v = a.args[0] || 'profiles'; const f = a.flags;
+      if (v === 'import') return { system: 'clear-glass', method: 'POST', path: '/cli/firefox/import', body: { profile: a.args.slice(1).join(' '), cookies: !f['no-cookies'], bookmarks: !!f.bookmarks, persona: !!f.persona, into: f.into ? String(f.into) : 'default' }, timeoutMs: 120000 };
+      return { system: 'clear-glass', method: 'GET', path: '/cli/firefox/profiles' };
+    },
+    print: (d, a, h) => {
+      if (d.ok === false && !d.cookies) { console.log(`${h.c.amber('✗')} ${d.error || (d.errors || []).join('; ') || 'failed'}`); return; }
+      if ((a.args[0] || 'profiles') === 'profiles') {
+        for (const p of d.profiles || []) console.log(`  ${p.isDefault ? h.c.mint('●') : ' '} ${p.name.padEnd(24)} ${['cookies', 'places', 'prefs'].filter(k => p.has && p.has[k]).join(' ')}\n      ${h.c.dim(p.path)}`);
+        if (!(d.profiles || []).length) console.log(h.c.dim(`  no Firefox profile found; looked in:\n    ${(d.looked || []).join('\n    ')}`));
+        return;
+      }
+      const c = d.cookies, b = d.bookmarks;
+      console.log(`${h.c.mint('✓')} ${d.profile} → ${d.into}`);
+      if (c) console.log(`  cookies   ${c.imported} of ${c.read} imported · skipped: ${Object.entries(c.skipped).filter(([, n]) => n).map(([k, n]) => `${n} ${k}`).join(', ') || 'none'}`);
+      if (b) console.log(`  bookmarks ${b.added} added, ${b.existing} already there`);
+      if (d.persona) console.log(`  persona   ${d.persona.userAgent ? 'user agent applied' : 'no user agent override'}${d.persona.languages ? ` · languages ${d.persona.languages}` : ''}`);
+      for (const e of d.errors || []) console.log(h.c.amber(`  ${e}`));
+    } },
+  { key: 'net', repo: false, usage: 'net <status|routes|resolve <url>|add <id> --via V [--provider p] [--url pattern] [--origin host] [--caller c] [--protocols https,wss] [--on-failure block]|rm <id>|default <via>|start|stop [--wipe]|detect|bridge <line>|bridges|builtin|use <n>|https-only on|off|check|quarantine|release <id>|discard <id>|handoff <id>|on-disconnect block|kill_tabs|kill_compartment|qbit [check] [--url U] [--user U] [--pass P]|paths --tor P --snowflake P|test>',
     about: 'network routes and the Snowflake transport: which way each request goes (direct, block, transport, socks5://h:p), per provider, url, site or caller; start/stop the transport; fail closed',
-    need: (a) => { const v = a.args[0] || 'status'; if (v === 'resolve' && !a.args[1]) return '<url>'; if (v === 'add' && (!a.args[1] || !a.flags.via)) return '<id> --via direct|block|transport|socks5://host:port'; if (v === 'rm' && !a.args[1]) return '<id>'; if (v === 'default' && !a.args[1]) return '<via>'; if (v === 'bridge' && !a.args[1]) return '<snowflake bridge line>'; return null; },
-    personOnly: (a) => (['add', 'rm', 'default', 'start', 'stop', 'bridge', 'paths'].includes(a.args[0]) ? 'changing routes or the transport is a person\'s act: an agent that could remove a rule could send his traffic direct. Ask him to run it.' : null),
+    need: (a) => { const v = a.args[0] || 'status'; if (v === 'resolve' && !a.args[1]) return '<url>'; if (v === 'add' && (!a.args[1] || !a.flags.via)) return '<id> --via direct|block|transport|socks5://host:port'; if (v === 'rm' && !a.args[1]) return '<id>'; if (v === 'default' && !a.args[1]) return '<via>'; if (v === 'bridge' && !a.args[1]) return '<snowflake bridge line>'; if (v === 'use' && !a.args[1]) return '<n> (a number from net bridges)'; if (v === 'https-only' && !['on', 'off'].includes(a.args[1])) return 'on|off'; if (['release', 'discard', 'handoff'].includes(v) && !a.args[1]) return '<id> (from net quarantine)'; if (v === 'on-disconnect' && !['block', 'kill_tabs', 'kill_compartment'].includes(a.args[1])) return 'block|kill_tabs|kill_compartment'; return null; },
+    personOnly: (a) => (['add', 'rm', 'default', 'start', 'stop', 'bridge', 'paths', 'use', 'https-only', 'builtin', 'release', 'discard', 'handoff', 'on-disconnect', 'qbit'].includes(a.args[0]) ? 'changing routes or the transport (or asking the Tor Project for bridges, which contacts it directly) is a person\'s act: an agent that could remove a rule could send his traffic direct. Ask him to run it.' : null),
     req: (a) => {
       const v = a.args[0] || 'status'; const f = a.flags; const cg = (method, path, body, timeoutMs) => ({ system: 'clear-glass', method, path, ...(body ? { body } : {}), ...(timeoutMs ? { timeoutMs } : {}) });
       if (v === 'status') return cg('GET', '/cli/net/status');
@@ -981,6 +1040,17 @@ export const SPEC = [
       if (v === 'start' || v === 'stop' || v === 'detect') return cg('POST', '/cli/net/transport', { action: v, wipe: !!f.wipe }, 30000);
       if (v === 'bridge') return cg('POST', '/cli/net/bridge', { line: a.args.slice(1).join(' ') });
       if (v === 'paths') return cg('POST', '/cli/net/paths', { ...(f.tor ? { torPath: String(f.tor) } : {}), ...(f.snowflake ? { snowflakePath: String(f.snowflake) } : {}) });
+      if (v === 'bridges') return cg('GET', '/cli/net/bridge/find');   // SF2 (0.60.178): real lines found on this machine, numbered
+      if (v === 'builtin') return cg('POST', '/cli/net/bridge/builtin', {}, 30000);
+      if (v === 'use') return cg('POST', '/cli/net/bridge/use', { n: Number(a.args[1]) });
+      if (v === 'https-only') return cg('POST', '/cli/net/https-only', { on: a.args[1] === 'on' });
+      if (v === 'check') return cg('POST', '/cli/net/check', {}, 60000);   // SF5: does the circuit exit through Tor (check.torproject.org)
+      if (v === 'quarantine') return cg('GET', '/cli/net/quarantine');   // CD5 (0.60.179): what routed windows downloaded, and the magnets they met
+      if (v === 'release') return cg('POST', '/cli/net/quarantine/release', { id: a.args[1] });
+      if (v === 'discard') return cg('POST', '/cli/net/quarantine/discard', { id: a.args[1] });
+      if (v === 'handoff') return cg('POST', '/cli/net/magnet/handoff', { id: a.args[1] }, 30000);
+      if (v === 'on-disconnect') return cg('POST', '/cli/net/on-disconnect', { rung: a.args[1] });
+      if (v === 'qbit') return a.args[1] === 'check' ? cg('POST', '/cli/net/qbit/check', {}, 30000) : cg('POST', '/cli/net/qbit', { ...(f.url ? { url: String(f.url) } : {}), ...(f.user !== undefined ? { user: String(f.user) } : {}), ...(f.pass !== undefined ? { pass: String(f.pass) } : {}) });
       if (v === 'test') return cg('POST', '/cli/net/test', {});
       return cg('GET', '/cli/net/status');
     },
@@ -990,6 +1060,9 @@ export const SPEC = [
       if (v === 'status') { const t = d.transport || {}; console.log(`  default ${d.default} · ${d.rules} rule${d.rules === 1 ? '' : 's'} · transport ${t.state}${t.state === 'bootstrapping' ? ` ${t.progress}%` : ''}${t.socksPort ? ` (socks 127.0.0.1:${t.socksPort})` : ''}${t.error ? h.c.amber(`  ${t.error}`) : ''}`); const m = (d.detect || {}).missing || []; if (m.length) console.log(h.c.dim(`  to start the transport, still needed: ${m.join(', ')}`)); console.log(h.c.dim(`  ${d.verifiedWhy ? 'not verified: ' + d.verifiedWhy : ''}\n  ${d.note || ''}`)); return; }
       if (v === 'routes') { console.log(`  default → ${d.default}`); for (const r of d.rules || []) console.log(`  ${r.id.padEnd(18)} ${r.via.padEnd(22)} ${Object.entries(r.match).map(([k, x]) => `${k}=${x}`).join(' ')}${r.protocols ? ` [${r.protocols.join(',')}]` : ''}`); if (!(d.rules || []).length) console.log(h.c.dim('  no rules: nothing is routed, everything goes direct')); return; }
       if (v === 'resolve') { console.log(d.ok ? `  ${a.args[1]} → ${d.via}   ${h.c.dim(d.why)}` : `  ${h.c.amber('collision')}: ${d.why}`); return; }
+      if (v === 'bridges' || v === 'builtin') { for (const c of d.lines || []) console.log(`  ${String(c.n).padStart(2)}  ${c.source.padEnd(20)} ${c.line.slice(0, 70)}${c.line.length > 70 ? '…' : ''}\n      ${h.c.dim(c.path || '')}`); if (!(d.lines || []).length) console.log(h.c.dim('  no Snowflake bridge line on this machine: install Tor Browser, run net setup, or ask the Tor Project with net builtin')); else console.log(h.c.dim('  net use <n> sets one')); if (d.torBrowser) console.log(h.c.dim(`  Tor Browser at ${d.torBrowser.dir}`)); return; }
+      if (v === 'quarantine') { for (const q of d.items || []) console.log(`  ${q.id.padEnd(18)} ${q.kind.padEnd(7)} ${String(q.state).padEnd(12)} ${q.filename}${q.via ? h.c.dim(`  via ${q.via}`) : ''}`); if (!(d.items || []).length) console.log(h.c.dim('  nothing quarantined')); console.log(h.c.dim(`  on disconnect: ${d.onDisconnect}${(d.kills || []).length ? ` · last kill ${new Date(d.kills[0].at).toLocaleString()} (${d.kills[0].rung})` : ''}`)); return; }
+      if (v === 'check') { console.log(d.ok ? (d.isTor ? `${h.c.mint('✓')} exits through Tor (${d.ip})` : `${h.c.amber('✗')} NOT through Tor: check.torproject.org saw ${d.ip}`) : `${h.c.amber('✗')} ${d.error}`); return; }
       console.log(`${h.c.mint('✓')} ${JSON.stringify(d).slice(0, 300)}`);
     } },
 ];
@@ -1046,6 +1119,23 @@ function _fieldReq(a, payload) {
   return { system: 'clear-glass', method: 'POST', path: '/cli/driver', timeoutMs: 30000, body: { agentId: a.flags.on && a.flags.on !== true ? String(a.flags.on) : 'default', ...payload } };
 }
 function _ago(ts) { if (!ts) return 'never'; const s = Math.round((Date.now() - ts) / 1000); return s < 60 ? `${s}s ago` : s < 3600 ? `${Math.round(s / 60)}m ago` : `${Math.round(s / 3600)}h ago`; }
+// §0.60.173 UP3 — one upload as he answers it: where each file would go, why, how sure, its system, and what it touches
+function _printUpload(d, h) {
+  const p = d.plan || {}; const st = p.stats || {};
+  console.log(`  ${d.state === 'needs-you' ? h.c.amber('⚑ needs you') : h.c.dim(d.state || '')}  ${d.uuid}  ${d.name || ''}  ${h.c.dim(`"${d.intent || ''}"`)}`);
+  console.log(h.c.dim(`  ${st.files || 0} file(s): ${st.create || 0} new · ${st.replace || 0} replace · ${st.identical || 0} identical · ${st.learned || 0} by his earlier answers${st.conflicts ? ` · ${st.conflicts} conflict(s)` : ''}${p.strip && p.strip.wrapper ? ` · wrapper "${p.strip.wrapper}/" stripped` : ''}${(p.intentSystems || []).length ? ` · the intent names ${p.intentSystems.join(', ')}` : ''}`));
+  for (const r of p.rows || []) {
+    const sure = r.confidence >= 0.8 ? h.c.mint : r.confidence >= 0.5 ? h.c.amber : h.c.coral;
+    console.log(`  ${sure(r.action.padEnd(9))} ${r.from} → ${h.c.bold(r.to)}  ${h.c.dim(`[${r.system}${r.systemExists ? '' : ' (new system)'}] ${r.why} ${Math.round(r.confidence * 100)}%`)}${r.conflict ? h.c.coral(`  same path as ${r.conflict}`) : ''}`);
+    if (r.risk) console.log(h.c.amber(`      ${r.risk}`));
+    for (const w of r.warnings || []) console.log(h.c.amber(`      ${w}`));
+    if ((r.requiredBy || []).length) console.log(h.c.dim(`      required by ${r.requiredBy.slice(0, 4).join(', ')}${r.requiredBy.length > 4 ? ` +${r.requiredBy.length - 4}` : ''}`));
+    if ((r.alternatives || []).length) console.log(h.c.dim(`      or: ${r.alternatives.slice(0, 3).map(x => `${x.to} (${x.why})`).join(' · ')}`));
+  }
+  for (const s of p.skipped || []) console.log(h.c.dim(`  – ${s.from}: ${s.why}`));
+  if (d.state === 'needs-you') console.log(h.c.dim(`\n  next: idearium repo upload-answer <repo> ${d.uuid}  [--to "from=path"] [--skip "from"]`));
+}
+
 function _printWindows(ws, h) {
   if (!ws.length) { console.log(h.c.dim('  no window has used the field or changed lately')); return; }
   for (const w of ws) {
