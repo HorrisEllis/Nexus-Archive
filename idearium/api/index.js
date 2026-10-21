@@ -306,6 +306,19 @@ try {
   // §FR2 0.60.114 — a change is tested in the tree it belongs to: this repo's folder (a Nexus change keeps Nexus's tree)
   try { _require('../../lib/repo-inject.js').setEvidenceRoot((n) => { const r = getRepoLayer().get(n.repoUuid); return r && r.nexusSelf ? (r.materializeDir || _repoDiskDir(n.repoUuid)) : _repoDiskDir(n.repoUuid); }); } catch (_) {}
   const RV = _require('../../lib/repo-versions.js');
+  // 0.60.190 APV2/APV4 — the run an approved change came from (its phase, map, who started it — RC7), for its change-log entry; and each
+  // commit, with the entries it carries, onto the orchestrator's ledger
+  _require('../../lib/repo-inject.js').setRunResolver((runId) => {
+    const base = String(runId).replace(/-(review|proof)$/, '');
+    const rows = loadTable('idearium_phase_runs').filter(r => r && String(r.runId) === base);
+    const first = rows.find(r => r.startedBy) || rows[0];
+    return first ? { phase: first.phase || null, map: first.map || null, title: first.title || null, startedBy: first.startedBy || null } : null;
+  });
+  RV.setOnCommit(({ repoUuid, commitId, message, provenance }) => _emitLedger('idearium.version.commit', { repoUuid, commitId, message, by: provenance.by, changelog: provenance.changelog || [], causedBy: (provenance.refs || [])[0] || null }));
+  if (!process.env.NEXUS_TEST_SANDBOX) {   // APV4 — what postDurable buffered while a system was down (failure modes too) goes when it answers
+    const t = setInterval(() => { _nexusClient.drainBuffer().then(r => { if (r && r.drained) _ledgerOut.drained += r.drained; }).catch(() => {}); }, 60000);
+    if (t.unref) t.unref();
+  }
   RV.setCommitter(async ({ repoUuid, message, causedBy, provenance }) => {
     let on = true; try { on = getIdeariumValue('versions.every_change') !== false; } catch (_) {}
     if (!on) return { ok: true, commitId: null, skipped: 'versions.every_change is off' };
@@ -782,7 +795,27 @@ async function _phaseSetStatus(repo, { map, phase, status, force = false, reason
 // the call's own backend when there is no ladder ('ollama' when it names one), for shouldChunk
 function paramsOfBackend(backend, rungs) { return rungs.length ? null : backend || null; }
 
-async function _phaseBuild(repo, dir, { map, phase, backend = null, agent = null, provider = null, note = '', replan = false, anyway = false }) {
+// 0.60.188 RC7 — James, 2026-10-21: "It built 5 phases in a row." A run row named its repo, map, phase and graph, never who started it, so
+// what he saw could not be traced (§1.2). Every run now carries startedBy { who, whence }: 'access' (the keyed caller the gate passed),
+// 'declared' (the caller says so: person:ui, person:cli, agent:<name>), 'system' (watchdog:<kind>), or 'unknown' — never guessed (NC0).
+function _starter(req, body) {
+  const w = req && req.access && req.access.who;
+  if (w && (w.hat || w.label)) return { who: String(w.hat || w.label), whence: 'access' };
+  const d = body && typeof body.startedBy === 'string' ? body.startedBy.trim().slice(0, 80) : '';
+  return d ? { who: d, whence: 'declared' } : { who: 'unknown', whence: 'unknown' };
+}
+// 0.60.190 APV4 — James: "what about an api route or the pulse emission system". Idearium's one door onto the orchestrator's ledger
+// (POST /api/ledger → ledgerWrite: Idearium's own event ledger, disk, and ledger.entry on SSE — the spine his 0.39.173 "make pulse emission
+// an event" built on). postDurable: the orchestrator down → buffered on disk, drained every minute (nothing lost, §0.3). Never awaited by
+// the step it reports; counted so a silence is visible (GET /api/ledger/out, §1.2).
+const _ledgerOut = { sent: 0, buffered: 0, failed: 0, drained: 0, lastError: null, lastType: null, lastAt: null };
+function _emitLedger(type, payload = {}) {
+  _ledgerOut.lastType = type; _ledgerOut.lastAt = Date.now();
+  Promise.resolve().then(() => _nexusClient.postDurable('orchestrator', '/api/ledger', { system: 'idearium', type, payload }, { timeout: 3000 }))
+    .then((r) => { if (r && r.buffered) _ledgerOut.buffered++; else if (r && r.ok) _ledgerOut.sent++; else { _ledgerOut.failed++; _ledgerOut.lastError = (r && r.error) || 'not written'; } })
+    .catch((e) => { _ledgerOut.failed++; _ledgerOut.lastError = e.message; });
+}
+async function _phaseBuild(repo, dir, { map, phase, backend = null, agent = null, provider = null, note = '', replan = false, anyway = false, startedBy = null }) {
   const PH = await import('../repo/phases.js');
   const view = PH.managerView({ repo, repoDir: dir, runs: [] });
   const node = view.phases.find(p => p.map === map && p.phase_key === phase);
@@ -868,8 +901,10 @@ async function _phaseBuild(repo, dir, { map, phase, backend = null, agent = null
   const runStartTs = Date.now();
   const runId = `phrun-${runStartTs.toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
   const base = { runId, repoUuid: repo.uuid, targetRepo: target.uuid, map, phase, phaseUuid: node.uuid, title: node.title,
+    startedBy: startedBy || { who: 'unknown', whence: 'unknown' },   // 0.60.188 RC7 — who started this run, on every row
     ...(depsGate && depsGate.open.length ? { depsOverride: depsGate.open.map(o => o.key) } : {}),   // §0.60.125 DG1 — built anyway: what was still open, on every row
     graphHash: phaseGraph.hash, graphFile: phaseGraphFile ? path.relative(IDEARIUM_DATA_DIR, phaseGraphFile).replace(/\\/g, '/') : null };   // §0.60.147 DG2 — the graph it was built against
+  _emitLedger('idearium.phase.run.started', { runId, repoUuid: repo.uuid, map, phase, title: node.title || null, startedBy: base.startedBy, causedBy: base.startedBy.who });   // 0.60.190 APV4
 
   // (1) snapshot first — never write without one
   const snap = await _commitRepoSnapshotFor(target.uuid, { message: `before phase ${phase} (${map.split('/').pop()})`, causedBy: `idearium.phases.build:${runId}` });
@@ -1706,7 +1741,7 @@ async function _autoRetry(info, kind, note) {
   const RW = _require('../../lib/run-watch.js');
   const rows = loadTable('idearium_phase_runs');
   const limit = RW.limitFor(kind, (k) => _cfg(k, undefined));   // 0.60.78: a rejection has its own cap (repos.reject_retries, 3); a stall keeps repos.auto_retries (2)
-  const base = { runId: `auto-${Date.now().toString(36)}`, repoUuid: info.repoUuid, targetRepo: info.targetRepo, map: info.map, phase: info.phase, retryKind: kind };
+  const base = { runId: `auto-${Date.now().toString(36)}`, repoUuid: info.repoUuid, targetRepo: info.targetRepo, map: info.map, phase: info.phase, retryKind: kind, startedBy: { who: `watchdog:${kind}`, whence: 'system' } };
   const said = (state, error) => { appendRow('idearium_phase_runs', { uuid: `${base.runId}-${state}`, ...base, state, error, retryOf: info.runId || null, ts: Date.now() }); getIdeaOS().emit('idearium.repo.phase.run', { ...base, state }); };
   if (!(limit > 0)) return { ok: false, why: 'repos.auto_retries is 0' };
   if (RW.retriesFor(rows, { phase: info.phase, kind }) >= limit) {
@@ -1722,7 +1757,7 @@ async function _autoRetry(info, kind, note) {
   const nth = RW.retriesFor(rows, { phase: info.phase, kind }) + 1;
   note = `${note}\n(This is ${kind} retry ${nth} of ${limit} for ${info.phase} today.${kind === 'reject' && nth > 1 ? ' Your earlier attempt(s) were also rejected: do not repeat them.' : ''})`;
   said('auto-retry', `${kind === 'reject' ? 'rejected' : kind === 'economy' ? 'held by a limit' : 'stalled'} — building ${info.phase} again (${nth}/${limit}): ${String(note).split('\n')[0].slice(0, 300)}`);
-  try { const r = await _phaseBuild(repo, _repoDiskDir(repo.uuid), { map: info.map, phase: info.phase, note }); return { ok: !!r.ok, run: r.data || null, error: r.error || null }; }
+  try { const r = await _phaseBuild(repo, _repoDiskDir(repo.uuid), { map: info.map, phase: info.phase, note, startedBy: { who: `watchdog:${kind}`, whence: 'system' } }); return { ok: !!r.ok, run: r.data || null, error: r.error || null }; }
   catch (e) { return { ok: false, error: e.message }; }
 }
 async function _watchRuns() {
@@ -2927,6 +2962,8 @@ const ROUTE_CAP = {
   'repo.worksurface': CAPS.READ_IDEAS, 'repo.worksurface.prove': CAPS.WRITE_IDEAS,
   'repo.versions.index': CAPS.READ_IDEAS, 'repo.versions.diff': CAPS.READ_IDEAS, 'repo.versions.tree': CAPS.READ_IDEAS,   // §0.60.7
   'repo.versions.restoreFile': CAPS.WRITE_IDEAS, 'repo.history.import': CAPS.WRITE_IDEAS,
+  'phases.census': CAPS.READ_IDEAS,   // 0.60.188 CNS1 — reads only
+  'repo.changelog': CAPS.READ_IDEAS, 'ledger.out': CAPS.READ_IDEAS,   // 0.60.190 APV3/APV4 — read only
   'repo.releases.list': CAPS.READ_IDEAS, 'repo.releases.create': CAPS.WRITE_IDEAS, 'releases.list': CAPS.READ_IDEAS, 'releases.sync': CAPS.WRITE_IDEAS, 'releases.changes': CAPS.READ_IDEAS,   // §0.60.41 RN1 · 0.60.72 RN2
   'repo.integrity': CAPS.READ_IDEAS, 'repo.integrity.notes': CAPS.WRITE_IDEAS,
   'route.assess': CAPS.READ_IDEAS,   // §0.60.8
@@ -3401,8 +3438,11 @@ function matchRoute(method, url) {
     ['GET',    ['api','repos',    ':uuid','versions','tree'],          'repo.versions.tree'],       // ?commitId=
     ['POST',   ['api','repos',    ':uuid','versions','restore-file'],  'repo.versions.restoreFile'],// { commitId, path }
     // §0.60.41 RN1 — releases in Versionium (versionium/lib/releases.js): a repo's, and Nexus's own
+    ['GET',    ['api','repos',    ':uuid','changelog'],                'repo.changelog'],        // 0.60.190 APV3 ?limit — each commit with the change-log entries it carries
+    ['GET',    ['api','ledger','out'],                                 'ledger.out'],            // 0.60.190 APV4 what Idearium sent to the orchestrator's ledger
     ['GET',    ['api','repos',    ':uuid','releases'],                 'repo.releases.list'],
     ['POST',   ['api','repos',    ':uuid','releases'],                 'repo.releases.create'],     // { version?, quote?, notes? }
+    ['GET',    ['api','phases','census'],                              'phases.census'],            // 0.60.188 CNS1 ?system=idearium — every phase judged against its evidence
     ['GET',    ['api','releases'],                                     'releases.list'],            // ?repository=nexus (default)
     ['POST',   ['api','releases','sync'],                              'releases.sync'],             // { all: true } → every release's commits
     ['GET',    ['api','releases','changes'],                           'releases.changes'],          // §0.60.72 RN2 ?since=0.60.47 · &write=1
@@ -5572,7 +5612,7 @@ async function handle(req, res, route, query, body) {
         const b = body || {};
         const r = await RR.cut(_vcall, repo.uuid, { version: b.version || null, quote: b.quote || null, notes: b.notes || null, by: b.by || 'idearium',
           flush: (id) => _require('../../lib/repo-versions.js').flush(id) });
-        if (!r.already) os.emit('idearium.repo.released', { repoUuid: repo.uuid, version: r.version, tag: r.tag, commitId: r.commitId });
+        if (!r.already) { os.emit('idearium.repo.released', { repoUuid: repo.uuid, version: r.version, tag: r.tag, commitId: r.commitId }); _emitLedger('idearium.repo.released', { repoUuid: repo.uuid, version: r.version, tag: r.tag, commitId: r.commitId }); }   // 0.60.190 APV4
         return ok(res, { release: r });
       } catch (e) { return err(res, e.status || 502, e.message, { code: e.code || null }); }
     }
@@ -5585,6 +5625,28 @@ async function handle(req, res, route, query, body) {
         if (query.write === '1') return ok(res, N.write({ since }));
         return ok(res, { since, markdown: N.markdown(R.read(), { since }) });
       } catch (e) { return err(res, 500, `release notes: ${e.message}`); }
+    }
+    case 'repo.changelog': {
+      // 0.60.190 APV3 — James: "make sure it's all interconnected, changes are logged and the diff snapshotted in versionium with a change
+      // log when approved." A projection of the repo's Versionium commits (APV0: one record), newest first; --all keeps commits with no entry
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const { SNAPSHOT_SYSTEM, summarizeRepoSnapshots, snapshotBranch } = await import('../repo/snapshot.js');
+      const hist = await _versionium('GET', `/api/versionium/history?system=${encodeURIComponent(SNAPSHOT_SYSTEM)}&branch=${encodeURIComponent(snapshotBranch(params.uuid))}&n=1000`);
+      if (!hist.ok) return err(res, 502, `versionium: ${hist.error}`);
+      const limit = Math.max(1, Math.min(500, parseInt(query.limit || '50', 10) || 50));
+      const rows = summarizeRepoSnapshots(hist.data.commits || [], params.uuid)
+        .map(c => ({ commitId: c.commitId, ts: c.ts, message: c.message, by: (c.provenance && c.provenance.by) || [], entries: (c.provenance && c.provenance.changelog) || [] }))
+        .filter(c => query.all === '1' || c.entries.length);
+      return ok(res, { repoUuid: params.uuid, total: rows.length, rows: rows.slice(0, limit) });
+    }
+    case 'ledger.out':   // 0.60.190 APV4 — sent, buffered (orchestrator down), failed, drained, the last error
+      return ok(res, { ..._ledgerOut, target: 'orchestrator POST /api/ledger' });
+    case 'phases.census': {
+      // 0.60.188 CNS1 — every phase of Nexus's maps judged against commits, releases, files and proof (lib/phase-census.js); the
+      // per-phase evidence stays in the answer so the UI and agents can show why a verdict was given
+      try { const c = _require('../../lib/phase-census.js').census({ root: _require('../../lib/nexus-self/systems.js').ROOT, system: String(query.system || 'idearium') }); return ok(res, c); }
+      catch (e) { return err(res, 500, `census failed: ${e.message}`); }
     }
     case 'releases.list': case 'releases.sync': {
       try {
@@ -7302,6 +7364,7 @@ async function handle(req, res, route, query, body) {
           if (!owned()) return err(res, 404, `inject not found in this repo: ${params.id}`);
           const r = RI.apply(params.id, { layer, force: !!body.force, approvedBy: body.approvedBy || 'idearium' });
           if (r.ok) os.emit('idearium.repo.inject.applied', { repoUuid: params.uuid, inject: params.id, path: r.inject.path });
+          if (r.ok) { let ce = null; try { ce = RI.changeEntry(r.inject); } catch (_) {} _emitLedger('idearium.change.approved', { repoUuid: params.uuid, inject: params.id, path: r.inject.path, entry: ce, causedBy: ce && ce.run }); }   // 0.60.190 APV4
           if (r.ok) _deviationAfter(params.uuid, 'files');
           // §0.39.266 — approved into the live Nexus tree: say so, and bring that system's repo to the new snapshot
           if (r.ok && r.gate) {
@@ -7328,6 +7391,7 @@ async function handle(req, res, route, query, body) {
           // §FR3 0.60.117 — undo keeps later edits (a three-way merge) unless the caller says merge: false
           const r = RI.revert(params.id, { layer, force: !!body.force, merge: body.merge !== false });
           if (r.ok) os.emit('idearium.repo.inject.reverted', { repoUuid: params.uuid, inject: params.id, path: r.inject.path });
+          if (r.ok) { let ce = null; try { ce = RI.changeEntry(r.inject); } catch (_) {} _emitLedger('idearium.change.reverted', { repoUuid: params.uuid, inject: params.id, path: r.inject.path, entry: ce, causedBy: params.id }); }   // 0.60.190 APV4
           if (r.ok && r.gate) {
             os.emit('idearium.nexus-self.rollback', { system: r.gate.system, applyId: r.inject.applyId, snapshot: r.gate.snapshot, inject: params.id });
             await _nexusSelfSync({ only: [r.gate.system] });
@@ -8806,7 +8870,7 @@ async function handle(req, res, route, query, body) {
         : action === 'repo.environment.setup' ? await BS.environmentSetup(d, u)
         : action === 'repo.spec.plan.get' ? await BS.specPlanGet(d, u, query.path)
         : action === 'repo.spec.plan' ? await BS.specPlan(d, u, body || {})
-        : action === 'repo.spec.build' ? await BS.specBuild(d, u, body || {})
+        : action === 'repo.spec.build' ? await BS.specBuild(d, u, { ...(body || {}), startedBy: _starter(req, body) })   // 0.60.188 RC7
         : action === 'repo.plan' ? await (async () => {
             const pr = await BS.plan(d, u, { map: query.map || null });
             // §0.39.362 CH5 — the compartment's end state: its progress, when its charter names one
@@ -8948,7 +9012,7 @@ async function handle(req, res, route, query, body) {
         if (hits.length !== 1) return err(res, hits.length ? 409 : 404, hits.length ? `${phase} is in ${hits.length} phasemaps — name one: ${hits.map(h => h.map).join(', ')}` : `no phase ${phase} in this repo`);
         map = hits[0].map;
       }
-      const r = await _phaseBuild(repo, dir, { map, phase, backend: body.backend || null, agent: body.agent || null, provider: body.provider || null, note: body.note || '', replan: body.replan === true, anyway: body.anyway === true });
+      const r = await _phaseBuild(repo, dir, { startedBy: _starter(req, body), map, phase, backend: body.backend || null, agent: body.agent || null, provider: body.provider || null, note: body.note || '', replan: body.replan === true, anyway: body.anyway === true });
       if (!r.ok) return err(res, r.status, r.error, r.extra);
       return ok(res, r.data);
     }
@@ -10185,8 +10249,14 @@ function _nexusSelfSync({ only = null, force = false } = {}) {
           const dir = _repoDiskDir(repo.uuid);
           if (!dir) return { ok: false, error: 'repo directory not resolvable' };
           const { commitRepoSnapshot } = await import('../repo/snapshot.js');
+          // 0.60.190 APV2 — what was approved into this system's live tree since its last commit rides on this one; back in the queue if
+          // the commit fails (§0.3)
+          const RIq = _require('../../lib/repo-inject.js');
+          const changes = RIq.takeGateEntries(system);
+          const where = `${system === '(nexus)' ? 'nexus index' : 'nexus/' + system} @ snapshot ${String(snapshot).slice(0, 12)}`;
           const r = await commitRepoSnapshot({
-            repo, repoDir: dir, message: `${system === '(nexus)' ? 'nexus index' : 'nexus/' + system} @ snapshot ${String(snapshot).slice(0, 12)}`,
+            repo, repoDir: dir, message: changes.length ? `${changes[0].title}${changes.length > 1 ? ` (+${changes.length - 1} more)` : ''} · ${where}` : where,
+            ...(changes.length ? { provenance: { by: [...new Set(changes.map(c => c.approvedBy).filter(Boolean))], refs: changes.map(c => `inject:${c.inject}`), files: changes.flatMap(c => c.files), labels: [], checkpoint: null, at: Date.now(), changelog: changes } } : {}),
             causedBy: 'idearium.nexus-self.sync', fileLayer: _fileLayers(repo.uuid).fileLayer, snapshotMode: _snapshotMode(),
             commit: async (payload) => {
               const c = await _versionium('POST', '/api/versionium/commit', payload, 60000);
@@ -10194,7 +10264,9 @@ function _nexusSelfSync({ only = null, force = false } = {}) {
               return c.data?.commit || { error: c.data?.error || 'versionium returned no commit' };
             },
           });
-          return r.ok ? { ok: true, commitId: r.commit.commitId } : { ok: false, error: `${r.code}: ${r.error}` };
+          if (!r.ok) { RIq.returnGateEntries(system, changes); return { ok: false, error: `${r.code}: ${r.error}` }; }
+          if (changes.length) _emitLedger('idearium.version.commit', { repoUuid: repo.uuid, commitId: r.commit.commitId, system, changelog: changes, causedBy: `inject:${changes[0].inject}` });
+          return { ok: true, commitId: r.commit.commitId };
         },
       });
       _nexusSelfLast = { at: Date.now(), ok: r.ok, snapshot: r.snapshot, ms: r.ms, changed: [...r.systems.filter(x => x.status !== 'unchanged').map(x => `${x.system}:${x.status}`), ...(r.restored || []).map(x => `${x.name}:restored`)], understanding: r.understanding };

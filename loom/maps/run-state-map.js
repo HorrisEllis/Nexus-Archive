@@ -51,7 +51,22 @@ const FILES = [
   ['clear-glass/src/net/qbittorrent.js', I('clear-glass/src/net/qbittorrent.js'), []],   // §0.60.179 CD3 the verified torrent hand-off (MR12)
   ['clear-glass/src/net/kill-switch.js', I('clear-glass/src/net/kill-switch.js'), []],   // §0.60.179 CD4 kill on disconnect
   ['clear-glass/src/import/firefox.js', I('clear-glass/src/import/firefox.js'), []],   // §0.60.179 BS1 Firefox profiles, cookies, bookmarks, persona (node:sqlite)
-  ['clear-glass/src/main/float-cli.js', I('clear-glass/src/main/float-cli.js'), []],   // §0.60.179 BS6 the floating CLI's own content-protected window
+  ['clear-glass/src/main/float-cli.js', I('clear-glass/src/main/float-cli.js'), []],
+  ['clear-glass/src/adblock/engine.js', I('clear-glass/src/adblock/engine.js'), []],   // §0.60.183 AB1 filter lists parsed, requests matched, element hiding (pure)
+  ['clear-glass/src/adblock/lists.js', I('clear-glass/src/adblock/lists.js'), [I('clear-glass/src/adblock/engine.js')]],   // §0.60.183 AB2 the lists, state, store; the one service
+  ['clear-glass/plugins/adblocker/index.js', I('clear-glass/plugins/adblocker/index.js'), [I('clear-glass/src/adblock/engine.js'), I('clear-glass/src/adblock/lists.js')]],   // §0.60.183 AB3 the Ad Blocker plugin asks the service
+  ['clear-glass/src/adblock/import.js', I('clear-glass/src/adblock/import.js'), [I('clear-glass/src/adblock/engine.js')]],   // §0.60.184 AB5 his own lists: files, folders, host lists
+  ['clear-glass/src/net/host-import.js', I('clear-glass/src/net/host-import.js'), [I('clear-glass/src/adblock/import.js')]],   // §0.60.184 SF8 host lists as routes through Snowflake
+  ['clear-glass/plugins/snowflake/index.js', I('clear-glass/plugins/snowflake/index.js'), [I('clear-glass/src/net/service.js'), I('clear-glass/src/net/host-import.js')]],   // §0.60.184 SF8 the Snowflake plugin's page
+  ['clear-glass/src/accounts/for-site.js', I('clear-glass/src/accounts/for-site.js'), [I('clear-glass/src/copilot/context-need.js')]],   // §0.60.185 BS20 the accounts signed in to a site
+  ['clear-glass/src/passwords/service.js', I('clear-glass/src/passwords/service.js'), []],   // §0.60.186 PW1 pending logins, offers, exact-origin fill, linkPending (vault passed in)
+  ['clear-glass/src/preload/passwords.js', I('clear-glass/src/preload/passwords.js'), []],   // §0.60.186 PW2 the page script on every session
+  ['clear-glass/src/main/passwords-wiring.js', I('clear-glass/src/main/passwords-wiring.js'), []],   // §0.60.186 PW3 pages ↔ service ↔ window
+  ['clear-glass/renderer/shell/passwords.js', I('clear-glass/renderer/shell/passwords.js'), []],   // §0.60.186 PW4 the key and its panel
+  ['clear-glass/src/core/zoom.js', I('clear-glass/src/core/zoom.js'), []],   // §0.60.183 BS14 page zoom in the core: Firefox's ladder, saved per site
+  ['clear-glass/renderer/shell/ctxmenu.js', I('clear-glass/renderer/shell/ctxmenu.js'), []],   // §0.60.183 BS15 the right-click menu: rows by what was clicked, placed at the pointer
+  ['clear-glass/src/copilot/context-need.js', I('clear-glass/src/copilot/context-need.js'), []],   // §0.60.182 BS12 what a message needs from the page (wired late, 0.60.183)
+  ['lib/agent-tools/tools/clear-glass/adblock.js', I('lib/agent-tools/tools/clear-glass/adblock.js'), [I('lib/agent-tools/tools/clear-glass/net.js')]],   // §0.60.183 AB4 the blocker for agents   // §0.60.179 BS6 the floating CLI's own content-protected window
   ['clear-glass/renderer/shell/menus.js', I('clear-glass/renderer/shell/menus.js'), []],   // §0.60.179 BS3 menu bar + ☰ from one model
   ['clear-glass/renderer/shell/extensions.js', I('clear-glass/renderer/shell/extensions.js'), []],   // §0.60.179 BS4 🧩 plugins with icons
   ['clear-glass/renderer/shell/downloads.js', I('clear-glass/renderer/shell/downloads.js'), []],   // §0.60.179 BS5 ⬇ panel (the Library's store + the quarantine)
@@ -83,6 +98,9 @@ const FILES = [
   ['lib/coder-brief.js', I('lib/coder-brief.js'), [I('lib/verify-first.js')]],   // §0.60.171 CB1 Gemini's five-part brief with AXIOMS v3.1
   ['lib/agent-self-model.js', I('lib/agent-self-model.js'), []],   // §0.60.171 SM1 each agent's model of itself; interrogation → proposals
   ['lib/safe-watch.js', I('lib/safe-watch.js'), []],   // §0.60.170 RC1: an fs.watch whose async EPERM cannot take the process down; re-arms
+  ['lib/phase-census.js', I('lib/phase-census.js'), [I('lib/phase-dag.js')]],
+  ['lib/change-entry.js', I('lib/change-entry.js'), [I('lib/nexus-self/inject-gate.js')]],
+  ['lib/chat-ledger-client.js', I('lib/chat-ledger-client.js'), []],   // 0.60.192 Clear Glass's live chat ledgers read through its routes (:7702), never its code   // 0.60.190 APV1 an approved change's change-log entry (it rides on its Versionium commit)   // 0.60.188 CNS1 every phase judged against its evidence (commits, releases, files, proof)
   ['lib/path-guard.js', I('lib/path-guard.js'), []],   // §0.60.170 RC4: a file name from an agent's reply is checked (chat label, cut short, prose) before it is written
   ['lib/system-shape.js', I('lib/system-shape.js'), []],   // §0.60.138 does a system match genesis, role by role
   ['diagnostic/cli.js', I('diagnostic/cli.js'), [I('diagnostic/registry-components.js'), I('diagnostic/config.js')]],   // §0.60.138 diagnostic's genesis cli
@@ -111,6 +129,14 @@ const CONSUMERS = [
   [I('idearium/api/index.js'), I('lib/verify-first.js'), '§0.60.171 VF1 runPlanned file loop + runContract brick dispatch: check() before the ladder; an existing test reused only when it proves the files'],
   [I('idearium/api/index.js'), I('lib/coder-brief.js'), '§0.60.171 CB1 compose() is the brief of every file/brick sent to a coder'],
   [I('idearium/api/index.js'), I('lib/pipeline-routing.js'), '§0.60.171 CB2 preferFirst() after the learned order (both build paths)'],
+  [I('idearium/api/index.js'), I('lib/phase-census.js'), '0.60.188 CNS1 GET /api/phases/census'],
+  [I('lib/work-journal.js'), I('lib/chat-ledger-client.js'), '0.60.192 _chat(): the contract ledger\'s reply text from the chat ledger (it pointed at :7701, the SSE port)'],
+  [I('guardian/lib/chat-transcripts.js'), I('lib/chat-ledger-client.js'), '0.60.192 ledgerReplyFor(): the reply recovery\'s last source — his download manager\'s live chat ledger'],
+  [I('lib/repo-inject.js'), I('lib/change-entry.js'), '0.60.190 APV2 an approved/reverted inject\'s entry, noted on its commit or queued for the gate\'s sync commit'],
+  [I('idearium/api/index.js'), I('lib/repo-inject.js'), '0.60.190 APV2 setRunResolver (run → phase, map, startedBy); takeGateEntries/returnGateEntries on the sync commit; changeEntry for the ledger'],
+  [I('idearium/api/index.js'), I('lib/repo-versions.js'), '0.60.190 APV4 setOnCommit → idearium.version.commit on the orchestrator\'s ledger'],
+  [I('idearium/api/index.js'), I('lib/nexus-client.js'), '0.60.190 APV4 _emitLedger → postDurable(orchestrator, /api/ledger); drainBuffer every minute'],
+  [I('idearium/cli/route-commands.js'), I('lib/phase-census.js'), '0.60.188 CNS1 `phases census` through the route'],
   [I('idearium/api/index.js'), I('lib/path-guard.js'), '§0.60.171 RC4b repairTree() at the start of a phase build'],
   [I('orchestrator/orchestrator.js'), I('lib/safe-watch.js'), '§0.60.170 RC1 UI hotswap watcher and auth hotswap watcher'],
   [I('guardian/lib/node-registry.js'), I('lib/safe-watch.js'), '§0.60.170 RC1 a watcher per node type folder'],
@@ -235,6 +261,32 @@ const CONSUMERS = [
   [I('clear-glass/renderer/shell/extensions.js'),  I('clear-glass/renderer/shell/icons.js'), '§0.60.180 BS8 plugin icons drawn by window.CGIcons.plugin (page global)'],
   [I('clear-glass/src/ipc/bridge.js'),              I('clear-glass/src/net/service.js'), '§0.60.180 SF7 _ensureBridge before every start (service.ensureBridge)'],
   [I('clear-glass/renderer/float-cli.js'),          I('clear-glass/renderer/copilot-cli.js'), '§0.60.179 BS6 CGCopilotCLI.create: the route bar, slash commands, history (page global)'],
+  [I('clear-glass/src/main/index.js'),              I('clear-glass/src/adblock/lists.js'), '§0.60.183 AB2 service() started at boot; due lists updated; cosmetics inserted on dom-ready (AB3)'],
+  [I('clear-glass/src/ipc/bridge.js'),              I('clear-glass/src/adblock/lists.js'), '§0.60.183 AB4 /cli/adblock/* (lazy require)'],
+  [I('clear-glass/src/main/index.js'),              I('clear-glass/plugins/adblocker/index.js'), '§0.60.183 AB3 BUILTIN_PLUGINS installs the Ad Blocker (content-filter + settings)'],
+  [I('clear-glass/src/plugins/webrequest-adapter.js'), I('clear-glass/plugins/adblocker/index.js'), '§0.60.183 AB3 emits the content-filter signature with resourceType, pageUrl, tabId (bus, not require)'],
+  [I('clear-glass/src/ipc/bridge.js'),              I('clear-glass/src/plugins/host.js'), '§0.60.183 BS13 plugins:settings: list() finds the settings signature; _askPlugin waits for plugin:settings'],
+  [I('clear-glass/renderer/shell/extensions.js'),  I('clear-glass/src/preload/index.js'), '§0.60.183 BS13 ClearGlass.plugins.settings (the plugin page) — IPC, not require'],
+  [I('clear-glass/src/driver/index.js'),            I('clear-glass/src/core/zoom.js'), '§0.60.183 BS14 the zoom action goes through zoom()'],
+  [I('clear-glass/src/ipc/bridge.js'),              I('clear-glass/src/core/zoom.js'), '§0.60.183 BS14 zoom:step|set|restore'],
+  [I('clear-glass/src/main/index.js'),              I('clear-glass/src/core/zoom.js'), '§0.60.183 BS14 zoom({ siteSettings }) at boot'],
+  [I('clear-glass/renderer/browser.js'),            I('clear-glass/renderer/shell/ctxmenu.js'), '§0.60.183 BS15 window.CGCtxMenu.open/keys (page global)'],
+  [I('clear-glass/renderer/shell/ctxmenu.js'),      I('clear-glass/src/preload/index.js'), '§0.60.183 BS15 ClearGlass.window.cursor → window:cursor (IPC)'],
+  [I('clear-glass/src/copilot/bridge.js'),          I('clear-glass/src/copilot/context-need.js'), '§0.60.182 BS12 need() and cookieSummary() per message'],
+  [I('lib/agent-tools/index.js'),                   I('lib/agent-tools/tools/clear-glass/adblock.js'), '§0.60.183 AB4 registerTool(clear_glass_adblock)'],
+  [I('clear-glass/src/main/index.js'),              I('clear-glass/src/passwords/service.js'), '§0.60.186 PW1 service({ vault: passwordVault }) at boot; onCaptured → linkPending'],
+  [I('clear-glass/src/main/index.js'),              I('clear-glass/src/main/passwords-wiring.js'), '§0.60.186 PW3 attach() — the page script on every session, the IPC'],
+  [I('clear-glass/src/main/passwords-wiring.js'),   I('clear-glass/src/preload/passwords.js'), '§0.60.186 PW3 registerPreloadScript(preloadPath); pw:form / pw:capture / pw:fill (IPC, not a require)'],
+  [I('clear-glass/src/passwords/service.js'),       I('clear-glass/src/passwords/vault.js'), '§0.60.186 PW1 the PasswordVault passed in: save(…, { accountId }), get'],
+  [I('clear-glass/src/providers/account-switch.js'), I('clear-glass/src/passwords/service.js'), '§0.60.186 PW3 capture() → onCaptured (injected by main) → linkPending'],
+  [I('clear-glass/renderer/shell/passwords.js'),    I('clear-glass/src/preload/index.js'), '§0.60.186 PW4 ClearGlass.passwords.save|dismiss|forPage|fillPage|onOffer|onAvailable (IPC)'],
+  [I('clear-glass/src/ipc/bridge.js'),              I('clear-glass/src/accounts/for-site.js'), '§0.60.185 BS20 accounts:forSite (lazy require; each account session read for the site)'],
+  [I('clear-glass/renderer/browser.js'),            I('clear-glass/src/preload/webview-bridge.js'), '§0.60.185 BS19 the page sends cg:ctx-point (sendToHost → the webview ipc-message event), not a require'],
+  [I('clear-glass/renderer/browser.js'),            I('clear-glass/renderer/shell/menus.js'), '§0.60.185 BS17 window.CGMenus.appMenuHTML/wire builds the ☰ menu (page global)'],
+  [I('clear-glass/src/adblock/lists.js'),           I('clear-glass/src/adblock/import.js'), '§0.60.184 AB5 importPaths / addUrl: detectFormat, sources'],
+  [I('clear-glass/src/ipc/bridge.js'),              I('clear-glass/src/net/host-import.js'), '§0.60.184 SF8 /cli/net/routes/import, /lists, /lists/rm (lazy require)'],
+  [I('clear-glass/src/net/host-import.js'),         I('clear-glass/src/net/service.js'), '§0.60.184 SF8 addRoutes / removeRoutes / routes() on the service passed in (not a require)'],
+  [I('clear-glass/renderer/settings/sections/network.js'), I('clear-glass/src/preload/index.js'), '§0.60.184 SF8 ClearGlass.plugins.pick for Import a host list (IPC)'],
 ];
 
 function mapRunState(driver) { return declareMap(driver, { key: 'run-state', uuidTag: '2026-1015-050', files: FILES, consumers: CONSUMERS }); }

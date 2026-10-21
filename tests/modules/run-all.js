@@ -380,6 +380,8 @@ const SUITES = [
   'test-snowflake.test.js',           // 0.60.178 — SF1–SF6: Snowflake end to end (detect, bridge lines, compartment, HTTPS-only, circuit check)
   'test-compartment-downloads.test.js',   // 0.60.179 — CD1–CD5: magnets caught, downloads quarantined, verified qBittorrent hand-off, kill on disconnect
   'test-browser-shell.test.js',          // 0.60.179 — BS1–BS7: Firefox import, the window like Firefox, plugin icons, the floating CLI (in Clear Glass)
+  'test-adblock.test.js',                // 0.60.183 AB1–AB4 — a full content blocker: real lists, exceptions, options, element hiding, per-site allow, its page
+  'test-passwords.test.js',              // 0.60.186 PW1–PW4 — websites use the password manager; a login belongs to the account the cookie vault keeps
   'test-live-recording.test.js',      // 0.60.57 — a recording is a .macro node file from the first second; scroll/paging keys; survives navigation
   'test-chatgpt-scrape-template.test.js', // 0.60.69 — the ChatGPT chat reader template (loop body, vars, extract fields)
   'test-cos-app-ui.test.js',          // 0.60.89 COSA6 — COS window (jsdom) and controller
@@ -431,6 +433,9 @@ const SUITES = [
   'test-economy-resume.test.js',    // 0.60.165 AB1 — a build that exhausted only on time-bound holds (economy/rate-limit/no-RAM) is retried when the slot frees; never a real failure
   'test-cos-run-target.test.js',     // 0.60.166 CT1 — the gate's test runs inside COS's process sandbox (clean env, timeout, output cap); portable, no KVM needed
   'test-tf-already-done.test.js',      // 0.60.167 — a phase whose files already exist is not stuck forever on test_first:require (TF.decide: passes-already+exists = already satisfied)
+  'test-stream-fallback.test.js',  // 0.60.191 R1/I1 — the DOM mutator's stream at the node anchor, kept as a partial .response; the last fallback before a re-send
+  'test-approval-chain.test.js',  // 0.60.190 APV — an approved change: its entry in the Versionium commit of its diff, the change log route/row/drawer, the orchestrator's ledger
+  'test-phase-census.test.js',  // 0.60.188 CNS1 — every phase judged against its evidence; short ids, mapping commits and map citations are not evidence
   'test-pipeline-root-causes.test.js',  // 0.60.170 RC1-RC4 — watcher EPERM never kills a kernel; linear node scan; Windows-safe node names; agent file names guarded
   'test-verify-first.test.js',          // 0.60.171 VF1 CB1 CB2 SM1 RC4b — check as it is before any agent; Gemini's five-part brief with the axioms; gemini first; agent self-models; labelled files archived
   'test-phase-dag.test.js',             // 0.60.172 DG3 — every phase of every phasemap in one DAG: cycles, dangling, undeclared, layers, critical path, conflicts; the build refuses an invalid DAG

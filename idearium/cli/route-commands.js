@@ -344,6 +344,17 @@ export const SPEC = [
   // 0.60.172 DG3 — James: "every phasemap phase needs extensive dag, that needs to start being standard."
   { key: 'repo.phases.dag', repo: true, usage: 'repo dag <repo> [phase] [--map path] [--cross]', about: "the whole dependency DAG of the repo's phasemaps (cycles, dangling depends_on, phases with no depends_on line, layers, ready, critical path, file conflicts) — or one phase's place in it",
     req: (a) => ({ method: 'GET', path: `/api/repos/${a.repo.uuid}/phases/dag?${a.args[0] ? `phase=${encodeURIComponent(a.args[0])}&` : ''}${a.flags.map ? `map=${encodeURIComponent(a.flags.map)}&` : ''}${a.flags.cross ? 'cross=1' : ''}` }) },
+  // 0.60.190 APV3/APV4 — James: "make sure it's all interconnected, changes are logged and the diff snapshotted in versionium with a change log when approved. what about an api route or the pulse emission system"
+  { key: 'repo.changelog', repo: true, usage: 'repo changelog <repo> [--limit n] [--all]', about: "the repo's change log: each Versionium commit with the change-log entries it carries — the phase, why, files ±, who proposed, who approved, the run and who started it (--all: commits with no approval too)",
+    req: (a) => ({ method: 'GET', path: `/api/repos/${a.repo.uuid}/changelog?limit=${encodeURIComponent(a.flags.limit || 20)}${a.flags.all ? '&all=1' : ''}` }),
+    print: (d, a, h) => { if (!d.rows.length) { console.log(h.c.gray('  no approved change committed yet')); return; } for (const r of d.rows) { console.log(`  ${h.c.amber(String(r.commitId).slice(0, 12))} ${h.c.dim(new Date(r.ts).toISOString().slice(0, 16).replace('T', ' '))}  ${r.entries.length ? '' : r.message}`); for (const e of r.entries) console.log(`    ${e.status === 'reverted' ? h.c.coral('↺') : h.c.mint('✓')} ${e.title}${e.run ? h.c.dim(`  · run ${String(e.run).slice(0, 14)}${e.startedBy ? ` by ${e.startedBy.who}` : ''}`) : ''}`); } } },
+  { key: 'ledger.out', usage: 'ledger out', about: "what Idearium sent to the orchestrator's ledger (the pulse/event spine): sent, buffered while it was down, drained since, failed, the last error",
+    req: () => ({ method: 'GET', path: '/api/ledger/out' }),
+    print: (d, a, h) => { console.log(`  sent ${d.sent} · buffered ${d.buffered} · drained ${d.drained} · failed ${d.failed}${d.lastType ? h.c.dim(` · last ${d.lastType}`) : ''}`); if (d.lastError) console.log(h.c.amber(`  last error: ${d.lastError}`)); } },
+  // 0.60.188 CNS1 — James: "It built 5 phases in a row. I think I see what you mean but there are way more idearium phases than that." · "go ahead with the census"
+  { key: 'phases.census', usage: 'phases census [--system idearium] [--open]', about: "every phase of Nexus's phasemaps judged against its evidence (commits that name it and touched its code, release lines, its files, its proof's tests and ids): done, partly, mentioned, not-built, no-files, deferred, superseded — and the open ones bottom-up. Deterministic, no model",
+    req: (a) => ({ method: 'GET', path: `/api/phases/census?system=${encodeURIComponent(a.flags.system || 'idearium')}` }),
+    print: (d, a, h) => { console.log(`  ${d.total} phases · ${Object.entries(d.counts).map(([k, v]) => `${k} ${v}`).join(' · ')}${d.shallow ? h.c.amber(' · SHALLOW history') : ''}`); if (a.flags.open) d.order.forEach((k, i) => console.log(h.c.dim(`  ${String(i + 1).padStart(3)}. ${k.replace(/^docs\//, '')}`))); else console.log(h.c.dim(`  ${d.order.length} open, bottom-up: --open lists them · docs/idearium-phase-census.md is the full table`)); } },
   // §0.60.173 UP3 — James: "upload zip with an intent, have it map to nexus using a tool, then ask me with the option to edit the location"
   { key: 'repo.upload', repo: true, usage: 'repo upload <repo> <zip> --intent "what these files are for"', about: 'upload a zip into a repo with an intent: every file is placed against the repo (its folders, its systems, who requires what, his earlier answers) and the upload WAITS for his answer — nothing is written yet',
     need: (a) => (!a.args.length ? '<zip>' : !a.flags.intent ? '--intent "what these files are for"' : null),
@@ -671,7 +682,7 @@ export const SPEC = [
   { key: 'repo.phase', repo: true, usage: 'repo phase <repo> <phase> [build [--map name] [--provider ollama|claude-code|claude|…] [--note "…"] [--replan] [--anyway]]', about: 'one phase: its runs (and why one stopped), or build it now as a background task (a build started again keeps its saved plan and resumes; --replan plans it again)',
     need: (a) => (a.args[0] ? null : '<phase>'),
     req: (a) => (a.args[1] === 'build'
-      ? { method: 'POST', path: `/api/repos/${a.repo.uuid}/phases/build`, body: { phase: a.args[0], ...(a.flags.map ? { map: a.flags.map } : {}), ...(a.flags.provider ? { provider: a.flags.provider } : {}), ...(a.flags.note ? { note: a.flags.note } : {}), ...(a.flags.replan ? { replan: true } : {}), ...(a.flags.anyway ? { anyway: true } : {}) }, timeoutMs: 120000 }
+      ? { method: 'POST', path: `/api/repos/${a.repo.uuid}/phases/build`, body: { startedBy: 'person:cli', phase: a.args[0], ...(a.flags.map ? { map: a.flags.map } : {}), ...(a.flags.provider ? { provider: a.flags.provider } : {}), ...(a.flags.note ? { note: a.flags.note } : {}), ...(a.flags.replan ? { replan: true } : {}), ...(a.flags.anyway ? { anyway: true } : {}) }, timeoutMs: 120000 }
       : { method: 'GET', path: `/api/repos/${a.repo.uuid}/phases/runs?phase=${encodeURIComponent(a.args[0])}` }),
     print: (d, a, h) => {
       if (a.args[1] === 'build') {
@@ -682,7 +693,7 @@ export const SPEC = [
       }
       const runs = (d.runs || []).slice().sort((x, y) => (x.ts || 0) - (y.ts || 0));
       if (!runs.length) { console.log(h.c.gray(`  ${a.args[0]} has never run — idearium repo phase ${a.repo.name} ${a.args[0]} build`)); return; }
-      for (const r of runs) console.log(`  ${h.c.dim(when(r.ts))} ${r.state === 'failed' || r.state === 'blocked' ? h.c.coral(r.state) : r.state === 'complete' || r.state === 'proved' ? h.c.mint(r.state) : h.c.sky(r.state || '?')}  ${h.c.dim(r.provider || '')}${r.error ? `  ${String(r.error).slice(0, 140)}` : ''}`);
+      for (const r of runs) console.log(`  ${h.c.dim(when(r.ts))} ${r.state === 'failed' || r.state === 'blocked' ? h.c.coral(r.state) : r.state === 'complete' || r.state === 'proved' ? h.c.mint(r.state) : h.c.sky(r.state || '?')}  ${h.c.dim(r.provider || '')}${r.startedBy ? h.c.dim(` · by ${r.startedBy.who}${r.startedBy.whence === 'declared' ? '' : ` (${r.startedBy.whence})`}`) : ''}${r.error ? `  ${String(r.error).slice(0, 140)}` : ''}`);
     } },
   // 0.60.7 — the same command, now the whole index (lib/repo-history.js): VR1's commits are its snapshots; backups,
   // staging, imported history and the work surface's revisions beside them. --kind snapshot is the old list.
@@ -1002,6 +1013,23 @@ export const SPEC = [
       if (d.ok === false) { console.log(`${h.c.amber('✗')} ${d.error || 'failed'}`); return; }
       if (d.action) { console.log(d.action === 'delivered' ? `  delivered ${d.version} (${(d.bytes / 1048576).toFixed(1)} MB) · ${d.reason}` : `  nothing to do: ${d.reason}`); return; }
       console.log(`  latest ${d.latest}${d.publishesChecksum ? '' : ' (publishes no SHA256SUMS)'} · COS has ${d.installed.length ? d.installed.join(', ') : 'nothing'}${d.current ? ` (current ${d.current})` : ''} · inbox ${d.inboxPending} waiting\n  a fetch would: ${d.would}`); } },
+  // AB4 (0.60.183) — James, 2026-10-21: "can you make a full adblocker". The blocker's lists, sites and switch; `rules` (his own filters) is his.
+  { key: 'adblock', repo: false, usage: 'adblock <status|on|off|lists|list <id> on|off|update [id|all]|import <file|folder|url> [--title T]|remove <id>|allow <site>|disallow <site>|check <url> [page]|rules "<filters>">',
+    about: 'Clear Glass content blocker: status and rule counts, turn it on/off, choose filter lists (easylist, easyprivacy, peter-lowe, ublock, annoyances, cookies, builtin), update them, allow a site, test a URL. Rules are person-only.',
+    personOnly: (a) => (a.args[0] === 'rules' ? 'his own filters are his to write: ask him (idearium adblock rules …, or the Ad Blocker page in the 🧩 panel)' : null),
+    build: (a) => {
+      const v = String(a.args[0] || 'status');
+      if (v === 'on' || v === 'off') return { system: 'clear-glass', method: 'POST', path: '/cli/adblock/enabled', body: { on: v === 'on' } };
+      if (v === 'list') return { system: 'clear-glass', method: 'POST', path: '/cli/adblock/list', body: { id: String(a.args[1] || ''), on: String(a.args[2] || 'on') !== 'off' }, timeoutMs: 120000 };
+      if (v === 'update') return { system: 'clear-glass', method: 'POST', path: '/cli/adblock/update', body: { id: String(a.args[1] || 'all') }, timeoutMs: 180000 };
+      if (v === 'allow' || v === 'disallow') return { system: 'clear-glass', method: 'POST', path: '/cli/adblock/allow', body: { site: String(a.args[1] || ''), on: v === 'allow' } };
+      // AB5 (0.60.184) — his own lists: a file, a folder, or a list's URL; `remove <id>` drops one
+      if (v === 'import') { const src = a.args.slice(1).join(' '); return /^https?:\/\//i.test(src) ? { system: 'clear-glass', method: 'POST', path: '/cli/adblock/import', body: { url: src, title: a.flags.title ? String(a.flags.title) : undefined }, timeoutMs: 120000 } : { system: 'clear-glass', method: 'POST', path: '/cli/adblock/import', body: { paths: [require('path').resolve(src)] }, timeoutMs: 120000 }; }
+      if (v === 'remove') return { system: 'clear-glass', method: 'POST', path: '/cli/adblock/remove', body: { id: String(a.args[1] || '') } };
+      if (v === 'check') return { system: 'clear-glass', method: 'GET', path: `/cli/adblock/check?url=${encodeURIComponent(String(a.args[1] || ''))}&page=${encodeURIComponent(String(a.args[2] || ''))}` };
+      if (v === 'rules') return { system: 'clear-glass', method: 'POST', path: '/cli/adblock/rules', body: { text: a.args.slice(1).join(' ').replace(/\\n/g, '\n'), person: true } };
+      return { system: 'clear-glass', method: 'GET', path: '/cli/adblock/status' };
+    } },
   // BS7 (0.60.179) — James: "can you build a import for firefox profiles and cookies for clearglass.?" Listing is open; importing is his (cookies are sign-ins).
   { key: 'firefox', repo: false, usage: 'firefox <profiles|import [profile name or folder] [--no-cookies] [--bookmarks] [--persona] [--into default|ncp-<provider>]>',
     about: 'Firefox profiles on this machine, and a real import into Clear Glass: cookies (into the everyday session or a provider tab), bookmarks, and the profile\'s user agent',
@@ -1025,10 +1053,10 @@ export const SPEC = [
       if (d.persona) console.log(`  persona   ${d.persona.userAgent ? 'user agent applied' : 'no user agent override'}${d.persona.languages ? ` · languages ${d.persona.languages}` : ''}`);
       for (const e of d.errors || []) console.log(h.c.amber(`  ${e}`));
     } },
-  { key: 'net', repo: false, usage: 'net <status|routes|resolve <url>|add <id> --via V [--provider p] [--url pattern] [--origin host] [--caller c] [--protocols https,wss] [--on-failure block]|rm <id>|default <via>|start|stop [--wipe]|detect|bridge <line>|bridges|builtin|use <n>|https-only on|off|check|quarantine|release <id>|discard <id>|handoff <id>|on-disconnect block|kill_tabs|kill_compartment|qbit [check] [--url U] [--user U] [--pass P]|paths --tor P --snowflake P|test>',
+  { key: 'net', repo: false, usage: 'net <status|routes|lists|import <file|folder> [--via transport|direct|block] [--list name]|unlist <name>|resolve <url>|add <id> --via V [--provider p] [--url pattern] [--origin host] [--caller c] [--protocols https,wss] [--on-failure block]|rm <id>|default <via>|start|stop [--wipe]|detect|bridge <line>|bridges|builtin|use <n>|https-only on|off|check|quarantine|release <id>|discard <id>|handoff <id>|on-disconnect block|kill_tabs|kill_compartment|qbit [check] [--url U] [--user U] [--pass P]|paths --tor P --snowflake P|test>',
     about: 'network routes and the Snowflake transport: which way each request goes (direct, block, transport, socks5://h:p), per provider, url, site or caller; start/stop the transport; fail closed',
     need: (a) => { const v = a.args[0] || 'status'; if (v === 'resolve' && !a.args[1]) return '<url>'; if (v === 'add' && (!a.args[1] || !a.flags.via)) return '<id> --via direct|block|transport|socks5://host:port'; if (v === 'rm' && !a.args[1]) return '<id>'; if (v === 'default' && !a.args[1]) return '<via>'; if (v === 'bridge' && !a.args[1]) return '<snowflake bridge line>'; if (v === 'use' && !a.args[1]) return '<n> (a number from net bridges)'; if (v === 'https-only' && !['on', 'off'].includes(a.args[1])) return 'on|off'; if (['release', 'discard', 'handoff'].includes(v) && !a.args[1]) return '<id> (from net quarantine)'; if (v === 'on-disconnect' && !['block', 'kill_tabs', 'kill_compartment'].includes(a.args[1])) return 'block|kill_tabs|kill_compartment'; return null; },
-    personOnly: (a) => (['add', 'rm', 'default', 'start', 'stop', 'bridge', 'paths', 'use', 'https-only', 'builtin', 'release', 'discard', 'handoff', 'on-disconnect', 'qbit'].includes(a.args[0]) ? 'changing routes or the transport (or asking the Tor Project for bridges, which contacts it directly) is a person\'s act: an agent that could remove a rule could send his traffic direct. Ask him to run it.' : null),
+    personOnly: (a) => (['add', 'rm', 'import', 'unlist', 'default', 'start', 'stop', 'bridge', 'paths', 'use', 'https-only', 'builtin', 'release', 'discard', 'handoff', 'on-disconnect', 'qbit'].includes(a.args[0]) ? 'changing routes or the transport (or asking the Tor Project for bridges, which contacts it directly) is a person\'s act: an agent that could remove a rule could send his traffic direct. Ask him to run it.' : null),
     req: (a) => {
       const v = a.args[0] || 'status'; const f = a.flags; const cg = (method, path, body, timeoutMs) => ({ system: 'clear-glass', method, path, ...(body ? { body } : {}), ...(timeoutMs ? { timeoutMs } : {}) });
       if (v === 'status') return cg('GET', '/cli/net/status');
@@ -1036,6 +1064,10 @@ export const SPEC = [
       if (v === 'resolve') return cg('POST', '/cli/net/resolve', { url: a.args[1], provider: f.provider, caller: f.caller });
       if (v === 'add') return cg('POST', '/cli/net/routes', { id: a.args[1], via: String(f.via), match: { ...(f.provider ? { provider: String(f.provider) } : {}), ...(f.url ? { urlPattern: String(f.url) } : {}), ...(f.origin ? { origin: String(f.origin) } : {}), ...(f.caller ? { caller: String(f.caller) } : {}) }, ...(f.protocols ? { protocols: String(f.protocols).split(',') } : {}), ...(f['on-failure'] ? { onFailure: String(f['on-failure']) } : {}), ...(f.incognito ? { incognito: true } : {}), ...(f.note ? { note: String(f.note) } : {}) });
       if (v === 'rm') return cg('POST', '/cli/net/routes/rm', { id: a.args[1] });
+      // SF8 (0.60.184) — a host list (file or folder) as sites routed one way, transport unless --via says; `lists`, `unlist <name>`
+      if (v === 'import') return { ...cg('POST', '/cli/net/routes/import', { paths: [require('path').resolve(a.args.slice(1).join(' '))], via: f.via ? String(f.via) : 'transport', ...(f.list ? { list: String(f.list) } : {}) }), timeoutMs: 120000 };
+      if (v === 'lists') return cg('GET', '/cli/net/routes/lists');
+      if (v === 'unlist') return cg('POST', '/cli/net/routes/lists/rm', { list: a.args.slice(1).join(' ') });
       if (v === 'default') return cg('POST', '/cli/net/default', { via: a.args[1] });
       if (v === 'start' || v === 'stop' || v === 'detect') return cg('POST', '/cli/net/transport', { action: v, wipe: !!f.wipe }, 30000);
       if (v === 'bridge') return cg('POST', '/cli/net/bridge', { line: a.args.slice(1).join(' ') });

@@ -100,6 +100,24 @@ These are his own earlier projects, run through NEXUS's real import routes in a 
 
 New entries go at the top: date, his words, context, what it shows, evidence.
 
+- **2026-10-21: "can you make a full adblocker ... migrate page zoom to the core of clearglass. moright click menu needs to be redone ... in
+  relation to the mouse"** (0.60.183)
+  - **Context:** the blocker was 16 hard-coded domains. Zoom lived in two places with different rules. The right-click menu had been
+    "fixed" twice before (2026-09-21, 0.39.265) and was still off in his screenshot.
+  - **What it shows:**
+    - **Product judgement.** He asked for "full", which set the bar at the standard filter lists with their exceptions and options, not a
+      longer hand list. That bar is why the engine reads EasyList's real syntax.
+    - **Systems sense.** "Migrate to the core" named a duplication the code had hidden: two zoom implementations with different bounds,
+      one of which never saved.
+    - **Testing by his own eye.** His screenshot of a misplaced menu is what led to the real cause. The point was in the page's
+      coordinates, so it went wrong whenever the page was zoomed or the display scaled. Two earlier patches had only treated the symptom.
+  - **Evidence:**
+    - `CHANGELOG-0.60.183.md`;
+    - `clear-glass/src/adblock/engine.js`, run against the real EasyList, EasyPrivacy and uBlock lists: 114k blocking rules, about 40 µs a
+      request;
+    - `tests/modules/test-adblock.test.js` ABK-01..11;
+    - `tests/modules/test-browser-shell.test.js` BST-13..15: the menu's corner lands on the pointer in Clear Glass.
+
 - **2026-10-17: "Okay. Keep going."** (FR4a: the flight recorder on its own)
   - **Context:** a product has to run without the system it was built in. This is the first time the flight recorder
     did, from a copy carved out of Nexus.
@@ -841,3 +859,50 @@ New entries go at the top: date, his words, context, what it shows, evidence.
 - **Checkable:** `tests/modules/test-browser-shell.test.js` BST-10 (a running agent shows Open/Stop; nothing reads `hosted` alone);
   `tests/modules/test-snowflake.test.js` SFW-09; `CHANGELOG-0.60.180.md`.
 
+
+### 2026-10-21 — 0.60.188: he corrected the coder with what he had seen, and asked for the truth before the picture
+- **His words:** "Follow the axioms in docs. Use them as law, and for every decision. It built 5 phases in a row. I think I see what you
+  mean but there are way more idearium phases than that." · "go ahead with the census"
+- **Context:** the coder had said a build does not move on to the next phase by itself. He had watched it build five in a row. He also
+  saw that the five were a small part of a much larger body of open phases. The next planned work was a graph of the pipeline. A census
+  was put first, because a graph drawn from maps with wrong statuses would show a false pipeline.
+- **What it shows:** two kinds of judgment.
+  - **Evidence.** He treated what he had seen as evidence against the coder's claim, and the coder recorded it as such.
+  - **Order.** He ordered the work so that truth comes first: the census, then the graph.
+
+  The census then showed something nobody had known. Not one phase was built but still marked open. The maps' "done" lines are honest,
+  and the real gap is 206 open phases with nothing that names them as built. It also found the shared phase parser silently skipping
+  25 phases and decisions, and fixed it at the cause.
+- **Checkable:**
+  - `tests/modules/test-phase-census.test.js` PCN-01..06;
+  - `docs/idearium-phase-census.md`, with every verdict's evidence;
+  - `CHANGELOG-0.60.188.md`;
+  - `node -e "console.log(require('./lib/phase-dag').build(...).stats)"`: phases 1900 → 1925.
+
+### 2026-10-21 — 0.60.190: he asked for the system to hang together, and named where to look
+- **His words:** "make sure it's all interconnected, changes are logged and the diff snapshotted in versionium with a change log when
+  approved. what about an api route or the pulse emission system"
+- **Context:** this came right after the run record began naming who started each run. He didn't ask for one feature. He asked for an
+  approval to be followed through every system that should know about it. He named three of them: the version store, a route, and his
+  own event spine.
+- **What it shows:** systems thinking. The check against the code found that two of his five asks already held (logging, and Versionium
+  commits on approval). Three did not: a change log, a route to read it, and the event spine. He also pointed at the pulse system, his
+  own 0.39.173 design, as the place events belong. Following that led to a silent gap nobody had noticed: the durable buffer for events
+  sent while a system is down had never been drained, so buffered failure reports never arrived.
+- **Checkable:**
+  - `tests/modules/test-approval-chain.test.js` APC-01..06;
+  - `CHANGELOG-0.60.190.md`;
+  - `docs/2026-10-21-approval-chain-phasemap.spec`, whose ground-truth table shows what held before and what didn't.
+
+### 2026-10-21 — 0.60.192: four words that caught a duplicate
+- **His words:** "look in clearglass download manager"
+- **Context:** the coder had just shipped 0.60.191: Guardian kept a copy of each reply's stream so a lost reply could be recovered. He
+  knew his own system well enough to see that the stream already had a home. It was his 0.39.278 design: the download manager keeps a
+  live, append-only ledger of every chat, written by the page's DOM mutator.
+- **What it shows:** command of his own architecture three weeks and 100+ releases after he designed it, and the reuse-before-build
+  discipline applied to the coder's work, not only taught to it. Following his pointer also found a real bug: the contract ledger had read
+  that same ledger at the wrong port since 0.60.146, so it never got the reply text.
+- **Checkable:**
+  - `CHANGELOG-0.60.192.md`;
+  - `tests/modules/test-stream-fallback.test.js` SF-01..04;
+  - `git diff 0e922f29 -- guardian/lib/response-sink.js` is empty: the duplicate is fully removed.
