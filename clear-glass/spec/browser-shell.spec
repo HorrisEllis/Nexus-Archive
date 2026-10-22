@@ -574,3 +574,35 @@ spec:
       - { id: GATE-BSH-PERSON, name: person-imports, severity: fatal, check: "import personOnly; agent tool lists only", on_failure: "build failure" }
       - { id: GATE-BSH-ISOLATED, name: cli-isolated, severity: fatal, check: "separate window, setContentProtection(true) before show", on_failure: "build failure" }
       - { id: GATE-BSH-PLUGINS, name: plugin-state-kept, severity: high, check: "disabledPlugins applied at boot", on_failure: "build failure" }
+
+  # ## ADDENDUM 2026-10-22 (0.60.206) — MOD-BSH-COPILOT-SKIN: a closed Co-pilot takes no width
+  # James, 2026-10-22, with screenshots of Idearium in Clear Glass: "aloso the ui for clearglass is cut off."
+  # - Cause: renderer/shell/copilot.css (0.60.180) gave `body.cg-shell #copilot-pane` its width. That selector outranks browser.css's
+  #   `#copilot-pane.hidden { width: 0 }`, so a closed pane went transparent and kept 340 px: a black strip down the right of every page
+  #   (his page ended at about 1580 of 1920 px).
+  # - Fix: `body.cg-shell #copilot-pane.hidden { width: 0; opacity: 0; border-left: none; }`. Nothing else changes.
+  # - Proof: tests/modules/test-browser-shell.test.js BST-09b, run in Clear Glass at 1920 px. It measured 340 px before the fix and 0 after,
+  #   and checks the page reaches the right edge.
+  # ## ADDENDUM 2026-10-22 (0.60.210) — MOD-BSH-DESIGN: the ☰ menu's Tools and Customize toolbar, rebuilt
+  # James, 2026-10-22, with a screenshot of the ☰ menu: "customize toolbar and those toolbar links, and customize toolbar need to be rebuilt for  the new ui, they are cheap and crappy, and look bad."
+  # - The tool rows drew each command's text glyph (✦ ⛏ ◎ ⬡ ⏮ ⟳ ⚙) beside rows with drawn icons, and the pinned tool buttons on the toolbar did
+  #   too. Each command now carries glyph (a drawn icon, renderer/shell/icons.js; a briefcase added for Fiverr gigs) and desc (one line) in
+  #   src/toolbar/commands.js, the one place commands are defined; every tool button draws it; a plugin's command draws its plugin's icon.
+  # - ☰ menu → Tools: the menu's own rows, a pin button on each (it pins at once), "Edit" opens Customize toolbar; Settings, which the menu has
+  #   its own row for, is not listed twice; a command with no toolbar button of its own (a plugin's zoom commands) runs from the row, unpinned.
+  # - Customize toolbar (renderer/shell/toolbar.css): a live preview of the toolbar, "On the toolbar" and "In the ☰ menu" lists with each
+  #   tool's icon and what it does, Pin / Unpin on every row (dragging still works), counts, run-once actions as buttons, Restore defaults and
+  #   Done. Every 0.60.178 id is kept; the superseded rules left browser.css (git history, §0.3). The movable tools now follow the pinned order.
+  # - Proof: tests/modules/test-browser-shell.test.js BST-21 in Clear Glass (drawn icons in the bar, the menu and the editor; the menu's pin;
+  #   Pin / Unpin, counts, preview; Done saves the list in order). 26/26.
+  # ## ADDENDUM 2026-10-22 (0.60.211) — zoom controls on the toolbar; the start page's agents read again
+  # James, 2026-10-22: "can you integrate that into clearglass, its a basic funcaiton of any browser." · "why remove the agents from new tab?"
+  # - Zoom has been core since BS14 (src/core/zoom.js; the plugin archived in plugins/_archive/zoom-0.60.182, not in BUILTIN_PLUGINS). The zoom
+  #   commands 0.60.210's notes named came from the test fixture's archived plugin, not his install — said here. What zoom lacked as a browser
+  #   function was a place on the toolbar: 'zoom-controls' (− level +, the level resets) is a pinnable built-in tool on the same core zoom as the
+  #   shortcuts, the address bar's level and the ☰ menu's Zoom row; the menu does not list it under Tools a second time.
+  # - Nothing removed the start page's agents (newtab.js unchanged since 0.60.180). It read the list once; a read that failed early, or came
+  #   back empty, said "Guardian's provider host is not answering" — wrong too, the list is Clear Glass's own — until another new tab. It now
+  #   says what failed and reads the agents again every 3 s while open, that section only (the search box and open panels are left alone).
+  # - Proof: test-browser-shell BST-22 and BST-23 in Clear Glass; 28/28.
+

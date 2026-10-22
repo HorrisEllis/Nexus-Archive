@@ -359,6 +359,100 @@ console.log('\ntest-browser-shell — Firefox import, the window rebuilt like Fi
       assert.deepStrictEqual(errors, []); await page.close();
     });
 
+    await test('BST-21', '0.60.210 the ☰ menu\'s Tools and Customize toolbar, rebuilt: drawn icons, descriptions, pin / unpin, preview, saved on Done', async () => {
+      // James, 2026-10-22: "customize toolbar and those toolbar links, and customize toolbar need to be rebuilt for  the new ui, they are cheap and crappy, and look bad."
+      const { TOOLBAR_COMMANDS } = require(CG('src/toolbar/commands.js'));
+      assert.ok(TOOLBAR_COMMANDS.filter(c => !c.pluginId).every(c => c.glyph && c.desc), 'every built-in command has a drawn icon and a line on what it does (a plugin\'s shows its own glyph)');
+      const pins = ['btn-gig', 'copilot-toggle', 'btn-bookmark'];
+      const page = await browser.newPage({ viewport: { width: 1440, height: 900 } }); const errors = []; page.on('pageerror', e => errors.push(e.message));
+      await page.addInitScript(initScript({ answers: { 'toolbar.commands': TOOLBAR_COMMANDS, 'options.get': { pinnedToolbarButtons: pins }, 'providers.list': [], 'bookmarks.list': [], 'plugins.list': [] } }));
+      await page.goto(require('url').pathToFileURL(CG('renderer/browser.html')).href + '?agentId=t');
+      await page.waitForSelector('#btn-back svg'); await page.waitForTimeout(300);
+      for (const id of ['btn-gig', 'btn-dom', 'btn-mesh', 'btn-rewind', 'btn-providers', 'btn-settings', 'picker-btn']) assert.ok(await page.$eval(`#${id}`, b => !!b.querySelector('svg')), `#${id} draws its icon, not a glyph`);
+      await page.click('#bookmark-mgr-btn'); await page.waitForSelector('#bookmark-mgr-panel [data-tool-menu-id="btn-dom"] svg');
+      const tools = await page.$$eval('#bookmark-mgr-panel [data-tool-menu-id]', rows => rows.map(r => [r.dataset.toolMenuId, !!r.querySelector('.mb-ico svg')]));
+      assert.ok(tools.length >= 5 && tools.every(t => t[1]), `drawn icons: ${JSON.stringify(tools)}`);
+      assert.ok(!tools.some(t => t[0] === 'btn-settings'), 'Settings is not listed twice (the menu has its own row)');
+      await page.evaluate(() => document.querySelector('#bookmark-mgr-panel [data-tool-pin="btn-dom"]').click());
+      await page.waitForFunction(() => !document.querySelector('#bookmark-mgr-panel [data-tool-menu-id="btn-dom"]'));
+      let sets = await page.evaluate(() => window.__cgCalls.filter(c => c.key === 'options.set').map(c => c.args[0].pinnedToolbarButtons));
+      assert.deepStrictEqual(sets[sets.length - 1], [...pins, 'btn-dom'], 'the pin button pins it, after the others');
+      assert.strictEqual(await page.$eval('#toolbar-pinned-tools', el => [...el.children].some(c => c.id === 'btn-dom')), true, 'on the toolbar at once');
+      await page.evaluate(() => { document.getElementById('bookmark-mgr-panel').style.display = 'none'; window.CGShell.customize(); });
+      await page.waitForSelector('#te-drop-toolbar .te-row[data-tool-id="btn-dom"] svg');
+      const rows = await page.$$eval('#toolbar-editor-panel .te-row', rs => rs.map(r => ({ id: r.dataset.toolId, svg: !!r.querySelector('.te-ico svg'), desc: r.querySelector('.te-desc').textContent })));
+      const nTools = TOOLBAR_COMMANDS.filter(c => c.id && c.pinnable && !c.pluginId).length;   // a plugin command with no button of its own runs once instead
+      assert.ok(rows.length === nTools && rows.every(r => r.svg && r.desc.length > 8), JSON.stringify(rows));
+      assert.strictEqual(await page.textContent('#te-count-toolbar'), '4');
+      assert.strictEqual(await page.$$eval('#te-preview-icons .te-pv svg', e => e.length), 4, 'the preview shows the four pinned');
+      await page.evaluate(() => document.querySelector('#te-drop-menu .te-row[data-tool-id="btn-mesh"] [data-te-move]').click());
+      await page.evaluate(() => document.querySelector('#te-drop-toolbar .te-row[data-tool-id="btn-gig"] [data-te-move]').click());
+      assert.deepStrictEqual(await page.$$eval('#te-drop-toolbar .te-row', rs => rs.map(r => r.dataset.toolId)), ['copilot-toggle', 'btn-bookmark', 'btn-dom', 'btn-mesh']);
+      assert.strictEqual(await page.textContent('#te-count-menu'), String(nTools - 4));
+      const nActions = TOOLBAR_COMMANDS.filter(c => !c.id || c.pluginId).length;
+      assert.ok(await page.$$eval('#te-actions-list .te-act', (b, n) => b.length === n && b.every(x => !!x.querySelector('svg')), nActions), 'each run-once action is a button with its drawn icon');
+      await page.click('#toolbar-editor-done');
+      sets = await page.evaluate(() => window.__cgCalls.filter(c => c.key === 'options.set').map(c => c.args[0].pinnedToolbarButtons));
+      assert.deepStrictEqual(sets[sets.length - 1], ['copilot-toggle', 'btn-bookmark', 'btn-dom', 'btn-mesh'], 'Done saves the toolbar list, in order');
+      if (process.env.BST_SHOT) await page.screenshot({ path: process.env.BST_SHOT });
+      assert.deepStrictEqual(errors, []); await page.close();
+    });
+
+    await test('BST-22', '0.60.211 the start page\'s agents: an empty or failed list says so and is read again until the agents are there', async () => {
+      // James, 2026-10-22: "why remove the agents from new tab?" — nothing removed them; the page read the list once and kept a failed read
+      const page = await browser.newPage({ viewport: { width: 1280, height: 800 } }); const errors = []; page.on('pageerror', e => errors.push(e.message));
+      await page.addInitScript(initScript({ answers: { 'providers.list': [], 'toolbar.commands': [], 'bookmarks.list': [], 'plugins.list': [], 'options.get': {} } }));
+      await page.goto(require('url').pathToFileURL(CG('renderer/browser.html')).href + '?agentId=t');
+      await page.waitForSelector('#sh-newtab .nt-agents .sh-empty');
+      assert.match(await page.textContent('#sh-newtab .nt-agents'), /trying again/);
+      assert.ok(!/Guardian's provider host/.test(await page.textContent('#sh-newtab')), 'the message names what failed, not Guardian');
+      await page.evaluate(() => { window.ClearGlass.providers.list = async () => [{ id: 'claude', name: 'Claude', color: '#d97757', running: false }, { id: 'chatgpt', name: 'ChatGPT', running: true }]; });
+      await page.waitForSelector('#sh-newtab .nt-agent[data-id="chatgpt"]', { timeout: 8000 });
+      assert.strictEqual(await page.$$eval('#sh-newtab .nt-agent', e => e.length), 2, 'the agents appear without opening another tab');
+      assert.deepStrictEqual(errors, []); await page.close();
+    });
+
+    await test('BST-23', '0.60.211 zoom controls on the toolbar: pinned from Customize, − / + step the core zoom, the level resets; the menu keeps its own row', async () => {
+      // James, 2026-10-22: "can you integrate that into clearglass, its a basic funcaiton of any browser."
+      const { TOOLBAR_COMMANDS } = require(CG('src/toolbar/commands.js'));
+      const page = await browser.newPage({ viewport: { width: 1440, height: 900 } }); const errors = []; page.on('pageerror', e => errors.push(e.message));
+      await page.addInitScript(initScript({ answers: { 'toolbar.commands': TOOLBAR_COMMANDS.filter(c => !c.pluginId), 'options.get': { pinnedToolbarButtons: ['copilot-toggle', 'zoom-controls'] }, 'providers.list': [], 'bookmarks.list': [], 'plugins.list': [] } }));
+      await page.goto(require('url').pathToFileURL(CG('renderer/browser.html')).href + '?agentId=t');
+      await page.waitForSelector('#toolbar-pinned-tools #zoom-controls');
+      assert.strictEqual(await page.$$eval('#zoom-controls [data-tz] svg', e => e.length), 2, '− and + are drawn');
+      assert.strictEqual((await page.textContent('#tz-pct')).trim(), '100%');
+      await page.click('#zoom-controls [data-tz="in"]');
+      await page.waitForFunction(() => document.getElementById('tz-pct').textContent.trim() !== '100%');
+      const up = (await page.textContent('#tz-pct')).trim();
+      assert.ok(/^1[1-9]\d%$/.test(up), `zoomed in: ${up}`);
+      assert.strictEqual(await page.$eval('#btn-zoom', b => b.style.display), 'flex', 'the address bar shows the level too');
+      await page.click('#tz-pct');
+      await page.waitForFunction(() => document.getElementById('tz-pct').textContent.trim() === '100%');
+      await page.click('#bookmark-mgr-btn'); await page.waitForSelector('#bookmark-mgr-panel [data-am="New Tab"]');
+      assert.strictEqual(await page.$$eval('#bookmark-mgr-panel [data-tool-menu-id="zoom-controls"]', e => e.length), 0, 'not under Tools: the menu has its own Zoom row');
+      assert.strictEqual(await page.$$eval('#bookmark-mgr-panel .am-zoom', e => e.length), 1);
+      await page.evaluate(() => { document.getElementById('bookmark-mgr-panel').style.display = 'none'; window.CGShell.customize(); });
+      await page.waitForSelector('#te-drop-toolbar .te-row[data-tool-id="zoom-controls"] svg');
+      assert.deepStrictEqual(errors, []); await page.close();
+    });
+
+    await test('BST-09b', '0.60.206 a closed Co-pilot takes no width: the page fills the window to its right edge', async () => {
+      // James, 2026-10-22: "the ui for clearglass is cut off" — his page stopped ~340 px short of a 1920 px window
+      const page = await browser.newPage({ viewport: { width: 1920, height: 1000 } }); const errors = []; page.on('pageerror', e => errors.push(e.message));
+      await page.addInitScript(initScript({ answers: { 'providers.list': [], 'toolbar.commands': [], 'bookmarks.list': [], 'plugins.list': [], 'options.get': {} } }));
+      await page.goto(require('url').pathToFileURL(CG('renderer/browser.html')).href + '?agentId=t');
+      await page.waitForSelector('#btn-back svg');
+      await page.evaluate(() => document.getElementById('copilot-pane').classList.add('hidden'));
+      await page.waitForTimeout(300);   // the width transition
+      const g = await page.evaluate(() => ({ pane: document.getElementById('copilot-pane').getBoundingClientRect().width, wrap: document.getElementById('webview-wrap').getBoundingClientRect().right, win: window.innerWidth }));
+      assert.strictEqual(g.pane, 0, `closed pane width ${g.pane}`);
+      assert.ok(g.win - g.wrap < 2, `the page reaches the right edge (${g.wrap} of ${g.win})`);
+      await page.evaluate(() => document.getElementById('copilot-pane').classList.remove('hidden'));
+      await page.waitForTimeout(300);
+      assert.ok(await page.$eval('#copilot-pane', e => e.getBoundingClientRect().width) > 300, 'open, it has its width');
+      assert.deepStrictEqual(errors, []); await page.close();
+    });
+
     await test('BST-10', 'Guardian hub: running agents show Open and Stop, the rest Start; the badge counts running; the old panel reads running', async () => {
       const page = await browser.newPage({ viewport: { width: 1440, height: 900 } }); const errors = []; page.on('pageerror', e => errors.push(e.message));
       await page.addInitScript(initScript({ answers: { 'providers.list': [{ id: 'claude', name: 'Claude', color: '#cc785c', running: true, status: 'injected', health: 100 }, { id: 'gemini', name: 'Gemini', color: '#4285f4', running: false }, { id: 'deepseek', name: 'DeepSeek', color: '#4d6bfe', running: false, status: 'crashed' }],

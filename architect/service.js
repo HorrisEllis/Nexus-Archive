@@ -1,4 +1,6 @@
 'use strict';
+// 0.60.207 DL2 — James: "make each system responsible for it's own data". Its files in the root data/ come home first (lib/data-home.js).
+require('../lib/data-home.js').atBoot('architect');
 /**
  * architect/service.js — The Architect HTTP Service
  * Port: 3747
@@ -65,7 +67,7 @@ const PORT = config.PORT;
 const CORTEX_PORT = config.CORTEX_PORT;
 const ROOT        = path.join(__dirname, '..');
 const DATA_DIR    = path.join(__dirname, 'data');
-const LEDGER_DIR  = path.join(ROOT, 'data', 'architect');
+const LEDGER_DIR  = require('../lib/data-home.js').dir('architect');   // 0.60.209 DL3: architect/data
 
 // ── JAA adapter ─────────────────────────────────────────────────────────────
 // Architect uses a flat-file JSONL store (same pattern as cortex)

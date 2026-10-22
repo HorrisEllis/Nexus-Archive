@@ -1,4 +1,6 @@
 'use strict';
+// 0.60.207 DL2 — James: "make each system responsible for it's own data". Its files in the root data/ come home first (lib/data-home.js).
+require('../../../lib/data-home.js').atBoot('clear-glass');
 /**
  * src/main/index.js — Clear Glass v3 SISO-native boot
  * UUID: cg-main-v3-0000-0000-000000000006
@@ -964,7 +966,7 @@ async function _startWire() {
       if (u === '/commands' && req.method === 'GET') {
         try {
           const fs = require('fs'), path = require('path');
-          const indexPath = path.join(__dirname, '..', '..', '..', 'data', 'clear-glass', 'command-index.json');
+          const indexPath = path.join(require('../../../lib/data-home.js').dir('clear-glass'), 'command-index.json');
           const raw = fs.readFileSync(indexPath, 'utf8');
           res.writeHead(200);
           return res.end(raw);

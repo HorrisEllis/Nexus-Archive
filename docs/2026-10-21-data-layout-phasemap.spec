@@ -56,7 +56,7 @@ phases:
 
   DL2_one_resolver:
     layer: library
-    status: OPEN
+    status: "DONE 0.60.207 — test-data-home DH-01..06 (DH-06 in Clear Glass)"
     depends_on: [DL1_clearup_tool]
     files: [lib/data-home.js, lib/test-sandbox.js]
     spec: docs/data-layout.spec
@@ -65,10 +65,17 @@ phases:
       lib/data-home.js: home / ledger / nodes / memory paths under each system, sandbox-aware. Route + command (`data census`,
       `data plan`, `data apply`, `data rollback`) and a Toolbox section for the clear-up tool.
     proof: every kind resolves under its system; a sandboxed process resolves under the sandbox
+    built: >-
+      0.60.207, James 2026-10-22: "start the data migration. look at the phases, any migrating data to the respective systems, and make each system responsible for it's own data." lib/data-home.js resolves home/ledger/nodes/memory
+      under each system (the sandbox in a test). Each system's entry calls atBoot(system) first: bringHome moves the root data/ files
+      the ownership table gives it through the clear-up tool (manifest first, sha256, rollback); a file whose old path code still names
+      waits and is listed; his calls are never moved; the record is <system>/data/.home.json; a boot with the same release and the same
+      waiting paths reads nothing. Route GET/POST /api/data/home[/:system], POST /api/data/rollback; `data home`, `data rollback`; the
+      Data view in the settings console. The Toolbox the spec named does not exist; the settings console is where it went (said).
 
   DL3_rewire_writers:
     layer: integration
-    status: OPEN
+    status: "IN PROGRESS — rewired: guardian 0.60.208; versionium, ollama-bridge, architect, clear-glass, diagnostic, orchestrator 0.60.209; loom, copilot, intelligence 0.60.212 (lib/data-home.js REWIRED; test-data-rewired). Left: idearium, cortex, and the shared data/ledger/"
     depends_on: [DL2_one_resolver, SS1_system_store_adoption]
     files: [lib/data-home.js, diagnostic/nexus-diagnostic.js, guardian/, lib/ledger-writer.js, lib/ledger-store.js, lib/vector-memory.js]
     spec: docs/data-layout.spec
@@ -123,3 +130,30 @@ phases:
     does: >-
       The 9 callers of the cortex/snapshot shim reach versionium through its route; the shim archived.
     proof: no cortex/snapshot require; the boundary ratchet adds nothing
+
+# ── ADDENDUM 2026-10-22 (0.60.207) — DL2 built; the migration's order from here ──
+# James, 2026-10-22: "start the data migration. look at the phases, any migrating data to the respective systems, and make each system responsible for it's own data."
+# - DL2 done (see the phase). On a pull, each system brings home what nothing names any more, at its own boot; today that is little:
+#   the census still finds code naming every owner's root path, diagnostic/nexus-diagnostic.js among them (it names every system's).
+# - Order from here, decided by his axioms (§5.9 the owner holds its data, §3.3 one system end to end before breadth): SS1 (Guardian:
+#   its tables out of cortex's store into its own, docs/2026-10-19-pipeline-root-causes-phasemap.spec) then DL3 per owner, each owner's
+#   tables (SS2) and files (DL3) in one step, ordered by fewest refs: versionium, ollama, architect, loom, clear-glass, …
+
+# ── ADDENDUM 2026-10-22 (0.60.209) — six owners' files rewired; the order corrected ──
+# James, 2026-10-22: "continue" (after 0.60.208, Guardian end to end).
+# - Rewired: versionium, ollama-bridge, architect, clear-glass, diagnostic, orchestrator. No code names their root paths (RW-01);
+#   Diagnostic's table — the registry's dataDir — points each at <folder>/data (RW-02). At each one's boot its files come home.
+# - The 0.60.207 addendum said each owner's tables (SS2) and files (DL3) would move in one step. Corrected here (that addendum stays,
+#   §0.3): files first for owners whose files only need a path, because a path change is checked by the census alone; each one's
+#   tables in cortex's store (SS2: versionium 5, orchestrator 4, diagnostic 2, architect 1 data blockers) follow per system, since
+#   each needs routes like Guardian's did. Decided by his axioms: §3.3 (smallest proven step), §8.6 (the census already proves a path).
+
+# ── ADDENDUM 2026-10-22 (0.60.212) — loom, copilot, intelligence rewired; Architect is his question ──
+# James, 2026-10-22: "then resume data migratino" · "Architect 1 isn't a system i don't believe and can be deleted."
+# - Rewired: loom (its cortex-sync buffer, uploads, scaffolds; nexus-status's LoomDriver no longer points at the root data/loom shadow the
+#   2026-08-14 nexus-map fix named), copilot (recursive-diagnose output), intelligence (its DATA_DIR, synthesis). Diagnostic's table points
+#   each at <folder>/data. Their files come home at each one's boot.
+# - Architect: read before acting. It is a running system (architect/service.js, port 3747, started by the orchestrator, 14 routes: blueprints,
+#   spec wizard, map scan, translate, compile, SNR, gaps); Idearium's compiler bridge calls its /api/map/scan and degrades without it. Removing
+#   it is his call with that cost named — asked, not done (USER_AUTONOMY; §0.3 would archive it, never delete). Its one cortex data blocker
+#   (SS2) waits on his answer.
