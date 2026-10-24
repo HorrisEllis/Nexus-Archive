@@ -77,6 +77,9 @@ const SUITES = [
   'test-pipeline-routing.test.js', // 0.39.286 RG — routing and fallback: modes, chains, failure classes, breaker, the route walked and kept on the chunk, /api/routing, the settings page
   'test-genesis-and-architecture-spec.test.js', // 0.39.286 GN1/AR1 — genesis 1.1.0 (registry doorway, routing) the default system template; the architecture spec cut to what exists
   'test-genesis-sandboxed.test.js', // DB19 (parked) — a fork of genesis: sealed sandbox, the registry the drawbridge, three tunnels (compartment, bridge, contract)
+  'test-evidence-close.test.js', // 0.60.224 SL2 — an open phase closes by evidence, its own (or file-specific) tests passing; dry run first; EC-05 in Clear Glass
+  'test-phase-close.test.js', // 0.60.223 SL1 — a proven, landed phase closes itself; undoing its change reopens it (lib/phase-close.js); PC-06 in Clear Glass
+  'test-build-queue.test.js', // 0.60.222 SL0 — what can be built now, and why every other open phase cannot (lib/build-queue.js); BQ-05 in Clear Glass
   'test-roadmap-import.test.js', // 0.60.199 SD17 — a project's own roadmap (phases.json / PHASEMAP.md) imported as a phasemap, so it continues; RI-05 in Clear Glass
   'test-mastermind-ready.test.js', // 0.60.200 SD18 — what Idearium needed to work on MASTERMIND: wrapper folder, primary roadmap, the project's own test runner, integrity notes that fit
   'test-any-project-tests.test.js', // 0.60.201 — "do the tests pass" for any project: npm, its own runner, Gradle, Maven, pytest, Cargo, Go, make; a missing tool said
@@ -450,12 +453,22 @@ const SUITES = [
   'test-economy-resume.test.js',    // 0.60.165 AB1 — a build that exhausted only on time-bound holds (economy/rate-limit/no-RAM) is retried when the slot frees; never a real failure
   'test-cos-run-target.test.js',     // 0.60.166 CT1 — the gate's test runs inside COS's process sandbox (clean env, timeout, output cap); portable, no KVM needed
   'test-tf-already-done.test.js',      // 0.60.167 — a phase whose files already exist is not stuck forever on test_first:require (TF.decide: passes-already+exists = already satisfied)
+  'test-autofill-learned.test.js',     // 0.60.225 JA1 — the autofill matcher consults a per-site learned map (a picked field fills every time); works for micro1/Mercor/Turing/etc
+  'test-autofill-learn-macro.test.js',  // 0.60.232 JA5 — the pick is also a macro + .macro node; a real page: label → box → selector-check's selector
+  'test-autofill-learn-ui.test.js',     // 0.60.231 JA4 — the learn-loop on screen (Clear Glass): Pick what a fill could not place; Fields it learned, with Forget
+  'test-autofill-learn-pick.test.js',   // 0.60.230 JA3 — the element picker on a missed field: needsPick, a stable unique key, saved per-site, filled again
+  'test-autofill-learn-save.test.js',   // 0.60.226 JA2 — a picked field saves per-origin to site-settings (autofill.field.<key>) and the fill path reads it back
   'test-stream-fallback.test.js',  // 0.60.191 R1/I1 — the DOM mutator's stream at the node anchor, kept as a partial .response; the last fallback before a re-send
   'test-approval-chain.test.js',  // 0.60.190 APV — an approved change: its entry in the Versionium commit of its diff, the change log route/row/drawer, the orchestrator's ledger
   'test-phase-census.test.js',  // 0.60.188 CNS1 — every phase judged against its evidence; short ids, mapping commits and map citations are not evidence
   'test-pipeline-root-causes.test.js',  // 0.60.170 RC1-RC4 — watcher EPERM never kills a kernel; linear node scan; Windows-safe node names; agent file names guarded
   'test-verify-first.test.js',          // 0.60.171 VF1 CB1 CB2 SM1 RC4b — check as it is before any agent; Gemini's five-part brief with the axioms; gemini first; agent self-models; labelled files archived
   'test-phase-dag.test.js',             // 0.60.172 DG3 — every phase of every phasemap in one DAG: cycles, dangling, undeclared, layers, critical path, conflicts; the build refuses an invalid DAG
+  'test-root-findings-not-phases.test.js',  // 0.60.225 NF1 — a root_findings entry is a finding, not a phase: loom marks it, the DAG closes it, the build refuses NOT_A_PHASE
+  'test-phase-groom.test.js',  // 0.60.227 SL3 — the DAG groomed: one depends_on reader, MP1's inferred edges, no cycle, DG1 checks every phase, the route
+  'test-agent-maps-phase.test.js',  // 0.60.228 SL8 — the agent maps one phase Nexus cannot place: checked by code, kept per phase text, past DG2; the run says so
+  'test-phase-nodes-all.test.js',  // 0.60.229 SL9 — every phase a .phase with its .graph beside its owner system; deterministic; the route reads what is written
+  'test-pipeline-sim.test.js',  // 0.60.230 SL10 — the phase build through every failure mode: scratch, extending, every gate; the run says why
   'test-upload-placement.test.js',      // 0.60.173 UP1-UP4 — a zip with an intent placed against the repo, waits for his answer, only his answer writes; his moves learned; the panel in Clear Glass
   'clear-glass-page-map.test.js',       // 0.60.174 PM1-PM4 — the page as blocks → index + chunks → a synthesized map that learns per site → intent → targets (layout in Clear Glass)
   'clear-glass-page-session.test.js',   // 0.60.175 PM5-PM8 — the page map as driver actions, co-pilot tools and commands; attention → Nerve → Ollama feel; live re-map; the panel in Clear Glass

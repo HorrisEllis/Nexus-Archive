@@ -100,6 +100,40 @@ These are his own earlier projects, run through NEXUS's real import routes in a 
 
 New entries go at the top: date, his words, context, what it shows, evidence.
 
+- **2026-10-23: "next"** (0.60.224)
+  - **Context:** the self-building loop's third phase. The out-of-date backlog gets closed by evidence: a phase is done when its own
+    tests pass, with a dry run first.
+  - **What it shows:** a guard against coherent-looking false progress. The first rule, "any linked test", would have marked over a
+    hundred phases done on passes that prove nothing about them. The rule was narrowed by his axiom (truth over coherence) before
+    anything was written. The dry run now shows how much of "done" rests on a phase's own test (2 of 107) and how much on a test of its
+    files, and the choice to apply stays his.
+  - **Evidence:** `CHANGELOG-0.60.224.md`; `docs/2026-10-23-evidence-dry-run.md`; `tests/modules/test-evidence-close.test.js` 5/5.
+
+- **2026-10-23: "contiue getting idearium building phases"** (0.60.223)
+  - **Context:** the trace behind his "can it build itself" question found that nothing ever marked a phase done. A proven run left
+    its phase open, and everything after it stayed refused until he marked it by hand.
+  - **What it shows:** persistence on the hard part. He kept the work on the loop itself, not on features beside it, and the one
+    missing write is now there. It is guarded the way his rules ask: no close without the change on disk, and an undo reopens it.
+  - **Evidence:** `CHANGELOG-0.60.223.md`; `tests/modules/test-phase-close.test.js` 6/6. In PC-04 a proposed change waits, the same
+    change applied closes the map's phase with the run named, and reverting it reopens the phase.
+
+- **2026-10-23: "whats the most important? can you help me build, invent, innovate, ways for idearium to build phases, all of them, we
+  need this to work so it can start building itself."** (0.60.222)
+  - **Context:** 2077 phases across 166 maps, 1183 of them open. No way existed to ask which could be built now. Asked for the most
+    important thing, he chose the self-building loop over more features.
+  - **What it shows:** directing toward leverage. A system that knows what it can build next is the precondition for building itself.
+    His spec-first rule (2026-10-20) held here: the spec compiled before any code, and the code was checked against it.
+  - **Evidence:** `CHANGELOG-0.60.222.md`; `docs/self-building-loop.spec`; `tests/modules/test-build-queue.test.js` 6/6; the run over
+    Nexus's own maps: 170 of 1183 open phases buildable now, every other one with its reason.
+
+- **2026-10-23: "some work for my mentor. need a way to real the data. the phases, convert md to spec. just get nexus building itself"**
+  - **Context:** two real projects from his mentor, in PHP/JS and in four languages, each keeping its plan in its own
+    markdown shape. Idearium read neither.
+  - **What it shows:** using his own system on outside work. A tool built for one project (MASTERMIND's roadmap import)
+    now reads two more, from their own records, without a model: worker_clean's plan with its next phase found, and core13's
+    open issues.
+  - **Evidence:** `CHANGELOG-0.60.221.md`; `tests/modules/test-roadmap-import.test.js` RI-06..08.
+
 - **2026-10-21: "can you make a full adblocker ... migrate page zoom to the core of clearglass. moright click menu needs to be redone ... in
   relation to the mouse"** (0.60.183)
   - **Context:** the blocker was 16 hard-coded domains. Zoom lived in two places with different rules. The right-click menu had been
@@ -998,3 +1032,27 @@ New entries go at the top: date, his words, context, what it shows, evidence.
   - `tests/modules/test-site-profile`, `test-site-readers` (7, each feature's own code), `test-site-settings-ui`, `test-global-settings`,
     `test-processes` and `test-processes-ui`. The screens are driven in Clear Glass;
   - docs/2026-10-23-site-profile-processes-phasemap.spec SP1–SP6.
+
+### 2026-10-24 — 0.60.225, 0.60.226, 0.60.230–0.60.232: an autofill that asks once, and remembers per site
+- **His words:** 2026-10-19: "if he doesn't understand, have the element picker popup for me to select the element for him. saves to
+  per site settings, and as a macro or automation and updates the autofill." · 2026-10-23: "make sure it works for these" (micro1,
+  Mercor, Turing, RemoExperts…) · "then the phases with the per site settings." · 2026-10-24: "ja3".
+- **Context:** The autofill matched fields by pattern only. A platform that labels a box oddly was missed on every visit, and
+  silently. His design closes that as a loop: when it misses, he points at the box once; the pick is saved for that site; the next
+  fill uses it. The coder built that design in three phases: the matcher reads the learned map (JA1), the pick is saved per site
+  (JA2), and the picker asks on a miss (JA3).
+- **What it shows:** human-in-the-loop design. A person is asked only where the machine is actually unsure. The answer is kept and
+  checked: a pick must name exactly one field on the page, or it is refused with the reason. A miss is reported, not hidden. One
+  instruction from him spans the matcher, the store, the picker and the agents' tools.
+- **Checkable:**
+  - `CHANGELOG-0.60.225.md`, `CHANGELOG-0.60.226.md`, `CHANGELOG-0.60.230.md`, `CHANGELOG-0.60.231.md`, `CHANGELOG-0.60.232.md`;
+  - `tests/modules/test-autofill-learned.test.js` (4), `test-autofill-learn-save.test.js` (3), `test-autofill-learn-pick.test.js` (5),
+    `test-autofill-learn-ui.test.js` (3, the screen driven in Clear Glass: Pick, the learned list, Forget),
+    `test-autofill-learn-macro.test.js` (5, the pick as a macro; one on a real page with the real dom mesh and selector-check);
+  - `docs/2026-10-19-gig-autofill-and-learn-phasemap.spec` JA1–JA5.
+  - His one sentence of 2026-10-19 named three homes for a pick: per-site settings, a macro or automation, and the autofill. All
+    three are built (JA2, JA5, JA1), each by reusing what Nexus had.
+
+  Every learned field can be seen and undone on screen (Forget), so a wrong pick costs one click.
+
+  Not yet shown: a fill on a live listing (his login).
