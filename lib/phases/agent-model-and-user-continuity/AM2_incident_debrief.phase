@@ -7,11 +7,11 @@ intent: null
 summary: AM2_incident_debrief (?) — 7 file(s)
 system: idearium
 tags: []
-exported_at: 1792787678104
+exported_at: 1792879719239
 source: nexus.lib.node-export
 occurrences: 1
-firstSeenAt: 1792787678104
-lastSeenAt: 1792787678104
+firstSeenAt: 1792879719239
+lastSeenAt: 1792879719239
 fingerprint: null
 payload:
   id: AM2_incident_debrief
@@ -22,13 +22,13 @@ payload:
   files:
     - lib/agent-system/submit.js
     - lib/gap-field.js
+    - copilot/lifeline.js
     - copilot/tool-runtime.js
     - idearium/api/index.js
-    - idearium/spec-engine/warp-build-dispatch.js
     - cortex/self-heal/fault-taxonomy.js
     - lib/loom-map.js
   depends_on:
     - AM1_per_agent_learned_model
   blocks: []
   spec: null
-  graph: 04a4544016b9bb00
+  graph: 41a6e8a172aa78c4

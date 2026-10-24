@@ -40,6 +40,22 @@ export const SPEC = [
       : { method: 'GET', path: `/api/repos/${a.repo.uuid}/agent/settings` }; },
     print: (d, a, h) => { const s = d.settings || d; h.header(`${a.repo.name} — its agent`); for (const k of ['provider', 'backend', 'injectMode', 'toolScope', 'ollamaModel']) if (s[k] != null) console.log(`  ${k.padEnd(12)} ${h.c.bold(String(s[k]))}`); if (s.providers) console.log(h.c.dim(`  providers: ${s.providers.join(' · ')}`)); console.log(''); } },
 
+  // §CG3 0.60.240 — James: "before an agent does anything. if confidence is lower than 75%, context must be obtained. build
+  // worksurface, compile list of dependancies, find the context, ask user last." A dry read of the gate for a message: what an
+  // agent would gather before it answers, and whether it would clear the 75% floor or need to ask.
+  { key: 'repo.gate', repo: true, usage: 'repo gate <repo> "<message>"', about: 'the confidence gate for a message: the context an agent would gather before it acts (worksurface, deps, find context, ask James last)',
+    req: (a) => ({ method: 'POST', path: `/api/repos/${a.repo.uuid}/agent/gate`, body: { message: a.args.join(' ') } }),
+    need: (a) => a.args.length ? null : 'a message',
+    print: (d, a, h) => {
+      if (!d || d.ok === false) { console.log(h.c.red((d && d.error) || 'the gate could not run')); return; }
+      const pct = Math.round((d.confidence || 0) * 100), thr = Math.round((d.threshold || 0.75) * 100);
+      h.header(`${a.repo.name} — the confidence gate`);
+      console.log('  ' + (d.confident ? h.c.green(`confident (${pct}% ≥ ${thr}%) — the agent proceeds`) : h.c.yellow(`below the floor (${pct}% < ${thr}%) — gathers context, asks James last`)));
+      for (const s of (d.steps || [])) console.log(`  ${ICON[s.action] || '·'} ${String(s.rung).padEnd(13)} ${h.c.dim(`${Math.round((s.confidence || 0) * 100)}%`)}  ${h.c.dim(s.got || s.action || '')}`);
+      if (d.prereqs) console.log(h.c.dim(`\n  would ask James: ${String(d.prereqs).slice(0, 200)}`));
+      console.log('');
+    } },
+
   // ── what its agent proposed ───────────────────────────────────────────────────────────────────────────────────────
   // §0.60.118 DK1 — James: "maybe buttons for agent tools, for the repo, to execute. replayable proceedures?" The same as the
   // Code tab's tools panel: one tool through the agent's door (this repo's scope), and .procedure files replayed in order.
@@ -461,11 +477,23 @@ export const SPEC = [
       console.log(h.c.dim(`  matching genesis: ${(d.matches || []).join(', ') || '—'}`));
     } },
   // 0.60.133 IM1 — "need to get the systems soveriegn again": which systems are, and what stands in each one's way
+  // §0.60.234 RF0/RF1 — James, 2026-10-24: "15 systems. the rest of the folders need to migrate." The refactor tool's proposal: each top-level
+  // folder outside the 15 gets a home from its edges (lib/architecture-migrate.js), as a phasemap RF2 applies. Read only.
+  { key: 'system.migrate', repo: false, usage: 'system migrate [--write <file.spec>]', about: 'the refactor tool: every folder outside the 15 systems, who uses it, and the home its edges give it (one system → that system; lib/ or two systems → core; no evidence → to confirm); --write saves it as a phasemap',
+    local: async (a) => { const AM = require('../../lib/architecture-migrate.js'); const rows = AM.propose(AM.read({})); if (a.flags.write && a.flags.write !== true) require('fs').writeFileSync(String(a.flags.write), AM.phasemap(rows, { origin: 'system migrate' })); return { rows, written: a.flags.write && a.flags.write !== true ? String(a.flags.write) : null }; },
+    print: (d, a, h) => { for (const r of d.rows || []) console.log(`  ${r.dir.padEnd(18)} ${r.placed ? h.c.mint(`→ ${r.homeDir}`) : h.c.amber('→ ? (to confirm)')}  ${h.c.dim(`${r.rule} ${r.why}`)}`); if (d.written) console.log(h.c.mint(`  written: ${d.written}`)); } },
+  // 0.60.250 SV1 — the shared store's tables: who writes and reads each, and the owner the evidence names (contested ones are his call)
+  { key: 'system.tables', repo: false, usage: 'system tables [<system>]', about: "the shared store's tables (cortex/memory/jaa-db.js): which systems write and read each, from the code; the owner the evidence names, the contested ones, and how many store users name no table it can read",
+    req: (a) => ({ method: 'GET', path: `/api/system/tables${a.args[0] ? `?system=${encodeURIComponent(a.args[0])}` : ''}` }),
+    print: (d, a, h) => {
+      for (const t of d.tables || []) console.log(`  ${t.table.padEnd(28)} ${(t.status === 'contested' ? h.c.amber(t.status) : t.owner ? h.c.mint(t.status) : h.c.dim(t.status)).padEnd(24)} ${h.c.dim(`writes: ${t.writers.join(', ') || '—'}${t.readers.length ? ` · reads: ${t.readers.join(', ')}` : ''}`)}`);
+      const s = d.summary || {}; console.log(h.c.dim(`  ${s.tables} tables · ${s.oneWriter} one writer · ${s.withCore} one system + core · ${s.onlyCore} only core · ${s.contested} contested · ${s.readOnly} read only · ${d.blind} of ${d.users} store users name no table this can read`));
+    } },
   { key: 'system.sovereign', repo: false, usage: 'system sovereign [<system>]', about: 'which systems are sovereign (nothing they require is in another system\'s folder; lib/ is the kernel) and, for each that is not, what is in the way: its data kept in cortex\'s store, a shared primitive in another system, or another system\'s capability required as a file',
     req: (a) => ({ method: 'GET', path: `/api/system/sovereign${a.args[0] ? `?system=${encodeURIComponent(a.args[0])}` : ''}` }),
     print: (d, a, h) => {
       for (const r of d.systems || []) {
-        console.log(`  ${(r.sovereign ? h.c.mint('sovereign') : h.c.amber('not yet  '))} ${r.system.padEnd(16)} ${h.c.dim(`out ${r.out} · in ${r.in} · kernel ${r.kernel}`)}${r.sovereign ? '' : h.c.dim(`  — data ${r.blockers.data} · primitive ${r.blockers.primitive} · capability ${r.blockers.capability}`)}`);
+        console.log(`  ${(r.sovereign ? h.c.mint('sovereign') : h.c.amber('not yet  '))} ${r.system.padEnd(16)} ${h.c.dim(`out ${r.out} · in ${r.in}${r.inFrom ? ` (systems ${r.inFrom.systems}, core ${r.inFrom.core})` : ''} · kernel ${r.kernel}${r.step ? ` · next: ${r.step}` : ''}`)}${r.sovereign ? '' : h.c.dim(`  — data ${r.blockers.data} · primitive ${r.blockers.primitive} · capability ${r.blockers.capability}`)}`);
         if (r.list) for (const [k, xs] of Object.entries(r.list)) for (const x of xs) console.log(h.c.dim(`      ${k.padEnd(10)} ${x.from} → ${x.to}`));
       }
       console.log(h.c.dim(`  ${(d.sovereign || []).length} sovereign: ${(d.sovereign || []).join(', ') || '—'}`));

@@ -1574,7 +1574,7 @@ async function _phaseBuild(repo, dir, { map, phase, backend = null, agent = null
               const VF0 = _require('../../lib/verify-first.js');
               const codeFiles = ((plan.order && plan.order.length) ? plan.order : plan.files.map(f => f.path)).filter(p => p !== testPath);
               let allPass = codeFiles.length > 0;
-              for (const f of codeFiles) { const v = await VF0.check({ root: _diskDir, file: f, plan, testPath }); if (v.verdict !== 'pass') { allPass = false; break; } }
+              for (const f of codeFiles) { const v = await VF0.check({ root: _diskDir, file: f, plan, testPath, runTarget: _require('../../cos/testenv/index.js').runTarget }); if (v.verdict !== 'pass') { allPass = false; break; } }
               if (allPass) existingTest = fs.readFileSync(t, 'utf8');
             }
           } catch (_) { existingTest = null; }
@@ -1636,7 +1636,7 @@ async function _phaseBuild(repo, dir, { map, phase, backend = null, agent = null
       const _root = _repoDiskDir(target.uuid);
       const _tp = (plan.testFirst && plan.testFirst.path) || _require('../../lib/test-first.js').pathFor(plan, phase);
       let vf = null;
-      try { vf = await VF.check({ root: _root, file, plan, testPath: _tp }); } catch (e) { vf = { verdict: 'missing', checks: [{ name: 'verify-first', ok: false, why: e.message }] }; }
+      try { vf = await VF.check({ root: _root, file, plan, testPath: _tp, runTarget: _require('../../cos/testenv/index.js').runTarget }); } catch (e) { vf = { verdict: 'missing', checks: [{ name: 'verify-first', ok: false, why: e.message }] }; }
       appendRow('idearium_phase_runs', { uuid: `${runId}-c${ck.chunk}-vf`, ...base, ...ck, state: vf.verdict === 'pass' ? 'verified' : 'verify-first', verdict: vf.verdict, snapshot: commitId,
         checks: vf.checks, note: vf.verdict === 'pass' ? `${file} meets its conditions as it is — no agent asked` : vf.verdict === 'missing' ? `${file} is new — built` : `${file} ${vf.verdict}: ${(vf.checks || []).filter(c => c.ok === false).map(c => c.name).join(', ') || 'no test to prove it'}`, error: null, ts: Date.now() });
       if (vf.verdict === 'pass') {
@@ -1772,7 +1772,7 @@ async function _phaseBuild(repo, dir, { map, phase, backend = null, agent = null
       if (!gate.parent) {
         const VF = _require('../../lib/verify-first.js'), CB = _require('../../lib/coder-brief.js');
         const tp = (plan.testFirst && plan.testFirst.path) || _require('../../lib/test-first.js').pathFor(plan, phase);
-        try { vfr = await VF.check({ root, file: f, plan, testPath: tp }); } catch (e) { vfr = { verdict: 'missing', checks: [{ name: 'verify-first', ok: false, why: e.message }] }; }
+        try { vfr = await VF.check({ root, file: f, plan, testPath: tp, runTarget: _require('../../cos/testenv/index.js').runTarget }); } catch (e) { vfr = { verdict: 'missing', checks: [{ name: 'verify-first', ok: false, why: e.message }] }; }
         appendRow('idearium_phase_runs', { uuid: `${runId}-${gate.id}-vf-${Date.now().toString(36)}`, ...base, ...ck, state: vfr.verdict === 'pass' ? 'verified' : 'verify-first', verdict: vfr.verdict, checks: vfr.checks, snapshot: commitId,
           note: vfr.verdict === 'pass' ? `${f} meets its conditions as it is — no agent asked` : vfr.verdict === 'missing' ? `${f} is new — built` : `${f} ${vfr.verdict}: ${(vfr.checks || []).filter(c => c.ok === false).map(c => c.name).join(', ') || 'no test to prove it'}`, error: null, ts: Date.now() });
         if (vfr.verdict === 'pass') {
@@ -3269,6 +3269,7 @@ const ROUTE_CAP = {
   'routing.agents':   CAPS.READ_IDEAS,
   'ollama.check':     CAPS.READ_IDEAS, 'ollama.check.ask': CAPS.WRITE_IDEAS,   // §CT4
   'repo.agent.route': CAPS.READ_IDEAS,   // §CT3
+  'repo.agent.gate': CAPS.READ_IDEAS,    // §CG3 — a dry read (gathers context, records nothing)
   'repo.thread': CAPS.READ_IDEAS,   // §RS9
   'repo.agent.tool.event': CAPS.WRITE_IDEAS, 'repo.agent.tool.events': CAPS.READ_IDEAS,   // §CT8
   'repo.agent.stream': CAPS.WRITE_IDEAS,   // §0.39.356 LS3
@@ -3293,6 +3294,7 @@ const ROUTE_CAP = {
   'system.drawbridge': CAPS.READ_IDEAS,   // 0.60.126 DB1 — the crossings between systems, and the ratchet
   'system.homes': CAPS.READ_IDEAS,   // 0.60.129 DB17
   'system.sovereign': CAPS.READ_IDEAS,   // 0.60.133 IM1
+  'system.tables': CAPS.READ_IDEAS,   // 0.60.250 SV1 — which system writes and reads which table of the shared store
   'system.shape': CAPS.READ_IDEAS,   // 0.60.138 IM5
   'system.nodes': CAPS.READ_IDEAS,   // 0.60.130 P33a
   'system.nodes.list': CAPS.READ_IDEAS,   // 0.60.157 GM4
@@ -3590,6 +3592,7 @@ function matchRoute(method, url) {
     ['GET',    ['api','system','drawbridge'], 'system.drawbridge'],   // 0.60.126 DB1 — every require() that crosses a system boundary; ?new=1 the ratchet's drift only
     ['GET',    ['api','system','homes'], 'system.homes'],
     ['GET',    ['api','system','sovereign'], 'system.sovereign'],
+    ['GET',    ['api','system','tables'], 'system.tables'],
     ['GET',    ['api','system','shape'], 'system.shape'],   // 0.60.138 — does each system match genesis: every role, its own file, the kernel, or missing (?system=)   // 0.60.133 IM1 — which systems are sovereign, and what stands in each one's way (?system=)
     ['GET',    ['api','data','home'], 'data.home.list'],                 // 0.60.207 DL2 — every system: where its data lives, what still waits in the root data/
     ['GET',    ['api','data','home',':system'], 'data.home.get'],        // 0.60.207 DL2 — one system: its record and each file's plan
@@ -3730,6 +3733,7 @@ function matchRoute(method, url) {
     ['GET',    ['api','repos',    ':uuid','agent'],           'repo.agent.status'],
     ['POST',   ['api','repos',    ':uuid','agent','prompt'],  'repo.agent.prompt'],
     ['GET',    ['api','repos',    ':uuid','agent','route'],   'repo.agent.route'],   // §CT3 — which model copilot's door would choose
+    ['POST',   ['api','repos',    ':uuid','agent','gate'],    'repo.agent.gate'],    // §CG3 — the confidence gate's decision for a message, without dispatching
     ['POST',   ['api','repos',    ':uuid','agent','tool-event'], 'repo.agent.tool.event'],   // §CT8 — copilot reports each tool call live
     ['GET',    ['api','repos',    ':uuid','agent','tool-events'], 'repo.agent.tool.events'], // §CT8 — the last calls, for a page that opens mid-run
     ['GET',    ['api','repos',    ':uuid','tasks'],  'repo.tasks'],      // §0.39.366 — everything the agent wearing this repo's hat is doing, and did
@@ -5978,6 +5982,10 @@ async function handle(req, res, route, query, body) {
       const SB = _require('../../lib/system-boundary.js');
       return ok(res, SB.sovereignty({ root: path.dirname(_require.resolve('../../package.json')), system: (query && query.system) || null }));
     }
+    case 'system.tables': {   // 0.60.250 SV1 — James: "i want to get each system soveriegn and inside a cos compartment". Evidence only.
+      const SB = _require('../../lib/system-boundary.js');
+      return ok(res, SB.tables({ root: path.dirname(_require.resolve('../../package.json')), system: (query && query.system) || null }));
+    }
     case 'system.homes': {   // 0.60.129 DB17 — James: "all system relevant files should stay with the system."
       const SB = _require('../../lib/system-boundary.js');
       const h = SB.homes({ root: path.dirname(_require.resolve('../../package.json')) });
@@ -7819,6 +7827,19 @@ async function handle(req, res, route, query, body) {
       return ok(res, r);
     }
 
+    // §CG3 0.60.240 — James: "before an agent does anything. if confidence is lower than 75%, context must be obtained …
+    // ask user last." The gate's decision for a message WITHOUT dispatching: what context an agent would gather before it
+    // acts (worksurface, dependencies, found context), the pre-send confidence, and whether it would reach the 75% floor
+    // or need to ask. A dry read — it records no prereq gaps. The Code tab (CG4) shows this before the docked agent answers.
+    case 'repo.agent.gate': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      if (!body.message || !String(body.message).trim()) return err(res, 400, 'message is required');
+      const RA = _require('../../lib/repo-agent.js');
+      const r = await RA.gateFor({ repo, repoDir: await _agentDir(params.uuid), message: body.message });
+      return ok(res, r);   // { ok, proceed, confident, confidence, threshold, steps, context, prereqs } or { ok:false, error }
+    }
+
     // §CT3 0.39.349 — James: "the code tab the agent tab, work surface". The docked agent shows the model copilot's door
     // would choose for this repo's agent (or that Settings pins a provider, so the door is not asked), and the other hops.
     case 'repo.agent.route': {
@@ -9143,7 +9164,7 @@ async function handle(req, res, route, query, body) {
     }
     case 'repo.phases.nodes': {
       // 0.60.229 SL9 — James, 2026-10-23: "decompose the phases into .phase with the dependancy graph per phase node. then move them into the
-      // repsective systems". The nodes are written by the compile step (node emerge/compiler/phase-specs.js --all), committed with the code;
+      // repsective systems". The nodes are written by the compile step (node lib/emerge/compiler/phase-specs.js --all), committed with the code;
       // this reads what is written, through lib only (idearium → emerge would be a new crossing, DG2): the nodes per owner system, the
       // phases of the maps with no node yet, and nodes whose phase is in no map any more.
       const repo = getRepoLayer().get(params.uuid);
@@ -9168,7 +9189,7 @@ async function handle(req, res, route, query, body) {
       }
       const missing = [...want].filter(k => !have.has(k)).sort(), stale = [...have.keys()].filter(k => !want.has(k)).sort();
       return ok(res, { nodes: have.size, phases: want.size, bySystem, missing: missing.slice(0, 200), missingCount: missing.length, stale: stale.map(k => ({ key: k, file: have.get(k) })).slice(0, 200), staleCount: stale.length,
-        remedy: missing.length || stale.length ? 'write them: node emerge/compiler/phase-specs.js --all (the compile step; the nodes are committed with the code)' : null });
+        remedy: missing.length || stale.length ? 'write them: node lib/emerge/compiler/phase-specs.js --all (the compile step; the nodes are committed with the code)' : null });
     }
     case 'repo.phases.groom': {
       // 0.60.227 SL3 — James, 2026-10-23: "need to do something about the dependancy graph." lib/phase-groom.js: files from a phase's own
@@ -11058,7 +11079,7 @@ export function startAPI() {
         // (not local to this closure) so a real shutdown path — cortex's
         // own migration found it has none either, a separate, pre-
         // existing gap, not fixed here — has something real to call.
-        _pulseClient = _require('../../orchestrator/lib/pulse.js').createPulse({
+        _pulseClient = _require('../../lib/pulse.js').createPulse({
           systemId: 'idearium', port: PORT,
           onOffline: () => console.warn('[idearium] orchestrator unreachable — pulse will keep retrying'),
           onOnline:  ({ latency }) => console.log(`[idearium] orchestrator back online, latency=${latency}ms`),

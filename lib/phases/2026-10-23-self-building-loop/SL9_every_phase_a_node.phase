@@ -7,11 +7,11 @@ intent: null
 summary: SL9_every_phase_a_node (library) — 7 file(s)
 system: idearium
 tags: []
-exported_at: 1792787921100
+exported_at: 1792877163851
 source: nexus.lib.node-export
 occurrences: 1
-firstSeenAt: 1792787921100
-lastSeenAt: 1792787921100
+firstSeenAt: 1792877163851
+lastSeenAt: 1792877163851
 fingerprint: null
 payload:
   id: SL9_every_phase_a_node
@@ -22,7 +22,7 @@ payload:
     DONE 0.60.229 — test-phase-nodes-all 5/5; 1939 phases written beside 14 owner systems, a second
     pass writes nothing
   files:
-    - emerge/compiler/phase-specs.js
+    - lib/emerge/compiler/phase-specs.js
     - lib/phase-dag.js
     - lib/phase-deps-gate.js
     - idearium/api/index.js
@@ -35,4 +35,4 @@ payload:
   blocks:
     - MOD-SL-NODES
   spec: docs/self-building-loop.spec
-  graph: 607e664a07b3c690
+  graph: e52fc4da1922715e

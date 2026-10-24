@@ -7,11 +7,11 @@ intent: null
 summary: OR1_one_door (?) — 5 file(s)
 system: idearium
 tags: []
-exported_at: 1792787677097
+exported_at: 1792879044327
 source: nexus.lib.node-export
 occurrences: 1
-firstSeenAt: 1792787677097
-lastSeenAt: 1792787677097
+firstSeenAt: 1792879044327
+lastSeenAt: 1792879044327
 fingerprint: null
 payload:
   id: OR1_one_door
@@ -23,9 +23,9 @@ payload:
     - ollama/lib/ollama-client.js
     - cortex/boot.js
     - guardian/server.js
-    - ui/home/areas/agent-suite.js
+    - lib/ui/home/areas/agent-suite.js
     - ollama/ollama-runtime.js
   depends_on: []
   blocks: []
   spec: null
-  graph: 1fb3963d095de33b
+  graph: ace797d8c5a4354d

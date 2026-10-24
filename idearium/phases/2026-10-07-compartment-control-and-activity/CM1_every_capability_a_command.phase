@@ -9,11 +9,11 @@ intent: null
 summary: CM1_every_capability_a_command (?) — 4 file(s)
 system: idearium
 tags: []
-exported_at: 1792787677070
+exported_at: 1792841754973
 source: nexus.lib.node-export
 occurrences: 1
-firstSeenAt: 1792787677070
-lastSeenAt: 1792787677070
+firstSeenAt: 1792841754973
+lastSeenAt: 1792841754973
 fingerprint: null
 payload:
   id: CM1_every_capability_a_command
@@ -25,8 +25,8 @@ payload:
     - idearium/cli/route-commands.js
     - idearium/cli/store-chatter.js
     - idearium/cli/index.js
-    - cli/nexus.js
+    - lib/cli/nexus.js
   depends_on: []
   blocks: []
   spec: null
-  graph: 7b012b7934a26bf1
+  graph: 83ee115278fd0acb

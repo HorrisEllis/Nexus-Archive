@@ -54,6 +54,39 @@ decisions:
     chosen: "caps are applied by the OS or the hypervisor and read back; what cannot be enforced is said"
     by: "his axioms §1.2, §0.1; the 'hook in' reading above is to confirm"
 
+  # ── 2026-10-24, his answers (see the ADDENDUM at the end for the context) ──
+  CS_D9_cli_inside_nexus:
+    chosen: "lib/cli → lib/nexus/cli"
+    by: "his, 2026-10-24: \"yes to inside.\" (asked: lib/nexus/cli, or keep lib/cli)"
+  CS_D10_cockpit_home:
+    status: "OPEN, to confirm"
+    asked_back: "his, 2026-10-24: \"cockpit becomes brainos?\" (asked: its name inside idearium, cockpit or forge-ide)"
+    readings: >-
+      The coder's two readings: (a) cockpit's back end (forge-ide per its own spec: cli, core, live, pipeline) becomes BrainOS's back end,
+      under BrainOS's UI (lib/ui/brainos, "the ui floating on top"); (b) the folder is renamed brainos. He asked it as a question, so it waits
+      on his answer.
+  CS_D11_warp_is_a_system:
+    chosen: "emerge integrates with warp, and the two are one system (the 16th): warp"
+    by: "his, 2026-10-24: \"yes move emerge and integrate with warp and make it as system.\" Supersedes CN_D2 (\"1. moved to lib?\", warp as a lib primitive) by his later word; CN_D2 is kept (§0.3)."
+    reading_to_confirm: >-
+      The coder's reading, by his axioms (DB0a primitives are kernel; DB0b only routes between systems): a system is reached by route, but
+      Event/Gate/Stream/StreamLog are used in-process by every system. So one copy of those primitives stays in core (lib/siso, from the four
+      copies), and the warp system is warp's dispatch, crystallizer and benchmarks with emerge's runtime (core/, chunk/, codegen, kernel). Its
+      name: "warp" (the coder's). To confirm.
+  CS_D12_spec_compiler_and_ide_to_idearium:
+    chosen: "emerge's spec compiler (lib/emerge/compiler, SPEC_COMPILER.spec) and its IDE (emerge-ide.js) move to idearium"
+    by: "his, 2026-10-24: \"the nspeccompiler and ide can move to idearium\""
+  CS_D13_changelogs_to_versionium:
+    chosen: "the 442 CHANGELOG-*.md move to versionium"
+    by: "his, 2026-10-24: \"versionium\" (asked: docs/changelogs, the coder's recommendation, or versionium). The coder's recommendation was docs; his call is versionium."
+    design_by_the_axioms: >-
+      Core must not reach into a system (the ratchet refuses it). So the release tooling that is version work moves with them: lib/release-notes.js,
+      lib/nexus-releases.js, lib/release-version.js, lib/checks/ck-253-versions.js and scripts/release-zip.js. Core's censuses
+      (lib/phase-census.js, lib/spec-census.js, lib/context-atlas.js, lib/readme-generate.js) read them through versionium's route.
+  CS_D14_autopilot_to_orchestrator:
+    chosen: "lib/nexus/autopilot.js → orchestrator/autopilot.js, still its own process"
+    by: "his question, 2026-10-24: \"what about moving autopilot ot the porchastrator folder?\"; the coder recommended yes. Recorded as DB23 in the drawbridge map; phased here."
+
 phases:
 
   CS1_a_version_is_a_system_state:
@@ -112,7 +145,7 @@ phases:
     layer: foundation
     status: OPEN
     depends_on: [CS_D7_sovereign_first, COSA3_run_and_supervise]
-    files: [cos/spine/boot.js, cos/app/runtime.js, nexus/autopilot.js, cos/compartment/process-runner.js]
+    files: [cos/spine/boot.js, cos/app/runtime.js, lib/nexus/autopilot.js, cos/compartment/process-runner.js]
     spec: cos/spec/cos-spine.spec
     blocks: [MOD-CS-BOOT]
     does: >-
@@ -137,7 +170,7 @@ phases:
     layer: integration
     status: OPEN
     depends_on: [CS1_a_version_is_a_system_state, CS4_every_system_a_compartment, CS_D3_the_spec_rebuilds_the_system]
-    files: [cos/spine/rebuild.js, cos/spine/version.js, cos/workspace/index.js, emerge/compiler/kg-builder.js, emerge/compiler/phase-specs.js]
+    files: [cos/spine/rebuild.js, cos/spine/version.js, cos/workspace/index.js, lib/emerge/compiler/kg-builder.js, lib/emerge/compiler/phase-specs.js]
     spec: cos/spec/cos-spine.spec
     blocks: [MOD-CS-REBUILD]
     does: >-
@@ -288,3 +321,10 @@ phases:
 # load balancer).
 # The order in this map is now: CS4a (COS boots alone, Cortex core; no code moves) → per system, lowest friction first: DB6 → DB16/DB4/DB5 →
 # DB11 → CS4 (open on demand) → IM6 → CS11 (RAID in the exe) → CS7 (balance through RAID).
+
+# ## ADDENDUM 2026-10-24 (c) — the phases mapped here on 2026-10-24 moved to their own map (nothing lost, §0.3)
+# His 2026-10-24 directions were recorded here: the placement moves CS12–CS21, and each system sovereign and in its compartment,
+# SV0–SV8. This map is tied to cos/spec/cos-spine.spec, and every phase in it must build modules of that spec
+# (tests/modules/test-substrate-spec.test.js SS-02). Those phases build other things, so SS-02 went red on main
+# (0.60.244, the coder's miss). They now live, word for word, in docs/2026-10-24-sovereign-systems-phasemap.spec. His answers
+# CS_D9–CS_D14 stay above in decisions: they are answers about COS, not phases. DB6 still ends at SV7, and CS4 still waits on DB6.

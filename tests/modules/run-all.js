@@ -454,6 +454,7 @@ const SUITES = [
   'test-cos-run-target.test.js',     // 0.60.166 CT1 — the gate's test runs inside COS's process sandbox (clean env, timeout, output cap); portable, no KVM needed
   'test-tf-already-done.test.js',      // 0.60.167 — a phase whose files already exist is not stuck forever on test_first:require (TF.decide: passes-already+exists = already satisfied)
   'test-autofill-learned.test.js',     // 0.60.225 JA1 — the autofill matcher consults a per-site learned map (a picked field fills every time); works for micro1/Mercor/Turing/etc
+  'test-architecture-migrate.test.js',  // 0.60.234 RF0/RF1 — the refactor tool: every folder outside the 15 systems gets a home from its edges, as a DAG-clean phasemap
   'test-autofill-learn-macro.test.js',  // 0.60.232 JA5 — the pick is also a macro + .macro node; a real page: label → box → selector-check's selector
   'test-autofill-learn-ui.test.js',     // 0.60.231 JA4 — the learn-loop on screen (Clear Glass): Pick what a fill could not place; Fields it learned, with Forget
   'test-autofill-learn-pick.test.js',   // 0.60.230 JA3 — the element picker on a missed field: needsPick, a stable unique key, saved per-site, filled again
@@ -472,8 +473,11 @@ const SUITES = [
   'test-upload-placement.test.js',      // 0.60.173 UP1-UP4 — a zip with an intent placed against the repo, waits for his answer, only his answer writes; his moves learned; the panel in Clear Glass
   'clear-glass-page-map.test.js',       // 0.60.174 PM1-PM4 — the page as blocks → index + chunks → a synthesized map that learns per site → intent → targets (layout in Clear Glass)
   'clear-glass-page-session.test.js',   // 0.60.175 PM5-PM8 — the page map as driver actions, co-pilot tools and commands; attention → Nerve → Ollama feel; live re-map; the panel in Clear Glass
+  'test-raid-port.test.js',             // 0.60.246 GD1 done (BCR2): RAID's one door; RP-04 — Guardian loads none of RAID's code
+  'test-cos-services.test.js',          // 0.60.245 BCR1 (from brave-cori's 0.60.235 SV0) — his engines in COS: the gate grammar (no IPC string run as code), two kernels side by side, upstream unchanged, no secret carried in
   'test-substrate-spec.test.js',        // 0.60.176 — docs/substrate.spec, docs/belief-loop.spec, emerge SPEC_COMPILER compile at full depth, tied to their phases; emerge build order topological
   'test-phase-specs.test.js',           // 0.60.176 PS1 — each phase specced again with its DAG and related files beside its owner; drift checked
+  'test-loom-into-cos.test.js',         // 0.60.248 (from brave-cori 0.60.241 LM0–LM3) and 0.60.249 LM4 — Loom reaches into no other system, and runs in its COS compartment behind the wall (LI-08 the real move-in)
   'test-data-clearup.test.js',          // 0.60.177 DL0/DL1 — every data file placed by docs/data-layout.spec; moved by hash with a manifest; rolled back byte for byte
   'test-readme-generate.test.js',    // 0.60.153 — the README: every system, module and file; every phase; the data; Idearium; every release; under 512 KiB
   'test-ui-editor.test.js',           // 0.60.122 UE0/UE1 — the UI editor: GrapesJS vendored, a repo page opened, edited, saved back (Clear Glass)
@@ -534,6 +538,7 @@ const SUITES = [
   'test-capability-registry.js',
   'test-raid-router.js',
   'test-snr-filter.js',
+  'test-agent-confidence-gate.test.js', // 0.60.238 CG1 — before an agent acts, <75% confidence obtains context (worksurface, deps, find, ask-user LAST)
   'test-ui-registry.js',
   // Added 2026-07-06 — built alongside cortex/core/raid/snr-filter.js and
   // the real roleConfidence/topologicalProximity fitness terms this pass.
