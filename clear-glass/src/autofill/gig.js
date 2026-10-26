@@ -246,7 +246,8 @@ function matchGigFields(domFields, gig) {
     if (['submit', 'button', 'hidden', 'checkbox', 'radio', 'file', 'image', 'reset', 'search'].includes(type)) continue;
     let part = null, confidence = null, source = null;
     for (const [src, text, conf] of [['name', field.name, 'medium'], ['id', field.attrs && (field.attrs.id || field.id_attr), 'medium'],
-      ['label', field.label, 'medium'], ['label', field.attrs && field.attrs['aria-label'], 'medium'], ['placeholder', field.attrs && field.attrs.placeholder, 'low']]) {
+      ['label', field.label, 'medium'], ['label', field.attrs && field.attrs['aria-label'], 'medium'], ['context', field.context, 'medium'],   // §FQ4 the row's heading
+      ['placeholder', field.attrs && field.attrs.placeholder, 'low']]) {
       const p = _gigPart(text);
       if (p) { part = p; source = src; confidence = conf; break; }
     }
@@ -274,7 +275,8 @@ const RANK = { high: 3, medium: 2, low: 1 };
 
 /** detectGig(dom, gig, { agentId }) — what would be filled where; nothing is typed. */
 async function detectGig(dom, gig, { agentId = 'default' } = {}) {
-  const domFields = await dom.handleQuery({ agentId, selector: 'input, textarea' });
+  const domFields = await (dom.queryFields ? dom.queryFields({ agentId, selector: 'input, textarea' }) : dom.handleQuery({ agentId, selector: 'input, textarea' }));   // §FQ1 0.60.262
+  if (!Array.isArray(domFields)) return { error: (domFields && domFields.error) || 'the page did not list its fields' };
   if (domFields && domFields.error) return { error: domFields.error };
   const matches = matchGigFields(domFields, gig);
   const filledKeys = new Set(matches.map(m => m.key));
@@ -283,7 +285,8 @@ async function detectGig(dom, gig, { agentId = 'default' } = {}) {
 
 /** fillGig(dom, gig, { agentId, minConfidence }) — types the matched parts in. Never saves, never publishes. */
 async function fillGig(dom, gig, { agentId = 'default', minConfidence = 'medium' } = {}) {
-  const domFields = await dom.handleQuery({ agentId, selector: 'input, textarea' });
+  const domFields = await (dom.queryFields ? dom.queryFields({ agentId, selector: 'input, textarea' }) : dom.handleQuery({ agentId, selector: 'input, textarea' }));   // §FQ1 0.60.262
+  if (!Array.isArray(domFields)) return { error: (domFields && domFields.error) || 'the page did not list its fields' };
   if (domFields && domFields.error) return { error: domFields.error };
   const floor = RANK[minConfidence] || RANK.medium;
   const all = matchGigFields(domFields, gig);
@@ -315,6 +318,12 @@ function gigFile(gig = {}) {
   const yaml = require('js-yaml');
   const body = yaml.dump({ format: GIG_FORMAT, platform: 'fiverr', ...gig }, { lineWidth: 100, noRefs: true, quotingType: '"' });
   return { text: `# Clear Glass gig file (${GIG_FORMAT}) — load it in Settings → Autofill → Gig, or in the gig panel.\n${body}`, filename: `${_slug(gig.title)}.gig` };
+}
+
+/** gigFilename(name) → the name ending in .gig, never .gig.json or .yaml (§AT4 0.60.256, James: "fix it so its .gig not .gig.json") */
+function gigFilename(name) {
+  const base = String(name || 'gig').replace(/[\\/:*?"<>|]+/g, '-').replace(/(\.(json|ya?ml|txt|gig))+$/i, '') || 'gig';
+  return `${base}.gig`;
 }
 
 /** gigTemplate() → { text, filename } — an empty .gig with every field, its limit and what it is for */
@@ -352,4 +361,4 @@ function gigTemplate() {
   return { text, filename: 'gig-template.gig' };
 }
 
-module.exports = { GIG_FORMAT, gigFile, gigTemplate, END_STATE_QUESTIONS, briefToSpec, LIMITS, TIERS, GIG_PATTERNS, buildGigPrompt, parseGig, gigParts, gigText, matchGigFields, detectGig, fillGig };
+module.exports = { GIG_FORMAT, gigFile, gigFilename, gigTemplate, END_STATE_QUESTIONS, briefToSpec, LIMITS, TIERS, GIG_PATTERNS, buildGigPrompt, parseGig, gigParts, gigText, matchGigFields, detectGig, fillGig };

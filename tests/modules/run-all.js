@@ -18,6 +18,8 @@ const fs   = require('fs');
 const MODULES_DIR = __dirname;
 
 const SUITES = [
+  'test-autofill-active.test.js',         // 0.60.257 AF1 — activeProfile (default/sole/first, never null) + setDefault + matchOne; the "no profile 'null'" fix
+  'test-autofill-fill-active.test.js',    // 0.60.258 AF2 — fillFields/detectFields default to the active profile (copilot/agents stop passing null); zero profiles → clean error
   'test-build-paths.test.js',             // 0.60.67 WB0 — every build path and whether WARP is on it, measured; CK-255
   'test-warp-rung.test.js',               // 0.60.73 WB1/WB2 — WARP around the chosen agent: cache, axiom gate, retain; gate mode never serves
   'test-projects-overview.test.js',       // 0.60.74 COSA10 — every project on one list; no two API routes share a method and path
@@ -77,6 +79,11 @@ const SUITES = [
   'test-pipeline-routing.test.js', // 0.39.286 RG — routing and fallback: modes, chains, failure classes, breaker, the route walked and kept on the chunk, /api/routing, the settings page
   'test-genesis-and-architecture-spec.test.js', // 0.39.286 GN1/AR1 — genesis 1.1.0 (registry doorway, routing) the default system template; the architecture spec cut to what exists
   'test-genesis-sandboxed.test.js', // DB19 (parked) — a fork of genesis: sealed sandbox, the registry the drawbridge, three tunnels (compartment, bridge, contract)
+  'test-recall-tool.test.js', // 0.60.261 RC1 — nexus.recall.tool: the event ledger, runs, orchestrator ledger, .response nodes, chat ledgers and a log in one compact read
+  'test-gate-waits-for-verdict.test.js', // 0.60.257 GV1–GV4 — RAID holds a phase nothing can check for his verdict (never FAILED, no self-heal); accept lands, reject reverts
+  'test-autofill-transfer.test.js', // 0.60.256 AT1–AT5 — the autofill data out and in (one .autofill file, a merge, undo); gig files are .gig
+  'test-registry-draft.test.js', // 0.60.255 (from brave-cori 0.60.229) DB16 — a registry drafted for every system with none, from its tree; not in force until he accepts it
+  'test-self-building-loop.test.js', // 0.60.255 (from brave-cori 0.60.225) SL4 the loop (build, land by his rule, close, next; budget, three misses, decisions skipped) and SL5 his rule B; LP-05 in Clear Glass
   'test-evidence-close.test.js', // 0.60.224 SL2 — an open phase closes by evidence, its own (or file-specific) tests passing; dry run first; EC-05 in Clear Glass
   'test-phase-close.test.js', // 0.60.223 SL1 — a proven, landed phase closes itself; undoing its change reopens it (lib/phase-close.js); PC-06 in Clear Glass
   'test-build-queue.test.js', // 0.60.222 SL0 — what can be built now, and why every other open phase cannot (lib/build-queue.js); BQ-05 in Clear Glass
@@ -456,6 +463,9 @@ const SUITES = [
   'test-autofill-learned.test.js',     // 0.60.225 JA1 — the autofill matcher consults a per-site learned map (a picked field fills every time); works for micro1/Mercor/Turing/etc
   'test-architecture-migrate.test.js',  // 0.60.234 RF0/RF1 — the refactor tool: every folder outside the 15 systems gets a home from its edges, as a DAG-clean phasemap
   'test-autofill-learn-macro.test.js',  // 0.60.232 JA5 — the pick is also a macro + .macro node; a real page: label → box → selector-check's selector
+  'test-cg-agent-doors.test.js',  // 0.60.251 AD1–AD5 + SI1 — autofill/gig/macros reachable by agents, co-pilot and rows; no userscript on a sign-in page
+  'test-nexus-update.test.js',  // 0.60.252 UP1–UP4 — update Nexus from GitHub (git now, COS the end state): check, apply, rollback, the hat's tool, the page in Clear Glass
+  'test-eros-hooks.test.js',  // 0.60.253 ER1–ER4 — ErosmancerOS into Snowflake, the accounts and the DOM mutator; the right tab or none
   'test-autofill-learn-ui.test.js',     // 0.60.231 JA4 — the learn-loop on screen (Clear Glass): Pick what a fill could not place; Fields it learned, with Forget
   'test-autofill-learn-pick.test.js',   // 0.60.230 JA3 — the element picker on a missed field: needsPick, a stable unique key, saved per-site, filled again
   'test-autofill-learn-save.test.js',   // 0.60.226 JA2 — a picked field saves per-origin to site-settings (autofill.field.<key>) and the fill path reads it back
@@ -539,6 +549,9 @@ const SUITES = [
   'test-raid-router.js',
   'test-snr-filter.js',
   'test-agent-confidence-gate.test.js', // 0.60.238 CG1 — before an agent acts, <75% confidence obtains context (worksurface, deps, find, ask-user LAST)
+  'test-framework-trial-deploy.test.js', // 0.60.247 AU2 — the framework trial deploys itself (collect answers; judging stays blind/human)
+  'test-flow-sources.test.js',           // 0.60.248 BX2 — the BrainOS FlowGraph backend (phases+DAG, runs, mesh; each source best-effort, named on failure)
+  'test-automation-registry.test.js',    // 0.60.249 AU1 — the automation union: one neutral door over the six sources; absent named, not thrown; run records under the source
   'test-ui-registry.js',
   // Added 2026-07-06 — built alongside cortex/core/raid/snr-filter.js and
   // the real roleConfidence/topologicalProximity fitness terms this pass.

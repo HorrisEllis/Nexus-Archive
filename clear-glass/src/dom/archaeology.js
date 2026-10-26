@@ -129,6 +129,23 @@ const DOM_OBSERVER_SCRIPT = `
     return null;
   }
 
+  // §FQ4 0.60.265 — James's Fiverr gig editor: "fill this in for me" matched nothing. Its fields have no <label>; "Gig title" and
+  // "Search tags" are headings in the row's other column. The field's context: the nearest heading-like element BEFORE it inside
+  // the closest ancestor that has one (up to 6 levels), short text only. A guess from layout, so matchers use it at medium.
+  // (No template literal and no regex here: this source lives inside DOM_OBSERVER_SCRIPT, one big template literal.)
+  function _contextFor(el) {
+    const HEAD = 'h1,h2,h3,h4,h5,h6,label,legend,[role="heading"],b,strong,[class*="title"],[class*="label"],[class*="heading"]';
+    let a = el.parentElement;
+    for (let depth = 0; a && depth < 6; depth++, a = a.parentElement) {
+      const heads = [...a.querySelectorAll(HEAD)].filter(h => h !== el && !h.contains(el) && (h.compareDocumentPosition(el) & 4));
+      for (let i = heads.length - 1; i >= 0; i--) {
+        const t = (heads[i].innerText || '').trim();
+        if (t && t.length <= 60 && t.split(String.fromCharCode(10)).length <= 2) return t;
+      }
+    }
+    return null;
+  }
+
   function buildMeta(el) {
     const r = el.getBoundingClientRect ? el.getBoundingClientRect() : {};
     const isField = ['input', 'textarea', 'select'].includes(el.tagName?.toLowerCase());
@@ -148,6 +165,7 @@ const DOM_OBSERVER_SCRIPT = `
       name:     el.name || null,
       type:     el.type || null,
       label:    isField ? _labelFor(el) : null,
+      context:  isField ? _contextFor(el) : null,   // §FQ4
     };
   }
 
@@ -283,6 +301,26 @@ const DOM_OBSERVER_SCRIPT = `
       return { ok: true, nodeId: cgId };
     },
 
+    // §ER3 0.60.253 — before ErosmancerOS types a value like a person: the field in view, focused and empty; its centre in viewport pixels
+    prepareType(cgId) {
+      const el = [...document.querySelectorAll('*')].find(e => e.__cgId === cgId);
+      if (!el) return { error: 'Element not found' };
+      const tag = el.tagName.toLowerCase(), editable = el.isContentEditable;
+      if (!['input', 'textarea'].includes(tag) && !editable) return { error: 'a ' + tag + ' cannot be typed into (an input, a textarea or an editable element can)' };
+      if (el.disabled || el.readOnly) return { error: 'the field is disabled or read-only' };
+      el.scrollIntoView({ block: 'center', inline: 'center' });
+      el.focus();
+      if (editable) el.innerText = '';
+      else {
+        const proto = tag === 'textarea' ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype;
+        const set = Object.getOwnPropertyDescriptor(proto, 'value')?.set; if (set) set.call(el, ''); else el.value = '';
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      const r = el.getBoundingClientRect();
+      if (!(r.width > 0 && r.height > 0)) return { error: 'the field is not visible' };
+      return { ok: true, x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2), tag };
+    },
+
     highlight(selector, color = '#00f5ff') {
       document.querySelectorAll('[data-cg-highlight]').forEach(e => {
         e.style.outline = '';
@@ -390,6 +428,26 @@ class DomArchaeology {
   }
 
   // ── Query ─────────────────────────────────────────────────────────────
+  // §FQ1 0.60.262 — James, 2026-10-26, the co-pilot on a Fiverr gig editor: "fill this in for me" → "Did not fill: matchGigFields: domFields
+  // must be the dom_query array". The page had no dom mesh (window.__cgDomMesh), so the query answered undefined and every fill threw a
+  // type error. The fields of a page, for every fill: the mesh is injected once if it is missing, and a page that still cannot answer says why.
+  async queryFields({ agentId = 'default', selector = 'input, select, textarea' } = {}) {
+    const wc = this._getWebContents(agentId);
+    if (!wc) return { error: `no tab for "${agentId}": open the page in a Clear Glass tab first` };
+    return this.queryFieldsOf(wc, { agentId, selector });
+  }
+
+  /** queryFieldsOf(wc) — the same, for a webContents the caller already holds (§AF3 0.60.263: the inline chip, per tab) */
+  async queryFieldsOf(wc, { agentId = 'default', selector = 'input, select, textarea' } = {}) {
+    const ask = () => wc.executeJavaScript(`window.__cgDomMesh ? window.__cgDomMesh.query(${JSON.stringify(selector)}) : null`, true);
+    let r = null; try { r = await ask(); } catch (e) { return { error: `the page could not be read: ${e.message}` }; }
+    if (!Array.isArray(r)) {
+      try { await this.inject(wc, agentId); r = await ask(); } catch (e) { return { error: `the page's field reader could not be loaded: ${e.message}` }; }
+    }
+    if (!Array.isArray(r)) return { error: `the page did not list its fields (${wc.getURL ? wc.getURL() : 'this tab'}): reload the tab and try again` };
+    return r;
+  }
+
   async handleQuery({ agentId = 'default', selector, cgId, tree = false, x, y }) {
     const wc = this._getWebContents(agentId);
     if (!wc) return { error: 'No webcontents' };
@@ -413,15 +471,38 @@ class DomArchaeology {
   }
 
   // ── Mutate ────────────────────────────────────────────────────────────
-  async handleMutate({ agentId = 'default', cgId, selector, mutation }) {
+  async handleMutate({ agentId = 'default', cgId, selector, mutation, via = 'native', value, text }) {
     const wc = this._getWebContents(agentId);
     if (!wc) return { error: 'No webcontents' };
+    // §ER3 0.60.253 — found while hooking Eros in: browser_action documents dom_mutate as {selector, value} and sends exactly that, but
+    // this read only `mutation`, so the page got mutate(cgId, undefined), threw, and the agent's call timed out (macro dom_mutate
+    // steps too). The documented shorthand is a mutation; a call with neither is refused with why.
+    if (!mutation && (value !== undefined || text !== undefined)) mutation = { ...(value !== undefined ? { value: String(value) } : {}), ...(text !== undefined ? { text: String(text) } : {}) };
+    if (!mutation || typeof mutation !== 'object') return { error: 'nothing to change: give mutation {value|text|html|style|attrs|remove} (or value / text)' };
 
     if (!cgId && selector) {
       // Resolve selector → cgId
       const el = await wc.executeJavaScript(`window.__cgDomMesh?.queryOne(${JSON.stringify(selector)})`, true);
       if (!el) return { error: `Element not found: ${selector}` };
       cgId = el.id;
+    }
+
+    // §ER3 0.60.253 — James, 2026-10-25: "can you hook erosmanceros into snowflake, accounts manager, and the dom mutator." via 'eros':
+    // a value is TYPED by ErosmancerOS (a curved pointer path, a click, one character at a time, at the page's account pace) instead
+    // of set. Only the value is typed; the rest of the mutation (text, html, style, attrs, remove) is applied natively after it.
+    // Eros unavailable → the error says so: nothing is set instead, silently (§1.2).
+    if (via === 'eros' && mutation && typeof mutation.value === 'string') {
+      if (typeof this.erosInput !== 'function') return { error: 'ErosmancerOS is not wired into this Clear Glass (via "native" sets the value instead)' };
+      const at = await wc.executeJavaScript(`window.__cgDomMesh?.prepareType(${JSON.stringify(cgId)})`, true);
+      if (!at || at.error) return { error: (at && at.error) || 'the page has no DOM mesh to place the field' };
+      let typed;
+      try { typed = await this.erosInput(agentId, wc.getURL(), { x: at.x, y: at.y, action: 'type', text: mutation.value }); }
+      catch (e) { return { error: `ErosmancerOS could not type it: ${e.message}`, via: 'eros' }; }
+      const { value: _v, ...rest } = mutation;
+      const after = Object.keys(rest).length ? await wc.executeJavaScript(`window.__cgDomMesh?.mutate(${JSON.stringify(cgId)}, ${JSON.stringify(rest)})`, true) : null;
+      const result = { ok: true, nodeId: cgId, via: 'eros', typed: mutation.value.length, profile: typed && typed.profile, at: { x: at.x, y: at.y }, ...(after && after.error ? { rest: after } : {}) };
+      this.sse.emit('dom.mutated', { agentId, cgId, mutation: { ...mutation, value: `(${mutation.value.length} chars typed)` }, result, ts: Date.now() });
+      return result;
     }
 
     const result = await wc.executeJavaScript(
