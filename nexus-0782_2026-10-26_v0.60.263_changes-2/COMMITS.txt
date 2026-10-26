@@ -1,0 +1,4 @@
+028ae4f7 map: gate chain (b) — the contract carries the gates, a ledger row per gate, Cortex archives the fulfilled (GC6, GC7)
+4fc8ae88 0.60.263 AF3: the inline autofill chip under a field (isolated world, never the password)
+33099a48 0.60.262 FQ1: every fill reads the page's fields through queryFields (mesh injected if missing)
+4b9e866e 0.60.261 RC1: nexus.recall.tool; merge main (AE1) and fix the macro recorder's automation-engine require
