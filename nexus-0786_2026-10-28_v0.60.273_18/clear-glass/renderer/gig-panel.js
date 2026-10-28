@@ -1,0 +1,208 @@
+/**
+ * clear-glass/renderer/gig-panel.js — Fiverr in the browser itself (0.59.3).
+ * James, 2026-10-10: "fiverr tutorial for helping me speed up gigs as much as possible, i need serious help. i have no
+ * bandwidth, and this is my only chance. gigs, portfolio, i was thinking to have the questions for the end state
+ * conditions in the gigs, so i can just send them to idearium and have them built. like this is vital also, its built
+ * somewhere but not in the browser.html".
+ *
+ * It was built — src/autofill/gig.js — but its only screen was Settings → Autofill, a separate window. This panel is in the
+ * browser, beside the Fiverr page, in two steps:
+ *   1 WRITE   one line of what he offers → the whole gig (title, tags, description, packages, FAQ, and five buyer questions
+ *             that are the work's end-state conditions) → copy any part, or fill the open Fiverr editor. Nothing is
+ *             saved or published: Publish stays his click.
+ *   2 BUILD   an order comes in → paste the buyer's answers → Send to Idearium: a spec (end state, users, must/never,
+ *             how we know it is done, materials) saved as a new repo, ready to build.
+ * The markup is in browser.html (#gig-panel); this file is only behaviour (CG2: the HTML holds the structure).
+ */
+(function () {
+  'use strict';
+  const cg = window.cg;
+  const $ = (id) => document.getElementById(id);
+  const panel = $('gig-panel');
+  if (!panel || !cg || !cg.autofill) return;
+  const agentId = new URLSearchParams(location.search).get('agentId') || 'default';
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const store = { get(k, d) { try { const v = localStorage.getItem(`cg.gig.${k}`); return v == null ? d : JSON.parse(v); } catch (_) { return d; } },
+    set(k, v) { try { localStorage.setItem(`cg.gig.${k}`, JSON.stringify(v)); } catch (_) {} } };
+  const DEFAULT_Q = ['What must the finished result do or be? (the end state, in your words)', 'Who will use it, and where? (people, devices, platform)',
+    'What must it always do — and never do?', 'How will you check it is done? (the test you will run, or what you will look at)', 'What materials, examples, logins or files do I need?'];
+  let GIG = store.get('last', null);
+  // 0.60.267 — the gig in this panel is the one the chips under each input offer (main keeps it as the last gig), and they refresh when it changes
+  function shareGig() { if (!GIG) return; try { cg.autofill.gigSetLast(GIG).catch(() => {}); } catch (_) {} try { window.dispatchEvent(new Event('cg:gig-changed')); } catch (_) {} }
+  if (GIG) setTimeout(shareGig, 0);
+  const say = (id, msg, kind = '') => { const el = $(id); el.textContent = msg; el.className = `gig-status ${kind}`; };
+
+  function show(on) { panel.classList.toggle('visible', on); if (on) loadProfiles(); }
+  $('btn-gig').addEventListener('click', () => show(!panel.classList.contains('visible')));
+  $('gig-close').addEventListener('click', () => show(false));
+  for (const t of panel.querySelectorAll('.gig-tab')) t.addEventListener('click', () => step(t.dataset.step));
+  function step(n) {
+    for (const t of panel.querySelectorAll('.gig-tab')) t.classList.toggle('on', t.dataset.step === n);
+    $('gig-step-write').hidden = n !== 'write'; $('gig-step-build').hidden = n !== 'build';
+    if (n === 'build') paintQuestions();
+  }
+
+  async function loadProfiles() {
+    let ps = []; try { ps = await cg.autofill.listProfiles(); } catch (_) {}
+    const sel = $('gig-profile'), keep = store.get('profile', null);
+    sel.innerHTML = ps.map(p => `<option value="${esc(p.id)}" ${p.id === keep ? 'selected' : ''}>${esc(p.name || p.label || p.id)}</option>`).join('');
+    $('gig-no-profile').hidden = ps.length > 0; $('gig-write').disabled = !ps.length;
+  }
+  $('gig-open-settings').addEventListener('click', () => { try { cg.window.openSettings(); } catch (_) {} });
+  $('gig-profile').addEventListener('change', () => store.set('profile', $('gig-profile').value));
+  $('gig-offer').value = store.get('offer', '');
+
+  $('gig-write').addEventListener('click', async () => {
+    const offer = $('gig-offer').value.trim(); store.set('offer', offer);
+    if (offer.length < 8) return say('gig-write-status', 'Say in a line what the gig offers — e.g. "simple websites for small businesses".', 'bad');
+    $('gig-write').disabled = true; say('gig-write-status', 'Writing the gig… (the co-pilot drafts it from your profile — nothing invented)');
+    let r; try { r = await cg.autofill.gig({ profileId: $('gig-profile').value, offer, extra: $('gig-extra').value.trim(), agentId }); } catch (e) { r = { ok: false, error: e.message }; }
+    $('gig-write').disabled = false;
+    if (!r || r.ok === false || !r.gig) return say('gig-write-status', `Not written: ${(r && r.error) || 'no answer'}`, 'bad');
+    GIG = r.gig; store.set('last', GIG); shareGig();
+    say('gig-write-status', `Written.${(r.warnings || []).length ? ` ${r.warnings.length} note(s): ${r.warnings.slice(0, 2).join(' · ')}` : ''} Copy a part, or fill the Fiverr page.`, 'ok');
+    paintGig();
+  });
+
+  const LIMIT = { title: 80, description: 1200 };
+  function parts(g) {
+    const out = [{ label: 'Title', text: g.title, max: LIMIT.title }, { label: 'Tags', text: (g.tags || []).join(', ') }, { label: 'Description', text: g.description, max: LIMIT.description }];
+    for (const t of ['basic', 'standard', 'premium']) { const p = (g.packages || {})[t]; if (p) out.push({ label: `${t[0].toUpperCase()}${t.slice(1)} package`, text: `${p.name} — $${p.price} · ${p.deliveryDays} day(s) · ${p.revisions} revision(s)\n${p.description}` }); }
+    (g.faq || []).forEach((f, i) => out.push({ label: `FAQ ${i + 1}`, text: `${f.question}\n${f.answer}` }));
+    (g.requirements || []).forEach((q, i) => out.push({ label: `Buyer question ${i + 1}`, text: q }));
+    return out.filter(p => p.text);
+  }
+  function paintGig() {
+    const box = $('gig-parts');
+    if (!GIG) { box.innerHTML = ''; $('gig-actions').hidden = true; return; }
+    const ps = parts(GIG);
+    box.innerHTML = ps.map((p, i) => `<div class="gig-part"><div class="gig-part-h"><b>${esc(p.label)}</b>${p.max ? `<span class="${String(p.text).length > p.max ? 'bad' : ''}">${String(p.text).length}/${p.max}</span>` : ''}<button class="gig-copy" data-i="${i}">Copy</button></div><div class="gig-part-t">${esc(p.text)}</div></div>`).join('');
+    for (const b of box.querySelectorAll('.gig-copy')) b.addEventListener('click', () => copy(ps[+b.dataset.i].text, b));
+    $('gig-actions').hidden = false;
+  }
+  async function copy(text, btn) {
+    try { await navigator.clipboard.writeText(String(text)); } catch (_) { const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
+    if (btn) { const t = btn.textContent; btn.textContent = 'Copied'; setTimeout(() => { btn.textContent = t; }, 1200); }
+  }
+  // A gig is one .gig file: save it, edit or share it, load it back (an old .gig.json still loads). Loading runs the same limits as a written gig.
+  $('gig-import').addEventListener('click', () => $('gig-file').click());
+  $('gig-file').addEventListener('change', async (ev) => {
+    const f = ev.target.files && ev.target.files[0]; ev.target.value = '';
+    if (!f) return;
+    if (f.size > 200000) return say('gig-write-status', 'That file is too large to be a gig.', 'bad');
+    let r; try { r = await cg.autofill.gigImport(await f.text()); } catch (e) { r = { ok: false, error: e.message }; }
+    if (!r || r.ok === false || !r.gig) return say('gig-write-status', `Not loaded: ${(r && r.error) || 'no answer'}`, 'bad');
+    GIG = r.gig; store.set('last', GIG); shareGig();
+    say('gig-write-status', `Loaded "${r.gig.title}".${(r.warnings || []).length ? ` ${r.warnings.length} note(s): ${r.warnings.slice(0, 2).join(' · ')}` : ''} Fill this Fiverr page, or copy a part.`, 'ok');
+    paintGig();
+  });
+  // 2026-10-12 — saved as a .gig (YAML, readable and editable); the template is an empty one to fill in
+  const _download = (r) => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([r.text], { type: 'application/octet-stream' })); a.download = r.filename; a.click();   // §AT4 nothing adds an extension
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    return a.download;
+  };
+  $('gig-export').addEventListener('click', async () => {
+    if (!GIG) return;
+    let r; try { r = await cg.autofill.gigFile(GIG); } catch (e) { r = { ok: false, error: e.message }; }
+    if (!r || !r.ok) return say('gig-write-status', `Not saved: ${(r && r.error) || 'no answer'}`, 'bad');
+    say('gig-write-status', `Saved ${_download(r)} (to your downloads).`, 'ok');
+  });
+  $('gig-template').addEventListener('click', async () => {
+    let r; try { r = await cg.autofill.gigTemplate(); } catch (e) { r = { ok: false, error: e.message }; }
+    if (!r || !r.ok) return say('gig-write-status', `No template: ${(r && r.error) || 'no answer'}`, 'bad');
+    say('gig-write-status', `Saved ${_download(r)} — fill it in, then "Load a gig file…".`, 'ok');
+  });
+  $('gig-copy-all').addEventListener('click', (e) => GIG && copy(parts(GIG).map(p => `${p.label}\n${p.text}`).join('\n\n'), e.currentTarget));
+  // 0.60.222 — James, 2026-10-28: "like autofill should detect pages, so it can know when to paste, or detect the actual elements. like hook
+  // into the element picker, mayne use it for correcting". The fill says which editor page it found and what it did; each part it could not
+  // find has "Point at it": the element picker starts, the element he clicks is remembered for that part on this site, and the part is
+  // filled again. Next time it is filled there first.
+  const PAGE_NAME = { overview: 'Overview', pricing: 'Scope & Pricing' };
+  async function fill() {
+    say('gig-write-status', 'Reading the page in this tab…');
+    let r; try { r = await cg.autofill.gigFill(GIG, agentId, 'low')   /* 0.60.267 — "needs to autofill any field it can": every match, a placeholder one too */; } catch (e) { r = { ok: false, error: e.message }; }
+    if (!r || r.ok === false || r.error) { $('gig-missing').innerHTML = ''; return say('gig-write-status', `Not filled: ${(r && r.error) || 'no answer'} — open Fiverr's gig editor in this tab first.`, 'bad'); }
+    const typed = (r.filled || []).length, chosen = (r.dropdowns || []).filter(d => d.ok).length, learned = (r.learned || []).length;
+    const where = r.page ? `${PAGE_NAME[r.page] || r.page} page` : `this page (${r.pageWhy})`;
+    const mac = r.macro ? (r.macro.ok ? `, replayed your choices ("${r.macro.name}")` : `; your recorded choices stopped: ${r.macro.error}`) : '';
+    say('gig-write-status', `${where}: typed ${typed}, chose ${chosen}${learned ? `, ${learned} where you pointed before` : ''}${mac}. Read it on the page; Save / Publish stay yours.`, (r.notFound || []).length || (r.macro && !r.macro.ok) ? '' : 'ok');
+    const miss = r.notFound || [];
+    $('gig-missing').innerHTML = miss.map(m => `<div class="gig-miss"><span><b>${esc(m.key)}</b> — ${esc(m.why)}</span><button data-part="${esc(m.key)}">Point at it</button></div>`).join('');
+    for (const b of $('gig-missing').querySelectorAll('button')) b.addEventListener('click', () => point(r.page, b.dataset.part));
+    // 0.60.268 AF5 — James: "have the element picker come up to map the page if confused". A part the fill could not place brings the picker
+    // up by itself, one part after another (each asked once per round; Esc in the picker stops it; Point at it stays for any later time).
+    const next = miss.find(m => !asked.has(`${r.page}:${m.key}`));
+    if (r.page && next && autoPick) { asked.add(`${r.page}:${next.key}`); const t = ++autoToken; setTimeout(() => { if (t === autoToken && !recording) point(r.page, next.key); }, 400); }   // not if he has moved on (recording, another fill)
+    else if (!next) asked.clear();
+  }
+  const asked = new Set(); let autoPick = true, autoToken = 0;   // 0.60.268: parts the picker already asked for this round; a newer action cancels a pending one
+  function point(page, part) {
+    if (!page) return say('gig-write-status', 'This page is not one the fill knows yet, so a pick cannot be kept for it.', 'bad');
+    say('gig-write-status', `Click the element "${part}" goes in…`);
+    window.__cgOnNextPick = async (pick) => {
+      let a; try { a = await cg.autofill.gigAssign({ agentId, page, part, xpath: pick && pick.xpath }); } catch (e) { a = { ok: false, error: e.message }; }
+      if (!a || !a.ok) return say('gig-write-status', `Not kept: ${(a && a.error) || 'no answer'}`, 'bad');
+      say('gig-write-status', `Kept: "${part}" is ${a.selector} on this page. Filling again…`, 'ok');
+      fill();
+    };
+    const pb = document.getElementById('picker-btn'); if (pb && !pb.classList.contains('active')) pb.click();
+  }
+  $('gig-fill').addEventListener('click', () => { if (GIG) fill(); });
+
+  // 0.60.224 — James: "use it for ... creating macros/automation". What the gig does not hold (Service type, the metadata boxes, the pricing
+  // rows) he does once while this records; it is kept as the page's macro ('fiverr <page>') and every fill of that page replays it.
+  let recording = null;
+  $('gig-record').addEventListener('click', async () => {
+    autoToken++;   // 0.60.268: recording wins over a pending automatic pick
+    const btn = $('gig-record');
+    if (!recording) {
+      let p; try { p = await cg.autofill.gigPage(agentId); } catch (e) { p = { page: null, why: e.message }; }
+      if (!p || !p.page) return say('gig-write-status', `Open Overview or Scope & Pricing first (${(p && p.why) || 'page not read'}).`, 'bad');
+      let s; try { s = await cg.macros.recordStart(agentId, `fiverr ${p.page} (recording)`); } catch (e) { s = { ok: false, error: e.message }; }
+      if (!s || s.ok === false) return say('gig-write-status', `Not recording: ${(s && s.error) || 'no answer'}`, 'bad');
+      recording = p.page; btn.textContent = 'Stop and keep my choices'; btn.classList.add('on');
+      return say('gig-write-status', 'Recording: make your choices on this page (dropdowns, boxes). Leave Save / Continue for after you stop.');
+    }
+    const page = recording; recording = null; btn.textContent = 'Record my choices on this page'; btn.classList.remove('on');
+    let r; try { r = await cg.macros.recordStop(agentId); } catch (e) { r = { ok: false, error: e.message }; }
+    if (!r || r.ok === false) return say('gig-write-status', `Recording not kept: ${(r && r.error) || 'no answer'}`, 'bad');
+    let k; try { k = await cg.autofill.gigSaveRecording({ page, steps: r.steps || [] }); } catch (e) { k = { ok: false, error: e.message }; }
+    if (!k || !k.ok) return say('gig-write-status', `Not kept: ${(k && k.error) || 'no answer'}`, 'bad');
+    say('gig-write-status', `Kept ${k.steps} step(s) as "${k.name}" — every fill of this page replays them.${(k.dropped || []).length ? ` Left out: ${k.dropped.join('; ')}.` : ''}`, 'ok');
+  });
+
+  // ── step 2: an order → Idearium ─────────────────────────────────────────
+  function questions() { return (GIG && GIG.requirements && GIG.requirements.length ? GIG.requirements : DEFAULT_Q).slice(0, 5); }
+  function paintQuestions() {
+    const qs = questions(), saved = store.get('answers', []);
+    $('gig-questions').innerHTML = qs.map((q, i) => `<label class="gig-q"><span>${i + 1}. ${esc(q)}</span><textarea data-i="${i}" rows="2">${esc(saved[i] || '')}</textarea></label>`).join('');
+    for (const t of $('gig-questions').querySelectorAll('textarea')) t.addEventListener('input', () => store.set('answers', answers()));
+  }
+  const answers = () => [...$('gig-questions').querySelectorAll('textarea')].map(t => t.value.trim());
+  // the buyer's whole reply pasted at once: split at "1." / "2)" … into the five answers
+  $('gig-split').addEventListener('click', () => {
+    const raw = $('gig-reply').value; if (!raw.trim()) return;
+    const parts2 = raw.split(/^\s*(?:Q?\d{1,2}[.)\]:-])\s*/m).map(s => s.trim()).filter(Boolean);
+    const list = parts2.length >= 2 ? parts2 : raw.split(/\n\s*\n/).map(s => s.trim()).filter(Boolean);
+    const ts = [...$('gig-questions').querySelectorAll('textarea')];
+    ts.forEach((t, i) => { t.value = list[i] || t.value; });
+    store.set('answers', answers());
+    say('gig-build-status', `Split into ${Math.min(list.length, ts.length)} answer(s) — check them, then send.`, 'ok');
+  });
+  $('gig-send').addEventListener('click', async () => {
+    const a = answers();
+    if (!a.some(Boolean)) return say('gig-build-status', 'Paste or type the buyer\'s answers first.', 'bad');
+    $('gig-send').disabled = true; say('gig-build-status', 'Sending to Idearium…');
+    let r; try { r = await cg.autofill.gigToIdearium({ gig: GIG || { requirements: questions() }, answers: a, buyer: $('gig-buyer').value.trim(), order: $('gig-order').value.trim() }); } catch (e) { r = { ok: false, error: e.message }; }
+    $('gig-send').disabled = false;
+    if (!r || !r.ok) return say('gig-build-status', `Not sent: ${(r && r.error) || 'no answer'}`, 'bad');
+    say('gig-build-status', `In Idearium: "${r.title}" — a spec and a repo. Open it to plan and build.`, 'ok');
+    const link = $('gig-open-idearium'); link.hidden = false; link.dataset.url = r.open;
+  });
+  $('gig-open-idearium').addEventListener('click', (e) => { const u = e.currentTarget.dataset.url; if (u) window.open(u, '_blank'); });
+
+  paintGig(); step('write');
+  window.CgGigPanel = { show, step, parts: () => (GIG ? parts(GIG) : []) };
+})();
