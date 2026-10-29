@@ -1,48 +1,38 @@
-# 0.60.268 — The gig fill goes page after page
+# 0.60.268 — node anchors, and the element picker when the fill is confused
 
-James, 2026-10-26: "update the gig files. needs to autofill then next page, wait for it to load, then autofill the next page."
+James, 2026-10-28: "what a node anchor. also have the element picker come up to map the page if confused."
 
-## Page after page (FW1)
-On Fiverr's gig editor, "fill this in for me" now walks the wizard:
-1. Fill the page.
-2. Press **Save & Continue**.
-3. Wait until the next step has loaded: its tab in the address, or its fields, have changed, the page is complete, and a moment has passed
-   for the form to draw.
-4. Fill that step, and repeat.
+Owned by: docs/2026-10-26-inline-autofill-ui-phasemap.spec AF5 (mapped and built the same day, with its addendum).
 
-It stops:
-- before **Gallery** and **Publish**. It never presses Publish; uploading and publishing are his.
-- when a page won't move on. It reads back Fiverr's own message, for example "Please enter a gig title".
-- after five pages.
+## Reading (to confirm)
+"Node anchor" is read as: every field (node) on the page anchored to what it means. The chips already show what goes in a field they
+understand. A field they don't understand gets an anchor, set once, so the page is mapped and stays mapped. "If confused" is read as: when a
+fill cannot place something, the element picker comes up without being asked.
 
-The co-pilot's answer lists the pages it went through and where it stopped.
+## Built
+- **⚓ on every field nothing placed.** The chips' backend (`_autofillSuggest`) lists each fillable field with no suggestion, and the
+  identity it will be remembered by. Passwords and hidden fields are left out. In the window, that field gets a dashed ⚓ chip. Its menu
+  lists what the field can be anchored as:
+  - on a Fiverr editor page, the gig parts that hold a value;
+  - every field type the active profile holds a value for.
+- **An anchor is kept by the field's stable identity on the site** (`autofill:anchor`, `cg.autofill.anchor`):
+  - a profile type goes into JA3's learned map: `learn-pick.chooseKey`, then `saveLearned`, the same identity and save path a pick uses;
+  - a gig part goes into page memory as that part's target, made the same way as Point at it (`_gigAssign` now takes a field the chips
+    know, as well as a pick).
 
-## The gig files
-Category and subcategory now use Fiverr's names where his screenshots showed them:
-
-| Gig | Category › Subcategory |
-|---|---|
-| The five development gigs | Programming & Tech › Software Development (seen in his list) |
-| The test gig | Programming & Tech › QA & Review |
-| The three AI gigs | AI Services (in Fiverr's top menu) › AI Agents or AI Development |
-
-The AI subcategories are guesses, and his to confirm. If one isn't in Fiverr's list, the fill names Fiverr's real ones. All nine still tick
-Programming language: JavaScript.
+  Then the chips come back with the value, and every later fill uses it.
+- **Gig parts anchored before are offered on their field** by the chips, marked ⚓.
+- **The picker comes up when confused.** After a gig fill, a part it could not place brings the element picker up by itself, with the
+  status naming the part. After the pick, the fill runs again and the next missing part comes up. Each part is asked once per round. A
+  pending automatic pick stands down if he starts recording (found by FW-10: it had taken over the recording's status).
+- `gig-pages.valueOf(gig, part)` is the one reading of a gig part, shared by the fill and the chips.
 
 ## Proof
-`clear-glass/test/gig-wizard.test.js` runs in real Electron, on a local wizard shaped like Fiverr's:
-
-| Page | Filled | Then |
-|---|---|---|
-| Overview | title, tags | moved to Pricing |
-| Pricing | package name, package description | moved to Description |
-| Description | description | moved to Gallery, stopped there; Publish never pressed |
-
-A page that refuses to move on is reported as: `stayed on general after "Save & Continue": Please enter a gig title`.
-
-These are unchanged: gig-dropdown, field-query, autofill-inline, gig-file, clear-glass-autofill 16/16, agent-doors 7/7, copilot-verbs 9/9.
-
-## Not covered
-- Fiverr's real wizard.
-- Fiverr's FAQ needs "Add FAQ" pressed before its boxes exist. Its delivery-time and revision dropdowns on Pricing are not chosen yet. Both
-  stay listed under left-to-copy.
+- `tests/modules/test-autofill-chips.test.js` 8/8, in Clear Glass:
+  - **AC-06:** a real page's odd field is listed with its key (its id, the stable one). Anchored as email, the key is learned for the site,
+    and the next suggestion offers the profile's email on it. A gig part anchored by its field is kept with a selector that finds only that box.
+  - **AC-07:** the ⚓ menu in the real `browser.html`, and the choice it sends.
+  - **AC-08:** the picker comes up for the part the fill missed.
+- Also passing: `test-fiverr-works` 11/11 (FW-10's recording with a pending pick), `clear-glass-gig` 7/7, `test-cg-gig-autofill` 4/4,
+  `clear-glass-autofill` 16/16, `test-autofill-learn-pick` 5/5, `-learn-ui` 3/3, `-learned` 4/4, `page-session` 6/6, `eros-hooks` 6/6.
+  `test-browser-shell` gave 27/28 and 28/28 on two runs (BST-23, flaky on the base too). `clear-glass-library-ui`: the base's 2.

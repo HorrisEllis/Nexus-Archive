@@ -1,39 +1,52 @@
-# 0.60.262 — "fill this in for me" fills again
+# 0.60.262 — the gig fill knows which Fiverr page it is on, and learns elements from the picker
 
-James, 2026-10-26, asking the co-pilot on a Fiverr gig editor: "fill this in for me". It answered "Did not fill: matchGigFields: domFields
-must be the dom_query array", twice.
+_Renumbered 2026-10-28: first released on claude/laughing-fermi-4f7sj5 as 0.60.222. Main already had its own 0.60.222 (and up to 0.60.260), so this release takes the next free number. Nothing in it changed (§0.3)._
 
-## Why
-Clear Glass reads a page's fields through a small script it injects into the page (the dom mesh, `window.__cgDomMesh`). That tab did not
-have it, so the field query came back `undefined`. The gig fill passed that straight to the matcher, which threw.
+James, 2026-10-28, with screenshots of Fiverr's Overview and Scope & Pricing: "like autofill should detect pages, so it can know when to
+paste, or detect the actual elements. like hook into the element picker, mayne use it for correcting or creating macros/automation"
 
-The profile fill had the same gap. It only caught an `{ error }` answer, not an empty one.
+Owned by: docs/2026-10-28-gated-flows-phasemap.spec (dated addendum).
 
-## What changed (FQ1)
-`DomArchaeology.queryFields` is now the one way every fill reads a page's fields:
-- If the tab has no dom mesh, it injects it once and asks again.
-- If the tab still cannot answer, it says why: "reload the tab".
-- If there is no tab, it says to open one.
+## What stands on what
+- The page reader (`readPage`): url, title, headings, text, and links with their selectors.
+- Page memory (`src/page/page-memory.js`), which already kept what each site's pages show and what worked there. It now also keeps targets.
+- The element picker's pick (its xpath).
+- `option-match.js` and ClearDriver `choose` (0.60.221).
 
-The gig fill and detect, and the profile fill and detect, all use it. A page that answers nothing is now an error that is said, never a
-thrown type error.
+## Built
+- **Page detection** (`src/autofill/gig-pages.js`, pure). It decides the page from what the page shows:
+  - Overview: Suggested categories, Service type, Gig metadata;
+  - Scope & Pricing: Scope & Pricing, Packages;
+  - anything else is "unknown". It says so and doesn't guess, because only these two pages are on record.
+- **The fill does the detected page's parts only.**
+  - Overview: it clicks the suggested category that matches the gig's ("Programming & Tech > AI Development"). When none matches, it lists
+    the suggestions.
+  - Scope & Pricing: it types each tier's name and description, then chooses each tier's delivery time.
+- **The picker teaches it.** Each part the fill can't find is listed in the gig panel with **Point at it**:
+  - the element picker starts, and he clicks the element;
+  - the pick becomes a selector that finds exactly that element, checked on the page (three boxes with the same placeholder are told
+    apart);
+  - it is kept for that part, site and page, and the part is filled again;
+  - every later fill uses the kept element first;
+  - each lesson is a line in the activity.
+- **The panel's count is fixed.** "Filled N field(s)" printed the list of filled fields, not a number. It now reads, for example, "Scope &
+  Pricing page: typed 3, chose 3".
 
 ## Proof
-`clear-glass/test/field-query.test.js` runs in real Electron:
-- A page starts with no dom mesh.
-- The mesh is injected, the page's 3 fields come back, and the gig's 3 parts match.
-- A missing tab gives "no tab for …".
+- `tests/modules/test-fiverr-works.test.js`, 9/9:
+  - FW-06 page detection;
+  - FW-07 kept targets;
+  - FW-08: in Clear Glass (no Playwright), a pick on the second of three "Name your package" boxes becomes a selector that finds only that
+    box;
+  - FW-09: the fill does only the detected page, uses a kept element first, chooses the delivery per tier, lists what it didn't find, and
+    clicks the category on Overview.
+- Existing suites: clear-glass-gig 7/7, cg-gig-autofill 4/4, page-session 6/6, cg-field 13/13. Browser-shell is 27/28: BST-23 fails the same
+  way with these changes stashed.
 
-Other suites:
-
-| Suite | Result |
-|---|---|
-| clear-glass-autofill | 16/16 |
-| autofill-learn-pick | 5/5 |
-| cg-agent-doors | 7/7 |
-| autofill-transfer | 5/5 |
-| gig-file | ok |
-
-## Not covered
-Fiverr's description box is a rich text editor, not an input or a textarea. A fill types the title, tags and package fields, and lists
-what is left to copy by hand, as before.
+## Not built yet (said)
+- "correcting or creating macros": a pick replacing a failed macro step's selector, and a fill saved as a macro. Macro steps can't choose
+  from a dropdown yet (FG4), so these wait on that.
+- Gig metadata's checkbox tabs and the Service type dropdown need his choices. The gig doesn't hold them.
+- The editor's other pages aren't detected until they are on record.
+- Not yet run on fiverr.com (it answers this sandbox 403). His screenshots still show Edit Gig in a pop-out window. 0.60.221 opens it as a
+  tab, so his Clear Glass may predate that release.

@@ -1,45 +1,39 @@
 {
-  "name": "nexus",
-  "version": "0.60.269",
-  "description": "NEXUS — sovereign AI orchestration platform",
-  "author": "James Brooks (Erosmancer)",
-  "license": "MIT",
-  "private": true,
-  "bin": {},
-  "workspaces": [
-    "clear-glass",
-    "architect",
-    "cos",
-    "emerge",
-    "idearium",
-    "siso",
-    "clear-glass/erosmancer/erosmancer-os"
-  ],
+  "name": "erosmancer-os",
+  "version": "0.1.0",
+  "description": "ErosmancerOS — CDP-native browser orchestration engine",
+  "type": "commonjs",
+  "main": "src/index.ts",
   "scripts": {
-    "test": "node tests/brutal.test.js",
-    "test:all": "node tests/brutal.test.js && node tests/pipeline.test.js && node tests/kernel.test.js && node tests/full.test.js && node tests/modules/run-all.js",
-    "test:int": "node tests/integration.test.js",
-    "start": "node orchestrator/orchestrator.js",
-    "update": "node scripts/update.js",
-    "start:all": "node lib/nexus/autopilot.js",
-    "start:core": "node lib/nexus/autopilot.js --only=orchestrator,bridge,cortex,guardian",
-    "autopilot": "node lib/nexus/autopilot.js",
-    "autopilot:status": "node lib/nexus/autopilot.js --status-port=7799",
-    "start:all:cli": "node lib/nexus/autopilot.js --cli",
-    "movement": "node lib/cli/nexus-movement.js",
-    "cos:vm-setup": "node cos/testenv/provision.js",
-    "cos:vm-status": "node cos/testenv/provision.js --status",
-    "changes": "node lib/release-notes.js"
-  },
-  "engines": {
-    "node": ">=18.0.0"
-  },
-  "devDependencies": {
-    "electron": "^42.5.0",
-    "electron-builder": "^26.15.3",
-    "jsdom": "^30.1.0"
+    "start": "npx tsx src/api/server.ts",
+    "dev": "npx tsx watch src/api/server.ts",
+    "test": "npx tsx tests/suite.ts",
+    "test:all": "npx tsx tests/suite.ts && npx tsx tests/hostile.test.ts && npx tsx tests/adaptive.test.ts && npx tsx tests/replay.test.ts",
+    "lint": "npx tsc --noEmit",
+    "build": "npx tsc"
   },
   "dependencies": {
-    "js-yaml": "^5.4.2"
-  }
+    "ws": "^8.17.0",
+    "uuid": "^9.0.1",
+    "eventemitter3": "^5.0.1",
+    "zod": "^3.23.8",
+    "express": "^4.19.2",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.5.10",
+    "@types/uuid": "^9.0.8",
+    "@types/node": "^20.12.7",
+    "typescript": "^5.4.5",
+    "tsx": "^4.9.3",
+    "@types/express": "^4.17.21",
+    "@types/cors": "^2.8.17"
+  },
+  "directories": {
+    "test": "tests"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "types": "src/index.ts"
 }

@@ -1,33 +1,28 @@
-# 0.60.263 — Click a field, and autofill shows under it
+# 0.60.263 — two gaps that would still stop Fiverr on the live site
 
-James, 2026-10-26: "And that's in the ui? When you click on name it will show autofill? Copilot will fill it in?" When told it was mapped
-but not built, he chose it first: "1".
+_Renumbered 2026-10-28: first released on claude/laughing-fermi-4f7sj5 as 0.60.223. Main already had its own 0.60.223 (and up to 0.60.260), so this release takes the next free number. Nothing in it changed (§0.3)._
 
-Map: `docs/2026-10-26-inline-autofill-ui-phasemap.spec` (AF3).
+James, 2026-10-28: "continue get it working"
 
-## What it does
-- **The chip:** click or tab into a field your active profile fills (name, email, phone…). A small Clear Glass chip opens under it,
-  showing the value and what it is.
-- **Fill all:** if the page has more empty fields it can fill, the chip also offers **Fill all N fields**.
-- **Filling:** a click fills through the native value setter and the input and change events that React and Vue forms listen to.
-- **Hiding:** Esc, leaving the field, or scrolling it away hides the chip.
-- **When it appears:** after every page load and in-page navigation. A form built late, like Fiverr's, gets one retry.
-- **When it never appears:** it never submits, never touches a password field, and never shows on a human-check page.
-- **Turning it off:** in Settings (`autofillInline: false`), or per site (`autofill.inline = off`).
-- **The co-pilot:** it still fills through "fill this in for me" (0.60.262).
+Owned by: docs/2026-10-28-tab-compartments-phasemap.spec and docs/2026-10-28-gated-flows-phasemap.spec (dated addenda).
 
-## Your data stays yours
-The chip and your values run in an isolated script world, inside a closed shadow root. The site's own scripts cannot read either one: in
-the test, the page sees neither. The fields carry only a bare number (`data-cg-af="1"`).
+## Fixed
+- **A link in a bare window popped out again.** His Edit Gig was already open in a bare pop-out window (his screenshots). A page there has
+  no tab strip, so 0.60.221's rule ("open it as a tab of the window it is in") had nowhere to put the tab, and the link popped out.
+  - Now a link meant as a tab, from any window without a tab strip, opens as a tab of the main window, which comes to the front.
+  - A sized popup (a Google or PayPal sign-in) still opens as a window.
+  - Code: `src/main/compartment-window.js` (`attach(contents, { openTab })`) and `src/main/index.js`.
+- **Options that are plain divs.** `choose` looked for a dropdown's options among list items and elements whose role or class says option
+  or item. A site whose options are plain divs read as "the dropdown did not open".
+  - Now, when none of those appear, it takes what appeared on screen when the dropdown opened: short text, one line. It still matches the
+    option, clicks it and reads it back.
 
 ## Proof
-`clear-glass/test/autofill-inline.test.js` runs in real Electron, on a real form, with real mouse clicks:
-- 3 fields are tagged (first name, last name, email); the password is left out.
-- The chip shows "James · First name" and "Fill all 3 fields".
-- A click fills "James", the input event fires, and the chip hides.
-- "Fill all" fills James, Brooks and j@example.com; the password stays empty.
+- `tests/modules/test-fiverr-works.test.js`, 9/9:
+  - FW-02: a bare window's link-tab goes to the main window, and a sized popup is still allowed;
+  - FW-05: in Clear Glass, a Revisions dropdown whose options are plain divs is chosen ("unlimited" → "Unlimited") and shows it.
+- `test-compartment-window`: CW-04 now accepts `attach(contents, …)`. It is back to its base result; CW-03 fails the same way on the base.
 
-The autofill (16/16), autofill-active, transfer and agent-doors suites are unchanged.
-
-## Open
-AF4: the switch and a default-profile picker on the Settings screen.
+## To use it
+Close the pop-out window and open the gig from Fiverr's dashboard in the main window. Edit Gig opens as a tab there; on each editor page
+press "Fill this Fiverr page" in the gig panel, and "Point at it" for anything it lists.

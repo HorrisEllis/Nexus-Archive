@@ -1,38 +1,47 @@
-# 0.60.264 — "fill in this page" fills, and the gig editor gets its chips
+# 0.60.264 — the Fiverr panel is wired; his choices on a page become its macro
 
-James, 2026-10-26: two screenshots of Fiverr's gig editor (manage_gigs).
-- The first showed Clear Glass's right-click menu.
-- The second showed the co-pilot answering "fill in this page" with a raw "```driver {"action":"readPage"}" instead of filling. Two earlier
-  "fill this in for me" asks in the same chat had failed with the 0.60.262 "domFields" error, so that copy did not have 0.60.262 yet.
+_Renumbered 2026-10-28: first released on claude/laughing-fermi-4f7sj5 as 0.60.224. Main already had its own 0.60.224 (and up to 0.60.260), so this release takes the next free number. Nothing in it changed (§0.3)._
 
-## What changed
-- **FQ2, the words.** These now count as a fill:
-  - "fill in this page"
-  - "fill out this form"
-  - "fill this page"
-  - "fill my gig"
+James, 2026-10-28: "continue" · earlier the same day: "like none of the autofill works" · "use it for correcting or creating
+macros/automation"
 
-  Before, they reached the model, which printed a command instead of acting. A question like "fill the gap in my resume?" is still not
-  a fill.
-- **FQ2, the reply.** When the model leaves a `driver` or `tool` block unclosed at the end of its reply, the block now runs. Before, it
-  was shown as text.
-- **FQ3, gig chips.** On a Fiverr gig editor, the inline chip (0.60.263) offers the last gig written next to your profile's fields:
-  - the title, without "I will", which the editor shows itself;
-  - the search tags;
-  - the description, the packages and the FAQ.
+Owned by: docs/2026-10-28-gated-flows-phasemap.spec (dated addendum).
 
-  Click the title box and the chip shows your gig's title. If one field matches both the gig and your profile, the gig's value is
-  offered.
+## Found: the Fiverr panel never did anything
+- `renderer/gig-panel.js` (since 0.59.3) and `renderer/page-map-panel.js` (since 0.60.175) start with `const cg = window.cg`, and stop when it
+  is missing.
+- Nothing ever set `window.cg`: `browser.js` kept its wrapped API in a private variable. So both panels returned on their first line. The
+  🎯 Fiverr button didn't open the panel, and "Fill this Fiverr page" was never wired.
+- The old tests read the source text and never ran the page, so they didn't catch it.
+- Fix: `browser.js` publishes the same wrapped API as `window.cg`, before the panels load.
+- Proof: FW-10 drives the real `browser.html` in Clear Glass. It opens the panel, fills, and sees "Point at it", then records and keeps.
+  With the one-line fix removed, FW-10 fails on "window.cg is the wrapped API".
+
+## Built: his choices on a page become its macro
+What the gig doesn't hold (Service type, the Gig metadata boxes, the pricing rows such as Number of APIs) he does once while the panel
+records.
+- **The panel button** "Record my choices on this page", then "Stop and keep my choices". It uses the live recorder that already exists.
+- **The recording is kept as that page's macro** ("fiverr overview" or "fiverr pricing"). Every later fill of the page replays it, as him,
+  after typing. The panel says whether it replayed or where it stopped.
+- **Made to replay on any gig** (`gig-pages.pageMacroSteps`):
+  - the recording's own gig address is dropped;
+  - each click first waits for its element (a dropdown's options exist only once it is open);
+  - a click on a button that says Save, Continue, Publish, Submit, Send or Pay is left out and listed (0.39.301: "Not automate talking or
+    posting").
+- **Recorder changes** (`recorder-script.js`, `recording.js`):
+  - a ticked or unticked box is recorded as its state and replays as `check { checked }`. It used to replay as "type 'on'", which toggles.
+  - a click keeps what its button said, which is how Save & Continue is recognised.
+- **browser_action** names `check`, `select`, `choose` and `pointer`, which the driver already had, so macros can use them.
 
 ## Proof
-| Suite | What it checks | Result |
-|---|---|---|
-| `clear-glass/test/autofill-inline.test.js` | the phrases; an unclosed block parses; the gig editor is recognised; the gig plan gives the title (no "I will") and the tags, never a password | pass |
-| `clear-glass/test/autofill-inline.test.js` | the real-Electron chip check from 0.60.263 | still passes |
-| test-cg-copilot-verbs | | 9/9 |
-| test-cg-agent-doors | | 7/7 |
-| clear-glass-autofill | | 16/16 |
+- `tests/modules/test-fiverr-works.test.js` 11/11:
+  - FW-10: the real panel in Clear Glass;
+  - FW-11: a recording becomes a replayable page macro.
+- `test-macro` 22/22, `test-live-recording` 8/8, `test-browser-shell` 28/28, `test-browser-action-screenshot` 10/10, `page-session` 6/6.
 
-## Not checked
-Fiverr's real gig editor. Its title and tags boxes are matched by their label, name or placeholder. If Fiverr labels them differently,
-the chip will not show there, and a screenshot will tell.
+## To use it
+1. Update to 0.60.224.
+2. Open the gig from the dashboard. Edit Gig opens as a tab.
+3. Press 🎯 (Fiverr), then "Fill this Fiverr page".
+4. Once on each page: "Record my choices on this page", make your Service type, metadata and row choices, then "Stop and keep my choices".
+   From then on, the fill does them too.

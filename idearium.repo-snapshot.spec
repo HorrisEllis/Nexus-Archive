@@ -1,0 +1,181 @@
+spec:
+  meta:
+    name:        idearium.repo-snapshot
+    version:     1.0.0
+    foundation:  nexus-system-foundation@1.0.0
+    owner:       idearium
+    uuid:        nexus-idearium-repo-snapshot-v1-0000-2026-0920-001
+    author:      james-brooks
+    compiled_by: claude
+    created:     2026-09-20
+    status:      Specified
+    implements:  'nexus-repository-system.spec §33 snapshots.must_record'
+    closes:      'docs/nexus-repository-system-build-phasemap.spec MCO3_snapshot_compliance'
+    purpose: >
+      A repo snapshot records everything §33 says a snapshot must record:
+      source hash, Git commit, atlas version, chunk index version, graph
+      version, dependency state, environment, test state, verification
+      state. It is committed to versionium through the existing commit
+      pipeline. No new commit mechanism, no second store.
+
+  build_order:
+    law: '§8.5 — spec before build; §3.4 — raw code before interfaces.'
+    written_before_code: true
+    sequence:
+      - 'this spec'
+      - 'idearium/repo/snapshot.js — builder + injectable-transport committer, callable from raw node'
+      - 'tests/modules/test-mco3-repo-snapshot.js — real pipeline, real git repo, real versionium engine round trip'
+      - 'idearium/api/index.js — repo.snapshot.* routes, only after the library is proven'
+      - 'idearium/index.js restoreSnapshot — refuse repo-snapshot state (see hazard below)'
+
+  finding_before_build:
+    law: '§16.1 — the next bottleneck determines the next task.'
+    what_the_phasemap_assumed: >
+      MCO3 was written as "additive fields on the existing real
+      versionium_commit". The existing idearium commit (IdeaOS
+      commitSnapshot) snapshots ideas/specs/gaps, not a repository. There
+      is no repo-scoped commit for fields to be added to, and MCO-B
+      (per-file snapshot/delta) is NOT STARTED. So this phase adds the
+      repo-scoped commit path itself, on top of versionium's unchanged
+      engine.commit(). MCO-B stays out of scope: this records the
+      derived state of a repo at a moment. It does not store file
+      content and cannot restore files.
+    hazard_found:
+      - >
+        IdeaOS.snapshots()/snapshot()/restoreSnapshot() read
+        versionium history?system=idearium. A repo snapshot committed
+        under system 'idearium' would appear in the idea snapshot list,
+        and restoring it would set ideas/specs/gaps/links to [] (the
+        restore does state.ideas || []). Repo snapshots therefore commit
+        under their own system, 'idearium.repo', and restoreSnapshot
+        refuses any state marked kind:'repo-snapshot' before it mutates
+        or stashes anything.
+      - >
+        IdeaOS.commitSnapshot() posted to system 'cortex'. Cortex answers
+        every /api/versionium/* with 410 (versionium is sovereign at
+        :3754). Idea snapshot push has therefore been failing. Repo
+        snapshots post to 'versionium' directly, and commitSnapshot gets
+        the same one-word correction, since it shares this path.
+
+  record:
+    shape: >
+      state = { kind: 'repo-snapshot', schema: SCHEMA_VERSION, repository,
+      repoName, takenAt, mustRecord: { <9 keys below> } }.
+      Committed with system 'idearium.repo' on branch 'repo-<uuid>'.
+    rule_unknown_is_not_zero: >
+      Every one of the nine keys is ALWAYS present. A value that cannot
+      be determined carries available:false and a stated reason. It is
+      never omitted, never 0, never an empty string. A reader can tell
+      "there is no git repo here" from "nobody looked".
+    fields:
+      sourceHash: >
+        sha256 over sorted "path<TAB>contentHash" lines of the files the
+        index recorded (indexes/files.json). Also re-derived from the
+        files as they are on disk right now, so fresh:true/false says
+        whether the atlas/chunks/graph below still describe this source.
+        A snapshot of stale indexes is recorded as stale, not hidden.
+      versionCommit: >
+        0.39.263 (was gitCommit) — James: "loom depends on the .git i want
+        versionium to hold the history for each repo." The repo's history
+        is its versionium snapshots on branch repo-<uuid>; nothing reads a
+        .git. { available:true, source:'versionium', branch, parent,
+        parentKnown }: parent is the snapshot before this one, known once
+        the file layer planned it (plan().baseCommitId); without a file
+        layer parentKnown:false says it was not asked. Records written
+        before 0.39.263 carry gitCommit (HEAD of a .git IN the repo
+        directory) instead; readers accept either.
+      atlasVersion: >
+        atlas.json declares no version. Identity is its sha256 and its
+        own generatedAt. Stated as such (declaredVersion: null).
+      chunkIndexVersion: >
+        chunks/index.json declares no version. Identity is its sha256 and
+        chunk count.
+      graphVersion: >
+        graph.json declares version (GRAPH_VERSION) and generatedAt;
+        recorded with its sha256 and node/edge/unresolved counts.
+      dependencyState: >
+        Manifests and lockfiles found among indexed files with their
+        content hashes, declared dependency counts for a root
+        package.json, lockfile present, node_modules present.
+      environment: >
+        compartmentId from the repo record, plus the node/platform/arch of
+        the process taking the snapshot. The repo's own runtime is owned
+        by its Compartment (§32) and is not resolved here: runtime is
+        null with that reason.
+      testState: >
+        From verification.lazy.json L6: found/run/skipped counts, failed
+        test files, and the lazy pass status. 'pending' or missing lazy
+        verification is reported as such, not as passed.
+      verificationState: >
+        verification.json L0-L5 plus verification.lazy.json L6-L8, one
+        entry per tier (passed / not_applicable / pending), overall
+        status, failure counts.
+
+  gate:
+    MCO3: >
+      MET when a real commit's metadata round-trips all nine must_record
+      keys, verified against one real commit read back through
+      versionium's own getState(), not asserted.
+
+  not_done:
+    - 'MCO-B per-file snapshot/delta: no file content is stored, so a repo snapshot cannot restore files'
+    - 'restoring files: MCO-B (versionium/spec/versionium.file-versioning.spec) adds the file layer and the restore. MCO3 alone records derived state only'
+    - 'comparing two arbitrary snapshots (the UI compares a snapshot with the one before it only)'
+    - 'snapshotting the repo runtime (owned by the Compartment)'
+
+  ui:
+    where: 'idearium/ui — repo subtab "Versionium" (js/app.js §VERSIONIUM, index.html #repo-subtab-versionium)'
+    shows: >
+      Snapshot list (newest first), a take-snapshot control, and per-snapshot
+      detail of all nine fields, each unavailable field with its stated
+      reason. A strip compares a snapshot with the one before it: identity
+      comparisons only (source-on-disk hash, git commit, atlas/chunk/graph
+      hashes, test and verification status). No score.
+    source_compare: >
+      The strip compares sourceHash.diskHash (the source as it was on disk
+      at snapshot time), NOT sourceHash.value, which is the hash the
+      indexes were built from and does not move when a file is edited
+      without a reindex.
+    says_plainly: 'as of MCO-B the tab also shows the file layer and restore; see versionium.file-versioning.spec'
+    test: 'tests/modules/test-mco3-versionium-tab.js — jsdom, fed by the real snapshot library'
+
+## ADDENDUM 2026-10-07 — 0.40.0 VR1: every change is a snapshot
+James: "needs to snapshot every accept, every change, diff, write, only the changes. like github."
+A repo snapshot is no longer taken only at baseline (import, chunk run, restore) or by hand. Every write or delete through
+RepoLayer (idearium/repo/index.js) calls lib/repo-versions.js touched(); writes settle (NEXUS_VERSION_SETTLE_MS, default
+1500 ms) and one commitRepoSnapshot() follows, through the same file layer (only changed files sent, as deltas).
+commitRepoSnapshot() takes `provenance` and records it on the snapshot record as `record.provenance`:
+{ by: [...], refs: ['task-…', 'inject:…'], files: [{ path, op }], checkpoint, since, at }. It is optional; every existing
+caller passes nothing and is unchanged. A failed commit is kept pending and retried — never dropped.
+Setting: versions.every_change (default on).
+
+## ADDENDUM 2026-10-21 — 0.60.196 / 0.60.197: a build indexes an unindexed repo; the record names the component registry
+James, 2026-10-21, after SP5 was refused "no snapshot: repo has not been through the import pipeline (no atlas.json)": "what does it need
+an atlas for?" · then: "shouldn't that be the component registry. architecture tab"
+- 0.60.196: a phase build that meets NOT_INDEXED runs the import pipeline itself and snapshots again (pipeline-root-causes map, same date).
+- 0.60.197: mustRecord gains a tenth key, `registryVersion`: the component registry the Architect tab shows and the planner reads
+  (idearium/repo/architecture.js over lib/code-intel's cards). Identity is the sha256 of its components (file, id, layer, type, exports)
+  and wires (from, to, relation), with the counts of components, wires, orphans and breaches. Unindexed → available:false with the reason.
+  summarizeRepoSnapshots carries it as `registry`; the Versionium list shows "registry N · W wires · <hash>".
+- The atlas is still recorded (§0.3: nothing dropped). His question reads two ways: (a) record the registry as well, so a snapshot names
+  what the build reasons over — built; (b) make the registry, not the atlas, the thing the build requires. The coder's reading is (a);
+  (b) is "to confirm" with him. Both come from the same indexing step, so the gate's outcome is the same today.
+- The NOT_INDEXED message now names what is missing (atlas, chunk index, component registry) and that a build indexes it itself.
+
+## ADDENDUM 2026-10-21 — 0.60.198 (IN3a): his decision — a build stands on the registry, recorded as its four parts
+James, 2026-10-21, answering the coder's question whether the registry should replace the atlas as what a build requires: "yes, the
+registry should be the spine, event bus, interaction contract, and component registry."
+- This supersedes the 0.60.197 reading (above, kept): the registry is not only recorded, it is what a phase build requires.
+- `registryVersion.parts`: `components` (file, id, layer, type, exports), `spine` (require wires), `eventBus` (each event with who emits
+  and who consumes it), `contract` (routes and CLI commands), each with its own sha256; `registryVersion.sha256` is over the four.
+  Modules' text is read from the repo directory (under 400 KB each) for routes, CLI and events, as the Architect tab does.
+- The build (idearium/api/index.js): a snapshot with no registry, or NOT_INDEXED, runs the import pipeline once and snapshots again;
+  still no registry → refused `NO_REGISTRY`, with the reason, on the run. atlas.json is still recorded; non-build snapshots keep their
+  existing gate (older repos' every-change history unaffected).
+- The NOT_INDEXED text keeps "has not been through the import pipeline" (test-mco3-versionium-tab reads it; 0.60.197 had dropped it).
+
+## ADDENDUM 2026-10-29 (0.60.278) — versions.every_change no longer turns recording off (§17.12)
+James, 2026-10-29: "full changes, and versions have to be pushed to versionium? enforce it everywhere that you'd find it. maybe the axioms" —
+and in 0.40.0, where the setting came from: "needs to snapshot every accept, every change". The switch was the coder's addition, not his.
+The setting is kept (§0.3). A change made while it is off is still committed to Versionium, and the committer's result says so in `note`.
+Decided by his axioms: §17.12 and USER_AUTONOMY (his later, explicit word).
