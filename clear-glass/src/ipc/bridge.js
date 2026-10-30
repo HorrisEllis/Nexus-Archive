@@ -759,6 +759,14 @@ class IpcBridge {
     this.app.get('/cli/site-gates', (req, res) => { const all = this.options?.getSiteGates?.() || {}; const EG = require('../page/element-gate'); res.json({ siteGates: req.query.url ? { [EG.originOf(req.query.url) || req.query.url]: EG.matchSite(all, req.query.url) } : all }); });
     this.app.post('/cli/site-gates', (req, res) => { const b = req.body || {}; const r = this.options ? this.options.addSiteGate(b.url, b.gate) : { error: 'options not ready' }; res.status(r.error ? 400 : 200).json(r); });
     this.app.post('/cli/site-gates/remove', (req, res) => { const b = req.body || {}; const r = this.options ? this.options.removeSiteGate(b.url, b.id) : { error: 'options not ready' }; res.status(r.error ? 400 : 200).json(r); });
+    // 2026-10-30 AC2 — the same for an agent, on the page it drives: trace, keep off (the site setting), open the site's own control
+    this.app.post('/cli/site-a11y', async (req, res) => {
+      const b = req.body || {}; let wcId = b.wcId;
+      if (wcId == null) { try { const wc = this.driver._getWebContents(b.agentId || 'default'); wcId = wc && wc.id; } catch (_) {} }
+      if (wcId == null) return res.status(400).json({ ok: false, error: 'no page open for this agent' });
+      const r = b.op === 'keep' ? await this._a11yKeepOff(wcId, b.entry, b.on !== false, { by: cliBy(req) }) : b.op === 'open' ? await this._a11yOpenControl(wcId, b.n) : await this._a11yTrace(wcId);
+      res.status(r.ok === false ? 400 : 200).json(r);
+    });
     this.app.post('/cli/site-gates/check', async (req, res) => { const b = req.body || {}; try { res.json(await this.driver.exec({ agentId: b.agentId || 'default', action: 'gate', ...(b.id ? { id: b.id } : b.gate ? { gate: b.gate } : { all: true }), by: 'agent' })); } catch (err) { res.status(400).json({ error: err.message }); } });
     this.app.post('/cli/site-keys/remove', (req, res) => { const b = req.body || {}; const r = this.options ? this.options.removeSiteKey(b.url, b.accel) : { error: 'options not ready' }; res.status(r.error ? 400 : 200).json(r); });
     this.app.get('/cli/processes', (req, res) => { try { res.json(require('../main/index').processes().list()); } catch (e) { res.status(500).json({ ok: false, error: e.message }); } });
@@ -1270,6 +1278,11 @@ class IpcBridge {
     // 0.60.283 — James, 2026-10-29: "The accessability man. i can't fix it." (Fiverr remembers its accessibility look; keyboard-mode.js)
     ipcMain.handle('site:a11yCheck', async (e, d = {}) => this._a11y(d && d.wcId, { reset: false }));
     ipcMain.handle('site:a11yReset', async (e, d = {}) => this._a11y(d && d.wcId, { reset: true }));
+    // 2026-10-30 AC2 — James: "look at the accessability. needs to actually hook into the back end settings. looks lazy also." The look traced to
+    // what turns it on (whatever it is named); what he keeps off is the site setting accessibility.keepOff, applied by main at every load.
+    ipcMain.handle('site-profile:a11yTrace',       async (e, d = {}) => this._a11yTrace(d && d.wcId));
+    ipcMain.handle('site-profile:a11yKeepOff',     async (e, d = {}) => this._a11yKeepOff(d && d.wcId, d && d.entry, d && d.on, { by: 'person' }));
+    ipcMain.handle('site-profile:a11yOpenControl', async (e, d = {}) => this._a11yOpenControl(d && d.wcId, d && d.n));
     ipcMain.handle('site-profile:clear', async (e, d) => this._siteProfile().clearSite(d && d.url, d && d.key, { by: 'person' }));
     ipcMain.handle('site-profile:keys',  async () => ({ keys: this._siteProfile().KEYS, features: this._siteProfile().FEATURES }));
 
@@ -2313,6 +2326,49 @@ class IpcBridge {
     return out;
   }
 
+  // 2026-10-30 AC2 — James, with fiverr.com in yellow-on-black links after the reset found nothing named accessibility: "look at the
+  // accessability. needs to actually hook into the back end settings. looks lazy also."
+  //   _a11yTrace(wcId)  → the link's look, the stylesheet rules that paint it and the classes/attributes that switch them on (whatever they
+  //                       are named), the site's own accessibility control, and what this site keeps off now (accessibility.keepOff)
+  //   _a11yKeepOff(wcId, entry, on) → the setting updated (validated by keys.js); on: applied to the page now; off: the page reloads, since a
+  //                       removed class or rule comes back only from the site itself
+  //   _a11yOpenControl(wcId, n) → clicks the site's control n (a server-kept look is turned off in the site's own settings)
+  _a11yPage(wcId) {
+    const { webContents } = this._electron || require('electron');
+    const wc = webContents.fromId(Number(wcId));
+    if (!wc || wc.isDestroyed()) return { error: 'no such page' };
+    let url = ''; try { url = wc.getURL(); } catch (_) {}
+    if (!/^https?:/.test(url)) return { error: 'this page is not a website' };
+    return { wc, url, origin: new URL(url).origin };
+  }
+  _a11yKept(url) { try { const p = this._siteProfile().siteProfile(url); return [].concat((p && p.accessibility && p.accessibility.keepOff) || []); } catch (_) { return []; } }
+  async _a11yTrace(wcId) {
+    const pg = this._a11yPage(wcId); if (pg.error) return { ok: false, error: pg.error };
+    let t; try { t = await pg.wc.executeJavaScript(require('../page/keyboard-mode').traceScript(), true); } catch (err) { return { ok: false, error: `the page could not be read: ${err.message}` }; }
+    const kept = this._a11yKept(pg.url);
+    let applied = null; try { applied = await pg.wc.executeJavaScript('window.__cgKeepOff ? { removed: window.__cgKeepOff.removed, rules: window.__cgKeepOff.rules } : null', true); } catch (_) {}
+    return { ok: true, url: pg.url, origin: pg.origin, ...t, keepOff: kept, applied };
+  }
+  async _a11yKeepOff(wcId, entry, on = true, { by = 'person' } = {}) {
+    const pg = this._a11yPage(wcId); if (pg.error) return { ok: false, error: pg.error };
+    if (!/^(class|attr|rule):./.test(String(entry || ''))) return { ok: false, error: `not something to keep off: ${entry} (class:<name>, attr:<name> or rule:<selector>)` };
+    const kept = this._a11yKept(pg.url).filter(x => x !== entry);
+    if (on) kept.push(entry);
+    const set = kept.length ? this._siteProfile().setSite(pg.url, 'accessibility.keepOff', kept, { by }) : this._siteProfile().clearSite(pg.url, 'accessibility.keepOff', { by });
+    if (set && set.ok === false) return { ok: false, error: set.why || set.error || 'not saved' };
+    const out = { ok: true, origin: pg.origin, entry, on: !!on, keepOff: kept };
+    if (on) { try { out.applied = await pg.wc.executeJavaScript(require('../page/keyboard-mode').keepOffScript([entry]), true); } catch (err) { out.applyError = err.message; } }
+    else { try { pg.wc.reload(); out.reloaded = true; } catch (err) { out.reloadError = err.message; } }
+    return out;
+  }
+  async _a11yOpenControl(wcId, n) {
+    const pg = this._a11yPage(wcId); if (pg.error) return { ok: false, error: pg.error };
+    const sel = `[data-cg-a11yctl="${Number(n) || 0}"]`;
+    let r; try { r = await pg.wc.executeJavaScript(`(function(){ var e = document.querySelector(${JSON.stringify(sel)}); if (!e) return null; e.scrollIntoView({ block: 'center' }); e.click(); return (e.getAttribute('aria-label') || e.title || e.textContent || '').trim().slice(0, 80); })()`, true); }
+    catch (err) { return { ok: false, error: err.message }; }
+    return r == null ? { ok: false, error: 'that control is not on the page any more (find it again)' } : { ok: true, opened: r };
+  }
+
   // 0.60.281 AP4 — James, 2026-10-29: "also capturing the contact info for job applications." The applications and their contacts are the
   // opportunity system's (lib/opportunity, served by Copilot); Clear Glass reaches them only through Copilot's routes (§5.15), and only these.
   // Copilot down → the screen says so; nothing here holds a copy.
@@ -2711,11 +2767,11 @@ class IpcBridge {
   async _autofillSuggest({ agentId = 'default' } = {}) {
     if (!this.dom) return { ok: false, error: 'dom bridge unavailable', suggestions: [] };
     const SG = require('../autofill/suggest.js');
-    let profileMatches = [], profileName = 'profile', why = null;
+    let profileMatches = [], profileName = 'profile', why = null, activeProfile = null;
     if (this.autofillStore) {
       try {
         const det = await _autofillDetect(this.dom, this.autofillStore, { agentId, learned: this._learnedFields(agentId) });
-        if (det && !det.error) { profileMatches = det.matches || []; const p = this.autofillStore.getProfile(det.profileId); profileName = (p && (p.name || p.label)) || 'profile'; }
+        if (det && !det.error) { profileMatches = det.matches || []; const p = this.autofillStore.getProfile(det.profileId); activeProfile = p || null; profileName = (p && (p.name || p.label)) || 'profile'; }
         else why = det && det.error;
       } catch (e) { why = e.message; }
     }
@@ -2736,6 +2792,25 @@ class IpcBridge {
         const hit = await this.dom.handleQuery({ agentId, selector: t.selector }).catch(() => null);
         if (Array.isArray(hit) && hit.length === 1) gigMatches.push({ cgId: hit[0].id, key: `${part} ⚓`, value: v, confidence: 'high' });
       }
+    }
+    // 2026-10-30 AF6 — James: "when it shows the black autfill chip, can you make that work for drop down also?" Dropdowns that are not form fields
+    // (Fiverr's category, subcategory, delivery and revisions per package; any [role=combobox]) get a chip too: the gig's value for a gig part,
+    // the profile's for a combobox its label names (the same matcher the fields use). Clicking it chooses the option (_autofillFillOne).
+    if (this.driver) {
+      try {
+        const dd = await this.driver.exec({ agentId, action: 'eval', code: SG.dropdownScript(), by: 'person' });
+        const list = (dd && Array.isArray(dd.result)) ? dd.result : [];
+        const profile = activeProfile;   // the profile the fields above were matched from (the site's choice, else the active one)
+        for (const x of list) {
+          const hit = await this.dom.handleQuery({ agentId, selector: `[data-cg-dd="${x.key}"]` }).catch(() => null);
+          const cgId = Array.isArray(hit) && hit[0] && hit[0].id; if (!cgId) continue;
+          if (x.kind === 'gig' && gig) { const v = GP.valueOf(gig, x.key); if (v != null && v !== '') gigMatches.push({ cgId, key: x.key, value: x.key.endsWith('.delivery') ? `${v} day${v === '1' ? '' : 's'}` : v, confidence: 'high', dropdown: true }); }
+          else if (x.kind === 'combo' && profile) {
+            let m = []; try { m = require('../autofill/matcher.js').matchFields([{ id: cgId, tag: 'select', type: 'select-one', name: x.name, label: x.label, attrs: { 'aria-label': x.label } }], profile); } catch (_) {}
+            for (const one of m) profileMatches.push({ ...one, dropdown: true });
+          }
+        }
+      } catch (_) { /* no dropdowns read: the field chips stand on their own */ }
     }
     const suggestions = SG.combine({ profileMatches, gigMatches, profileName });
     // 0.60.268 AF5 — "what a node anchor": every fillable field nothing placed gets a ⚓ chip; what it can be anchored as
@@ -2778,11 +2853,25 @@ class IpcBridge {
 
   async _autofillFillOne({ agentId = 'default', cgId, value } = {}) {
     if (!this.dom || !cgId || value === undefined) return { ok: false, error: 'a field and a value are needed' };
+    // 2026-10-30 AF6 — a dropdown is chosen, not set: a marked dropdown (data-cg-dd) through the driver's choose (opens it, picks the option, reads
+    // it back; paced, ErosmancerOS when wired); a native <select> by the text it shows; a text box is typed by the driver (paced, EI1)
+    if (this.driver) {
+      let what = null;
+      try { const x = await this.driver.exec({ agentId, action: 'eval', by: 'person', code: `(function(id){ var el = Array.prototype.find.call(document.querySelectorAll('input,textarea,select,[contenteditable],[data-cg-dd]'), function(e){ return e.__cgId === id; }); if (!el) return null; el.setAttribute('data-cg-chip', id); return { tag: el.tagName, dd: el.getAttribute('data-cg-dd') }; })(${JSON.stringify(cgId)})` }); what = x && x.result; } catch (_) {}
+      const sel = `[data-cg-chip="${String(cgId).replace(/"/g, '')}"]`;
+      try {
+        if (what && what.dd) { const c = await this.driver.exec({ agentId, action: 'choose', selector: sel, option: String(value), by: 'person' }); this._chipLog(cgId, `chose ${c.option}`); return { ok: true, chose: c.option }; }
+        if (what && what.tag === 'SELECT') { await this.driver.exec({ agentId, action: 'select', selector: sel, text: String(value), by: 'person' }); this._chipLog(cgId, 'selected'); return { ok: true }; }
+        if (what && /^(INPUT|TEXTAREA)$/.test(what.tag)) { const t = await this.driver.exec({ agentId, action: 'setValue', selector: sel, value: String(value), by: 'person' }); this._chipLog(cgId, 'typed'); return { ok: true, via: t.via }; }
+      } catch (err) { return { ok: false, error: err.message }; }
+    }
     const r = await this.dom.handleMutate({ agentId, cgId, mutation: { value: String(value) } });
     if (r && r.error) return { ok: false, error: r.error };
     try { require('../processes').activity().push({ kind: 'nav', what: `autofill chip filled ${cgId}`, by: 'person', level: 'info' }); } catch (_) {}
     return { ok: true };
   }
+
+  _chipLog(cgId, what) { try { require('../processes').activity().push({ kind: 'nav', what: `autofill chip ${what} (${cgId})`, by: 'person', level: 'info' }); } catch (_) {} }
 
   // 0.60.224 — which editor page this tab is on (the panel's record button names its macro by it)
   async _gigPage({ agentId = 'default' } = {}) {

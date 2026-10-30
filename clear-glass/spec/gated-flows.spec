@@ -586,6 +586,48 @@ spec:
       error_paths: ["ErosmancerOS down → paced keys, viaWhy says why"]
       acceptance: ["test-pipeline-gates PG-07 in Clear Glass: measured gaps between keys, a pause every few; ErosmancerOS used when wired; down → paced, said"]
 
+    # 2026-10-30 AF6 — James: "when it shows the black autfill chip, can you make that work for drop down also?"
+    - id: MOD-AF6
+      name: chip-for-dropdowns
+      uuid: nexus-gated-flows-chip-for-dropdowns-v1-0000-2026-1030-001
+      path: clear-glass/src/autofill/suggest.js
+      phase: AF6_the_chip_on_dropdowns
+      description: "The black autofill chip also sits under a dropdown that is not a form field: Fiverr's SELECT A CATEGORY / SELECT A SUBCATEGORY, DELIVERY TIME and Revisions per package (the gig's value), and any [role=combobox] / [aria-haspopup=listbox] its label names (the profile's value, by the same matcher the fields use). dropdownScript marks them data-cg-dd (reads only); the reporter reports them with what they show; a click chooses the option through the driver (opens it, picks, reads back; paced, ErosmancerOS when wired). A native <select> is chosen by the text it shows, and a text box typed by the driver."
+      deps: [{ name: human-input-for-every-key }]
+      exports: ["dropdownScript() → [{ key, kind, label?, name? }]", "_autofillSuggest: dropdown chips", "_autofillFillOne: choose / select / type"]
+      gate_pipeline: ["GATE-AF6-001: mark → suggest → his click → choose → read back"]
+      behavioral_contracts: ["nothing is chosen until he clicks the chip", "a value already shown has no chip"]
+      error_paths: ["the option is not in the dropdown → the chip turns red with why"]
+      acceptance: ["test-pipeline-nodes AF-06 in Clear Glass: a new gig's SELECT A CATEGORY gets a chip with the gig's category; clicking it chooses it"]
+
+    # 2026-10-30 A11Y2 — James, with a screenshot of fiverr.com still in yellow-on-black links and the reset saying "Nothing on this page is named
+    # as accessibility": "look at the accessability. needs to actually hook into the back end settings. looks lazy also."
+    - id: MOD-A11Y2
+      name: accessibility-look-traced-and-kept-off
+      uuid: nexus-gated-flows-a11y-traced-v1-0000-2026-1030-001
+      path: clear-glass/src/page/keyboard-mode.js
+      phase: AC2_the_look_traced_and_kept_off_by_the_backend
+      description: "traceScript finds what makes the look, whatever it is named: the stylesheet rules that paint a link (colour, background, underline, spacing) and, in each rule's selector, the class or attribute on the page that switches it on (its trigger, present now); whether the operating system forces colours (forced-colors, prefers-contrast); and the site's own accessibility control (a widget's button, any control named accessibility), which is where a look kept on the site's server is turned off. What he keeps off is a per-site setting (accessibility.keepOff: classes, attributes, rule selectors), applied by main at every load of the site (offScript): the trigger removed and kept off, the rule disabled. The Site settings popup shows the look (a sample link), each cause with a switch, Open the site's accessibility settings, and Undo."
+      deps: [{ name: keyboard-mode }]
+      exports: ["traceScript() → { link, inline, rules: [{ selector, keepable, sheet, props, triggers }], triggers: [{ kind, name, value, on }], unreadable, forced, controls: [{ n, label, kind }], widgets }", "keepOffScript(list) — 'class:<n>' | 'attr:<n>' | 'rule:<selector>', kept off by a MutationObserver", "site setting accessibility.keepOff (string[], maxLen 400, panel a11y)", "bridge _a11yTrace(wcId) / _a11yKeepOff(wcId, entry, on) / _a11yOpenControl(wcId, n); IPC site-profile:a11yTrace / a11yKeepOff / a11yOpenControl; POST /cli/site-a11y { op: trace|keep|open }; command glass a11y"]
+      gate_pipeline: ["GATE-A11Y2-001: trace → his switch → saved per site → applied at each load → the link's look read back"]
+      behavioral_contracts: ["nothing is removed until he switches it off; each switch is undone by switching it back", "the site's own control is opened, never toggled for him (its setting is his account's)"]
+      error_paths: ["a rule in a sheet the page will not let be read (another origin) → said, with its sheet"]
+      acceptance: ["test-a11y-trace A2-01 in Clear Glass: a look switched on by an attribute not named accessibility is traced to its rule and trigger; kept off, it stays off after a reload; the site's control is found"]
+
+    - id: MOD-A11Y2-PANEL
+      name: accessibility-look-panel
+      uuid: nexus-gated-flows-a11y-panel-v1-0000-2026-1030-002
+      path: clear-glass/renderer/a11y-panel.js
+      phase: AC2_the_look_traced_and_kept_off_by_the_backend
+      description: "The Site settings popup's accessibility panel (replacing 0.60.283's red reset row, archived in _archive/2026-10-30-a11y-reset-row/): a sample link in the page's colours, a switch per trigger and per rule (Keep off on this site, written to accessibility.keepOff through the bridge), the site's own accessibility control as a button, the system's forced colours said when on, and the old sweep kept as Clear what the site stored. Styles in renderer/a11y-panel.css, loaded by browser.html; mounted by browser.js _a11yPanel into the Accessibility group."
+      deps: [{ name: accessibility-look-traced-and-kept-off }]
+      exports: ["window.CGA11yPanel.build({ api, wcId }) → { el, refresh() }"]
+      gate_pipeline: ["GATE-A11Y2-002: Find what turns it on → rows drawn from the trace → a switch → api.a11yKeepOff → the row redrawn from the backend"]
+      behavioral_contracts: ["every row comes from the trace or the site setting; nothing listed by hand", "a refused write puts the switch back and says why"]
+      error_paths: ["the trace fails → said in the status line, in red"]
+      acceptance: ["test-a11y-trace A2-04 in Clear Glass: the swatch in the page's colours, a switch per trigger and rule, the site's control; a switch writes through"]
+
   events:
     flows:
       - "macro.gate { macro, step, open, why, by }"

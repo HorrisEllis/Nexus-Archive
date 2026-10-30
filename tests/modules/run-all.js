@@ -416,6 +416,7 @@ const SUITES = [
   'test-gig-features.test.js',             // 0.60.281 AP1 — a gig's package rows: features in the .gig, checkAt/rowLabels, the fill's rows
   'test-opportunity-contacts.test.js',     // 0.60.281 AP2–AP4 — contacts behind job applications: captured from the page, routes, command, tool, Settings › Applications
   'test-snowflake-steps.test.js',          // 0.60.281 SN1 — Snowflake as a step in macros and workflows (route, unroute, start, wait, check, stop)
+  'test-a11y-trace.test.js', // 2026-10-30 AC2 — the accessibility look traced to what turns it on, kept off by the site setting, the popup panel
   'test-fiverr-overview-and-a11y.test.js', // 0.60.283 — a new gig's Overview (category, subcategory, tags, gated) and a site's remembered accessibility look reset
   'test-pipelines.test.js',                // 0.60.284 PL1–PL4 — pipelines: tasks in a dependency graph (macros, workflows, agents, commands), gated, a checklist
   'test-history-nodes.test.js',            // 0.60.285 HN1–HN3 — Idearium's history as nodes per unit (.exchange .input .response .tool_call .code_block)
@@ -424,6 +425,7 @@ const SUITES = [
   'test-gig-all-fields.test.js',  // 0.60.290 GF1–GF4 — every field (title, rich description, FAQs, buyer questions) read back; friction → his site keys; 0.60.291 GG1 every part gated
   'test-element-gates.test.js',   // 0.60.292 UG1/UG4/UG5 — a gate on any DOM element, made with the picker per site or page (UG2/UG3 archived 0.60.293)
   'test-pipeline-gates.test.js',  // 0.60.293 PL6–PL11 — gates as pipeline blocks; macros ↔ workflows ↔ pipelines; per-site pipelines
+  'test-pipeline-nodes.test.js',  // 0.60.296 PN1–PN4, AF6 — .pipeline node files, the editor picker, the Fiverr gig pipeline, the chip on dropdowns
   'test-intent-flow.test.js',     // 0.60.286 FA8–FA10 — type what you want: intent → context → DAG → found → gaps → contract
   'test-project-spine.test.js',   // 0.60.286 FA — import whole, the registry as the spine, refactor, split, convert, finish
   'test-versionium-everywhere.test.js',   // 0.60.278 VE0–VE5 — every change and every version in Versionium, in full (§17.12)

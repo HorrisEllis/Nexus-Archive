@@ -457,3 +457,34 @@ phases_ei:
     status: BUILT 0.60.294
     depends_on: [KB1_choose_waits_and_keys]
     files: [clear-glass/src/driver/index.js, lib/test-sandbox.js, tests/modules/test-pipeline-gates.test.js]
+
+## ADDENDUM 2026-10-30 — AF6 the black autofill chip on dropdowns
+James, 2026-10-30: "when it shows the black autfill chip, can you make that work for drop down also?"
+Grounded: the chip (renderer/autofill-inline.js, AF3) covered input, textarea and native select (set by value, not by the text shown); Fiverr's
+dropdowns are not fields, so they had none. Decided by his axioms: §8.6 reuse (the chip, the reporter, the matcher, the driver's choose).
+phases_af6:
+  AF6_the_chip_on_dropdowns:
+    spec: clear-glass/spec/gated-flows.spec
+    blocks: [MOD-AF6]
+    status: BUILT 0.60.296
+    depends_on: [EI1_every_key_and_click_paced_through_eros, KB1_choose_waits_and_keys]
+    files: [clear-glass/src/autofill/suggest.js, clear-glass/src/ipc/bridge.js]
+
+## ADDENDUM 2026-10-30 — A11Y2: the accessibility look traced to its cause and kept off by the site's own setting
+James, 2026-10-30, with a screenshot of fiverr.com's home page still in yellow-on-black links, the popup's reset saying "Nothing on this page is
+named as accessibility … Looked at: 127 storage keys, 50 cookies; a link looks rgb(255, 255, 0) on rgb(0, 0, 0)": "look at the accessability.
+needs to actually hook into the back end settings. looks lazy also."
+Grounded: FG1/0.60.283 looked only for names that say accessibility (classes, storage, cookies). The page has none, so the look is switched on
+by something named otherwise (a class or attribute a widget sets), or kept on the site's server (a widget's or the account's setting), which no
+storage sweep can reach. A web search found no documentation of a Fiverr accessibility setting (to confirm on his machine: the round icon at the
+bottom right of his screenshot looks like the site's own accessibility control).
+Readings (the coder's, to confirm): "hook into the back end settings" = (1) what turns the look off is a Clear Glass per-site setting applied by
+main at every load, not a one-off button; (2) a look kept on the site's server is turned off in the site's own accessibility settings, which
+Clear Glass opens for him. "looks lazy" = the popup's red paragraph; replaced by a panel.
+phases_a11y2:
+  AC2_the_look_traced_and_kept_off_by_the_backend:
+    spec: clear-glass/spec/gated-flows.spec
+    blocks: [MOD-A11Y2, MOD-A11Y2-PANEL]
+    status: BUILT 0.60.297
+    depends_on: [FG1_keyboard_mode_switch]
+    files: [clear-glass/src/page/keyboard-mode.js, clear-glass/src/site-settings/keys.js, clear-glass/src/main/index.js, clear-glass/src/ipc/bridge.js, clear-glass/src/preload/index.js, clear-glass/renderer/browser.js, clear-glass/renderer/browser.html, clear-glass/renderer/a11y-panel.js, clear-glass/renderer/a11y-panel.css, clear-glass/src/site-settings/readers.js, clear-glass/renderer/site-profile-groups.js, idearium/cli/route-commands.js]

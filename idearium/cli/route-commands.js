@@ -88,6 +88,13 @@ export const SPEC = [
   { key: 'pipeline.list', repo: false, usage: 'pipeline list [--archived] [--site <url> [--on-load]]', about: 'pipelines: tasks in a dependency graph, each a macro, workflow, agent, command, browser step, another pipeline or a wait at a gate; per site with --site',
     req: (a) => ({ system: 'clear-glass', method: 'GET', path: `/automation/pipelines${a.flags.site ? `?site=${encodeURIComponent(a.flags.site)}${a.flags['on-load'] ? '&onLoad=1' : ''}` : a.flags.archived ? '?archived=1' : ''}` }),
     print: (d, a, h) => { for (const p of d.pipelines || []) console.log(`  ${h.c.bold(p.name)}  ${h.c.dim(`${p.tasks.length} task${p.tasks.length === 1 ? '' : 's'}${p.site ? ` · ${p.site}${p.onLoad ? ' (on load)' : ''}` : ''}${p.archived ? ' · archived' : ''} · ${p.id}`)}`); if (!(d.pipelines || []).length) console.log(h.c.gray('  no pipelines yet — make one in Clear Glass Settings › Pipelines')); } },
+  // 2026-10-30 PN2 — James: "export the .macro and .automation nodes to the .pipeline node and import into the pipeline section of clearglass"
+  { key: 'pipeline.export', repo: false, usage: 'pipeline export <id or name>', about: 'save a pipeline as a .pipeline node file in the node library, with the macros, workflows and pipelines it runs bundled',
+    req: (a) => ({ system: 'clear-glass', method: 'POST', path: `/automation/pipelines/${encodeURIComponent((a.args || [])[0] || '')}/node/save`, body: {} }),
+    print: (d, a, h) => console.log(d.ok ? h.c.mint(`  ${d.file} saved${d.missing && d.missing.length ? ` — not bundled (not found): ${d.missing.join(', ')}` : ''}`) : h.c.amber(`  ${d.error}`)) },
+  { key: 'pipeline.import', repo: false, usage: 'pipeline import <node file in the library, e.g. fiverr-gig.pipeline>', about: 'import a .pipeline node file (and what it bundles) into Clear Glass\'s Pipelines',
+    req: (a) => ({ system: 'clear-glass', method: 'POST', path: `/automation/nodes/${encodeURIComponent((a.args || [])[0] || '')}/import`, body: {} }),
+    print: (d, a, h) => console.log(d.ok ? h.c.mint(`  “${d.pipeline ? d.pipeline.name : (d.workflow || d.macro || {}).name}” imported${(d.warnings || []).length ? ` — ${d.warnings.join('; ')}` : ''}`) : h.c.amber(`  ${d.error}`)) },
   { key: 'pipeline.show', repo: false, usage: 'pipeline show <id>', about: 'a pipeline\'s tasks in order, with what each runs and depends on',
     need: (a) => (a.args[0] ? null : '<id>'),
     req: (a) => ({ system: 'clear-glass', method: 'GET', path: `/automation/pipelines/${encodeURIComponent(a.args[0])}` }),
@@ -1313,6 +1320,25 @@ export const SPEC = [
       for (const o of sites) { console.log(h.c.bold(`  ${o}`)); for (const [k, b] of Object.entries(all[o])) console.log(`    ${h.c.mint(k.padEnd(14))} ${b.do}${b.option ? ` "${b.option}"` : ''}${b.key ? ` ${b.key}` : ''}${b.macro ? ` ${b.macro}` : ''}${b.selector ? h.c.dim(`  ${b.selector}`) : ''}`); }
     } },
   // 2026-10-30 UG4 — James: "it needs to be universal for all dom elements ... per site settings, macros and automation features."
+  // 2026-10-30 AC2 — James: "look at the accessability. needs to actually hook into the back end settings." An agent has what the popup has.
+  { key: 'glass.a11y', repo: false, usage: 'glass a11y | glass a11y keep <class:name|attr:name|rule:selector> [--off] | glass a11y open <n>',
+    about: "the accessibility look of the page open in Clear Glass, traced to the rules that paint it and what switches them on; keep one off on the site (its setting accessibility.keepOff, applied at every load), or open the site's own accessibility control",
+    req: (a) => {
+      const [op, ...rest] = a.args || []; const f = a.flags || {};
+      if (op === 'keep') return { system: 'clear-glass', method: 'POST', path: '/cli/site-a11y', body: { op: 'keep', entry: rest.join(' '), on: !f.off } };
+      if (op === 'open') return { system: 'clear-glass', method: 'POST', path: '/cli/site-a11y', body: { op: 'open', n: Number(rest[0]) } };
+      return { system: 'clear-glass', method: 'POST', path: '/cli/site-a11y', body: { op: 'trace' } };
+    },
+    print: (d, a, h) => {
+      if (d.ok === false || d.error) return console.log(h.c.amber(`  ${d.error}`));
+      if (d.opened) return console.log(h.c.mint(`  opened ${d.opened}`));
+      if (d.entry) return console.log(h.c.mint(`  ${d.origin} · ${d.entry} ${d.on ? 'kept off' : 'no longer kept off (reloaded)'} · keepOff: ${d.keepOff.join(' | ') || 'none'}`));
+      if (d.link) console.log(`  link: ${d.link.color} on ${d.link.background}${d.forced && d.forced.colors ? h.c.amber('  (system forced colours on)') : ''}`);
+      for (const t of d.triggers || []) console.log(`  ${t.kind}:${t.name}${t.value ? `=${t.value}` : ''} on ${t.on}${(d.keepOff || []).includes(`${t.kind}:${t.name}`) ? h.c.mint('  kept off') : ''}`);
+      for (const r of d.rules || []) console.log(`  rule:${r.selector}  ${Object.keys(r.props).join(',')}  ${h.c.gray(r.sheet)}`);
+      for (const c of d.controls || []) console.log(`  control ${c.n}: ${c.label} (${c.kind})`);
+      if (!(d.triggers || []).length && !(d.rules || []).length) console.log(h.c.gray(`  no readable rule paints the links this way${(d.unreadable || []).length ? ` (${d.unreadable.length} sheet(s) unreadable)` : ''}`));
+    } },
   { key: 'glass.gates', repo: false, usage: 'glass gates [<site url>] | glass gates add <site url> --selector s [--value v | --equals v | --matches /re/ | --shows o | --checked true|false | --text t | --visible true | --gone true] [--page glob] [--label name] | glass gates remove <site url> <id> | glass gates check [--id id]',
     about: 'gates on any element, per site or page: blocks your pipelines, workflows and macros wait on (a pipeline task gate, Wait at a gate, a macro step gate use:<id>); check runs yours on the page open in Clear Glass',
     req: (a) => {
