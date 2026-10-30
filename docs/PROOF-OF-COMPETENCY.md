@@ -32,11 +32,15 @@ typed channels, a CLI, and an API (`skills/james-brooks/SKILL.md`, "The Cobalt C
   copilot, and every agent get the same powers through one door.
 - **Instance, 0.60.7:** "Versionium for every repo" is five commands in that table, each served by the same route the UI
   calls.
+- **Checkable:** `node -e "import('./idearium/cli/route-commands.js').then(m=>console.log(m.SPEC.length))"` counts the commands in the one
+  table. `tests/modules/test-change-record.test.js` CR-05 fails if two rows share a key.
 
 ### Specification and mapping before building
 
 - **Rule he set:** "map before build". It is AXIOMS §3.3, made a standing rule in docs/CLAUDE.md.
-- **Evidence:** 104 phasemaps. Each phase names its files, what it depends on, and the proof it must pass. Decisions
+- **Evidence:** 200 phasemaps in docs/ (count them: `git ls-files 'docs/*-phasemap.spec' | wc -l`, 2026-10-29). Each phase
+  names its files, what it depends on, and the proof it must pass. Since his 2026-10-20 rule ("everything needs to be speccced before
+  built"), the full specs must compile at full depth; `tests/modules/test-substrate-spec.test.js` checks every one of them, with its map. Decisions
   record their options with the chosen one quoted. Example: `docs/2026-10-13-projects-raid-and-gates-phasemap.spec`,
   section `decisions:`.
 
@@ -1351,3 +1355,116 @@ upstream to the gate: a pattern is now **held as a hypothesis** until an event-l
   The fix went there: a gate RAID holds for a person, not a side door in Idearium.
 - **Checkable:** `tests/modules/test-gate-waits-for-verdict.test.js` 5/5 (GV-01: one call, never FAILED, no self-heal);
   `CHANGELOG-0.60.257.md`.
+
+### 2026-10-29 — 0.60.276–0.60.277: "Remember sovereignty." · "a"
+- **His words:** "Remember sovereignty. Add that to the axioms and then add it to the claude.md to read the axioms in the docs". Then,
+  given two ways to fix what the first check found, "a".
+- **Context:** The day before, the coder had moved the changelogs into Versionium's folder and then had lib read that folder directly.
+  He did not point at the code; he named the principle. Once it was written as §5.15, the first check against it found that violation.
+  The coder recommended (b): put the files back where lib owns them. He chose (a): Versionium owns the files and the code that reads
+  them, and every other system asks it.
+- **What it shows:** architectural judgment held against the cheaper option. (b) was smaller. (a) is the one that keeps one owner per
+  kind of data, and doing it showed where release code and version reading had been mixed in one lib module, which were then split.
+  It also shows principle-level direction: he corrected a class of mistake, not an instance, and the correction is now a checkable law.
+- **Checkable:** `docs/AXIOMS-v3.1.md` §5.15 (101 laws, 101 quick-reference lines); `tests/modules/test-versionium-owns-releases.test.js`
+  4/4 (no system requires the moved code; drawbridge ratchet: 0 added; an outage is said, not spread);
+  `versionium/changelogs/CHANGELOG-0.60.277.md`.
+
+### 2026-10-29 — 0.60.281: "update the gig files. also capturing the contact info for job applications."
+- **His words:** "update the gig files. also capturing the contact info for job applications. also snowflake plugin support to macros and
+  automation." He sent it with a screenshot of his gig's Scope & Pricing page. The day before, he had set the order: "fiverr is the most
+  important. that and job applications, 0logging contact info from applications/businesses you apply for".
+- **Context:** The gig files held a name, description, days, revisions and price for each package. His screenshot showed that Fiverr asks
+  for more: rows that change with the subcategory, such as "Number of APIs integrated" and "Data Syncing". The job pipeline recorded who he
+  is as the applicant, and nothing about who he was applying to.
+- **What it shows:**
+  - **Product judgment from real use.** He found both gaps by working the actual sites, not from the code, and the screenshot was the spec
+    for the gig rows.
+  - **Getting the follow-up loop right.** A pipeline that can apply but cannot say whom to follow up with is missing the part that turns an
+    application into a conversation.
+  - **His rule held, and it shaped the design.** His rule from 0.60.280, "this is the nodes in the settings, not hardcoded", is why the
+    rows are data in the gig file and not code. He can add the next subcategory's rows himself.
+- **Checkable:** `tests/modules/test-gig-features.test.js` 3/3 and `tests/modules/test-opportunity-contacts.test.js` 6/6 (both drive
+  Clear Glass); `versionium/changelogs/CHANGELOG-0.60.281.md`.
+
+### 2026-10-29 — 0.60.286: "create all the capability to finish this or any other project in the repo."
+- **His words:** "take this, and import it into idearium, then create all the capability to finish this or any other project in the repo.
+  convert mds, hardcoded phasemaps, refactor tool for the architecture to use the component registry as the spine, decomposition tool for
+  breaking up each component into it's own file and wire it into the spine." Later the same day: "like type in the cli, determine context
+  needed, build dag. search the project for context, ask user about any gaps, then contract, etc"
+- **Context:**
+  - He uploaded Emerge, a project of his made outside Nexus.
+  - Importing it showed Idearium silently dropping its tracked `lang/build/current` folder: every folder named `build` was skipped.
+  - Its plan lived inside its spec, where Nexus never looked.
+- **What it shows:**
+  - **Systems design, named as a pipeline.** His second message is a complete agent workflow written as one line, in an order that holds
+    up:
+    1. understand the intent;
+    2. find the context it needs;
+    3. order the work as a DAG;
+    4. search;
+    5. ask the human last, only about gaps;
+    6. then commit to a contract.
+
+    The code keeps that order verbatim.
+  - **Architecture direction.** "The component registry as the spine" is his IN3 plan from 2026-10-19, now applied to any project.
+- **Checkable:**
+  - The real Emerge zip went through the router:
+    - the tracked build folder is kept;
+    - `cie-eg.spec`'s plan became 17 phases, 9 ready to build, 0 DAG problems;
+    - 10 mds became specs;
+    - `emerge-kernel.js` split into 5 files with identical exports, verified by loading old and new apart;
+    - all 26 multi-component files split and verified in the sandbox.
+  - Tests: `test-project-spine` 8/8, `test-intent-flow` 4/4 and `test-gig-fill-menu` 3/3, each with a Clear Glass check.
+  - Changelog: `versionium/changelogs/CHANGELOG-0.60.286.md`.
+
+### 2026-10-29 — 0.60.287: "Bidirectional causal changing." · "Should I stop making this like it's a product and make it for me?"
+- **His words:**
+  - First: "Each problem needs to build a dag using reverse end state reasoning."
+  - Asked whether he meant working back from done: "Yes the same way I reason. Bidirectional causal changing."
+  - Earlier the same day: "Should I stop making this like it's a product and make it for me?"
+- **The call, against the alternative:**
+  - **Method.** The coder had built the "type what you want" flow forwards: from his words to the files, outwards. He named the method
+    instead: chain backward from the end state and forward from the change, and work only where they meet. That is bidirectional search
+    over cause and effect, a known technique in planning. He arrived at it from how he reasons himself.
+  - **Direction.** He chose one user (himself) and one loop (Fiverr, then applications) over a general product. Every step mapped after
+    that call follows that order.
+- **What it catches that forward-only planning misses.** In `test-intent-flow` IF-05:
+  - A change to `money.js`, with the end "the cart total", gives the path money → pricing → cart.
+  - `receipt.js` also uses money. It is flagged as a side effect to verify, not ignored.
+  - A change to the menu with the same end is **refused before any work is planned**. Nothing connects the two, which forward
+    planning cannot tell.
+- **Checkable:**
+  - `tests/modules/test-intent-flow.test.js`: 5/5, including IF-05 above, and IF-04 driving the Do box in Clear Glass;
+  - `docs/2026-10-29-his-loop-phasemap.spec`, decisions HL_D2 and HL_D3 with his words;
+  - `lib/intent-flow.js` `causal()`.
+
+### 2026-10-30 — 0.60.290–0.60.291: "if you run into friction use the per site keybindings that I proposed." · "each field/drop down/ or anything should be gated."
+- **His words:**
+  - 2026-10-30: "like can you fix the autofill to work with all fields, and if you run into friction use the per site keybindings that I
+    proposed."
+  - The same day, after it filled every field: "each field/drop down/ or anything should be gated."
+- **The call, against the alternative:**
+  - **Fallback.** The per-site keys (his idea on 2026-10-28: "like elements to keys, per site?") were a shortcut he pressed by hand. He
+    made them the automation's fallback. A field the fill cannot handle becomes something he binds once, which the fill uses on every
+    later run. That turns each failure into a fix he can make himself, instead of a code change.
+  - **Gates.** The usual approach to form autofill is to set the value, read it once, and count the field as done. His rule is that
+    nothing counts until a gate on the page holds. The coder's version reads the field again after the page settles.
+- **What it catches that read-once misses:** `test-gig-all-fields` GF-05, in Clear Glass. The page puts the title back 250 ms after it is
+  typed. A read right after typing sees the gig's title and would count it as filled. The gate reads it again after the page settles,
+  sees the value change, tries twice, and reports the title as not done, with what the page showed.
+- **GF-04:** a description box the fill cannot find by its words is filled through the key he bound to it (part: description), and read
+  back.
+- **Check it:** `node tests/modules/test-gig-all-fields.test.js` → 5 passed.
+
+### 2026-10-30 — 0.60.293: "gates are for the pipelines for macro atuomation" · "i build bottom up, and interconnected, and compound leverage"
+- **His words:** "what? gates are for the pipelines for macro atuomation", then "make sure macros, automations, and pipelines are
+  interconnected. i build bottom up, and interconnected, and compound leverage".
+- **The call, against the alternative.** The coder had pushed a check down into every write the browser makes: automatic and hidden, and
+  it slowed every write. He corrected it to the design his record already held: a gate is a building block that flows wait on. He also
+  asked for the three automation layers to run each other. The result is one block and one engine. "Wait at a gate" is written once, and
+  it is a workflow step, a pipeline task and a pipeline task's gate. Macros run workflows, workflows run pipelines, pipelines run macros
+  and other pipelines. That is compound leverage in the literal sense: each new piece is usable from every layer at once.
+- **Check it:** `node tests/modules/test-pipeline-gates.test.js` → 6 passed. In PG-04, a macro runs a workflow, which runs a pipeline,
+  whose task runs a macro gated on a gate he made with the picker. The value is typed at the bottom of the chain, and the run shows up in
+  the same store the Pipelines screen reads.

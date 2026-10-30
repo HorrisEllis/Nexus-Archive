@@ -214,6 +214,9 @@ contextBridge.exposeInMainWorld('ClearGlass', {
     set:   (url, key, value) => ipcRenderer.invoke('site-profile:set', { url, key, value }),
     clear: (url, key)        => ipcRenderer.invoke('site-profile:clear', { url, key }),
     keys:  ()                => ipcRenderer.invoke('site-profile:keys'),
+    // 0.60.283 — what holds this tab's site's accessibility look on; reset: backed up, removed, the site set to Off, the page reloaded
+    a11yCheck: (wcId) => ipcRenderer.invoke('site:a11yCheck', { wcId }),
+    a11yReset: (wcId) => ipcRenderer.invoke('site:a11yReset', { wcId }),
   },
 
   // ── Accounts (real, per-agentKey identity — §PHASE-3 2026-08-23) ──────
@@ -276,6 +279,15 @@ contextBridge.exposeInMainWorld('ClearGlass', {
     set:      (accel, action)  => ipcRenderer.invoke('shortcuts:set', { accel, action }),
     remove:   (accel)          => ipcRenderer.invoke('shortcuts:remove', { accel }),
     reset:    ()               => ipcRenderer.invoke('shortcuts:reset'),
+    // 0.60.275 KB3 — keys bound to elements, per site
+    siteList:   ()                     => ipcRenderer.invoke('siteKeys:list'),
+    siteSet:    (url, accel, binding)  => ipcRenderer.invoke('siteKeys:set', { url, accel, binding }),
+    siteRemove: (url, accel)           => ipcRenderer.invoke('siteKeys:remove', { url, accel }),
+    // 2026-10-30 UG5 — his gates per site
+    gateList:   ()                     => ipcRenderer.invoke('siteGates:list'),
+    gateAdd:    (url, gate)            => ipcRenderer.invoke('siteGates:add', { url, gate }),
+    gateRemove: (url, id)              => ipcRenderer.invoke('siteGates:remove', { url, id }),
+    gateCheck:  (opts = {})            => ipcRenderer.invoke('siteGates:check', opts),
     onAction: (cb) => { const f = (_e, d) => cb(d); ipcRenderer.on('shortcut:action', f); return () => ipcRenderer.removeListener('shortcut:action', f); },
   },
 
@@ -351,6 +363,16 @@ contextBridge.exposeInMainWorld('ClearGlass', {
   },
 
   // §BUILT 2026-09-19 — real AutofillProfile CRUD + detect/fill orchestration
+  // 0.60.269 — Settings › About: the versions, and whether a newer Electron / Clear Glass / Nexus exists (read-only)
+  // 0.60.281 AP4 — James: "also capturing the contact info for job applications." Settings › Applications: the opportunity system's
+  // applications and contacts, through Copilot's /api/opportunity routes only (the bridge proxies an allowlist; §5.15)
+  applications: {
+    call: (method, path, body) => ipcRenderer.invoke('applications:call', { method, path, body }),
+  },
+  about: {
+    info:  () => ipcRenderer.invoke('about:info'),
+    check: () => ipcRenderer.invoke('about:check'),
+  },
   autofill: {
     listProfiles:  ()             => ipcRenderer.invoke('autofill:profile:list'),
     getProfile:    (id)           => ipcRenderer.invoke('autofill:profile:get', { id }),
@@ -369,7 +391,15 @@ contextBridge.exposeInMainWorld('ClearGlass', {
     // §0.39.301 — write a Fiverr gig, then (only when asked) type it into the gig editor (src/autofill/gig.js)
     gig:       (payload)                     => ipcRenderer.invoke('autofill:gig', payload),
     gigDetect: (gig, agentId)                => ipcRenderer.invoke('autofill:gig:detect', { gig, agentId }),
-    gigFill:   (gig, agentId, minConfidence) => ipcRenderer.invoke('autofill:gig:fill', { gig, agentId, minConfidence }),
+    gigFill:   (gig, agentId, minConfidence, opts = {}) => ipcRenderer.invoke('autofill:gig:fill', { gig, agentId, minConfidence, ...opts }),   // 0.60.286 GM2 opts: { only, replay, edits }
+    gigMenu:   (agentId, gig) => ipcRenderer.invoke('autofill:gig:menu', { agentId, gig }),   // 0.60.286 GM2 — the fill menu for the page in the tab
+    gigAssign: (d) => ipcRenderer.invoke('autofill:gig:assign', d),   // 0.60.222 — teach a gig part the element he picked
+    gigPage:   (agentId) => ipcRenderer.invoke('autofill:gig:page', { agentId }),          // 0.60.224
+    gigSaveRecording: (d) => ipcRenderer.invoke('autofill:gig:saveRecording', d),         // 0.60.224 — his choices → the page's macro
+    suggest:   (agentId) => ipcRenderer.invoke('autofill:suggest', { agentId }),          // 0.60.267 AF3 — what can go in every field
+    gigSetLast: (gig) => ipcRenderer.invoke('autofill:gig:setLast', { gig }),            // 0.60.267 — the panel's gig is the chips' gig
+    fillOne:   (agentId, cgId, value) => ipcRenderer.invoke('autofill:fillOne', { agentId, cgId, value }),   // 0.60.267 AF3 — a chip clicked
+    anchor:    (agentId, cgId, kind, value) => ipcRenderer.invoke('autofill:anchor', { agentId, cgId, kind, value }),   // 0.60.268 AF5 — ⚓ a field
     exportAll: ()                            => ipcRenderer.invoke('autofill:export'),                   // §AT2 0.60.256 the .autofill file: { text, filename, counts }
     importAll: (text)                        => ipcRenderer.invoke('autofill:import', { text }),         // merges; keeps what it replaced
     importUndo: ()                           => ipcRenderer.invoke('autofill:import:undo'),
@@ -444,6 +474,11 @@ contextBridge.exposeInMainWorld('ClearGlass', {
   // ── Floating CLI (BS6, 0.60.179) — its own window, excluded from screen capture; see src/main/float-cli.js ──
   floatCli: {
     toggle:  ()          => ipcRenderer.invoke('floatcli:toggle'),
+    // 0.60.280 KB7 — pin: the button on every browser window, kept
+    show:    (expanded)  => ipcRenderer.invoke('floatcli:show', { expanded: !!expanded }),
+    pin:     (pinned)    => ipcRenderer.invoke('floatcli:pin', { pinned: !!pinned }),
+    pinned:  ()          => ipcRenderer.invoke('floatcli:pinned'),
+    onPinned: (cb)       => { const f = (_e, d) => cb(d); ipcRenderer.on('floatcli:pinned', f); return () => ipcRenderer.removeListener('floatcli:pinned', f); },
     size:    (expanded)  => ipcRenderer.invoke('floatcli:size', { expanded }),
     hide:    ()          => ipcRenderer.invoke('floatcli:hide'),
     nav:     (op, url)   => ipcRenderer.invoke('floatcli:nav', { op, url }),

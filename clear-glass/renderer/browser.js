@@ -72,6 +72,11 @@
     },
   });
 
+  // 0.60.224 — the panels loaded after this file (gig-panel.js since 0.59.3, page-map-panel.js since 0.60.175) read window.cg, which nothing
+  // ever set: each returned on its first line, so the Fiverr panel's buttons — "Fill this Fiverr page" among them — were never wired. Found
+  // while getting Fiverr working (James, 2026-10-28: "like none of the autofill works"). They get this same wrapped API.
+  window.cg = cg;
+
   const params = new URLSearchParams(window.location.search);
   const agentId = params.get('agentId') || 'default';
   const ssePort = params.get('ssePort') || 7701;
@@ -516,6 +521,10 @@ ${alt ? `<p>Did you mean <a style="color:#00f5ff" href="${esc(alt)}">${esc(alt)}
   })();
 
   document.getElementById('btn-new-tab').addEventListener('click', () => _tabs.newTab());
+  // FP1 / TC3 (0.60.221) — James, 2026-10-28: "why did fiverr open in a popout window? like none of the autofill works." · "I want it just to
+  // open in a new tab." A link meant as a new tab (target=_blank) is sent here by main (src/main/compartment-window.js) and opens as a tab of
+  // this window, in its session, where autofill, the driver and macros reach it.
+  if (window.ClearGlass?.on) window.ClearGlass.on('cg:open-tab', (d) => { if (d && typeof d.url === 'string' && /^https?:/i.test(d.url)) _tabs.newTab(d.url); });
 
   // Wire webview events into tab state
   // BS2 (0.60.179) — the tab shows the site's icon, as Firefox does (http/https/data icons only)
@@ -690,6 +699,8 @@ ${alt ? `<p>Did you mean <a style="color:#00f5ff" href="${esc(alt)}">${esc(alt)}
   // §SELECTOR-ASSIGN 0.39.251 — a pick on a provider page is offered as that
   // provider's reply / input / send selector (renderer/selector-assign/).
   window.CGSelectorAssign?.mount({ cg, wv, notify: (m) => addMsg('assistant', m) });
+  window.CGSiteKeyBar?.mount({ cg });   // 0.60.275 KB3 — "Bind a key" after a pick
+  window.CGGateBar?.mount({ cg });      // 0.60.292 UG5 — "Gate this element" after a pick
 
   pickerBtn.addEventListener('click', async () => {
     pickerActive = !pickerActive;
@@ -752,6 +763,8 @@ ${alt ? `<p>Did you mean <a style="color:#00f5ff" href="${esc(alt)}">${esc(alt)}
     if (e.channel === 'dom:pick-result') {
       const pick = { ...e.args[0], pickId: 'pick-' + Date.now(), name: `pick-${picks.length + 1}` };
       picks.push(pick); window.__cgLastPickAt = Date.now();
+      // 0.60.222 — a panel that asked for the next pick (the gig panel's "Point at it") gets it
+      if (typeof window.__cgOnNextPick === 'function') { const f = window.__cgOnNextPick; window.__cgOnNextPick = null; try { f(pick); } catch (_) {} }
       renderPicks();
       picksPanel.classList.add('visible');
       pickerActive = false;
@@ -769,6 +782,8 @@ ${alt ? `<p>Did you mean <a style="color:#00f5ff" href="${esc(alt)}">${esc(alt)}
         apiUrl:  pickerRoute?.value === 'api' ? (pickerApiUrl?.value || '') : undefined,
       });
       window.CGSelectorAssign?.offer({ xpath: pick.xpath, url: pick.url || wv.getURL() });
+      window.CGSiteKeyBar?.offer({ xpath: pick.xpath, url: pick.url || wv.getURL() });   // 0.60.275 KB3 — elements to keys, per site
+      window.CGGateBar?.offer({ xpath: pick.xpath, url: pick.url || wv.getURL() });      // 0.60.292 UG5 — a gate on any element, per site or page
     } else if (e.channel === 'dom:event') {
       // Live MutationObserver stream — forward straight through, no local
       // UI cost (this can fire many times a second on a busy page).
@@ -2156,6 +2171,29 @@ ${alt ? `<p>Did you mean <a style="color:#00f5ff" href="${esc(alt)}">${esc(alt)}
   // resume state. Cleardriver, agentmesh and guardian setting." The popup is this tab's site, every feature's settings grouped and drawn from
   // the key table (renderer/site-profile-groups.js), each change written at once. The list of every site's stored values it used to show
   // (0.39.x) is Settings › Sites, one click away ("All sites…"), where nothing of it was lost.
+  // 0.60.283 — James, 2026-10-29: "The accessability man. i can't fix it." A site that remembers its accessibility look (Fiverr) loads with it
+  // on, so Tab mode Off had nothing to undo. "Reset" finds what holds it (classes, storage, cookies), backs it up, removes it, sets the site
+  // to Off and reloads; the row says what it found, or that nothing matched and which names it looked at.
+  function _a11yResetRow(root) {
+    const g = root.querySelector('[data-feature="accessibility"]'); if (!g || !cg.siteProfile || !cg.siteProfile.a11yReset) return;
+    const row = document.createElement('div'); row.className = 'sp-a11y';
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'sp-a11y-reset'; b.textContent = 'Reset this site’s accessibility look';
+    const note = document.createElement('div'); note.className = 'sp-note sp-a11y-note';
+    b.addEventListener('click', async (e) => {
+      e.stopPropagation(); b.disabled = true; note.textContent = 'Looking…';
+      try {
+        const r = await cg.siteProfile.a11yReset(_wcId());
+        if (!r || r.ok === false) throw new Error((r && r.error) || 'no answer');
+        const what = [].concat(r.classes.html.map(c => `class ${c}`), r.classes.body.map(c => `class ${c}`), Object.keys(r.attrs.html).concat(Object.keys(r.attrs.body)).map(a => `attribute ${a}`),
+          r.storage.map(x => `${x.area} storage ${x.key}`), r.cookies.map(c => `cookie ${c}`));
+        note.textContent = what.length ? `Removed ${what.join(', ')} (backed up), set this site to Off, and reloaded.`
+          : `Nothing on this page is named as accessibility. Set this site to Off and reloaded. Looked at: ${r.otherKeys.length} storage keys, ${r.otherCookies.length} cookies${r.link ? `; a link looks ${r.link.color} on ${r.link.background}, spacing ${r.link.letterSpacing}` : ''}.`;
+        note.title = JSON.stringify({ storageKeys: r.otherKeys, cookies: r.otherCookies, backup: r.backup || null });
+      } catch (err) { note.textContent = `Could not reset: ${err.message}`; }
+      b.disabled = false;
+    });
+    row.append(b, note); g.append(row);
+  }
   async function _renderSiteSettingsPanel() {
     const panel = document.getElementById('site-settings-panel');
     panel.classList.add('sp-pop');
@@ -2177,6 +2215,7 @@ ${alt ? `<p>Did you mean <a style="color:#00f5ff" href="${esc(alt)}">${esc(alt)}
         onSet: (key, value) => cg.siteProfile.set(url, key, value),
         onClear: (key) => cg.siteProfile.clear(url, key) });
       panel.replaceChildren(head, g.el);
+      _a11yResetRow(g.el);
     } catch (err) {
       const e = document.createElement('div'); e.className = 'sp-note'; e.textContent = `Site settings: ${err.message}`;
       panel.replaceChildren(head, e);

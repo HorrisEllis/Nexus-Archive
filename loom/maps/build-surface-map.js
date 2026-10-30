@@ -20,7 +20,73 @@ const I = (rel) => idFor(rel);
 const FILES = [
   ['clear-glass/src/main/compartment-window.js', I('clear-glass/src/main/compartment-window.js'), [
     I('clear-glass/src/preload/compartment-window.js'),        // PRELOAD path — the compartment window's only preload
+    I('clear-glass/src/main/window-frame.js'),                 // require — popupOptions, darkenWindow (listed 0.60.221: it was missing)
+    I('clear-glass/src/tabs/open-decision.js'),                // require (0.60.221) — decideOpen: a link meant as a tab opens a tab
+    I('clear-glass/renderer/browser.js'),                      // IPC cg:open-tab → _tabs.newTab (0.60.221)
   ]],
+  ['clear-glass/src/tabs/open-decision.js', I('clear-glass/src/tabs/open-decision.js'), []],   // 0.60.221 FP1 — pure
+  ['clear-glass/src/page/option-match.js', I('clear-glass/src/page/option-match.js'), []],     // 0.60.221 FP2 — pure
+  ['clear-glass/renderer/autofill-inline.js', I('clear-glass/renderer/autofill-inline.js'), [   // 0.60.267 AF3 — the chip under each input
+    I('clear-glass/renderer/browser.js'),                      // window.cg — the wrapped preload API
+    I('clear-glass/src/ipc/bridge.js'),                        // IPC autofill:suggest / autofill:fillOne
+    I('clear-glass/src/preload/webview-bridge.js'),            // the page's autofill:rects / autofill:stale (ipc-message)
+  ]],
+  ['clear-glass/src/autofill/suggest.js', I('clear-glass/src/autofill/suggest.js'), []],
+  ['clear-glass/src/page/keyboard-mode.js', I('clear-glass/src/page/keyboard-mode.js'), [   // 0.60.273 FG1 — the Tab switch per site
+    I('clear-glass/src/page/state-diff.js'),                   // require — snapshotScript, diffState, _part injected into the page
+  ]],
+  // 0.60.274 — the changelogs' home (versionium/changelogs); it requires nothing of ours. Its consumers (release-version, nexus-releases,
+  // phase-census, spec-census, context-atlas, scripts/release-zip, idearium/api's releases.changelog) are plain requires the source scanner maps.
+  ['lib/changelog-files.js', I('lib/changelog-files.js'), []],   // 0.60.277 — the scanners' view (VS_D4); lib/changelogs.js moved to versionium/lib (releases-map)
+  ['clear-glass/src/shortcuts/site-keys.js', I('clear-glass/src/shortcuts/site-keys.js'), [   // 0.60.275 KB2 — keys bound to elements, per site
+    I('clear-glass/src/shortcuts/registry.js'),                // require — normalize, isSafe
+  ]],
+  ['clear-glass/renderer/site-keys/bind-bar.js', I('clear-glass/renderer/site-keys/bind-bar.js'), [   // 0.60.275 KB3 — "Bind a key" after a pick
+    I('clear-glass/renderer/browser.js'),                      // window.cg — mount({ cg }) and offer() after dom:pick-result
+    I('clear-glass/src/ipc/bridge.js'),                        // IPC siteKeys:set (through the preload's shortcuts.siteSet)
+  ]],
+  // 0.60.281 AP2–AP4, SN1 — James, 2026-10-29: "update the gig files. also capturing the contact info for job applications. also snowflake
+  // plugin support to macros and automation."
+  ['lib/opportunity/contacts.js', I('lib/opportunity/contacts.js'), [I('lib/opportunity/store.js')]],   // require — T.contacts, jaa, ledger
+  ['clear-glass/renderer/settings/sections/applications.js', I('clear-glass/renderer/settings/sections/applications.js'), [   // AP4 Settings › Applications
+    I('clear-glass/src/ipc/bridge.js'),                        // IPC applications:call (cg.applications.call) → _opportunityCall
+  ]],
+  ['clear-glass/src/net/step.js', I('clear-glass/src/net/step.js'), []],   // SN1 — pure; the service and transport are handed in (deps)
+  // 0.60.286 FA — James: "create all the capability to finish this or any other project in the repo" (docs/project-spine.spec)
+  ['lib/adapters/contract.js', I('lib/adapters/contract.js'), [I('lib/adapters/javascript.js'), I('lib/adapters/documents.js'), I('lib/adapters/emerge.js')]],   // lazy requires
+  ['lib/adapters/javascript.js', I('lib/adapters/javascript.js'), [I('lib/code-intel/structure.js'), I('lib/code-intel/decls.js'), I('lib/code-intel/text.js')]],
+  ['lib/adapters/documents.js', I('lib/adapters/documents.js'), []],
+  ['lib/adapters/emerge.js', I('lib/adapters/emerge.js'), [I('lib/code-intel/structure.js')]],
+  ['lib/project-spine.js', I('lib/project-spine.js'), [I('lib/adapters/contract.js')]],
+  ['lib/project-refactor.js', I('lib/project-refactor.js'), [I('lib/project-spine.js')]],
+  ['lib/project-split.js', I('lib/project-split.js'), [I('lib/adapters/contract.js')]],
+  ['lib/project-convert.js', I('lib/project-convert.js'), [I('lib/adapters/contract.js'), I('lib/project-spine.js'), I('lib/spec-from-markdown.js'), I('lib/phasemap-parse.js'), I('lib/phase-dag.js')]],
+  ['lib/intent-flow.js', I('lib/intent-flow.js'), [I('lib/project-spine.js'), I('lib/code-intel/text.js')]],
+  ['idearium/ui/js/repo-spine.js', I('idearium/ui/js/repo-spine.js'), ['nexus.idearium.api', I('idearium/ui/js/repo-intent.js')]],   // a browser script: HTTP
+  ['idearium/ui/js/repo-intent.js', I('idearium/ui/js/repo-intent.js'), ['nexus.idearium.api']],
+  // 0.60.286 GM — James: "make a full menu with check boxes, adn drop downs if applicable"
+  ['clear-glass/src/autofill/gig-menu.js', I('clear-glass/src/autofill/gig-menu.js'), []],
+  ['clear-glass/renderer/gig-menu.js', I('clear-glass/renderer/gig-menu.js'), [I('clear-glass/renderer/gig-panel.js')]],   // window.CgGigPanel, cg.autofill.gigMenu/gigFill over IPC
+  // 2026-10-30 GF — James: "fix the autofill to work with all fields, and if you run into friction use the per site keybindings that I proposed"
+  ['clear-glass/src/autofill/gig-fields.js', I('clear-glass/src/autofill/gig-fields.js'), []],
+  // 2026-10-30 UG — James: "it needs to be universal for all dom elements ... stop thinking so narrow"
+  ['clear-glass/src/page/element-gate.js', I('clear-glass/src/page/element-gate.js'), [I('clear-glass/src/page/option-match.js')]],
+  ['clear-glass/renderer/site-gates/gate-bar.js', I('clear-glass/renderer/site-gates/gate-bar.js'), []],   // a browser script: cg.shortcuts.gateAdd over IPC
+  ['lib/repo-history-nodes.js', I('lib/repo-history-nodes.js'), [I('lib/node-export.js'), I('lib/test-sandbox.js')]],   // 0.60.285 HN1 — Idearium's history as nodes, one per unit
+  ['lib/automation/pipeline.js', I('lib/automation/pipeline.js'), [I('lib/automation/engine.js'), I('lib/automation/steps.js')]],   // 0.60.284 PL1 — WORKFLOWS_DIR; byType, validateStep
+  ['clear-glass/renderer/settings/sections/pipelines.js', I('clear-glass/renderer/settings/sections/pipelines.js'), [I('lib/automation/routes.js')]],   // 0.60.284 PL4 — wire /automation/pipelines*
+  ['clear-glass/src/page/state-diff.js', I('clear-glass/src/page/state-diff.js'), []],      // 0.60.221 FP4 — pure; first used 0.60.273
+  ['clear-glass/src/about/index.js', I('clear-glass/src/about/index.js'), []],   // 0.60.269 — versions and the update check (fetch, no requires)
+  ['clear-glass/renderer/settings/sections/about.js', I('clear-glass/renderer/settings/sections/about.js'), [   // 0.60.269 Settings › About
+    I('clear-glass/src/ipc/bridge.js'),                        // IPC about:info / about:check (cg.about)
+  ]],   // 0.60.267 AF3 — pure: combine, reporterScript
+  ['clear-glass/renderer/gig-panel.js', I('clear-glass/renderer/gig-panel.js'), [   // 0.60.224 — reads window.cg (set by browser.js)
+    I('clear-glass/renderer/browser.js'),                      // window.cg — the wrapped preload API
+  ]],
+  ['clear-glass/src/autofill/gig-pages.js', I('clear-glass/src/autofill/gig-pages.js'), [   // 0.60.222 — which Fiverr page, its parts
+    I('clear-glass/src/page/option-match.js'),                 // require — suggestedCategory's match
+  ]],
+  // the driver's require of option-match.js (choose, 0.60.221) is a plain require: the source scanner maps it, so it is not hand-mapped here
   ['clear-glass/src/preload/compartment-window.js', I('clear-glass/src/preload/compartment-window.js'), []],
   ['clear-glass/src/copilot/verbs.js', I('clear-glass/src/copilot/verbs.js'), []],
   ['guardian/lib/provider-login.js', I('guardian/lib/provider-login.js'), []],
@@ -430,6 +496,41 @@ const CONSUMERS = [
   [I('cos/testenv/index.js'), I('cos/testenv/run-target.js'), '0.60.244 SV0 the runTarget getter (lazy: run-target.js requires index.js)'],
   [I('idearium/api/index.js'), I('lib/system-boundary.js'), '0.60.250 SV1 GET /api/system/tables → tables(): the shared store\'s writers and readers per table'],
   [I('idearium/ui/settings.html'), I('idearium/api/index.js'), '0.60.250 SV1 the Sovereignty card: GET /api/system/tables?system=<it>'],
+  [I('lib/opportunity/index.js'), I('lib/opportunity/contacts.js'), '0.60.281 AP2 capture()/prepare() → captureFor(opp, page): the job page\'s contacts'],
+  [I('copilot/routes/opportunity.js'), I('lib/opportunity/contacts.js'), '0.60.281 AP3 GET|POST /api/opportunity/contacts, PUT /:id, POST /:id/archive (through O.contacts)'],
+  [I('lib/agent-tools/tools/opportunity/opportunity.js'), I('lib/opportunity/contacts.js'), '0.60.281 AP3 contacts / contact_add / contact_edit / contact_archive'],
+  [I('idearium/cli/route-commands.js'), I('copilot/routes/opportunity.js'), '0.60.281 AP3 opp.contacts / opp.contact rows → copilot /api/opportunity/contacts (nexus-client)'],
+  [I('clear-glass/src/ipc/bridge.js'), I('copilot/routes/opportunity.js'), '0.60.281 AP4 _opportunityCall: HTTP :3750 /api/opportunity/(status|list|contacts…), an allowlist (§5.15)'],
+  [I('clear-glass/src/ipc/bridge.js'), I('clear-glass/src/net/step.js'), '0.60.281 SN1 this.netStep → netStep(service, host, ensureBridge, fetchVia, pluginOn) handed to driver.netStep'],
+  [I('clear-glass/src/driver/index.js'), I('clear-glass/src/net/step.js'), '0.60.281 SN1 _net(): the driver action net calls the netStep the bridge handed in'],
+  [I('lib/automation/engine.js'), I('clear-glass/src/driver/index.js'), '0.60.281 SN1 browser step "network" → _drive(..., \'net\', { do, site, timeoutMs })'],
+  [I('lib/agent-tools/tools/browser/browser-action.js'), I('clear-glass/src/driver/index.js'), '0.60.281 SN1 network → driver.exec { action: \'net\' } (macro steps), through Guardian'],
+  [I('clear-glass/src/ipc/bridge.js'), I('clear-glass/src/driver/index.js'), '0.60.281 AP1 _gigFeatures: choose / readChoice / checkAt / rowLabels per package row'],
+  [I('clear-glass/src/ipc/bridge.js'), I('clear-glass/src/page/keyboard-mode.js'), '0.60.283 _a11y: sweepScript — what holds a site\'s accessibility look on; reset backs up, removes, sets Off, reloads'],
+  [I('clear-glass/renderer/browser.js'), I('clear-glass/src/ipc/bridge.js'), '0.60.283 the Site settings popup\'s Reset (cg.siteProfile.a11yReset → IPC site:a11yReset)'],
+  [I('lib/automation/routes.js'), I('lib/automation/pipeline.js'), '0.60.284 PL2 /automation/pipelines* and /automation/pipeline-runs* (A.pipelines, lazy)'],
+  [I('lib/automation/pipeline.js'), I('lib/automation/engine.js'), '0.60.284 PL1 each task → engine.runStep(step, { vars, scope: { tasks } })'],
+  [I('idearium/cli/route-commands.js'), I('lib/automation/routes.js'), '0.60.284 PL3 pipeline.* rows → Clear Glass :7704 /automation/pipelines*'],
+  [I('clear-glass/src/ipc/bridge.js'), I('clear-glass/src/autofill/gig-pages.js'), '0.60.283 _gigTags: tagInputScript / tagShownScript (each tag gated)'],
+  [I('lib/repo-agent.js'), I('lib/repo-history-nodes.js'), '0.60.285 HN2 _log → record(row, { text, message, toolCalls, model }): every exchange as nodes (lazy require)'],
+  ['nexus.idearium.api', I('lib/repo-history-nodes.js'), '0.60.285 HN3 repo.history-nodes / repo.history-nodes.backfill — GET /api/repos/:uuid/history-nodes, POST …/backfill'],
+  ['nexus.idearium.api', I('lib/project-spine.js'), '0.60.286 FA6 repo.spine / spine.write / finish — the registry as the spine (lazy _require)'],
+  ['nexus.idearium.api', I('lib/project-refactor.js'), '0.60.286 FA6 repo.refactor — move/rename by component id'],
+  ['nexus.idearium.api', I('lib/project-split.js'), '0.60.286 FA6 repo.split-candidates / repo.split — one component, one file'],
+  ['nexus.idearium.api', I('lib/project-convert.js'), '0.60.286 FA6 repo.convert — md → spec, a spec build plan → phasemap'],
+  ['nexus.idearium.api', I('lib/intent-flow.js'), '0.60.286 FA9 repo.intent — intent → context → DAG → gaps → contract'],
+  [I('clear-glass/src/ipc/bridge.js'), I('clear-glass/src/autofill/gig-menu.js'), '0.60.286 GM2 _gigMenu / _gigFill(edits) — lazy require'],
+  [I('clear-glass/src/ipc/bridge.js'), I('clear-glass/src/autofill/gig-fields.js'), '0.60.290 GF3 _gigText / _gigList / _gigSiteKey — lazy require'],
+  [I('clear-glass/src/ipc/bridge.js'), I('clear-glass/src/shortcuts/site-keys.js'), '0.60.290 GF4 friction → his keys for the part (forPart) — lazy require'],
+  [I('clear-glass/src/driver/index.js'), I('clear-glass/src/page/element-gate.js'), '0.60.293 PL6 the gate action (reads only) that pipelines, workflows and macros wait on — lazy require'],
+  // 2026-10-30 PL6–PL11 — James: "make sure macros, automations, and pipelines are interconnected. i build bottom up, and interconnected, and compound leverage"
+  [I('lib/automation/engine.js'), I('lib/automation/pipeline.js'), '0.60.293 PL9 step "Run a pipeline": a workflow runs a pipeline, a pipeline task runs another — lazy require'],
+  [I('lib/automation/pipeline.js'), I('lib/automation/engine.js'), '0.60.293 PL7 a task\'s element gate runs through the engine\'s gate step (engine.runStep)'],
+  [I('clear-glass/src/main/index.js'), I('lib/automation/pipeline.js'), '0.60.293 PL10 a site\'s pipelines run when a page of it opens — lazy require'],
+  [I('lib/agent-tools/tools/clear-glass/macro.js'), I('lib/agent-tools/tools/clear-glass/gate-eval.js'), '0.60.293 PL8 a macro step\'s element gate (use, shows, checked …) read through the driver\'s gate action'],
+  [I('clear-glass/src/options/store.js'), I('clear-glass/src/page/element-gate.js'), '0.60.292 UG4 his site gates validated — lazy require'],
+  [I('clear-glass/src/ipc/bridge.js'), I('clear-glass/src/page/element-gate.js'), '0.60.292 UG1 the gig fill\'s settle is element-gate\'s; /cli/site-gates — lazy require'],
+  [I('clear-glass/renderer/browser.js'), I('clear-glass/renderer/site-gates/gate-bar.js'), '0.60.292 UG5 Gate this element after a pick (window.CGGateBar)'],
 ];
 
 function mapBuildSurface(driver) {

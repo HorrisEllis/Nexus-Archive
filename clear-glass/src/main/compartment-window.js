@@ -18,6 +18,7 @@
  */
 const path = require('path');
 const Frame = require('./window-frame.js');   // 0.60.54 CS1
+const { decideOpen } = require('../tabs/open-decision.js');   // FP1 0.60.221
 
 // §0.39.345 — James: "can you make the windows borderless like comportmant desktop for cos." Every idearium page that
 // pops out and already draws its own title bar (ui/js/window-chrome.js: drag, minimize, maximize, close) opens
@@ -66,13 +67,22 @@ function windowOptions(kind, features, preloadPath) {
 const PRELOAD = path.join(__dirname, '../preload/compartment-window.js');
 
 /** Route one webContents' popups (call from app 'web-contents-created'). */
-function attach(contents) {
+function attach(contents, { openTab } = {}) {   // openTab(url, { background }) — 0.60.222b: a tab for a page with no tab strip of its own
   if (!contents || typeof contents.setWindowOpenHandler !== 'function') return false;
   if (contents.getType && !['webview', 'window'].includes(contents.getType())) return false;   // 0.60.54: a provider or sign-in window's popups too
-  contents.setWindowOpenHandler(({ url, features }) => {
+  contents.setWindowOpenHandler(({ url, features, disposition }) => {
     const kind = isCompartmentPage(url);
+    // FP1 / TC3 (0.60.221) — James, 2026-10-28: "I want it just to open in a new tab." A site's link meant as a tab (target=_blank,
+    // Ctrl+click) opened as a bare window no tab, driver or autofill reached (Fiverr's Edit Gig). It now opens as a tab of the window the
+    // link is in; a sized popup (a sign-in, a payment) stays a window, so it can still report back to its opener.
+    const d = decideOpen({ url, disposition, features, compartment: kind });
+    const host = contents.hostWebContents;
+    if (d.open === 'tab' && host && !host.isDestroyed()) { host.send('cg:open-tab', { url, background: d.background }); return { action: 'deny' }; }
+    // a page in a bare window (an earlier pop-out, a provider window) has no tab strip: its link-tab opens in the main window, as a tab
+    if (d.open === 'tab' && !host && typeof openTab === 'function') { try { if (openTab(url, { background: d.background })) return { action: 'deny' }; } catch (_) {} }
     // §GF1 0.60.258 — James: "also the popup windows need to match the rest of the ui." A site's popup opens in a Glass frame (the Clear Glass
     // title bar over it; its opener kept, so "Continue with Google" still closes itself). CG_NATIVE_POPUPS=1: the dark OS frame of CS1.
+    // (restored 0.60.265: PR #181's conflict resolution had dropped it)
     if (!kind && process.env.CG_NATIVE_POPUPS !== '1' && require('electron').BaseWindow) return { action: 'allow', createWindow: (options) => require('./glass-frame.js').fromOpen({ ...Frame.popupOptions(features), ...options }) };
     if (!kind) return { action: 'allow', overrideBrowserWindowOptions: Frame.popupOptions(features) };   // 0.60.54 CS1: dark frame, no menu bar
     return { action: 'allow', overrideBrowserWindowOptions: windowOptions(kind, features, PRELOAD) };

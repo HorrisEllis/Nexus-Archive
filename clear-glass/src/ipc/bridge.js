@@ -387,6 +387,15 @@ class IpcBridge {
     this.app.post('/cli/net/bridge/use',    _netRoute((b) => _net().useBridge(b.n)));
     this.app.post('/cli/net/https-only',    _netRoute((b) => _net().setHttpsOnly(b.on !== false && b.on !== 'off')));
     this.app.post('/cli/net/check',         _netRoute(() => { _netHost(); return _net().checkCircuit({ fetchVia: _fetchVia }); }));
+    // 0.60.281 SN1 — James, 2026-10-29: "also snowflake plugin support to macros and automation." The driver's `net` action (a macro step,
+    // a workflow's "Network (Snowflake)") runs src/net/step.js on this same service and transport; off when the Snowflake plugin is off.
+    this.netStep = (args, urlOf) => require('../net/step').netStep({ service: _net(), host: _netHost(), ensureBridge: _ensureBridge, fetchVia: _fetchVia, urlOf,
+      pluginOn: () => !this.pluginHost || (this.pluginHost.list() || []).some(p => p.name === 'snowflake' && p.state === 'active'),
+      // James: "can 't you have it turn on the snowflake?" — turned on as the 🧩 panel does it (plugins:enable), kept on after a restart, said
+      turnOnPlugin: () => { try { const p = (this.pluginHost.list() || []).find(x => x.name === 'snowflake'); if (!p) return { ok: false, error: 'the Snowflake plugin is not installed' };
+        this.pluginHost.enable(p.id); const cur = new Set(this.options?.get()?.disabledPlugins || []); cur.delete(p.id); this.options?.set({ disabledPlugins: [...cur] }); return { ok: true }; }
+        catch (err) { return { ok: false, error: err.message }; } } }, args);
+    if (this.driver) this.driver.netStep = this.netStep;
     // BS1/BS7 (0.60.179) — Firefox import, for real (src/import/firefox.js). Cookies go into the everyday session (Electron's default, where an
     // ordinary window's page loads) or a provider tab's; never into a Snowflake compartment. No cookie value leaves this route.
     const _ffSession = (into) => {
@@ -593,6 +602,8 @@ class IpcBridge {
     });
     // §0.39.301 — the gig writer's second door (src/autofill/gig.js), same functions the autofill:gig* IPC uses.
     // §0.59.3 — a buyer's answers → a spec in Idearium, built from there (the same function the Gig panel calls)
+    this.app.get('/cli/about', (req, res) => res.json(this._aboutInfo()));                      // 0.60.269 — what is running
+    this.app.get('/cli/about/check', async (req, res) => { try { res.json(await this._aboutCheck()); } catch (e) { res.status(502).json({ ok: false, error: e.message }); } });
     this.app.post('/cli/autofill/gig/to-idearium', async (req, res) => { const r = await this._gigToIdearium(req.body || {}); res.status(r.ok ? 200 : 502).json(r); });
     this.app.post('/cli/autofill/gig', async (req, res) => {
       const r = await this._gigDraft(req.body || {});
@@ -604,9 +615,11 @@ class IpcBridge {
       catch (e) { res.status(400).json({ error: e.message }); }
     });
     this.app.post('/cli/autofill/gig/fill', async (req, res) => {
-      const r = await this._gigFill({ gig: req.body?.gig, agentId: req.body?.agentId || 'default', minConfidence: req.body?.minConfidence || 'medium' });
+      const b = req.body || {};   // 0.60.286 GM2 — agents get the menu's only / replay / edits too
+      const r = await this._gigFill({ gig: b.gig, agentId: b.agentId || 'default', minConfidence: b.minConfidence || 'medium', only: b.only || null, replay: b.replay !== false, edits: b.edits || null });
       res.status(r.error ? (r.error === 'dom bridge unavailable' ? 503 : 400) : 200).json(r);
     });
+    this.app.post('/cli/autofill/gig/menu', async (req, res) => { res.json(await this._gigMenu({ gig: req.body?.gig || null, agentId: req.body?.agentId || 'default' })); });   // 0.60.286 GM2
     // §GA1 0.60.161 — one door for the co-pilot's "fill this in for me": use the written gig, else write from profile+offer, else ask
     this.app.post('/cli/autofill/gig/autofill', async (req, res) => {
       const r = await this._gigAutofill({ agentId: req.body?.agentId || 'default', offer: req.body?.offer || '', profileId: req.body?.profileId || null, minConfidence: req.body?.minConfidence || 'medium' });
@@ -739,6 +752,15 @@ class IpcBridge {
       catch (e) { res.status(500).json({ ok: false, error: e.message }); }
     });
     // SP5 (0.60.219) — agents read what is running and what happened; ending a process is not offered here (SP_D3)
+    // 0.60.275 KB2 — keys bound to elements, per site, for agents and the CLI (glass keys)
+    this.app.get('/cli/site-keys', (req, res) => { const all = this.options?.getSiteKeys?.() || {}; const SK = require('../shortcuts/site-keys'); res.json({ siteKeys: req.query.url ? { [SK.originOf(req.query.url) || req.query.url]: SK.forUrl(all, req.query.url) } : all }); });
+    this.app.post('/cli/site-keys', (req, res) => { const b = req.body || {}; const r = this.options ? this.options.setSiteKey(b.url, b.accel, b.binding) : { error: 'options not ready' }; res.status(r.error ? 400 : 200).json(r); });
+    // 2026-10-30 UG4 — his gates per site, for agents and the CLI (glass gates)
+    this.app.get('/cli/site-gates', (req, res) => { const all = this.options?.getSiteGates?.() || {}; const EG = require('../page/element-gate'); res.json({ siteGates: req.query.url ? { [EG.originOf(req.query.url) || req.query.url]: EG.matchSite(all, req.query.url) } : all }); });
+    this.app.post('/cli/site-gates', (req, res) => { const b = req.body || {}; const r = this.options ? this.options.addSiteGate(b.url, b.gate) : { error: 'options not ready' }; res.status(r.error ? 400 : 200).json(r); });
+    this.app.post('/cli/site-gates/remove', (req, res) => { const b = req.body || {}; const r = this.options ? this.options.removeSiteGate(b.url, b.id) : { error: 'options not ready' }; res.status(r.error ? 400 : 200).json(r); });
+    this.app.post('/cli/site-gates/check', async (req, res) => { const b = req.body || {}; try { res.json(await this.driver.exec({ agentId: b.agentId || 'default', action: 'gate', ...(b.id ? { id: b.id } : b.gate ? { gate: b.gate } : { all: true }), by: 'agent' })); } catch (err) { res.status(400).json({ error: err.message }); } });
+    this.app.post('/cli/site-keys/remove', (req, res) => { const b = req.body || {}; const r = this.options ? this.options.removeSiteKey(b.url, b.accel) : { error: 'options not ready' }; res.status(r.error ? 400 : 200).json(r); });
     this.app.get('/cli/processes', (req, res) => { try { res.json(require('../main/index').processes().list()); } catch (e) { res.status(500).json({ ok: false, error: e.message }); } });
     this.app.get('/cli/activity', (req, res) => res.json({ events: require('../processes').activity().recent({ limit: Math.min(+req.query.limit || 100, 500), kind: req.query.kind || null, origin: req.query.origin || null }) }));
     this.app.post('/cli/processes/end', (req, res) => res.status(403).json({ ok: false, why: 'ending a process is a person\'s action: the Processes window (Shift+Esc), not an agent route' }));
@@ -1018,6 +1040,14 @@ class IpcBridge {
     if (site && !site.enabled) return { error: `macros are off for ${new URL(url).origin} (its site settings, macros.enabled)` };
     const BA = require('../../../lib/agent-tools/tools/browser/browser-action.js');
     const runStep = async ({ action, data = {} }) => {
+      // 2026-10-30 PL9 — a macro step that runs a workflow or a pipeline goes to this Clear Glass's own engine (the one Settings › Automation and
+      // Pipelines show): macros → workflows → pipelines → macros, one engine, one store
+      if (action === 'run_workflow' || action === 'run_pipeline') {
+        const A = this.mesh && this.mesh._automation; if (!A) return { error: 'the automation engine is not running here' };
+        const step = action === 'run_workflow' ? { type: 'workflow', config: { workflow: data.name, vars: data.vars || {} } } : { type: 'pipeline', config: { pipeline: data.name, vars: data.vars || {} } };
+        const r = await A.runStep(step, { vars: data.vars || {} });
+        return r && r.ok ? { ok: true, action, result: r.output } : { error: (r && r.error) || 'it did not run' };
+      }
       const call = BA.driverCall(action, data); if (!call) return BA.execute({ action, data });
       if (!this.driver) return { error: 'driver not wired' };
       try { return { ok: true, action, result: await this.driver.exec({ agentId, ...call, by: 'person' }) }; } catch (err) { return { error: err.message }; }
@@ -1237,6 +1267,9 @@ class IpcBridge {
     // the network route is the netPolicy origin rule. by: the person (the window) — an agent's write comes through /cli/site-profile.
     ipcMain.handle('site-profile:get',   async (e, d) => this._siteProfile().siteProfile(d && d.url));
     ipcMain.handle('site-profile:set',   async (e, d) => this._siteProfile().setSite(d && d.url, d && d.key, d && d.value, { by: 'person' }));
+    // 0.60.283 — James, 2026-10-29: "The accessability man. i can't fix it." (Fiverr remembers its accessibility look; keyboard-mode.js)
+    ipcMain.handle('site:a11yCheck', async (e, d = {}) => this._a11y(d && d.wcId, { reset: false }));
+    ipcMain.handle('site:a11yReset', async (e, d = {}) => this._a11y(d && d.wcId, { reset: true }));
     ipcMain.handle('site-profile:clear', async (e, d) => this._siteProfile().clearSite(d && d.url, d && d.key, { by: 'person' }));
     ipcMain.handle('site-profile:keys',  async () => ({ keys: this._siteProfile().KEYS, features: this._siteProfile().FEATURES }));
 
@@ -1348,9 +1381,19 @@ class IpcBridge {
     // builder opens pre-filled (passwords become a {{password}} parameter).
     // §0.60.57 MR1 — James, 2026-10-15: "needs to start recording a macro node file." The recording IS a .macro file from the first
     // second (src/macros/live-recording.js); recordStop returns the same steps the file holds, so the step editor opens on what was saved.
-    ipcMain.handle('macros:recordStart', async (e, { agentId, name } = {}) => this._macroRecord('start', { agentId, name }));
-    ipcMain.handle('macros:recordStatus', async (e, { agentId } = {}) => this._macroRecord('status', { agentId }));
-    ipcMain.handle('macros:recordStop', async (e, { agentId } = {}) => this._macroRecord('stop', { agentId }));
+    let _live = null;
+    const live = () => _live || (_live = new (require('../macros/live-recording').LiveRecorder)({
+      getWebContents: (id) => this.driver._getWebContents(id), evalJs: (wc, code) => this.driver._evalJs(wc, code),
+      dir: require('../../../lib/automation-nodes.js').NODES_DIR }));
+    ipcMain.handle('macros:recordStart', async (e, { agentId, name } = {}) => {
+      if (!this.driver) return { ok: false, error: 'driver not wired — recording unavailable' };
+      try { return await live().start({ agentId, name }); } catch (err) { return { ok: false, error: err.message }; }
+    });
+    ipcMain.handle('macros:recordStatus', async (e, { agentId } = {}) => { try { return live().status(agentId); } catch (err) { return { ok: false, error: err.message }; } });
+    ipcMain.handle('macros:recordStop', async (e, { agentId } = {}) => {
+      if (!this.driver) return { ok: false, error: 'driver not wired — recording unavailable' };
+      try { return await live().stop(agentId); } catch (err) { return { ok: false, error: err.message }; }
+    });
     ipcMain.handle('macros:schema', async () => {
       try {
         const ba = require('../../../lib/agent-tools/tools/browser/browser-action.js');
@@ -1715,7 +1758,18 @@ class IpcBridge {
       if (!this.dom) return { error: 'dom bridge unavailable' };
       return require('../autofill/gig.js').detectGig(this.dom, gig, { agentId });
     });
-    ipcMain.handle('autofill:gig:fill', async (e, { gig, agentId = 'default', minConfidence = 'medium' } = {}) => this._gigFill({ gig, agentId, minConfidence }));
+    ipcMain.handle('autofill:gig:fill', async (e, { gig, agentId = 'default', minConfidence = 'medium', only = null, replay = true, edits = null } = {}) => this._gigFill({ gig, agentId, minConfidence, only, replay, edits }));
+    ipcMain.handle('autofill:gig:assign', async (e, d = {}) => this._gigAssign(d));
+    ipcMain.handle('autofill:gig:page', async (e, d = {}) => this._gigPage(d));                    // 0.60.224
+    ipcMain.handle('autofill:gig:menu', async (e, d = {}) => this._gigMenu(d));                    // 0.60.286 GM2 — the fill menu for the page in the tab
+    ipcMain.handle('autofill:suggest', async (e, d = {}) => this._autofillSuggest(d));              // 0.60.267 AF3 — the chips
+    ipcMain.handle('autofill:gig:setLast', async (e, { gig } = {}) => { try { if (gig && gig.title && this.autofillStore) { this.autofillStore.setLastGig(gig); return { ok: true }; } } catch (err) { return { ok: false, error: err.message }; } return { ok: false, error: 'no gig' }; });   // 0.60.267 — the panel's gig is the chips' gig
+    ipcMain.handle('autofill:fillOne', async (e, d = {}) => this._autofillFillOne(d));              // 0.60.267 AF3 — a chip clicked
+    ipcMain.handle('autofill:anchor', async (e, d = {}) => this._autofillAnchor(d));                // 0.60.268 AF5 — a field anchored to what it is
+    ipcMain.handle('applications:call', async (e, d = {}) => this._opportunityCall(d));          // 0.60.281 AP4 — Settings › Applications, through Copilot
+    ipcMain.handle('about:info', async () => this._aboutInfo());                                   // 0.60.269 — Settings › About
+    ipcMain.handle('about:check', async () => this._aboutCheck());                                 // 0.60.269 — newer Electron / Clear Glass / Nexus?
+    ipcMain.handle('autofill:gig:saveRecording', async (e, d = {}) => this._gigSaveRecording(d));  // 0.60.224 — his choices → the page's macro   // 0.60.222 — a picked element taught to a gig part
     ipcMain.handle('autofill:gig:autofill', async (e, p = {}) => this._gigAutofill(p));   // §GA1 — the co-pilot's one door
     // 2026-10-12 — a gig FILE (.gig, or an old .gig.json: the shapes parseGig reads) → the same gig, held to Fiverr's limits like a written one.
     // Reads and checks only: nothing is saved, typed or published.
@@ -1829,6 +1883,15 @@ class IpcBridge {
     ipcMain.handle('shortcuts:set',    async (e, d) => this.options?.setShortcut(d.accel, d.action));
     ipcMain.handle('shortcuts:remove', async (e, d) => this.options?.removeShortcut(d.accel));
     ipcMain.handle('shortcuts:reset',  async () => this.options?.resetShortcuts());
+    // 0.60.275 KB2/KB3 — keys bound to elements, per site (src/shortcuts/site-keys.js)
+    ipcMain.handle('siteKeys:list',    async () => ({ siteKeys: this.options?.getSiteKeys?.() || {} }));
+    ipcMain.handle('siteKeys:set',     async (e, d) => this.options?.setSiteKey(d.url, d.accel, d.binding) || { error: 'options not ready' });
+    ipcMain.handle('siteKeys:remove',  async (e, d) => this.options?.removeSiteKey(d.url, d.accel) || { error: 'options not ready' });
+    // 2026-10-30 UG4/UG5 — his gates per site (options siteGates), made with the picker; check runs the driver's gate action on the page
+    ipcMain.handle('siteGates:list',   async () => ({ siteGates: this.options?.getSiteGates?.() || {} }));
+    ipcMain.handle('siteGates:add',    async (e, d) => this.options?.addSiteGate(d.url, d.gate) || { error: 'options not ready' });
+    ipcMain.handle('siteGates:remove', async (e, d) => this.options?.removeSiteGate(d.url, d.id) || { error: 'options not ready' });
+    ipcMain.handle('siteGates:check',  async (e, d) => { try { return await this.driver.exec({ agentId: d.agentId || 'default', action: 'gate', ...(d.id ? { id: d.id } : d.gate ? { gate: d.gate } : { all: true }), by: 'person' }); } catch (err) { return { error: err.message }; } });
     ipcMain.handle('listeners:get',        async (e, d) => this.options?.getListener(d.id));
     ipcMain.handle('listeners:register',   async (e, d) => this.options?.registerListener(d));
     ipcMain.handle('listeners:update',     async (e, d) => this.options?.updateListener(d.id, d.updates));
@@ -2127,7 +2190,7 @@ class IpcBridge {
     try {
       if (!this._liveRecorder) this._liveRecorder = new (require('../macros/live-recording').LiveRecorder)({
         getWebContents: (id) => this.driver._getWebContents(id), evalJs: (wc, code) => this.driver._evalJs(wc, code),
-        dir: require('../../../lib/automation-nodes.js').NODES_DIR });   // 0.60.261: the engine moved to core (AE1, main); the node folder is lib/automation-nodes.js's
+        dir: require('../../../lib/automation-nodes.js').NODES_DIR });   // 0.60.266: AE1 (0.60.251) moved NODES_DIR here; this call still named the old file
       if (op === 'start') return await this._liveRecorder.start({ agentId, name });
       if (op === 'stop') return await this._liveRecorder.stop(agentId);
       if (op === 'status') return this._liveRecorder.status(agentId);
@@ -2225,20 +2288,560 @@ class IpcBridge {
     return g;
   }
 
-  async _gigFill({ gig, agentId = 'default', minConfidence = 'medium', wizard: wizardOpt } = {}) {
+  // 0.60.283 — what holds a site's accessibility look on (its html/body classes and attributes, its storage, its readable cookies), and, on
+  // reset: a backup of every entry first (REVERSIBILITY: userData/a11y-resets/<host>-<time>.json), then they are removed, the site is set to
+  // accessibility.tabMode 'off' (so a look it brings back is swept at each load), and the page reloads. Nothing matched is said, with every
+  // storage key and cookie name it did not match, so a look stored under another name can be traced.
+  async _a11y(wcId, { reset = false } = {}) {
+    const { webContents, app } = this._electron || require('electron');   // _electron: a test's stand-in
+    const wc = webContents.fromId(Number(wcId));
+    if (!wc || wc.isDestroyed()) return { ok: false, error: 'no such page' };
+    let url = ''; try { url = wc.getURL(); } catch (_) {}
+    if (!/^https?:/.test(url)) return { ok: false, error: 'this page is not a website' };
+    const K = require('../page/keyboard-mode');
+    const found = await wc.executeJavaScript(K.sweepScript({ storage: reset, cookies: reset }), true);
+    const out = { ok: true, url, origin: new URL(url).origin, reset, found: found.found, classes: found.classes, attrs: found.attrs,
+      storage: found.storage.map(x => ({ area: x.area, key: x.key })), cookies: found.cookies.map(x => x.name), otherKeys: found.otherKeys, otherCookies: found.otherCookies, link: found.link };
+    if (!reset) return out;
+    try {
+      const fs = require('fs'), path = require('path'); const dir = path.join(app.getPath('userData'), 'a11y-resets'); fs.mkdirSync(dir, { recursive: true });
+      out.backup = path.join(dir, `${new URL(url).host}-${Date.now()}.json`);
+      fs.writeFileSync(out.backup, JSON.stringify({ at: new Date().toISOString(), url, ...found }, null, 2));
+    } catch (err) { out.backupError = err.message; }
+    try { out.tabMode = await this._siteProfile().setSite(url, 'accessibility.tabMode', 'off', { by: 'person' }); } catch (err) { out.tabModeError = err.message; }
+    try { wc.reload(); out.reloaded = true; } catch (err) { out.reloadError = err.message; }
+    return out;
+  }
+
+  // 0.60.281 AP4 — James, 2026-10-29: "also capturing the contact info for job applications." The applications and their contacts are the
+  // opportunity system's (lib/opportunity, served by Copilot); Clear Glass reaches them only through Copilot's routes (§5.15), and only these.
+  // Copilot down → the screen says so; nothing here holds a copy.
+  async _opportunityCall({ method = 'GET', path = '', body = null } = {}) {
+    const ALLOW = [['GET', /^\/api\/opportunity\/(status|list|contacts)(\?.*)?$/], ['POST', /^\/api\/opportunity\/contacts$/],
+      ['PUT', /^\/api\/opportunity\/contacts\/[\w-]+$/], ['POST', /^\/api\/opportunity\/contacts\/[\w-]+\/archive$/]];
+    const m = String(method).toUpperCase(), p = String(path);
+    if (!ALLOW.some(([am, re]) => am === m && re.test(p))) return { ok: false, error: `not an Applications route: ${m} ${p}` };
+    const payload = body && m !== 'GET' ? JSON.stringify(body) : null;
+    return new Promise((resolve) => {
+      const req = require('http').request({ host: '127.0.0.1', port: Number(process.env.COPILOT_PORT || 3750), path: p, method: m, timeout: 8000,
+        headers: { 'Content-Type': 'application/json', ...(payload ? { 'Content-Length': Buffer.byteLength(payload) } : {}) } }, (res) => {
+        let d = ''; res.on('data', (c) => { d += c; });
+        res.on('end', () => { try { resolve(JSON.parse(d)); } catch (_) { resolve({ ok: false, error: `Copilot answered ${res.statusCode} with no JSON` }); } });
+      });
+      req.on('timeout', () => { req.destroy(); resolve({ ok: false, error: 'Copilot did not answer in 8 s', down: true }); });
+      req.on('error', (err) => resolve({ ok: false, error: `Copilot is not running (${err.code || err.message}) — applications live there`, down: true }));
+      if (payload) req.write(payload);
+      req.end();
+    });
+  }
+
+  // 0.60.283 — the gig's tags (at most 5) into Fiverr's Search tags box, one by one, each gated on the page showing it. { done, missed, why? }
+  async _gigTags(agentId, gig, learnedSelector = null) {
+    const GP = require('../autofill/gig-pages');
+    const tags = (Array.isArray(gig.tags) ? gig.tags : []).slice(0, 5);
+    if (!tags.length) return { done: [], missed: [], why: 'the gig has no tags' };
+    let selector = learnedSelector;
+    if (!selector) {
+      const f = await this.driver.exec({ agentId, action: 'eval', code: GP.tagInputScript(), by: 'person' });
+      if (!f || !f.result || !f.result.found) throw new Error('the Search tags box was not found — point at it');
+      selector = '[data-cg-tags="1"]';
+    }
+    const done = [], missed = [];
+    for (const t of tags) {
+      let shown = false;
+      for (let attempt = 0; attempt < 2 && !shown; attempt++) {
+        await this.driver.exec({ agentId, action: 'type', selector, text: String(t), clearFirst: attempt > 0, by: 'person' });
+        await this.driver.exec({ agentId, action: 'pressKey', key: 'Enter', by: 'person' });
+        const g = await this.driver.exec({ agentId, action: 'eval', code: GP.tagShownScript(t), by: 'person' });
+        shown = !!(g && g.result);
+      }
+      (shown ? done : missed).push(t);
+    }
+    if (!done.length) throw new Error(`no tag took (${missed.join(', ')}) — the box may want them another way; point at it`);
+    return { done, missed };
+  }
+
+  // 0.60.281 AP1 — the package rows of the pricing page from gig.packages[tier].features (see _gigFill): { filled, failed, unlisted }
+  async _gigFeatures(agentId, gig, want = null) {
+    const out = { filled: [], failed: [], unlisted: [] };
+    const named = new Set();
+    for (const tier of ['basic', 'standard', 'premium']) {
+      const p = gig.packages && gig.packages[tier]; if (!p || !p.features) continue;
+      const column = tier.toUpperCase();
+      for (const [row, value] of Object.entries(p.features)) {
+        named.add(row.toLowerCase());
+        if (want && !want.has(`${tier}.feature.${row}`)) continue;   // 0.60.286 GM2 — unticked in the fill menu
+        try {
+          // 2026-10-30 GG1 — each row gated after the page settles: ticked/clear, or the value shown; a closed gate does the row once more
+          const C = gigChecks(this.driver, agentId);
+          const check = value === true || value === false ? C.checked(column, row, value) : C.choice({ column, row }, String(value));
+          let c = null, g = null;
+          for (let t = 0; t < 2 && !(g && g.open); t++) {
+            c = value === true || value === false ? await this.driver.exec({ agentId, action: 'checkAt', column, row, checked: value, by: 'person' })
+              : await this.driver.exec({ agentId, action: 'choose', column, row, option: String(value), by: 'person' });
+            g = await gigGate(check);
+          }
+          (out.gates = out.gates || []).push({ key: `${tier}.feature.${row}`, open: g.open, saw: g.saw });
+          if (!g.open) throw new Error(`its gate stayed closed: ${g.saw}`);
+          out.filled.push(value === true || value === false ? { tier, row, value, changed: c.changed } : { tier, row, value, shown: c.option, clickedBy: c.clickedBy });
+        } catch (err) { out.failed.push({ tier, row, value, why: err.message }); }
+      }
+    }
+    try {
+      const rl = await this.driver.exec({ agentId, action: 'rowLabels', column: 'BASIC', by: 'person' });
+      const known = /^(packages|price|delivery time|revisions?|total|description|name)$/i;
+      out.unlisted = (rl.labels || []).filter(l => !named.has(l.toLowerCase()) && !known.test(l));
+    } catch (err) { out.rowsWhy = err.message; }
+    return out;
+  }
+
+  // 2026-10-30 GG1 — the gate and its checks are module functions (gigGate, gigChecks, at the end of this file): one place, any caller
+  async _gigGate(check, opts) { return gigGate(check, opts); }
+  _gigChecks(agentId) { return gigChecks(this.driver, agentId); }
+
+  // 2026-10-30 GF3 — James: "fix the autofill to work with all fields". A text part found by its section's words (gig-fields.js), typed in as
+  // a keyboard would (driver insertText, so a rich editor takes it), read back. { ok, kind, shown } or throws why.
+  async _gigText(agentId, part, value, section = null) {
+    const GF = require('../autofill/gig-fields');
+    const sec = section || GF.SECTIONS[part];
+    if (!sec) throw new Error(`no section words for ${part}`);
+    const f = await this.driver.exec({ agentId, action: 'eval', code: GF.fieldScript(part, sec.re, { exclude: sec.exclude || null, prefer: sec.prefer || null }), by: 'person' });
+    const found = f && f.result;
+    if (!found || !found.found) throw new Error((found && found.why) || 'not found on the page');
+    const t = await this.driver.exec({ agentId, action: 'insertText', selector: found.selector, text: String(value), by: 'person' });
+    const back = await this.driver.exec({ agentId, action: 'eval', code: GF.readScript(part), by: 'person' });
+    const shown = back && back.result != null ? back.result : t && t.shown;
+    if (!GF.readsBack(shown, value)) throw new Error(`the ${part} box shows "${String(shown || '').slice(0, 60)}" after typing, not the gig's text`);
+    return { ok: true, kind: found.kind, length: String(value).length };
+  }
+
+  // 2026-10-30 GF3 — the lists: each FAQ (question + answer) or buyer question added through its own Add button, its empty boxes filled,
+  // confirmed with Add, and read back on the page. One the page already shows is skipped, said. Save, Publish and Continue stay his.
+  async _gigList(agentId, kind, items, want = null) {
+    const GF = require('../autofill/gig-fields');
+    const out = { done: [], already: [], failed: [] };
+    const list = (Array.isArray(items) ? items : []).map((x, i) => ({ i, q: kind === 'faq' ? x && x.question : x, a: kind === 'faq' ? x && x.answer : null }))
+      .filter(x => x.q && (kind !== 'faq' || x.a))
+      .filter(x => !want || (kind === 'faq' ? want.has(`faq.${x.i}.question`) || want.has(`faq.${x.i}.answer`) : want.has(`requirement.${x.i}`)));
+    const ev = async (code) => { const r = await this.driver.exec({ agentId, action: 'eval', code, by: 'person' }); return r && r.result; };
+    for (const it of list) {
+      try {
+        if (await ev(GF.shownScript(it.q))) { out.already.push(it.i); continue; }
+        const add = await ev(GF.clickButtonScript(kind === 'faq' ? /^\+?\s*add faq$/i : /^\+?\s*add (new )?question$/i));
+        if (!add || !add.clicked) throw new Error((add && add.why) || 'the Add button was not found');
+        let boxes = null;
+        for (let t = 0; t < 10 && !(boxes && boxes.found); t++) { if (t) await new Promise(r => setTimeout(r, 150)); boxes = await ev(GF.listBoxesScript(kind)); }
+        if (!boxes || !boxes.found) throw new Error((boxes && boxes.why) || 'no boxes opened');
+        await this.driver.exec({ agentId, action: 'insertText', selector: `[data-cg-part="${kind}.question"]`, text: String(it.q), by: 'person' });
+        if (kind === 'faq') await this.driver.exec({ agentId, action: 'insertText', selector: '[data-cg-part="faq.answer"]', text: String(it.a), by: 'person' });
+        const ok = await ev(GF.clickButtonScript(/^add$/i));
+        if (!ok || !ok.clicked) throw new Error((ok && ok.why) || 'the Add button under the boxes was not found');
+        let shown = false;
+        for (let t = 0; t < 10 && !shown; t++) { if (t) await new Promise(r => setTimeout(r, 150)); shown = !!(await ev(GF.shownScript(it.q))); }
+        if (!shown) throw new Error('added, but the page does not show it');
+        out.done.push(it.i);
+      } catch (err) { out.failed.push({ i: it.i, why: err.message }); }
+    }
+    return out;
+  }
+
+  // 2026-10-30 GF4 — James: "if you run into friction use the per site keybindings that I proposed." His keys on this site that name the part
+  // (binding.part, bound in the bind bar): an element he bound gets the value typed (text) or chosen (choice) there; otherwise the binding's own
+  // steps run (click, key, macro); then the part is read back. { ok, accel, how } | { ok:false, why }
+  async _gigSiteKey(agentId, url, part, value, { kind = 'text', verify = null } = {}) {
+    const SK = require('../shortcuts/site-keys'), GF = require('../autofill/gig-fields');
+    let map = {}; try { map = (this.options && this.options.getSiteKeys && this.options.getSiteKeys()) || {}; } catch (_) {}
+    const keys = SK.forPart(map, url, part);
+    if (!keys.length) return { ok: false, why: `no key of yours on this site for ${part} — pick the element, Bind a key, and set "for gig part" to ${part}` };
+    const tried = [];
+    for (const { accel, binding } of keys) {
+      try {
+        let selector = binding.selector || null;
+        if (selector && SK.isXPath(selector)) {
+          const m = await this.driver.exec({ agentId, action: 'eval', code: SK.markScript(selector), by: 'person' });
+          if (!m || !m.result) throw new Error('the element it names is not on this page');
+          selector = SK.MARKED;
+        }
+        let how, gate = verify;   // 2026-10-30 GG1: an element he bound is gated on itself; a key, click or macro on the part's own gate
+        const C = gigChecks(this.driver, agentId);
+        const own = async (check) => { const g = await gigGate(check); return g.open; };
+        if (selector && kind === 'text' && binding.do !== 'macro') {
+          const t = await this.driver.exec({ agentId, action: 'insertText', selector, text: String(value), by: 'person' });
+          if (!GF.readsBack(t && t.shown, value)) throw new Error(`typed, but it shows "${String((t && t.shown) || '').slice(0, 60)}"`);
+          how = 'typed at the element you bound'; gate = () => own(C.text({ selector }, value));
+        } else if (selector && (binding.do === 'choose' || kind === 'choice')) {
+          const c = await this.driver.exec({ agentId, action: 'choose', selector, option: binding.option || String(value), by: 'person' });
+          how = `chose "${c && c.option}" at the element you bound`; gate = () => own(C.choice({ selector }, binding.option || String(value)));
+        } else {
+          for (const st of SK.steps(binding)) {
+            if (st.macro) { const m = await this.runMacroAsPerson({ name: st.macro, agentId, skipSnapshot: true, by: 'person' }); if (m && m.error) throw new Error(`macro ${st.macro}: ${m.error}`); }
+            else await this.driver.exec({ agentId, ...st, ...(selector && st.selector ? { selector } : {}), by: 'person' });
+          }
+          how = SK.describe(binding);
+        }
+        if (gate && !(await gate())) throw new Error(`${how}, but its gate stayed closed`);
+        return { ok: true, accel, how };
+      } catch (err) { tried.push(`${accel}: ${err.message}`); }
+    }
+    return { ok: false, why: `your keys for ${part} did not take (${tried.join('; ')})` };
+  }
+
+  // 0.60.286 GM2 — the fill menu: every part of the gig as a row (gig-menu.js), ticked for the Fiverr page open in the tab; the human check said
+  async _gigMenu({ gig = null, agentId = 'default' } = {}) {
+    const g = gig || (this.autofillStore && this.autofillStore.getLastGig ? this.autofillStore.getLastGig() : null);
+    let page = null, pageWhy = 'no page read'; const hc = await this._humanCheckGate(agentId).catch(() => ({ pass: true }));
+    if (this.driver) { try { const read = await this.driver.exec({ agentId, action: 'readPage', by: 'person' }); const w = require('../autofill/gig-pages').gigPage(read); page = w.page; pageWhy = w.why; } catch (err) { pageWhy = err.message; } }
+    return { ok: true, ...require('../autofill/gig-menu').menu(g, page), pageWhy, humanCheck: hc && !hc.pass ? hc.why : null };
+  }
+
+  async _gigFill({ gig, agentId = 'default', minConfidence = 'medium', only = null, replay = true, edits = null } = {}) {
+    // 0.60.286 GM2 — James, 2026-10-29: "need to do better than a button, make a full menu with check boxes, adn drop downs if applicable."
+    // From the fill menu: edits (his values) put into the gig first; only (the ticked keys) filled; replay (his recorded choices) optional.
+    if (edits && typeof edits === 'object' && gig) gig = require('../autofill/gig-menu').apply(gig, edits);
+    const want = Array.isArray(only) ? new Set(only.map(String)) : null;
+    const wants = (k) => !want || want.has(k) || (k === 'category' && want.has('subcategory'))
+      || (k === 'faq' && [...want].some(x => x.startsWith('faq.'))) || (k === 'requirement' && [...want].some(x => x.startsWith('requirement.')));
     if (!this.dom) return { error: 'dom bridge unavailable' };
     if (!gig || !gig.title) return { error: 'write the gig first' };
     try { if (this.autofillStore) this.autofillStore.setLastGig(gig); } catch (_) {}   // §GA1a
-    const hc = await this._humanCheckGate(agentId); if (!hc.pass) return { error: hc.why, ...hc };   // §HC3 the gate before the gig is typed
+    const hc = await this._humanCheckGate(agentId); if (!hc.pass) return { error: hc.why, ...hc };   // §HC3 the gate before the gig is typed (restored 0.60.265)
+    // 0.60.222 — James, 2026-10-28: "like autofill should detect pages, so it can know when to paste, or detect the actual elements. like
+    // hook into the element picker". The fill reads the page first and does that page's parts only (src/autofill/gig-pages.js); a part he
+    // pointed at with the picker before (page-memory target) is filled there first; what is still not found is listed, to point at.
+    const GP = require('../autofill/gig-pages');
+    let read = null; if (this.driver) { try { read = await this.driver.exec({ agentId, action: 'readPage', by: 'person' }); } catch (_) {} }
+    const where = read ? GP.gigPage(read) : { page: null, why: 'the page could not be read' };
+    let site = null; try { site = new URL(read && read.url).origin; } catch (_) {}
+    const mem = require('../page/page-memory').shared();
     let r;
-    // §FW1 0.60.268 — on Fiverr's gig editor, page after page (fill, Save & Continue, wait, fill), stopping before Gallery/Publish
-    let url = ''; try { url = (this.driver && this.driver._getWebContents(agentId) || { getURL: () => '' }).getURL(); } catch (_) {}
-    const G = require('../autofill/gig.js');
-    const wizard = wizardOpt !== false && require('../copilot/verbs.js').isGigEditor(url);
-    try { r = wizard ? await G.fillGigWizard(this.dom, gig, { agentId, minConfidence }) : await G.fillGig(this.dom, gig, { agentId, minConfidence }); }
+    // 2026-10-30 GF3: on Description & FAQ and Requirements the FAQs and questions are added item by item (_gigList), never typed into
+    // whatever boxes happen to be open; and a description is typed, not set (a rich editor ignores a set value)
+    const listPage = where.page === 'description' || where.page === 'requirements';
+    try { r = await require('../autofill/gig.js').fillGig(this.dom, gig, { agentId, minConfidence, only: want ? [...want] : null, skip: listPage ? /^(faq\.|requirement\.|description$)/ : null }); }
     catch (err) { return { error: err.message }; }
-    if (!r.error) this.postEvent('autofill.gig.filled', { agentId, filled: r.filled.length, skipped: r.skipped.length, failed: r.failed.length, leftToCopy: r.leftToCopy.length, ts: Date.now() });
+    r.page = where.page; r.pageWhy = where.why; r.dropdowns = []; r.learned = []; r.notFound = []; r.siteKeys = [];
+    if (where.page === 'gallery') r.gallery = 'the Gallery takes your images, video and documents: yours to add (nothing is uploaded for you)';
+    const valueOf = (part) => GP.valueOf(gig, part);   // 0.60.268: one reading of a gig part, shared with the chips
+    const filledKeys = new Set((r.filled || []).map(f => f.key));
+    // 2026-10-30 GG1 — James: "each field/drop down/ or anything should be gated." Every part ends at a gate: what the page shows for it is
+    // read until it is right, then read again after the page settles (a page that puts its own value back fails it). A closed gate runs the
+    // part again (retries); still closed → his site keys for the part, gated the same way; else the part says what its gate saw.
+    r.gates = [];
+    const C = gigChecks(this.driver, agentId);
+    const gated = async (key, doIt, check, retries = 1) => {
+      let g = null;
+      for (let t = 0; t <= retries; t++) {
+        const rec = await doIt(t);
+        // a page that does not answer the read at all is unknown: recorded as unchecked, never a pass and never retried as closed (NC0)
+        const first = await (async () => { try { return await check(); } catch (_) { return null; } })();
+        if (first && first.unread) { r.gates.push({ key, unchecked: first.saw, tries: t + 1 }); return rec; }
+        g = await gigGate(check);
+        if (g.open) { r.gates.push({ key, open: true, tries: t + 1, saw: g.saw }); return rec; }
+      }
+      r.gates.push({ key, open: false, tries: retries + 1, saw: g && g.saw });
+      throw new Error(`its gate stayed closed: ${g && g.saw}`);
+    };
+    const friction = async (part, value, err, check) => {
+      const kind = part === 'category' || /\.(delivery|revisions)$/.test(part) ? 'choice' : part === 'tags' || part === 'faq' || part === 'requirement' ? 'run' : 'text';
+      const verify = check ? async () => { const g = await gigGate(check); r.gates.push({ key: part, open: g.open, via: 'site key', saw: g.saw }); return g.open; } : null;
+      let sk = { ok: false, why: 'no page address to look up your keys' };
+      if (this.driver && read && read.url) { try { sk = await this._gigSiteKey(agentId, read.url, part, value, { kind, verify }); } catch (e) { sk = { ok: false, why: e.message }; } }
+      if (sk.ok) r.siteKeys.push({ key: part, accel: sk.accel, how: sk.how, after: err.message });
+      else r.notFound.push({ key: part, why: `${err.message} · ${sk.why}` });
+    };
+    // the boxes the label-matching pass set: each gated too; a closed one is typed again (as a keyboard), then goes to his keys. With no driver
+    // nothing can read the page: said, never treated as a pass or a failure (§1.2)
+    if (!this.driver) r.gatesWhy = 'no page reader (driver) here: what was set is not gated';
+    for (const f of this.driver ? (r.filled || []).slice() : []) {
+      if (!f.cgId) continue;
+      const check = C.text({ cgId: f.cgId, key: f.key }, f.value);
+      try {
+        await gated(f.key, async (t) => { if (t) await this.driver.exec({ agentId, action: 'insertText', selector: `[data-cg-part="${f.key}"]`, text: f.value, by: 'person' }); }, check);
+      } catch (err) { r.filled.splice(r.filled.indexOf(f), 1); filledKeys.delete(f.key); await friction(f.key, f.value, err, check); }
+    }
+    for (const part of (where.page && GP.PARTS[where.page]) || []) {
+      if (!wants(part)) continue;
+      const value = valueOf(part); if (value === null || value === undefined || value === '') continue;
+      if (filledKeys.has(part)) continue;   // filled and gated above
+      const learned = site && mem.target(site, GP.targetKey(where.page, part));
+      const isChoice = part === 'category' || part.endsWith('.delivery');
+      const column = /^(basic|standard|premium)\./.test(part) ? part.split('.')[0].toUpperCase() : null;
+      const catShown = gig.subcategory || gig.category;
+      let check = null;
+      try {
+        // 0.60.283 — James: "i want autofill to do it all if possible." Search tags: each typed and Enter pressed in the tags box (the one he
+        // pointed at, else the box in the Search tags section), gated per tag; then the part's gate: every tag that took is still shown.
+        if (part === 'tags') {
+          check = C.allShown(() => (r.tags && r.tags.done) || []);
+          await gated(part, async () => { r.tags = await this._gigTags(agentId, gig, learned && learned.selector); }, check, 0);   // typing again would add a tag twice
+          continue;
+        }
+        // 2026-10-30 GF3 — the lists, item by item (each gated on the page showing it); the part's gate: every item it added or found is shown
+        if (part === 'faq' || part === 'requirement') {
+          const items = part === 'faq' ? (gig.faq || []).map(f => f && f.question) : (gig.requirements || []);
+          check = C.allShown(() => { const L = r[part === 'faq' ? 'faqs' : 'requirements']; return L ? [...L.done, ...L.already].map(i => items[i]).filter(Boolean) : []; });
+          await gated(part, async () => {
+            const L = await this._gigList(agentId, part, part === 'faq' ? gig.faq : gig.requirements, want);
+            r[part === 'faq' ? 'faqs' : 'requirements'] = L;
+            if (L.failed.length) throw new Error(L.failed.map(f => `#${f.i + 1}: ${f.why}`).join('; '));
+          }, check);   // a second run skips what is shown, so it adds nothing twice
+          continue;
+        }
+        if ((part === 'title' || part === 'description') && !learned) {
+          check = C.text({ selector: `[data-cg-part="${part}"]` }, value);
+          const t = await gated(part, () => this._gigText(agentId, part, value), check);
+          r.filled.push({ key: part, confidence: 'high', source: `section words (${t.kind})` }); continue;
+        }
+        if (learned) {
+          check = isChoice ? C.choice({ selector: learned.selector }, value) : C.text({ selector: learned.selector }, value);
+          await gated(part, (t) => isChoice ? this.driver.exec({ agentId, action: 'choose', selector: learned.selector, option: value, by: 'person' })
+            : this.driver.exec({ agentId, action: t ? 'insertText' : 'setValue', selector: learned.selector, ...(t ? { text: value } : { value }), by: 'person' }), check);
+          r.learned.push({ key: part, selector: learned.selector }); continue;
+        }
+        // 0.60.286 GM2 — revisions chosen in the tier's column on the Revisions row; price typed in the Price row; each gated
+        if (part.endsWith('.revisions')) {
+          check = C.choice({ column, row: 'Revisions' }, value);
+          const c = await gated(part, () => this.driver.exec({ agentId, action: 'choose', column, row: 'Revisions', option: value, by: 'person' }), check);
+          r.dropdowns.push({ key: part, ok: true, option: c.option, via: 'built-in' }); continue;
+        }
+        if (part.endsWith('.price')) {
+          let box = null;
+          check = async () => box ? C.text({ selector: box }, value)() : { open: false, saw: 'no price box yet' };
+          const t = await gated(part, async () => { const x = await this.driver.exec({ agentId, action: 'typeAt', column, row: 'Price', text: value, by: 'person' }); box = x.selector || null; return x; }, check);
+          r.filled.push({ key: part, confidence: 'high', source: 'typeAt', value: t.value }); continue;
+        }
+        if (part.endsWith('.delivery')) {
+          // 0.60.269 — James: "I want to be able to edit what you added." The pick is his node file now: the macro "Fiverr gig - choose
+          // delivery" (clear-glass/automation/nodes), run as him; editing it in Settings › Macros changes what this does. The built-in pick
+          // runs only when the macro cannot, and says so. Either way the part's gate reads the column.
+          check = C.choice({ column }, value);
+          let via = 'built-in', why = null, option = value;
+          // his node macro is gated on the value itself: when it ran, its gates are this part's gate (re-checking it and re-picking with the
+          // built-in, 0.60.291, broke that — test-about-and-nodes AN-03)
+          const viaMacro = typeof this._gigNodeMacro === 'function' ? await this._gigNodeMacro(agentId, 'Fiverr gig - choose delivery', { tier: column, delivery: value }) : { ok: false, why: 'node macros not wired here' };
+          if (viaMacro.ok) via = 'macro';
+          else await gated(part, async () => {
+            const c = await this.driver.exec({ agentId, action: 'choose', column, shows: 'DELIVERY TIME', option: value, by: 'person' });
+            via = 'built-in'; why = viaMacro.why; option = c.option;
+          }, check);
+          r.dropdowns.push({ key: part, ok: true, option, via, ...(why ? { why } : {}) }); continue;
+        }
+        if (part === 'category') {
+          check = C.shown(catShown);
+          const sc = GP.suggestedCategory(read.links, gig);
+          if (sc.ok) {
+            await gated(part, () => this.driver.exec({ agentId, action: 'pointer', selector: sc.link.selector, do: 'click', by: 'person' }), check);
+            r.dropdowns.push({ key: part, ok: true, option: sc.text, via: 'suggested' }); continue;
+          }
+          // 0.60.283 — a new gig offers no suggestion, only SELECT A CATEGORY and SELECT A SUBCATEGORY: his node "Fiverr gig - choose
+          // category" (gated, editable in Settings › Macros), else the same two picks built in, each read back; then the part's gate
+          if (!/select a category/i.test(String(read.text || ''))) throw new Error(sc.why);
+          // 2026-10-30 — James, with a screenshot of a new gig (PROGRAMMING & TECH chosen, SELECT A SUBCATEGORY left): "the drop down didn't work
+          // fully. it was a new gig." His node macro is gated on each value itself: when it ran, its gates are this part's gate. When it stopped
+          // part way (the category chosen, the subcategory not), the built-in pick reads the page first and picks only what is still unchosen —
+          // before, it looked for "SELECT A CATEGORY" again, which the page no longer showed, so the subcategory was never picked.
+          const viaMacro = typeof this._gigNodeMacro === 'function' ? await this._gigNodeMacro(agentId, 'Fiverr gig - choose category', { category: gig.category, subcategory: gig.subcategory || '' }) : { ok: false, why: 'node macros not wired here' };
+          if (viaMacro.ok) { r.dropdowns.push({ key: part, ok: true, option: value, via: 'macro' }); continue; }
+          const GF = require('../autofill/gig-fields');
+          const shows = async (t) => { const x = await this.driver.exec({ agentId, action: 'eval', code: GF.shownScript(t), by: 'person' }); return !!(x && x.result); };
+          const picked = [];
+          await gated(part, async () => {
+            if (await shows('SELECT A CATEGORY')) { const c1 = await this.driver.exec({ agentId, action: 'choose', shows: 'SELECT A CATEGORY', option: gig.category, by: 'person' }); picked.push(c1.option); }
+            if (gig.subcategory && await shows('SELECT A SUBCATEGORY')) { const c2 = await this.driver.exec({ agentId, action: 'choose', shows: 'SELECT A SUBCATEGORY', option: gig.subcategory, by: 'person' }); picked.push(c2.option); }
+          }, check);
+          const rec = { key: part, ok: true, option: picked.length ? picked.join(' > ') : value, via: 'built-in', why: viaMacro.why, ...(picked.length < (gig.subcategory ? 2 : 1) ? { kept: 'what the page already showed' } : {}) };
+          r.dropdowns.push(rec); continue;
+        }
+        throw new Error('not found on the page');
+      } catch (err) {
+        // 2026-10-30 GF4 — friction: his keys for this part on this site, gated like the part; else said, with how to bind one
+        await friction(part, value, err, check);
+      }
+    }
+    // 0.60.281 AP1 — James, 2026-10-29: "update the gig files." The package rows come from the gig (features), never from code: a number or text
+    // is chosen in that tier's column and row (the gated choose, read back), yes/no ticks or clears that row's checkbox (checkAt, read back).
+    // The page's rows the gig has no value for are listed (r.features.unlisted), so he can add them to the gig.
+    if (where.page === 'pricing' && this.driver) r.features = await this._gigFeatures(agentId, gig, want);
+    // 0.60.224 — his recorded choices for this page (Service type, the metadata boxes, the pricing rows …) replayed after the fill, as him
+    if (where.page && this.macroTool && replay !== false) {
+      let has = null; try { has = await this.macroTool.execute({ action: 'get', name: GP.macroName(where.page) }); } catch (_) {}
+      if (has && !has.error && (has.macro || has.steps || has.ok)) {
+        let m; try { m = await this.runMacroAsPerson({ name: GP.macroName(where.page), agentId, skipSnapshot: true, by: 'person' }); } catch (e) { m = { error: e.message }; }
+        r.macro = m && m.error ? { name: GP.macroName(where.page), ok: false, error: m.error, failedAtStep: m.failedAtStep } : { name: GP.macroName(where.page), ok: true, steps: m && m.stepsCompleted };
+      }
+    }
+    if (!r.error) this.postEvent('autofill.gig.filled', { agentId, page: r.page, filled: r.filled.length, learned: r.learned.length, notFound: r.notFound.length, failed: r.failed.length, features: r.features ? { filled: r.features.filled.length, failed: r.features.failed.length, unlisted: r.features.unlisted.length } : null, ts: Date.now() });
     return r;
+  }
+
+  // 0.60.269 — James: "also need a about page in the settings, where it says the version, can check for updates to electron and clearglass."
+  _aboutInfo() {
+    const A = require('../about');
+    let nexus = null, cgv = null;
+    try { nexus = require('../../../lib/version.js').system; } catch (_) {}
+    try { cgv = require('../../package.json').version; } catch (_) {}
+    return { ok: true, ...A.info({ nexus, clearGlass: cgv }), sources: { ...A.SOURCES, ...this._aboutSources() } };
+  }
+  _aboutSources() { try { const o = this.options && this.options.get ? this.options.get() : null; return (o && o.about && o.about.sources) || {}; } catch (_) { return {}; } }
+  async _aboutCheck() {
+    const A = require('../about'), i = this._aboutInfo();
+    const r = await A.check({ fetchText: (u) => A.fetchText(u), current: { electron: i.electron, clearGlass: i.clearGlass, nexus: i.nexus }, sources: this._aboutSources() });
+    return { ok: true, info: i, ...r };
+  }
+
+  // 0.60.269 — run one of Clear Glass's own node macros (clear-glass/automation/nodes) as him: imported from its file the first time, his
+  // edited copy every time after (importMacro reuses a macro with the same steps and never overwrites his). { ok } | { ok:false, why }
+  async _gigNodeMacro(agentId, name, params) {
+    if (!this.macroTool) return { ok: false, why: 'macros not available here' };
+    const N = require('../../../lib/automation-nodes.js');
+    // 0.60.280 KB6 — the node file is the truth: absent → imported; a copy he never edited → upgraded to the node's version (said); his edit stays
+    const node = N.bundledNode(require('path').join(__dirname, '..', '..', 'automation', 'nodes'), name);
+    let up = null;
+    if (node) up = await N.upgradeMacro(node, { getMacro: (n) => this.macroTool.execute({ action: 'get', name: n }), deleteMacro: (n) => this.macroTool.execute({ action: 'delete', name: n }), createMacro: (m) => this.macroTool.execute({ action: 'create', ...m }) });
+    else { let have = null; try { have = await this.macroTool.execute({ action: 'get', name }); } catch (_) {} if (!have || have.error) return { ok: false, why: `no macro "${name}" (and no node file for it)` }; }
+    if (up && !up.ok) return { ok: false, why: up.why };
+    let m; try { m = await this.runMacroAsPerson({ name, agentId, params, skipSnapshot: true, by: 'person' }); } catch (e) { m = { error: e.message }; }
+    const note = up && (up.upgraded || up.kept) ? { node: up.why } : {};
+    return m && !m.error && m.ok !== false ? { ok: true, ...note, gates: (m.results || []).filter(x => x.gate).map(x => x.gate) } : { ok: false, ...note, why: `macro "${name}" stopped${m && m.failedAtStep != null ? ` at step ${m.failedAtStep + 1}` : ''}: ${(m && m.error) || 'no answer'}` };
+  }
+
+  // 0.60.267 AF3 — James: "needs to autofill any field it can. also needs to have the autopill under each input fieled." Every field on the
+  // page with what could go in it (the active profile's match and the written gig's), for the chips Clear Glass draws under each input in its
+  // own window. Values go to the window, never into the page, until he clicks one. A site with autofill off gets none, said.
+  async _autofillSuggest({ agentId = 'default' } = {}) {
+    if (!this.dom) return { ok: false, error: 'dom bridge unavailable', suggestions: [] };
+    const SG = require('../autofill/suggest.js');
+    let profileMatches = [], profileName = 'profile', why = null;
+    if (this.autofillStore) {
+      try {
+        const det = await _autofillDetect(this.dom, this.autofillStore, { agentId, learned: this._learnedFields(agentId) });
+        if (det && !det.error) { profileMatches = det.matches || []; const p = this.autofillStore.getProfile(det.profileId); profileName = (p && (p.name || p.label)) || 'profile'; }
+        else why = det && det.error;
+      } catch (e) { why = e.message; }
+    }
+    let gigMatches = [];
+    const gig = this.autofillStore && this.autofillStore.getLastGig ? this.autofillStore.getLastGig() : null;
+    if (gig && gig.title) {
+      const domFields = await this.dom.handleQuery({ agentId, selector: 'input, textarea' });
+      if (Array.isArray(domFields)) { try { gigMatches = require('../autofill/gig.js').matchGigFields(domFields, gig); } catch (_) {} }
+    }
+    // 0.60.268 AF5 — gig parts he anchored on this kind of page (page-memory targets) are offered on their field
+    const GP = require('../autofill/gig-pages.js'), LP = require('../autofill/learn-pick.js');
+    let page = null, site = null;
+    if (this.driver) { try { const read = await this.driver.exec({ agentId, action: 'readPage', by: 'person' }); page = GP.gigPage(read).page; site = new URL(read.url).origin; } catch (_) {} }
+    if (page && site && gig) {
+      const mem = require('../page/page-memory').shared();
+      for (const part of GP.PARTS[page]) {
+        const t = mem.target(site, GP.targetKey(page, part)), v = GP.valueOf(gig, part); if (!t || v === null) continue;
+        const hit = await this.dom.handleQuery({ agentId, selector: t.selector }).catch(() => null);
+        if (Array.isArray(hit) && hit.length === 1) gigMatches.push({ cgId: hit[0].id, key: `${part} ⚓`, value: v, confidence: 'high' });
+      }
+    }
+    const suggestions = SG.combine({ profileMatches, gigMatches, profileName });
+    // 0.60.268 AF5 — "what a node anchor": every fillable field nothing placed gets a ⚓ chip; what it can be anchored as
+    let unmapped = [];
+    const all = await this.dom.handleQuery({ agentId, selector: 'input, select, textarea' });
+    if (Array.isArray(all)) {
+      const placed = new Set(suggestions.map(x => x.cgId));
+      unmapped = all.filter(f => LP.isFillable(f) && !placed.has(f.id) && String(f.type || '').toLowerCase() !== 'password' && f.visible !== false)
+        .map(f => { const k = LP.chooseKey(f, all); return { cgId: f.id, key: k.key || null, why: k.error || null }; });
+    }
+    let profileTypes = [];
+    try { const ap = this.autofillStore && this.autofillStore.activeProfile && this.autofillStore.activeProfile(); if (ap && ap.ok) profileTypes = [...LP.FIELD_TYPE_SET].filter(t => { const v = require('../autofill/matcher.js').valueFor(t, ap.profile); return v !== undefined && v !== null && v !== ''; }).sort(); } catch (_) {}
+    const mapTo = { profile: profileTypes, gig: page && gig ? GP.PARTS[page].filter(p => GP.valueOf(gig, p) !== null) : [], page };
+    return { ok: true, suggestions, unmapped, mapTo, why: suggestions.length ? null : (why || 'nothing on this page matches the profile or the gig'),
+      script: SG.reporterScript([...suggestions.map(x => x.cgId), ...unmapped.map(u => u.cgId)]) };
+  }
+
+  // 0.60.268 AF5 — James: "what a node anchor". He says what a field is; it is anchored to the field's stable identity on this site:
+  // a profile field type → JA3's learned map (learn-pick chooseKey + saveLearned, the same path a pick takes); a gig part → page-memory's
+  // target for that part on this kind of page (the same as Point at it). Every later fill and chip uses it.
+  async _autofillAnchor({ agentId = 'default', cgId, kind, value } = {}) {
+    if (!cgId || !value) return { ok: false, error: 'a field and what it is are needed' };
+    const LP = require('../autofill/learn-pick.js');
+    if (kind === 'profile') {
+      if (!LP.FIELD_TYPE_SET.has(value)) return { ok: false, error: `not a field type: ${value}` };
+      const all = await this.dom.handleQuery({ agentId, selector: 'input, select, textarea' });
+      if (!Array.isArray(all)) return { ok: false, error: (all && all.error) || 'the page could not be read' };
+      const f = all.find(x => x.id === cgId); if (!f) return { ok: false, error: 'that field is gone from the page' };
+      const k = LP.chooseKey(f, all); if (k.error) return { ok: false, error: k.error };
+      const r = LP.saveLearned(this.siteSettings, this._pageUrl(agentId), k.key, value);
+      return r.ok ? { ok: true, kind, key: k.key, stable: k.stable, value } : r;
+    }
+    if (kind === 'gig') {
+      const p = await this._gigPage({ agentId });
+      if (!p.page) return { ok: false, error: `not a Fiverr editor page the fill knows (${p.why})` };
+      return this._gigAssign({ agentId, page: p.page, part: value, cgId });
+    }
+    return { ok: false, error: 'kind is profile or gig' };
+  }
+
+  async _autofillFillOne({ agentId = 'default', cgId, value } = {}) {
+    if (!this.dom || !cgId || value === undefined) return { ok: false, error: 'a field and a value are needed' };
+    const r = await this.dom.handleMutate({ agentId, cgId, mutation: { value: String(value) } });
+    if (r && r.error) return { ok: false, error: r.error };
+    try { require('../processes').activity().push({ kind: 'nav', what: `autofill chip filled ${cgId}`, by: 'person', level: 'info' }); } catch (_) {}
+    return { ok: true };
+  }
+
+  // 0.60.224 — which editor page this tab is on (the panel's record button names its macro by it)
+  async _gigPage({ agentId = 'default' } = {}) {
+    if (!this.driver) return { page: null, why: 'driver not wired' };
+    try { return require('../autofill/gig-pages').gigPage(await this.driver.exec({ agentId, action: 'readPage', by: 'person' })); }
+    catch (e) { return { page: null, why: e.message }; }
+  }
+
+  // 0.60.224 — James: "use it for ... creating macros/automation". A recording of his choices on one editor page becomes that page's macro
+  // ('fiverr <page>'), made to replay on any gig (gig-pages.pageMacroSteps); a newer recording replaces it.
+  async _gigSaveRecording({ page, steps } = {}) {
+    const GP = require('../autofill/gig-pages');
+    if (!page || !GP.PARTS[page]) return { ok: false, error: 'record on a Fiverr editor page the fill knows (Overview, Scope & Pricing)' };
+    if (!this.macroTool) return { ok: false, error: 'macro tool not available' };
+    const { steps: out, dropped } = GP.pageMacroSteps(steps);
+    if (!out.length) return { ok: false, error: 'nothing to keep: the recording had no clicks, ticks or typing on this page', dropped };
+    const name = GP.macroName(page);
+    try { await this.macroTool.execute({ action: 'delete', name }); } catch (_) {}
+    const c = await this.macroTool.execute({ action: 'create', name, urlPattern: '*fiverr.com*', steps: out, description: `His choices on Fiverr's ${page} page, replayed by the gig fill` });
+    if (!c || c.error) return { ok: false, error: (c && c.error) || 'not saved', dropped };
+    return { ok: true, name, steps: out.length, dropped };
+  }
+
+  // 0.60.222 — "hook into the element picker ... use it for correcting": he points at the element a part goes in; the pick (its xpath) is
+  // turned into a selector that finds exactly that element again, checked on the page, and remembered for this site and page.
+  async _gigAssign({ agentId = 'default', page, part, xpath, cgId } = {}) {   // cgId (0.60.268): a field the chips know, instead of a pick's xpath
+    const GP = require('../autofill/gig-pages');
+    if (!page || !GP.PARTS[page] || !GP.PARTS[page].includes(part)) return { ok: false, error: `unknown part ${part} for page ${page}` };
+    if ((!xpath && !cgId) || !this.driver) return { ok: false, error: 'a picked element is needed' };
+    const wc = this.driver._getWebContents(agentId); if (!wc) return { ok: false, error: 'no page in this tab' };
+    const r = await wc.executeJavaScript(`(function(xp){
+      var el = null;
+      if (xp.indexOf('cg:') === 0) { var all = document.querySelectorAll('input, textarea, select, [contenteditable="true"], [role="combobox"]'); for (var i = 0; i < all.length; i++) if (all[i].__cgId === xp.slice(3)) { el = all[i]; break; } }
+      else el = document.evaluate(xp, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+      if (!el) return { error: 'the picked element is gone' };
+      var c = el.closest('textarea,input,select,[role="combobox"],[aria-haspopup],a,button') || el; el = c;
+      var esc = function(v){ return (window.CSS && CSS.escape) ? CSS.escape(v) : String(v).replace(/[^a-zA-Z0-9_-]/g, '\\$&'); };
+      var uniq = function(s){ try { var n = document.querySelectorAll(s); return n.length === 1 && n[0] === el; } catch (_) { return false; } };
+      if (el.id && uniq('#' + esc(el.id))) return { selector: '#' + esc(el.id) };
+      var tag = el.tagName.toLowerCase();
+      var attrs = ['name', 'data-testid', 'data-test', 'aria-label', 'placeholder'];
+      for (var i = 0; i < attrs.length; i++) { var v = el.getAttribute(attrs[i]); if (v) { var s = tag + '[' + attrs[i] + '="' + v.replace(/"/g, '\\"') + '"]'; if (uniq(s)) return { selector: s }; } }
+      var parts = [], cur = el;
+      while (cur && cur.nodeType === 1 && parts.length < 8) {
+        if (cur.id && uniq('#' + esc(cur.id) + (parts.length ? ' > ' + parts.join(' > ') : ''))) { parts.unshift('#' + esc(cur.id)); break; }
+        var p = cur.parentElement, t = cur.tagName.toLowerCase();
+        var same = p ? Array.prototype.filter.call(p.children, function(x){ return x.tagName === cur.tagName; }) : [];
+        parts.unshift(same.length > 1 ? t + ':nth-of-type(' + (same.indexOf(cur) + 1) + ')' : t);
+        if (uniq(parts.join(' > '))) return { selector: parts.join(' > ') };
+        cur = p;
+      }
+      return uniq(parts.join(' > ')) ? { selector: parts.join(' > ') } : { error: 'no selector finds exactly the picked element' };
+    })(${JSON.stringify(xpath || ('cg:' + cgId))})`, true).catch(e => ({ error: e.message }));
+    if (!r || r.error) return { ok: false, error: (r && r.error) || 'page did not answer' };
+    let site = null; try { site = new URL(wc.getURL()).origin; } catch (_) {}
+    if (!site) return { ok: false, error: 'the page has no site' };
+    const saved = require('../page/page-memory').shared().setTarget(site, GP.targetKey(page, part), { selector: r.selector, xpath, by: 'picker' });
+    try { require('../processes').activity().push({ kind: 'macro', what: `taught "${part}" on Fiverr's ${page} page: ${r.selector}`, url: wc.getURL(), by: 'person', level: 'info' }); } catch (_) {}
+    return { ok: saved.ok, part, page, selector: r.selector };
   }
 
   async _postToApiChannel(url, payload, captureBody = false) {
@@ -2644,5 +3247,31 @@ class IpcBridge {
     return new Promise(r => { if (this.server) this.server.close(r); else r(); });
   }
 }
+
+// 2026-10-30 GG1 — James: "each field/drop down/ or anything should be gated." A gate: check() → { open, saw }, read until open (timeoutMs),
+// then read again after settleMs, so a page that puts its own value back is caught. { open, saw, held }
+// 2026-10-30 UG1 — GG1's settled loop is element-gate's settle now: one loop for every gate (§8.6)
+function gigGate(check, opts) { return require('../page/element-gate').settle(check, opts); }
+
+// the checks a part's gate reads, each → async () => { open, saw }; read only, nothing on the page is changed by them
+function gigChecks(driver, agentId) {
+  const GF = require('../autofill/gig-fields');
+  const ev = async (code) => { const x = await driver.exec({ agentId, action: 'eval', code, by: 'person' }); return x && x.result; };
+  const q = (v) => JSON.stringify(String(v == null ? '' : v).slice(0, 60));
+  return {
+    text: (where, value) => async () => { const x = await ev(GF.valueAtScript(where)); if (!x || !x.found) return { open: false, saw: 'the box is gone' };
+      return { open: GF.readsBack(x.value, value), saw: q(x.value) }; },
+    choice: (where, value) => async () => { const g = await driver.exec({ agentId, action: 'readChoice', ...where, is: String(value), by: 'person' });
+      if (!g || (g.shown == null && g.matches == null && !(g.texts && g.texts.length))) return { open: false, unread: true, saw: 'the page did not answer the read' };
+      return { open: !!(g && g.matches), saw: q(g && g.shown != null ? g.shown : (g && g.texts || []).slice(0, 4).join(' | ')) }; },
+    shown: (text) => async () => { const ok = !!(await ev(GF.shownScript(text))); return { open: ok, saw: ok ? `${q(text)} shown` : `${q(text)} not on the page` }; },
+    allShown: (list) => async () => { const want = list(); if (!want.length) return { open: false, saw: 'nothing took' };
+      const miss = []; for (const t of want) if (!(await ev(GF.shownScript(t)))) miss.push(t);
+      return { open: !miss.length, saw: miss.length ? `not shown: ${miss.map(q).join(', ')}` : `${want.length} shown` }; },
+    checked: (column, row, want) => async () => { const c = await driver.exec({ agentId, action: 'checkAt', column, row, read: true, by: 'person' });
+      return { open: !!c && c.checked === !!want, saw: c ? (c.checked ? 'ticked' : 'clear') : 'no checkbox' }; },
+  };
+}
+
 
 module.exports = IpcBridge;

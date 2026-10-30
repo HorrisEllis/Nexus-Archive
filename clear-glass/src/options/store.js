@@ -300,6 +300,14 @@ class NexusOptions {
 
   /** _persist() — the one real place this store writes: one JAA row per option key. */
   _persist() {
+    // 0.60.279 VE6 — James, 2026-10-29: "yes, clear glass macros and settings too." (§17.12) Each burst of saves goes to Versionium: which
+    // keys changed, before → after, secrets redacted (lib/versionium-record.js settingsRecorder; buffered while it is down; never blocks).
+    try {
+      if (this._lastSaved === undefined) { try { this._lastSaved = JSON.parse(JSON.stringify(this._kv().load() || {})); } catch (_) { this._lastSaved = {}; } }
+      if (!this._toVersionium) this._toVersionium = require('../../../lib/versionium-record.js').settingsRecorder({ kind: 'clear-glass.settings', system: 'clear-glass', label: 'Clear Glass settings' });
+      this._toVersionium(this._lastSaved, this.data);
+      this._lastSaved = JSON.parse(JSON.stringify(this.data || {}));
+    } catch (_) { /* the save is what matters; a record that cannot be made is said by pending() and the next save */ }
     this._kv().replaceAll(this.data);
   }
 
@@ -784,6 +792,46 @@ class NexusOptions {
     this.data = { ...this.data, shortcuts: r.overrides };
     this._persist();
     return this.getShortcuts();
+  }
+
+  // 0.60.275 KB2 — James: "any way you can add all of that to the keybindings. like elements to keys, per site?" (src/shortcuts/site-keys.js)
+  getSiteKeys() { return { ...(this.data.siteKeys || {}) }; }
+  setSiteKey(url, accel, binding) {
+    const r = require('../shortcuts/site-keys').bind(this.data.siteKeys || {}, url, accel, binding);
+    if (r.error) return { error: r.error };
+    this.data = { ...this.data, siteKeys: r.map }; this._persist();
+    return { ok: true, origin: r.origin, accel: r.accel, binding: r.binding, siteKeys: this.getSiteKeys() };
+  }
+  removeSiteKey(url, accel) {
+    const r = require('../shortcuts/site-keys').unbind(this.data.siteKeys || {}, url, accel);
+    if (r.error) return { error: r.error };
+    this.data = { ...this.data, siteKeys: r.map }; this._persist();
+    return { ok: true, origin: r.origin, accel: r.accel, siteKeys: this.getSiteKeys() };
+  }
+
+  // 2026-10-30 UG4 — James: "it needs to be universal for all dom elements ... a way to create them per page using the element picker, per site
+  // settings, macros and automation features." His gates, per site (origin) and optionally per page (a URL pattern): { id, label, page,
+  // selector | xpath, value | equals | matches | shows | checked | text | visible | gone } (src/page/element-gate.js validates).
+  getSiteGates() { return JSON.parse(JSON.stringify(this.data.siteGates || {})); }
+  addSiteGate(url, gate) {
+    const EG = require('../page/element-gate');
+    const origin = EG.originOf(url); if (!origin) return { error: `not a site: ${url}` };
+    const allowed = ['label', 'page', 'selector', 'xpath', ...EG.WHAT];
+    const g = {}; for (const k of allowed) if (gate && gate[k] !== undefined && gate[k] !== null && gate[k] !== '') g[k] = gate[k];
+    if (g.selector && EG.isXPath(g.selector)) { g.xpath = g.selector; delete g.selector; }
+    const v = EG.validate(g); if (!v.ok) return { error: v.why };
+    g.id = (gate && gate.id && /^[\w-]{1,60}$/.test(gate.id)) ? gate.id : `g${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
+    const map = { ...(this.data.siteGates || {}) }; map[origin] = [...(map[origin] || []).filter(x => x.id !== g.id), g];
+    this.data = { ...this.data, siteGates: map }; this._persist();
+    return { ok: true, origin, gate: g, siteGates: this.getSiteGates() };
+  }
+  removeSiteGate(url, id) {
+    const origin = require('../page/element-gate').originOf(url); if (!origin) return { error: `not a site: ${url}` };
+    const map = { ...(this.data.siteGates || {}) }; const before = (map[origin] || []).length;
+    map[origin] = (map[origin] || []).filter(x => x.id !== id); if (!map[origin].length) delete map[origin];
+    if (before === ((map[origin] || []).length)) return { error: `no gate "${id}" on ${origin}` };
+    this.data = { ...this.data, siteGates: map }; this._persist();
+    return { ok: true, origin, id, siteGates: this.getSiteGates() };
   }
 
   resetShortcuts() {

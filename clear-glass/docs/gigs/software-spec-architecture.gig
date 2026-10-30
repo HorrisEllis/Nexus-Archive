@@ -4,7 +4,6 @@ platform: fiverr
 title: I will write a clear technical spec and build plan for your app idea
 category: Programming & Tech
 subcategory: Software Development
-serviceType: ''
 tags:
   - technical spec
   - architecture
@@ -45,18 +44,21 @@ packages:
     deliveryDays: 2
     revisions: 1
     price: 50
+    features: {}        # Fiverr's package rows for this subcategory, as the page labels them; the fill lists the rows it finds
   standard:
     name: Spec and Build Plan
     description: 'Full spec: parts, data, flows, and a phased build plan with tests.'
     deliveryDays: 5
     revisions: 2
     price: 160
+    features: {}        # Fiverr's package rows for this subcategory, as the page labels them; the fill lists the rows it finds
   premium:
     name: Architecture Package
     description: Spec, phased plan, dependency map and risk review, ready to build.
     deliveryDays: 9
     revisions: 3
     price: 380
+    features: {}        # Fiverr's package rows for this subcategory, as the page labels them; the fill lists the rows it finds
 faq:
   - question: Do I need technical knowledge?
     answer: >-
@@ -72,6 +74,3 @@ requirements:
   - What must it always do, and what must it never do?
   - How will you check that it is done? (the test you will run, or what you will look at)
   - Please share any files, examples, access or data I need to start.
-metadata:
-  Programming language:
-    - JavaScript

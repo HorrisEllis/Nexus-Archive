@@ -13,7 +13,7 @@ const { BrowserWindow, webContents } = require('electron');
 const { randomUUID: uuidv4 } = require('crypto'); // §BUGFIX 2026-08-23 — the real 'uuid' npm package was never installed (checked node_modules and package.json directly); this crashed every real file that required it, including boot-critical ones. Node's own built-in produces the identical UUID format, zero dependency.
 
 // actions that change a page: refused where the site says agents may not drive it (navigate checks its target instead)
-const DRIVING = new Set(['click', 'type', 'scroll', 'hover', 'eval', 'select', 'check', 'setValue', 'pressKey', 'upload', 'pointer', 'inject', 'cookies.set', 'cookies.clear', 'storage.set', 'back', 'forward', 'reload']);
+const DRIVING = new Set(['click', 'type', 'scroll', 'hover', 'eval', 'select', 'choose', 'check', 'checkAt', 'typeAt', 'setValue', 'insertText', 'pressKey', 'upload', 'pointer', 'inject', 'cookies.set', 'cookies.clear', 'storage.set', 'back', 'forward', 'reload']);
 const AGENT_PAGE = /^(mesh|ncp|auto)-/;
 
 class ClearDriver {
@@ -23,6 +23,11 @@ class ClearDriver {
     this.vault  = vault;
     this.sse    = sse;
     this.queue  = new Map(); // agentId → action queue
+    // 2026-10-30 — James: "also needs to use delays between key clicks, erosmanceros is for all copilot and guardian agents. any input not from
+    // me." Every key this driver puts in a page is paced like a person's (ErosmancerOS types it when wired; otherwise one key at a time at
+    // this pace, with short pauses). CG_INPUT_PACE_MS="min,max" sets it (the test sandbox sets a fast one, lib/test-sandbox.js).
+    const env = String(process.env.CG_INPUT_PACE_MS || '').split(',').map(Number).filter(n => Number.isFinite(n) && n >= 0);
+    this.pace = env.length === 2 ? { key: env, pause: [env[0] * 4, env[1] * 4], pauseEvery: [8, 16] } : { key: [45, 140], pause: [220, 520], pauseEvery: [8, 16] };
   }
 
   // ── Primary dispatch ──────────────────────────────────────────────────
@@ -87,8 +92,16 @@ class ClearDriver {
       case 'readTree':       return this._readTree(agentId, args);   // 0.60.49 SP1 — the semantic tree
       case 'resolve':        return this._resolve(agentId, args);    // 0.60.49 SP1 — a semantic address → its element
       case 'select':         return this._select(agentId, args);
+      case 'choose':         return this._choose(agentId, args);
+      case 'readChoice':     return this._readChoice(agentId, args);   // 0.60.280 KB4 — a macro step's choice gate
+      case 'net':            return this._net(agentId, args);          // 0.60.281 SN1 — Snowflake as a step (src/net/step.js)
+      case 'checkAt':        return this._checkAt(agentId, args);      // 0.60.281 AP1 — the checkbox at a column and a row, to a state, read back
+      case 'rowLabels':      return this._rowLabels(agentId, args);    // 0.60.281 AP1 — the row labels of a priced table (left of a column)
+      case 'typeAt':         return this._typeAt(agentId, args);       // 0.60.286 GM2 — the text box at a column and a row (a package's price), typed, read back
       case 'check':          return this._check(agentId, args);
       case 'setValue':       return this._setValue(agentId, args);
+      case 'insertText':     return this._insertText(agentId, args);
+      case 'gate':           return this._gateCheck(agentId, args);   // 2026-10-30 UG4 — check a gate, one of his by id, or all of his on the page
       case 'pressKey':       return this._pressKey(agentId, args);
       case 'upload':         return this._upload(agentId, args);
       // §0.39.279 — the interaction field (src/page/field.js): see the page as numbered x/y/z targets, point at one
@@ -147,6 +160,14 @@ class ClearDriver {
   async _click(agentId, { selector, x, y, button = 'left', delay = 0 }) {
     const wc = this._getWebContents(agentId);
     if (!wc) throw new Error(`No webcontents for agent: ${agentId}`);
+    // 2026-10-30 — James: "erosmanceros is for all copilot and guardian agents. any input not from me." A left click goes the way a person's
+    // hand does: ErosmancerOS's curve when wired, else Electron's along the curved path (_humanPointer 'auto'); a fallback is said (viaWhy).
+    // Another button keeps the direct events below.
+    if (button === 'left' && typeof this._pointer === 'function') {
+      if (delay > 0) await this._sleep(delay + Math.random() * 50);
+      const r = await this._humanPointer(agentId, { ...(selector ? { selector } : { x, y }), do: 'click', via: 'auto', label: selector || 'click' });
+      return { clicked: { x: r.x, y: r.y, selector }, via: r.via, ...(r.viaWhy ? { viaWhy: r.viaWhy } : {}) };
+    }
 
     if (selector) {
       // Resolve element position via DOM
@@ -181,20 +202,19 @@ class ClearDriver {
     const wc = this._getWebContents(agentId);
     if (!wc) throw new Error(`No webcontents for agent: ${agentId}`);
 
-    if (selector) await this._click(agentId, { selector });
-    if (clearFirst) {
-      wc.sendInputEvent({ type: 'keyDown', keyCode: 'A', modifiers: ['control'] });
-      await this._sleep(50);
-    }
-
+    // 2026-10-30 — James: "needs to use delays between key clicks, erosmanceros is for all copilot and guardian agents. any input not from me."
+    // With an element: typed through _humanType (ErosmancerOS when wired, else paced keys), after what is there unless clearFirst.
+    if (selector) { const t = await this._humanType(agentId, { selector, text: String(text), replace: !!clearFirst }); return { typed: t.typed, via: t.via, ...(t.viaWhy ? { viaWhy: t.viaWhy } : {}) }; }
+    // no element: the keys go to whatever has focus, at the pace (delay, when a caller gives one, is the lower bound)
+    const P = this.pace, rnd = ([a, b]) => a + Math.random() * Math.max(0, b - a);
     for (const char of text) {
       wc.sendInputEvent({ type: 'keyDown', keyCode: char });
       wc.sendInputEvent({ type: 'char', keyCode: char });
       wc.sendInputEvent({ type: 'keyUp', keyCode: char });
-      await this._sleep(delay + Math.random() * 30 - 15);
+      await this._sleep(Math.max(rnd(P.key), delay === 50 ? 0 : delay));
     }
 
-    return { typed: text.length };
+    return { typed: text.length, via: 'paced' };
   }
 
   // ── Scroll ────────────────────────────────────────────────────────────
@@ -702,6 +722,326 @@ class ClearDriver {
     return r;
   }
 
+  // choose (0.60.221) — James, 2026-10-28: "it needs to do the drop down menus. one by one ... using erosmancer and mouse curve and the virtual
+  // input" · "the drop down doesn't work". select took a native <select> only; Fiverr's dropdowns are its own widgets. One dropdown per call:
+  //   find it — by selector, or by what a person sees: the column's header (BASIC) and the row's label ("Number of APIs integrated") or the
+  //   text it shows (DELIVERY TIME), by where they sit on the page (no class names);
+  //   a native <select> → select, with the option matched first (src/page/option-match.js);
+  //   a widget → opened with the curved pointer (via 'native', or 'eros' for ErosmancerOS's virtual input), the options that appeared read,
+  //   the wanted one matched (ambiguous or missing → refused with the options seen), clicked with the pointer, and read back: a dropdown
+  //   that does not show the choice is a failure, never a silent pass.
+  // 0.60.271 — James, 2026-10-28: "it needs delays in between the dropdown menu. like drop down and then click. Also should use electrons
+  // digital input and mouse curve from erosmanceros to simulate a human mouse". A person's pace now: a pause after the dropdown opens
+  // (openWait), a look at the options before the click (pickWait), a settle after it (settleWait) — each in ms, a [min, max] picked at
+  // random, overridable per step (his macro node can set them). via 'auto' (the default) moves with ErosmancerOS's curve when Eros is
+  // wired and answering, else Electron's own input along the native curved path; a fallback is said in the result (viaWhy).
+  async _humanPointer(agentId, args) {
+    if (args.via !== 'auto') return this._pointer(agentId, args);
+    if (typeof this.erosInput === 'function') {
+      try { return await this._pointer(agentId, { ...args, via: 'eros' }); }
+      catch (e) { const r = await this._pointer(agentId, { ...args, via: 'native' }); return { ...r, viaWhy: `ErosmancerOS did not take it (${e.message}) — Electron input instead` }; }
+    }
+    const r = await this._pointer(agentId, { ...args, via: 'native' }); return { ...r, viaWhy: 'ErosmancerOS is not wired here — Electron input' };
+  }
+  _pause(span) { const [a, b] = Array.isArray(span) ? span : [span, span]; return this._sleep(a + Math.random() * Math.max(0, b - a)); }
+
+  async _choose(agentId, { selector, column, row, shows: showsText, option, via = 'auto', openWait = [600, 1100], pickWait = [300, 650], settleWait = [500, 900], optionsWaitMs = 8000, pick = 'auto', keys = null, keysFor = null } = {}) {
+    const wc = this._getWebContents(agentId);
+    if (!wc) throw new Error(`No webcontents for agent: ${agentId}`);
+    if (option === undefined || option === null || option === '') throw new Error('choose requires option');
+    if (!selector && !column && !showsText) throw new Error('choose requires selector, column with row or shows, or shows alone');   // 0.60.283: shows alone (the Overview's SELECT A CATEGORY)
+    const OM = require('../page/option-match');
+    const found = await this._evalJs(wc, `(function(sel, col, row, showsText){
+      function vis(el){ var r = el.getBoundingClientRect(), cs = getComputedStyle(el); return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none'; }
+      function norm(t){ return String(t || '').replace(/\\s+/g, ' ').trim().toLowerCase(); }
+      function ownText(el){ return norm(Array.prototype.map.call(el.childNodes, function(n){ return n.nodeType === 3 ? n.textContent : ''; }).join(' ')) || (el.children.length ? '' : norm(el.textContent)); }
+      function byText(t){ var want = norm(t), out = []; document.querySelectorAll('body *').forEach(function(el){ if (vis(el) && (ownText(el) === want || (!el.children.length && norm(el.textContent) === want))) out.push(el); }); return out; }
+      var trig = null;
+      if (sel) { try { trig = document.querySelector(sel); } catch (_) {} if (!trig) return { error: 'no element for ' + sel }; }
+      else {
+        // 0.60.283 — no column: the dropdown is found by the text it shows anywhere on the page (Fiverr's SELECT A CATEGORY)
+        var h = null;
+        if (col) { var heads = byText(col); if (!heads.length) return { error: 'no column headed "' + col + '" on the page' }; h = heads[0].getBoundingClientRect(); }
+        var band = null;
+        if (row) { var rows = byText(row); if (!rows.length) return { error: 'no row labelled "' + row + '" on the page' };
+          var rl = rows[0], box = (rl.closest('tr') || rl.parentElement || rl).getBoundingClientRect(); band = { top: box.top, bottom: box.bottom }; }
+        var cands = [];
+        document.querySelectorAll('select,[role="combobox"],[aria-haspopup],button,[tabindex],div,span').forEach(function(el){
+          if (!vis(el)) return; var r = el.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+          if (h && (cx < h.left || cx > h.right)) return;
+          if (band && (cy < band.top || cy > band.bottom)) return;
+          if (!band && showsText && norm(el.textContent) !== norm(showsText)) return;
+          if (!band && !showsText) return;
+          cands.push(el); });
+        // the outermost control that is a select or looks like a dropdown trigger; else the innermost match
+        trig = cands.find(function(el){ return el.tagName === 'SELECT'; })
+            || cands.find(function(el){ return el.getAttribute('role') === 'combobox' || el.hasAttribute('aria-haspopup'); })
+            || cands.filter(function(el){ return !cands.some(function(o){ return o !== el && el.contains(o); }); })[0] || null;
+        if (!trig) return { error: (col ? 'no dropdown in column "' + col + '"' : 'no dropdown') + (row ? ' and row "' + row + '"' : ' showing "' + showsText + '"') };
+      }
+      window.__cgChooseN = (window.__cgChooseN || 0) + 1;
+      trig.setAttribute('data-cg-choose', String(window.__cgChooseN));
+      trig.scrollIntoView({ block: 'center' });
+      var native = trig.tagName === 'SELECT' ? trig : trig.querySelector('select');
+      if (native) native.setAttribute('data-cg-choose-native', String(window.__cgChooseN));
+      // what is already on screen, so the options that appear on opening can be told apart
+      // 0.60.275 — James: "it keeps freezing". What is on screen before opening is kept in a page-side WeakSet, not written onto every
+      // element: an attribute on each of thousands of elements is a mutation storm the site's scripts and Clear Glass's own DOM observer both answer.
+      window.__cgPre = new WeakSet();
+      document.querySelectorAll('body *').forEach(function(el){ window.__cgPre.add(el); });
+      return { n: window.__cgChooseN, native: !!native, shown: norm(trig.innerText || trig.textContent).slice(0, 200),
+        options: native ? Array.prototype.map.call(native.options, function(o){ return o.textContent.trim(); }) : null };
+    })(${JSON.stringify(selector || null)}, ${JSON.stringify(column || null)}, ${JSON.stringify(row || null)}, ${JSON.stringify(showsText || null)})`);
+    if (!found || found.error) throw new Error(`choose: ${(found && found.error) || 'page did not answer'}`);
+    const trigSel = `[data-cg-choose="${found.n}"]`;
+    if (found.native) {
+      const m = OM.matchOption(found.options, option);
+      if (!m.ok) throw new Error(`choose: ${m.why} — options: ${m.candidates.join(' | ')}`);
+      const r = await this._select(agentId, { selector: `[data-cg-choose-native="${found.n}"]`, text: m.option });
+      return { kind: 'native', option: m.option, shown: r.text, by: m.by, via: 'native' };
+    }
+    // 0.60.275 — James, 2026-10-28: "the drop downs. it needs to wait for the system. it keeps freezing. and then, opens the drop down, doesn't
+    // click. could always try arrows, or a number." Before each step it waits until the page answers quickly (a frozen page is waited for, not
+    // clicked at); the options are read until they hold still; and a pick that does not show is tried again with the keyboard — the arrows to
+    // the option and Enter, then the option's number typed and Enter — and last a direct click. Each is read back; the result says which took.
+    const scan = () => this._evalJs(wc, `(function(){
+        function vis(el){ var r = el.getBoundingClientRect(), cs = getComputedStyle(el); return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none'; }
+        function fresh(el){ return !(window.__cgPre && window.__cgPre.has(el)); }
+        var all = Array.prototype.filter.call(document.querySelectorAll('[role="option"],[role="menuitem"],li,[class*="option" i],[class*="item" i]'), function(el){ return fresh(el) && vis(el); });
+        // 0.60.222b — a site whose options are plain divs: what appeared on opening, with short text of its own
+        if (!all.length) all = Array.prototype.filter.call(document.querySelectorAll('body *'), function(el){ if (!fresh(el)) return false; var t = (el.innerText || '').trim(); return t && t.length <= 80 && t.indexOf('\\n') < 0 && vis(el); });
+        var leaves = all.filter(function(el){ return !all.some(function(o){ return o !== el && el.contains(o); }); });
+        document.querySelectorAll('[data-cg-opt]').forEach(function(el){ el.removeAttribute('data-cg-opt'); });
+        return leaves.slice(0, 200).map(function(el, i){ el.setAttribute('data-cg-opt', String(i)); return (el.innerText || el.textContent || '').replace(/\\s+/g, ' ').trim(); });
+      })()`);
+    const readOptions = async (budgetMs) => {   // until the list holds still (the same options twice), or the budget is spent
+      let last = null, t0 = Date.now();
+      while (Date.now() - t0 < budgetMs) {
+        await this._waitResponsive(wc);
+        const o = await scan();
+        if (Array.isArray(o) && o.length && Array.isArray(last) && last.join('\n') === o.join('\n')) return o;
+        last = Array.isArray(o) ? o : null; await this._sleep(200);
+      }
+      return last;
+    };
+    const open = async () => {
+      await this._waitResponsive(wc);
+      const r = await this._humanPointer(agentId, { selector: trigSel, do: 'click', via, label: `open ${column || selector}` });
+      await this._pause(openWait);   // drop down … (his words) — the menu animates in before anything is read
+      return r;
+    };
+    const opened = await open();
+    let opts = await readOptions(optionsWaitMs);
+    if (!opts || !opts.length) { await open(); opts = await readOptions(optionsWaitMs); }   // the first click may have landed while the page was busy
+    if (!opts || !opts.length) throw new Error(`choose: the dropdown did not open (no new options after clicking ${column || selector}, twice)`);
+    const m = OM.matchOption(opts, option);
+    if (!m.ok) throw new Error(`choose: ${m.why} — options: ${m.candidates.slice(0, 40).join(' | ')}`);
+    await this._pause(pickWait);   // … and then click
+    const optSel = `[data-cg-opt="${m.index}"]`;
+    const readShown = () => this._evalJs(wc, `(function(){ var t = document.querySelector(${JSON.stringify(trigSel)}); return t ? (t.innerText || t.textContent || '').replace(/\\s+/g, ' ').trim() : null; })()`);
+    const isOpen = () => this._evalJs(wc, `(function(){ var o = document.querySelector(${JSON.stringify(optSel)}); return !!(o && o.isConnected); })()`).catch(() => false);
+    // 0.60.280 KB5 — James, 2026-10-29: "bind arrow keys, or numbers to each drop down menu value". The ways to pick, in the order `pick` says
+    // (not `by`: every person's run already passes by: 'person', who acted):
+    // auto (pointer → arrows → number → direct click), pointer (pointer → direct click), keys (arrows → number), number (number → arrows).
+    // Keys bound in the node (keys, or keysFor[option]) are pressed exactly as written instead. Each way is read back; `tried` says each.
+    const tried = []; let shown = null, clickedBy = null, picked = null;
+    const reopen = async () => { if (!(await isOpen())) { await open(); await readOptions(optionsWaitMs); } };
+    const KEYN = { arrowdown: 'Down', down: 'Down', arrowup: 'Up', up: 'Up', enter: 'Enter', return: 'Enter', tab: 'Tab', escape: 'Escape', esc: 'Escape', space: 'Space', home: 'Home', end: 'End', pagedown: 'PageDown', pageup: 'PageUp' };
+    const bound = (() => {
+      let k = keys != null ? keys : (keysFor && (keysFor[String(option)] != null ? keysFor[String(option)] : keysFor[m.option]));
+      if (k == null || k === '') return null;
+      const list = Array.isArray(k) ? k : String(k).trim().split(/[\s,]+/);
+      return list.filter(Boolean).map(x => KEYN[String(x).toLowerCase()] || String(x));
+    })();
+    const num = (/\d+/.exec(m.option) || [])[0];
+    const WAYS = {
+      bound: async () => {
+        await reopen();
+        for (const k of bound) { await this._key(wc, k, k.length === 1); await this._sleep(90 + Math.random() * 90); }
+        await this._pause(settleWait); shown = await readShown(); tried.push(`keys ${bound.join(' ')} → "${shown}"`); return 'keys (bound)';
+      },
+      pointer: async () => {
+        await reopen(); await this._waitResponsive(wc);
+        picked = await this._humanPointer(agentId, { selector: optSel, do: 'click', via, label: m.option, scroll: 'within' });
+        await this._pause(settleWait); shown = await readShown(); tried.push(`pointer → "${shown}"`); return 'pointer';
+      },
+      keys: async () => {   // arrows from the option the menu has highlighted (or from the top) to the one meant, then Enter
+        await reopen();
+        const cur = await this._evalJs(wc, `(function(){ var os = Array.prototype.slice.call(document.querySelectorAll('[data-cg-opt]'));
+          for (var i = 0; i < os.length; i++) { var o = os[i]; if (o.getAttribute('aria-selected') === 'true' || o.getAttribute('aria-current') === 'true' || /(^|[\\s_-])(active|focused|highlighted|hover)/i.test(o.className || '')) return Number(o.getAttribute('data-cg-opt')); }
+          return -1; })()`).catch(() => -1);
+        const steps = m.index - (Number.isInteger(cur) ? cur : -1);
+        for (let i = 0; i < Math.abs(steps); i++) { await this._key(wc, steps > 0 ? 'Down' : 'Up'); await this._sleep(90 + Math.random() * 90); }
+        await this._key(wc, 'Enter');
+        await this._pause(settleWait); shown = await readShown(); tried.push(`arrows ${steps > 0 ? '↓' : '↑'}×${Math.abs(steps)} + Enter → "${shown}"`); return 'keys';
+      },
+      number: async () => {   // the option's number typed, then Enter ("6 DAYS DELIVERY" → 6)
+        if (!num) { tried.push('number: the option has no number'); return null; }
+        await reopen();
+        for (const ch of num) { await this._key(wc, ch, true); await this._sleep(60 + Math.random() * 60); }
+        await this._key(wc, 'Enter');
+        await this._pause(settleWait); shown = await readShown(); tried.push(`typed ${num} + Enter → "${shown}"`); return 'number';
+      },
+      page: async () => {   // 0.60.273 — a direct click on the option while it is still on the page
+        await reopen();
+        const again = await this._evalJs(wc, `(function(){ var o = document.querySelector(${JSON.stringify(optSel)}); if (!o || !o.isConnected) return false; o.click(); return true; })()`).catch(() => false);
+        if (!again) { tried.push('direct click: the option was gone'); return null; }
+        await this._pause(settleWait); shown = await readShown(); tried.push(`direct click → "${shown}"`); return 'page';
+      },
+    };
+    const ORDER = { auto: ['pointer', 'keys', 'number', 'page'], pointer: ['pointer', 'page'], keys: ['keys', 'number'], number: ['number', 'keys'] };
+    if (!bound && !ORDER[pick]) throw new Error(`choose: pick is auto, pointer, keys or number (got ${JSON.stringify(pick)})`);
+    for (const way of (bound ? ['bound'] : ORDER[pick])) {
+      const label = await WAYS[way]();
+      if (label && OM.shows(shown, m.option)) { clickedBy = label; break; }
+    }
+    if (!clickedBy) throw new Error(`choose: "${m.option}" did not take — the dropdown shows "${shown}" (tried: ${tried.join('; ')})`);
+    return { kind: 'widget', option: m.option, shown, by: m.by, via: picked && picked.via || via, clickedBy, tried, ...((opened && opened.viaWhy) || (picked && picked.viaWhy) ? { viaWhy: (picked && picked.viaWhy) || opened.viaWhy } : {}) };
+  }
+
+  // 0.60.281 SN1 — James, 2026-10-29: "also snowflake plugin support to macros and automation." route/unroute this tab's site, start, stop,
+  // wait, check, status — through the net service the bridge hands in (driver.netStep), never a second copy of it
+  async _net(agentId, params = {}) {
+    if (typeof this.netStep !== 'function') throw new Error('net: Snowflake is not wired into this driver');
+    const urlOf = () => { try { const wc = this._getWebContents(agentId); return wc ? wc.getURL() : null; } catch (_) { return null; } };
+    return this.netStep({ do: params.do, site: params.site || null, via: params.via || 'transport', timeoutMs: params.timeoutMs || 90000, turnOn: params.turnOn !== false, start: params.start !== false }, urlOf);
+  }
+
+  // 0.60.281 AP1 — James, 2026-10-29: "update the gig files." A package row that is a checkbox (Data Syncing, Conditional Logic …): the one in
+  // the column headed `column` and the row labelled `row`, clicked with the pointer only when it is not already in the wanted state, read back.
+  async _checkAt(agentId, { column, row, checked = true, via = 'auto', read = false } = {}) {   // read (2026-10-30 GG1): only say the state, a gate
+    const wc = this._getWebContents(agentId);
+    if (!wc) throw new Error(`No webcontents for agent: ${agentId}`);
+    if (!column || !row) throw new Error('checkAt needs column and row');
+    const find = () => this._evalJs(wc, `(function(col, row){
+      function vis(el){ var r = el.getBoundingClientRect(), cs = getComputedStyle(el); return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none'; }
+      function norm(t){ return String(t || '').replace(/\\s+/g, ' ').trim().toLowerCase(); }
+      function byText(t){ var want = norm(t), out = []; document.querySelectorAll('body *').forEach(function(el){ if (!el.children.length && norm(el.textContent) === want && vis(el)) out.push(el); }); return out; }
+      var h = byText(col); if (!h.length) return { error: 'no column headed "' + col + '"' };
+      var rw = byText(row); if (!rw.length) return { error: 'no row labelled "' + row + '"' };
+      var hr = h[0].getBoundingClientRect(), rb = (rw[0].closest('tr') || rw[0].parentElement || rw[0]).getBoundingClientRect();
+      var boxes = Array.prototype.filter.call(document.querySelectorAll('input[type="checkbox"],[role="checkbox"]'), function(el){
+        var t = el.type === 'checkbox' && !vis(el) ? (el.closest('label') || el.parentElement) : el; if (!t || !vis(t)) return false;
+        var r = t.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2; return cx >= hr.left && cx <= hr.right && cy >= rb.top && cy <= rb.bottom; });
+      if (!boxes.length) return { error: 'no checkbox at column "' + col + '", row "' + row + '"' };
+      var b = boxes[0]; window.__cgCheckN = (window.__cgCheckN || 0) + 1; var target = b.type === 'checkbox' && !vis(b) ? (b.closest('label') || b.parentElement) : b;
+      target.setAttribute('data-cg-check', String(window.__cgCheckN));
+      return { n: window.__cgCheckN, checked: b.type === 'checkbox' ? !!b.checked : b.getAttribute('aria-checked') === 'true' };
+    })(${JSON.stringify(column)}, ${JSON.stringify(row)})`);
+    let f = await find();
+    if (!f || f.error) throw new Error(`checkAt: ${(f && f.error) || 'page did not answer'}`);
+    if (read) return { column, row, checked: !!f.checked };
+    const want = !!checked;
+    if (f.checked === want) return { column, row, checked: want, changed: false };
+    await this._waitResponsive(wc);
+    await this._humanPointer(agentId, { selector: `[data-cg-check="${f.n}"]`, do: 'click', via, label: `${row} (${column})` });
+    await this._pause([250, 450]);
+    f = await find();
+    if (!f || f.error || f.checked !== want) throw new Error(`checkAt: "${row}" in ${column} is ${f && !f.error ? (f.checked ? 'ticked' : 'clear') : 'gone'} after the click, not ${want ? 'ticked' : 'clear'}`);
+    return { column, row, checked: want, changed: true };
+  }
+
+  // 0.60.286 GM2 — James, 2026-10-29: "do everything you can ... to get fiverr operational". A package's price had no way in: the text box in the
+  // column headed `column` (BASIC) on the row labelled `row` (Price) is marked, typed as him (setValue's native setter + input/change), and read
+  // back. { column, row, text, value }
+  async _typeAt(agentId, { column, row, text = '' } = {}) {
+    const wc = this._getWebContents(agentId);
+    if (!wc) throw new Error(`No webcontents for agent: ${agentId}`);
+    if (!column || !row) throw new Error('typeAt needs column and row');
+    const f = await this._evalJs(wc, `(function(col, row){
+      function vis(el){ var r = el.getBoundingClientRect(), cs = getComputedStyle(el); return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none'; }
+      function norm(t){ return String(t || '').replace(/\\s+/g, ' ').trim().toLowerCase(); }
+      function byText(t){ var want = norm(t), out = []; document.querySelectorAll('body *').forEach(function(el){ if (!el.children.length && norm(el.textContent) === want && vis(el)) out.push(el); }); return out; }
+      var h = byText(col); if (!h.length) return { error: 'no column headed "' + col + '"' };
+      var rw = byText(row); if (!rw.length) return { error: 'no row labelled "' + row + '"' };
+      var hr = h[0].getBoundingClientRect(), rb = (rw[0].closest('tr') || rw[0].parentElement || rw[0]).getBoundingClientRect();
+      var boxes = Array.prototype.filter.call(document.querySelectorAll('input:not([type=checkbox]):not([type=radio]):not([type=hidden]),textarea'), function(el){
+        if (!vis(el)) return false; var r = el.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+        return cx >= hr.left - 4 && cx <= hr.right + 4 && cy >= rb.top - 2 && cy <= rb.bottom + 2; });
+      if (!boxes.length) return { error: 'no text box at column "' + col + '", row "' + row + '"' };
+      window.__cgTypeN = (window.__cgTypeN || 0) + 1; boxes[0].setAttribute('data-cg-type', String(window.__cgTypeN));
+      return { n: window.__cgTypeN };
+    })(${JSON.stringify(column)}, ${JSON.stringify(row)})`);
+    if (!f || f.error) throw new Error(`typeAt: ${(f && f.error) || 'page did not answer'}`);
+    const selector = `[data-cg-type="${f.n}"]`;
+    await this._waitResponsive(wc);
+    await this._setValue(agentId, { selector, value: String(text) });
+    const back = await this._evalJs(wc, `(function(){ var e = document.querySelector(${JSON.stringify(selector)}); return e ? String(e.value) : null; })()`);
+    const want = String(text).replace(/[$,\s]/g, ''), got = String(back == null ? '' : back).replace(/[$,\s]/g, '');
+    if (got !== want) throw new Error(`typeAt: "${row}" in ${column} shows "${back}" after typing, not "${text}"`);
+    return { column, row, text: String(text), value: back, selector };   // selector (2026-10-30 GG1): the box, for the part's settled gate
+  }
+
+  // 0.60.281 AP1 — the row labels of a priced table: the short texts left of the column headed `column`, below its header (so the fill can
+  // say which of the page's rows the gig has no value for)
+  async _rowLabels(agentId, { column } = {}) {
+    const wc = this._getWebContents(agentId);
+    if (!wc) throw new Error(`No webcontents for agent: ${agentId}`);
+    const r = await this._evalJs(wc, `(function(col){
+      function vis(el){ var r = el.getBoundingClientRect(), cs = getComputedStyle(el); return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none'; }
+      function norm(t){ return String(t || '').replace(/\\s+/g, ' ').trim(); }
+      var h = null; document.querySelectorAll('body *').forEach(function(el){ if (!h && !el.children.length && norm(el.textContent).toLowerCase() === String(col).toLowerCase() && vis(el)) h = el; });
+      if (!h) return { error: 'no column headed "' + col + '"' };
+      var hr = h.getBoundingClientRect(), out = [];
+      document.querySelectorAll('body *').forEach(function(el){ if (el.children.length || !vis(el)) return; var r = el.getBoundingClientRect(), t = norm(el.textContent);
+        if (t && t.length <= 80 && r.right <= hr.left + 2 && (r.top + r.bottom) / 2 > hr.bottom && out.indexOf(t) < 0) out.push(t); });
+      return { labels: out };
+    })(${JSON.stringify(column || 'BASIC')})`);
+    if (!r || r.error) throw new Error(`rowLabels: ${(r && r.error) || 'page did not answer'}`);
+    return r;
+  }
+
+  // 0.60.280 KB4 — James, 2026-10-29: "make the gates for them gated and have them check for the correct value". What a dropdown shows now:
+  // the one choose last marked in that column (or row, or the selector); when the page has redrawn it, the short texts in that column. With
+  // `is`, matches says whether it shows that value (the same match choose reads back with).
+  async _readChoice(agentId, { column = null, row = null, selector = null, is = null } = {}) {
+    const wc = this._getWebContents(agentId);
+    if (!wc) throw new Error(`No webcontents for agent: ${agentId}`);
+    if (!column && !row && !selector) throw new Error('readChoice needs column, row or selector');
+    const OM = require('../page/option-match');
+    const r = await this._evalJs(wc, `(function(sel, col, row){
+      function vis(el){ var r = el.getBoundingClientRect(), cs = getComputedStyle(el); return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none'; }
+      function norm(t){ return String(t || '').replace(/\\s+/g, ' ').trim(); }
+      function byText(t){ var want = norm(t).toLowerCase(), out = []; document.querySelectorAll('body *').forEach(function(el){ if (!el.children.length && norm(el.textContent).toLowerCase() === want && vis(el)) out.push(el); }); return out; }
+      if (sel) { var e = null; try { e = document.querySelector(sel); } catch (_) {} return e ? { shown: norm(e.innerText || e.textContent), from: 'selector' } : { error: 'no element for ' + sel }; }
+      var band = null, cols = null;
+      if (col) { var h = byText(col); if (!h.length) return { error: 'no column headed "' + col + '"' }; var hr = h[0].getBoundingClientRect(); cols = { left: hr.left, right: hr.right }; }
+      if (row) { var rw = byText(row); if (!rw.length) return { error: 'no row labelled "' + row + '"' }; var rb = (rw[0].closest('tr') || rw[0].parentElement || rw[0]).getBoundingClientRect(); band = { top: rb.top, bottom: rb.bottom }; }
+      function inside(el){ var r = el.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+        return (!cols || (cx >= cols.left && cx <= cols.right)) && (!band || (cy >= band.top && cy <= band.bottom)); }
+      var marked = Array.prototype.filter.call(document.querySelectorAll('[data-cg-choose]'), function(el){ return vis(el) && inside(el); })
+        .sort(function(a, b){ return Number(b.getAttribute('data-cg-choose')) - Number(a.getAttribute('data-cg-choose')); });
+      if (marked.length) return { shown: norm(marked[0].innerText || marked[0].textContent), from: 'marked' };
+      var texts = []; document.querySelectorAll('body *').forEach(function(el){ if (el.children.length || !vis(el) || !inside(el)) return; var t = norm(el.textContent); if (t && t.length <= 60) texts.push(t); });
+      return { shown: null, texts: texts.slice(0, 80), from: 'column' };
+    })(${JSON.stringify(selector)}, ${JSON.stringify(column)}, ${JSON.stringify(row)})`);
+    if (!r || r.error) throw new Error(`readChoice: ${(r && r.error) || 'page did not answer'}`);
+    if (is == null || is === '') return r;
+    if (r.shown != null) return { ...r, is, matches: OM.shows(r.shown, String(is)) };
+    const hit = (r.texts || []).find(t => OM.shows(t, String(is)));
+    return { ...r, shown: hit || null, is, matches: !!hit };
+  }
+
+  // 0.60.275 — wait until the page answers quickly: a frozen page (his machine under load) is waited for, not acted on. Up to maxMs, then on.
+  async _waitResponsive(wc, { fastMs = 250, maxMs = 20000 } = {}) {
+    const t0 = Date.now(); let good = 0;
+    while (Date.now() - t0 < maxMs) {
+      const a = Date.now();
+      try { await this._evalJs(wc, '1'); } catch (_) { return false; }
+      if (Date.now() - a < fastMs) { if (++good >= 2) return true; } else good = 0;
+      await this._sleep(60);
+    }
+    return false;
+  }
+
+  // 0.60.275 — one key to the page, as the input system makes it: a named key (Down, Up, Enter) or a character
+  async _key(wc, key, isChar = false) {
+    if (isChar) { wc.sendInputEvent({ type: 'keyDown', keyCode: key }); wc.sendInputEvent({ type: 'char', keyCode: key }); wc.sendInputEvent({ type: 'keyUp', keyCode: key }); return; }
+    wc.sendInputEvent({ type: 'keyDown', keyCode: key });
+    await this._sleep(30 + Math.random() * 30);
+    wc.sendInputEvent({ type: 'keyUp', keyCode: key });
+  }
+
   // check: checkbox/radio to a definite state (a click toggles, so clicking an already-checked box unchecks it).
   async _check(agentId, { selector, checked = true } = {}) {
     const wc = this._getWebContents(agentId);
@@ -721,10 +1061,50 @@ class ClearDriver {
 
   // setValue: long answers (a cover letter) typed key by key take minutes and trip per-key handlers. Sets the value
   // through the element's native setter (so React/Vue-controlled inputs register it), then fires input+change.
+  // 2026-10-30 — every key typed for anyone but him, paced (see the constructor): ErosmancerOS types it when wired (its own human timing),
+  // else one key at a time — insertText per character (any script, any editor), Enter between lines, a pause every few keys. replace: what
+  // is in the box goes first. → { via, typed, shown, viaWhy? }
+  async _humanType(agentId, { selector, text = '', replace = true } = {}) {
+    const wc = this._getWebContents(agentId);
+    if (!wc) throw new Error(`No webcontents for agent: ${agentId}`);
+    const sel = JSON.stringify(selector);
+    const at = await this._evalJs(wc, `(function(){ var el = document.querySelector(${sel}); if (!el) return { ok:false, error:'element not found' };
+      el.scrollIntoView && el.scrollIntoView({ block:'center' }); el.focus && el.focus();
+      var rich = !/^(INPUT|TEXTAREA)$/.test(el.tagName);
+      if (${replace ? 'true' : 'false'}) {
+        if (!rich) { var proto = el.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype; var d = Object.getOwnPropertyDescriptor(proto, 'value'); if (d && d.set) d.set.call(el, ''); else el.value = ''; el.dispatchEvent(new Event('input', { bubbles:true })); }
+        else { var r = document.createRange(); r.selectNodeContents(el); var s = getSelection(); s.removeAllRanges(); s.addRange(r); document.execCommand('delete'); }
+      } else if (!rich && el.setSelectionRange) { try { var n = String(el.value).length; el.setSelectionRange(n, n); } catch (_) { /* email, number … have no caret to move: the keys go to its end anyway */ } }
+      var b = el.getBoundingClientRect(); return { ok:true, rich: rich, x: Math.round(b.left + Math.min(b.width / 2, 40)), y: Math.round(b.top + Math.min(b.height / 2, 16)) }; })()`);
+    if (!at || !at.ok) throw new Error(`type ${selector}: ${(at && at.error) || 'failed'}`);
+    let via = 'paced', viaWhy = null;
+    if (typeof this.erosInput === 'function') {
+      try { await this.erosInput(agentId, wc.getURL(), { x: at.x, y: at.y, action: 'type', text: String(text) }); via = 'eros'; }
+      catch (e) { viaWhy = `ErosmancerOS did not type it (${e.message}) — paced keys instead`; }
+    } else viaWhy = 'ErosmancerOS is not wired here — paced keys';
+    if (via !== 'eros') {
+      const P = this.pace, rnd = ([a, b]) => a + Math.random() * Math.max(0, b - a);
+      let next = Math.round(rnd(P.pauseEvery));
+      const chars = [...String(text)];
+      for (let i = 0; i < chars.length; i++) {
+        const ch = chars[i];
+        if (ch === '\n') { wc.sendInputEvent({ type: 'keyDown', keyCode: 'Enter' }); wc.sendInputEvent({ type: 'char', keyCode: 'Enter' }); wc.sendInputEvent({ type: 'keyUp', keyCode: 'Enter' }); }
+        else if (ch !== '\r') { if (typeof wc.insertText === 'function') await wc.insertText(ch); else { wc.sendInputEvent({ type: 'keyDown', keyCode: ch }); wc.sendInputEvent({ type: 'char', keyCode: ch }); wc.sendInputEvent({ type: 'keyUp', keyCode: ch }); } }
+        await this._sleep(rnd(P.key));
+        if (--next <= 0 && i < chars.length - 1) { await this._sleep(rnd(P.pause)); next = Math.round(rnd(P.pauseEvery)); }
+      }
+    }
+    const shown = await this._evalJs(wc, `(function(){ var el = document.querySelector(${sel}); if (!el) return null;
+      el.dispatchEvent(new Event('change', { bubbles:true })); return /^(INPUT|TEXTAREA)$/.test(el.tagName) ? String(el.value) : String(el.innerText || ''); })()`);
+    return { via, typed: [...String(text)].length, shown, rich: at.rich, ...(viaWhy ? { viaWhy } : {}) };
+  }
+
   async _setValue(agentId, { selector, value = '' } = {}) {
     const wc = this._getWebContents(agentId);
     if (!wc) throw new Error(`No webcontents for agent: ${agentId}`);
     if (!selector) throw new Error('setValue requires selector');
+    // 2026-10-30 — a value is typed, paced (_humanType), never set at once: "any input not from me" goes the way a person's does
+    if (String(value) !== '') { const t = await this._humanType(agentId, { selector, text: String(value), replace: true }); return { ok: true, length: String(value).length, via: t.via, ...(t.viaWhy ? { viaWhy: t.viaWhy } : {}) }; }
     const r = await this._evalJs(wc, `(function(){
       const el = document.querySelector(${JSON.stringify(selector)});
       if (!el) return { ok:false, error:'element not found' };
@@ -744,13 +1124,97 @@ class ClearDriver {
     return r;
   }
 
-  async _pressKey(agentId, { key = 'Enter', modifiers = [] } = {}) {
+  // ── 2026-10-30 UG4/PL6 — reading a gate (src/page/element-gate.js) for a pipeline, workflow or macro step ─────────────────────────────────────────────────────────────────────────────
+  // getSiteGates: main hands the options store's siteGates in (src/main/index.js); none → his gates are not applied, and the result says so
+  _siteGates() { try { return (typeof this.getSiteGates === 'function' && this.getSiteGates()) || {}; } catch (_) { return {}; } }
+  _gatePolicy(url) {
+    let p = null; try { p = require('../site-settings/readers').gatePolicy(url); } catch (_) {}
+    return { enabled: true, settleMs: 400, timeoutMs: 2500, retries: 1, ...(p || {}) };
+  }
+  // one expectation, read on the page: its element's state (stateScript), a dropdown's choice (readChoice), or a checkbox at a column and row
+  async _gateRead(agentId, exp) {
+    const EG = require('../page/element-gate'), OM = require('../page/option-match');
+    const wc = this._getWebContents(agentId);
+    if (exp.choice) {
+      const g = await this._readChoice(agentId, { ...exp.choice, is: exp.shows });
+      return { open: !!g.matches, saw: g.matches ? `shows "${g.shown}"` : `shows "${g.shown != null ? g.shown : (g.texts || []).slice(0, 4).join(' | ')}", not "${exp.shows}"` };
+    }
+    if (exp.checkAt) {
+      const c = await this._checkAt(agentId, { ...exp.checkAt, read: true });
+      return { open: c.checked === !!exp.checked, saw: c.checked ? 'ticked' : 'clear' };
+    }
+    const state = await this._evalJs(wc, EG.stateScript(exp));
+    return EG.evaluate(exp, state || {}, OM);
+  }
+  async _gateAll(agentId, exps) {
+    const outs = [];
+    for (const e of exps) { let r; try { r = await this._gateRead(agentId, e); } catch (err) { r = { open: false, saw: err.message }; } outs.push({ ...r, label: e.label || e.why || null }); }
+    return { open: outs.every(o => o.open), saw: outs.map(o => (o.label ? `${o.label}: ` : '') + o.saw).join(' · ') };
+  }
+  // (0.60.292's _gated — an automatic read-back after every write — is archived: _archive/2026-10-30-write-gates/. A gate is a block a
+  // pipeline, workflow or macro waits on, his correction of 2026-10-30; this driver only reads one, through the gate action below.)
+  // the gate action: { gate } checks that gate; { id } one of his; { all: true } every gate of his on this page. Nothing is written.
+  async _gateCheck(agentId, { gate = null, id = null, all = false, timeoutMs = null } = {}) {
+    const EG = require('../page/element-gate');
+    const wc = this._getWebContents(agentId); if (!wc) throw new Error(`No webcontents for agent: ${agentId}`);
+    const url = wc.getURL(), pol = this._gatePolicy(url);
+    const mine = EG.matchSite(this._siteGates(), url);
+    let exps = [];
+    if (gate) { const g = EG.normalize(gate); const v = EG.validate(g); if (!v.ok) throw new Error(`gate: ${v.why}`); exps = [g]; }
+    else if (id) { const g = mine.find(x => x.id === id); if (!g) throw new Error(`gate: no gate of yours "${id}" on this page`); exps = [EG.normalize(g)]; }
+    else if (all) exps = mine.filter(g => !String(JSON.stringify(g)).includes('{{value}}')).map(g => ({ ...EG.normalize(g), label: g.label || g.id }));
+    else throw new Error('gate needs gate, id, or all');
+    if (!exps.length) return { open: true, checks: 0, saw: 'no gate of yours on this page' };
+    const g = await EG.settle(() => this._gateAll(agentId, exps), { ...pol, ...(timeoutMs ? { timeoutMs } : {}) });
+    return { open: g.open, saw: g.saw, checks: exps.length };
+  }
+
+  // 2026-10-30 GF3 — James: "fix the autofill to work with all fields". A rich editor (Fiverr's description) ignores a value set from script
+  // (setValue writes textContent, which its own model never sees). This puts the text in the way a keyboard does: focus the box, select what is
+  // there, insert as typed text (Electron's insertText; execCommand when there is none), Enter between lines; then read it back.
+  async _insertText(agentId, { selector, text = '' } = {}) {
+    // 2026-10-30 — paced like a person's typing (or ErosmancerOS's), never inserted at once; the at-once body below is kept only for a page
+    // whose editor will not take single keys, and is no longer reached (git history 0.60.290 has it as it ran)
+    if (!selector) throw new Error('insertText requires selector');
+    { const t = await this._humanType(agentId, { selector, text: String(text), replace: true }); return { ok: true, rich: t.rich, shown: t.shown, via: t.via, ...(t.viaWhy ? { viaWhy: t.viaWhy } : {}) }; }
     const wc = this._getWebContents(agentId);
     if (!wc) throw new Error(`No webcontents for agent: ${agentId}`);
-    wc.sendInputEvent({ type: 'keyDown', keyCode: key, modifiers });
-    if (key.length === 1) wc.sendInputEvent({ type: 'char', keyCode: key, modifiers });
-    wc.sendInputEvent({ type: 'keyUp', keyCode: key, modifiers });
-    return { pressed: key, modifiers };
+    if (!selector) throw new Error('insertText requires selector');
+    const sel = JSON.stringify(selector);
+    const ready = await this._evalJs(wc, `(function(){ var el = document.querySelector(${sel}); if (!el) return { ok:false, error:'element not found' };
+      el.scrollIntoView && el.scrollIntoView({ block:'center' }); el.focus && el.focus();
+      if (/^(INPUT|TEXTAREA)$/.test(el.tagName)) el.select();
+      else { var r = document.createRange(); r.selectNodeContents(el); var s = getSelection(); s.removeAllRanges(); s.addRange(r); }
+      return { ok:true, rich: !/^(INPUT|TEXTAREA)$/.test(el.tagName) }; })()`);
+    if (!ready || !ready.ok) throw new Error(`insertText ${selector}: ${(ready && ready.error) || 'failed'}`);
+    const lines = String(text).split(/\r?\n/);
+    for (let i = 0; i < lines.length; i++) {
+      // a line break: Enter as a keyboard gives it (key down, its character, key up) — an editor that acts on keydown takes the first, a plain
+      // editable box needs the character
+      if (i) { if (ready.rich) { wc.sendInputEvent({ type: 'keyDown', keyCode: 'Enter' }); wc.sendInputEvent({ type: 'char', keyCode: 'Enter' }); wc.sendInputEvent({ type: 'keyUp', keyCode: 'Enter' }); await this._sleep(20); }
+        else await this._evalJs(wc, `document.execCommand('insertText', false, '\\n')`); }
+      if (!lines[i]) continue;
+      if (typeof wc.insertText === 'function') await wc.insertText(lines[i]);
+      else await this._evalJs(wc, `document.execCommand('insertText', false, ${JSON.stringify(lines[i])})`);
+      await this._sleep(20);
+    }
+    const shown = await this._evalJs(wc, `(function(){ var el = document.querySelector(${sel}); if (!el) return null;
+      el.dispatchEvent(new Event('change', { bubbles:true })); return /^(INPUT|TEXTAREA)$/.test(el.tagName) ? el.value : (el.innerText || ''); })()`);
+    return { ok: true, rich: ready.rich, shown: shown == null ? null : String(shown) };
+  }
+
+  // 0.60.280 KB5 — times: the same key N times at a person's pace (Down ×6 to reach a dropdown's seventh option)
+  async _pressKey(agentId, { key = 'Enter', modifiers = [], times = 1 } = {}) {
+    const wc = this._getWebContents(agentId);
+    if (!wc) throw new Error(`No webcontents for agent: ${agentId}`);
+    const n = Math.max(1, Math.min(200, parseInt(times, 10) || 1));
+    for (let i = 0; i < n; i++) {
+      if (i) await this._sleep(80 + Math.random() * 80);
+      wc.sendInputEvent({ type: 'keyDown', keyCode: key, modifiers });
+      if (key.length === 1) wc.sendInputEvent({ type: 'char', keyCode: key, modifiers });
+      wc.sendInputEvent({ type: 'keyUp', keyCode: key, modifiers });
+    }
+    return { pressed: key, modifiers, times: n };
   }
 
   // upload: a file input cannot be filled by typing or by script (browsers forbid setting .value). The one real way
@@ -903,11 +1367,11 @@ class ClearDriver {
   // Clear Glass's attention record (src/page/attention.js) and Nexus Nerve know where an agent pointed
   async _pointer(agentId, args = {}) {
     const r = await this._pointerAct(agentId, args);
-    try { this.sse.emit('field.pointer', { agentId, do: r.action, x: r.x, y: r.y, n: r.target ? r.target.n : null, name: r.target ? r.target.name : null, covered: !!r.covered, via: r.via, ts: Date.now() }); } catch (_) {}
+    try { this.sse.emit('field.pointer', { agentId, do: r.action, x: r.x, y: r.y, n: r.target ? r.target.n : null, name: r.target ? r.target.name : null, label: args.label || null, covered: !!r.covered, via: r.via, ts: Date.now() }); } catch (_) {}
     return r;
   }
 
-  async _pointerAct(agentId, { n, x, y, selector, do: action = 'click', text, deltaY = 300, via = 'native', spotlight = true, label } = {}) {
+  async _pointerAct(agentId, { n, x, y, selector, do: action = 'click', text, deltaY = 300, via = 'native', spotlight = true, label, scroll = 'page' } = {}) {
     if (!['move', 'click', 'double', 'right', 'scroll', 'type'].includes(action)) throw new Error(`pointer "do" must be move|click|double|right|scroll|type, not "${action}"`);
     const wc = this._getWebContents(agentId);
     if (!wc) throw new Error(`No webcontents for agent: ${agentId}`);
@@ -919,8 +1383,21 @@ class ClearDriver {
       if (tgt.z < 0) throw new Error(`target #${n} is off-screen — scroll (pointer action "scroll") and call field again`);
       x = tgt.cx; y = tgt.cy;
     } else if (selector) {
-      const pos = await this._evalJs(wc, `(function(){ const el = document.querySelector(${JSON.stringify(selector)}); if (!el) return null;
-        el.scrollIntoView({ block: 'center', inline: 'center' }); const r = el.getBoundingClientRect(); return { x: Math.round(r.left + r.width/2), y: Math.round(r.top + r.height/2) }; })()`);
+      // 0.60.273 — scroll 'within': an option in an open dropdown is brought into view inside its own list, and the page moves only if the
+      // list itself is off screen (and then the least it can). Centring it on the page moved the page under Fiverr's open menu (his picture 3).
+      const pos = await this._evalJs(wc, `(function(within){ const el = document.querySelector(${JSON.stringify(selector)}); if (!el) return null;
+        if (!within) el.scrollIntoView({ block: 'center', inline: 'center' });
+        else {
+          for (var p = el.parentElement; p && p !== document.body && p !== document.documentElement; p = p.parentElement) {
+            var cs = getComputedStyle(p); if (!/(auto|scroll)/.test(cs.overflowY) || p.scrollHeight <= p.clientHeight) continue;
+            var pr = p.getBoundingClientRect(), er = el.getBoundingClientRect();
+            if (er.top < pr.top || er.bottom > pr.bottom) p.scrollTop += (er.top + er.height / 2) - (pr.top + pr.height / 2);
+            break;
+          }
+          var q = el.getBoundingClientRect();
+          if (q.top < 0 || q.bottom > innerHeight || q.left < 0 || q.right > innerWidth) el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        }
+        const r = el.getBoundingClientRect(); return { x: Math.round(r.left + r.width/2), y: Math.round(r.top + r.height/2) }; })(${JSON.stringify(scroll === 'within')})`);
       if (!pos) throw new Error(`Element not found: ${selector}`);
       x = pos.x; y = pos.y;
     }

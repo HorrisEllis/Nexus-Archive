@@ -326,17 +326,21 @@ try {
     if (t.unref) t.unref();
   }
   RV.setCommitter(async ({ repoUuid, message, causedBy, provenance }) => {
+    // 0.60.278 VE5 — §17.12 (James, 2026-10-29: "full changes, and versions have to be pushed to versionium? enforce it everywhere") and
+    // his 0.40.0 words ("needs to snapshot every accept, every change"): the switch versions.every_change (the coder's, 0.40.0) no longer
+    // turns recording off. It is kept (§0.3), and a change made while it is off is recorded and says so.
     let on = true; try { on = getIdeariumValue('versions.every_change') !== false; } catch (_) {}
-    if (!on) return { ok: true, commitId: null, skipped: 'versions.every_change is off' };
+    const overrode = on ? null : 'versions.every_change is off, but every change is recorded (§17.12)';
     const r = await _commitRepoSnapshotFor(repoUuid, { message, causedBy, provenance });
-    return r.ok ? { ok: true, commitId: r.data.commitId, changed: r.data.files ? r.data.files.counts : null } : { ok: false, error: r.error };
+    return r.ok ? { ok: true, commitId: r.data.commitId, changed: r.data.files ? r.data.files.counts : null, ...(overrode ? { note: overrode } : {}) } : { ok: false, error: r.error };
   });
 } catch (_) {}
 // §0.60.41 RN1 — Nexus's releases recorded in Versionium once Versionium answers: idempotent, so every boot is safe; a
 // sync that cannot reach it is said in the log and tried at the next boot (or POST /api/releases/sync)
 if (!process.env.NEXUS_TEST_SANDBOX) {
   const t = setTimeout(() => {
-    _require('../../lib/nexus-releases.js').sync(_vcall)
+    // 0.60.277 VS3 — Versionium owns the release logic (his (a), §5.15): it syncs its own records when asked
+    _vcall('POST', '/api/versionium/nexus/releases/sync', {}, 120000)
       .then(r => { if (r.recorded) console.log(`[idearium] releases: ${r.recorded} recorded in versionium (${r.already} already, ${r.unpinned} without a git commit in this clone)`); })
       .catch(e => console.warn(`[idearium] releases not synced to versionium yet: ${e.message}`));
   }, 20000);
@@ -2564,6 +2568,29 @@ async function _proveLoop(run, { maxBuildsPerRound }) {
   }
 }
 
+// 0.60.286 FA6 — a repo's text files as [{ path, content }] for the project tools (lib/project-*.js): the files an adapter reads, plus
+// .gitignore; the big and the binary left out (said by the tools as unknown, never guessed)
+const _FA_TEXT = /\.(js|cjs|mjs|jsx|ts|tsx|md|markdown|spec|eg|json)$/i;
+function _repoTextFiles(repoUuid, repo) {
+  const out = [];
+  for (const f of (repo && repo.files) || []) {
+    const p = String(f.path || '').replace(/\\/g, '/');
+    if (!_FA_TEXT.test(p) || /(^|\/)(node_modules|\.git)\//.test(p) || (f.size || f.bytes || 0) > 2 * 1024 * 1024) continue;
+    const r = getRepoLayer().readTextFile(repoUuid, p);
+    if (r && !r.error && typeof r.content === 'string' && !r.content.includes('\u0000')) out.push({ path: p, content: r.content });
+  }
+  return out;
+}
+// every file (bytes for the binary ones) — what a split's verify copies so the old and the new file load among their real neighbours
+function _repoAllFiles(repoUuid, repo) {
+  const out = []; const dir = _repoDiskDir(repoUuid);
+  for (const f of (repo && repo.files) || []) {
+    const p = String(f.path || '').replace(/\\/g, '/'); if (/(^|\/)(node_modules|\.git)\//.test(p)) continue;
+    try { if (dir) { const abs = path.join(dir, p); if (fs.existsSync(abs)) { out.push({ path: p, content: fs.readFileSync(abs) }); continue; } } } catch (_) { /* read through the layer below */ }
+    const r = getRepoLayer().readTextFile(repoUuid, p); if (r && !r.error) out.push({ path: p, content: r.content });
+  }
+  return out;
+}
 function _repoDiskDir(repoUuid) {
   const repo = getRepoLayer().get(repoUuid);
   if (!repo) return null;
@@ -3305,7 +3332,7 @@ const ROUTE_CAP = {
   'repo.versions.restoreFile': CAPS.WRITE_IDEAS, 'repo.history.import': CAPS.WRITE_IDEAS,
   'phases.census': CAPS.READ_IDEAS,   // 0.60.188 CNS1 — reads only
   'repo.changelog': CAPS.READ_IDEAS, 'ledger.out': CAPS.READ_IDEAS,   // 0.60.190 APV3/APV4 — read only
-  'repo.releases.list': CAPS.READ_IDEAS, 'repo.releases.create': CAPS.WRITE_IDEAS, 'releases.list': CAPS.READ_IDEAS, 'releases.sync': CAPS.WRITE_IDEAS, 'releases.changes': CAPS.READ_IDEAS,   // §0.60.41 RN1 · 0.60.72 RN2
+  'repo.releases.list': CAPS.READ_IDEAS, 'repo.releases.create': CAPS.WRITE_IDEAS, 'releases.list': CAPS.READ_IDEAS, 'releases.sync': CAPS.WRITE_IDEAS, 'releases.changes': CAPS.READ_IDEAS, 'releases.changelog': CAPS.READ_IDEAS, 'versionium.pending': CAPS.READ_IDEAS,   // §0.60.41 RN1 · 0.60.72 RN2 · 0.60.274
   'repo.integrity': CAPS.READ_IDEAS, 'repo.integrity.notes': CAPS.WRITE_IDEAS,
   'route.assess': CAPS.READ_IDEAS,   // §0.60.8
   'checks.list': CAPS.READ_IDEAS, 'checks.run': CAPS.READ_IDEAS,   // §0.60.33 QA1 — the check catalogue; a run only reads and parses
@@ -3819,6 +3846,8 @@ function matchRoute(method, url) {
     ['GET',    ['api','releases'],                                     'releases.list'],            // ?repository=nexus (default)
     ['POST',   ['api','releases','sync'],                              'releases.sync'],             // { all: true } → every release's commits
     ['GET',    ['api','releases','changes'],                           'releases.changes'],          // §0.60.72 RN2 ?since=0.60.47 · &write=1
+    ['GET',    ['api','releases','changelog'],                         'releases.changelog'],
+    ['GET',    ['api','versionium','pending'],                         'versionium.pending'],        // 0.60.278 VE5 — records waiting for Versionium (§17.12)        // 0.60.274 ?version=x.y.z — its changelog's text (versionium/changelogs)
     ['POST',   ['api','repos',    ':uuid','history','import'],         'repo.history.import'],      // { zips:[{name, contentBase64}], dryRun, allowSecrets }
     // §0.60.7 PL4 — the import checks (lib/import-checks.js): GET reads them; POST also writes them as the repo's notes
     ['GET',    ['api','repos',    ':uuid','integrity'],                'repo.integrity'],
@@ -3915,6 +3944,18 @@ function matchRoute(method, url) {
     ['GET',    ['api','repos',    ':uuid','tasks'],  'repo.tasks'],      // §0.39.366 — everything the agent wearing this repo's hat is doing, and did
     ['GET',    ['api','repos',    ':uuid','activity'],  'repo.activity'],
     ['GET',    ['api','repos',    ':uuid','notes'],     'repo.notes'],         // §0.60.6 — the repo's notes: ?q=&kind=&status=&tag=
+    ['GET',    ['api','repos',    ':uuid','history-nodes'],             'repo.history-nodes'],            // 0.60.285 HN3 — the repo's history as nodes: ?lang=&provider=&limit=
+    ['POST',   ['api','repos',    ':uuid','history-nodes','backfill'],  'repo.history-nodes.backfill'],   // 0.60.285 HN3 — old log rows → nodes (cut ones marked)
+    // 0.60.286 FA6 — James: "create all the capability to finish this or any other project in the repo" (docs/project-spine.spec)
+    ['GET',    ['api','repos',    ':uuid','spine'],                     'repo.spine'],                    // the registry as the spine: components, wires with evidence, drift against nexus.spine.json
+    ['POST',   ['api','repos',    ':uuid','spine'],                     'repo.spine.write'],              // write nexus.spine.json (declared edges kept)
+    ['POST',   ['api','repos',    ':uuid','refactor'],                  'repo.refactor'],                 // { op: move|rename, id, to|name, apply } — asked of the registry
+    ['GET',    ['api','repos',    ':uuid','split-candidates'],          'repo.split-candidates'],         // files holding several components
+    ['POST',   ['api','repos',    ':uuid','split'],                     'repo.split'],                    // { path, by, apply, testCmd } — one component, one file; the old path is the door
+    ['GET',    ['api','repos',    ':uuid','convert'],                   'repo.convert'],                  // mds and hard-coded plans that would be converted
+    ['POST',   ['api','repos',    ':uuid','convert'],                   'repo.convert.apply'],            // { paths?, apply } — md → spec, a spec's build plan → phasemap
+    ['GET',    ['api','repos',    ':uuid','finish'],                    'repo.finish'],                   // one checklist to finish the project
+    ['POST',   ['api','repos',    ':uuid','intent'],                    'repo.intent'],                   // 0.60.286 FA9 { text, answers, write } — intent → context → DAG → found → gaps → contract
     ['POST',   ['api','repos',    ':uuid','notes'],     'repo.notes.add'],     // §0.60.6 — { body, title?, kind?, tags?, pinned? }
     ['GET',    ['api','my-projects'],                   'projects.overview'],
     ['GET',    ['api','raid','held'],                   'raid.held'],          // §0.60.78 RT1 — cortex's officiator: the agents' wait, each staged drop's tries
@@ -5999,7 +6040,7 @@ async function handle(req, res, route, query, body) {
     // states it agrees (CK-253), and the module versions — labelled as modules, never shown as the version
     // §0.60.41 RN1 — James: "i want idearium to have releases and a changelog for each version. it was added to the wrong
     // place." A repo's release is a Versionium tag on its branch head with the commits since the last; Nexus's own come
-    // from lib/version.js, its changelogs and git (lib/nexus-releases.js), synced into Versionium.
+    // from lib/version.js, its changelogs and git (versionium/lib/nexus-releases.js since 0.60.277), synced into Versionium.
     case 'repo.releases.list': case 'repo.releases.create': {
       const repo = getRepoLayer().get(params.uuid);
       if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
@@ -6014,14 +6055,24 @@ async function handle(req, res, route, query, body) {
       } catch (e) { return err(res, e.status || 502, e.message, { code: e.code || null }); }
     }
     // §0.60.72 RN2 — James: "tell me all the recent changes. i want a changelog for each change or diff." Every commit
-    // under the first release that contains it, written from git (lib/release-notes.js); ?since=<version> · ?write=1 → CHANGES.md
+    // under the first release that contains it, written from git (versionium/lib/release-notes.js since 0.60.277); ?since=<version> · ?write=1 → CHANGES.md
+    // 0.60.274 — James, 2026-10-28: "can we move the changelogs to versionium and idearium". A release's changelog, read from its home
+    // (versionium/changelogs; Versionium's own since 0.60.277); ?version= (default: the running release)
+    // 0.60.277 VS3 — James, 2026-10-29: "a". The changelogs and the release notes are Versionium's (§5.15): asked through its routes.
+    // Versionium down → 502 that says so; Idearium itself keeps running (rule 3).
+    case 'releases.changelog': {
+      const v = query.version ? `?version=${encodeURIComponent(query.version)}` : '';
+      const r = await _versionium('GET', `/api/versionium/nexus/changelog${v}`);
+      if (!r.ok) return err(res, r.status === 404 ? 404 : 502, r.status === 404 ? `no changelog for ${query.version || 'the running release'} (versionium)` : `Versionium is down or refused: ${r.error}`);
+      const { ok: _ok, ...c } = r.data || {}; return ok(res, c);
+    }
+    // 0.60.278 VE5 — what waits for Versionium in nexus-client's buffer (every process's file): it is delivered when Versionium answers
+    case 'versionium.pending': return ok(res, _require('../../lib/versionium-record.js').pending());
     case 'releases.changes': {
-      try {
-        const N = _require('../../lib/release-notes.js'), R = _require('../../lib/nexus-releases.js');
-        const since = query.since || null;
-        if (query.write === '1') return ok(res, N.write({ since }));
-        return ok(res, { since, markdown: N.markdown(R.read(), { since }) });
-      } catch (e) { return err(res, 500, `release notes: ${e.message}`); }
+      const q = new URLSearchParams({ ...(query.since ? { since: query.since } : {}), ...(query.write === '1' ? { write: '1' } : {}) }).toString();
+      const r = await _versionium('GET', `/api/versionium/nexus/changes${q ? `?${q}` : ''}`, null, 60000);
+      if (!r.ok) return err(res, 502, `Versionium is down or refused: ${r.error}`);
+      const { ok: _ok, ...d } = r.data || {}; return ok(res, d);
     }
     case 'repo.changelog': {
       // 0.60.190 APV3 — James: "make sure it's all interconnected, changes are logged and the diff snapshotted in versionium with a change
@@ -6058,7 +6109,7 @@ async function handle(req, res, route, query, body) {
     }
     case 'releases.list': case 'releases.sync': {
       try {
-        if (action === 'releases.sync') return ok(res, await _require('../../lib/nexus-releases.js').sync(_vcall, { commits: (body && body.all) ? 'all' : 'recent' }));
+        if (action === 'releases.sync') return ok(res, await _vcall('POST', '/api/versionium/nexus/releases/sync', { all: !!(body && body.all) }, 180000));   // 0.60.277 VS3 — Versionium's
         const repository = query.repository || 'nexus';
         const d = await _vcall('GET', `/api/versionium/releases?${new URLSearchParams({ repository, n: String(parseInt(query.n, 10) || 1000) })}`);
         return ok(res, { repository, current: _require('../../lib/release-version.js').current().version, releases: d.releases || [] });
@@ -6069,7 +6120,13 @@ async function handle(req, res, route, query, body) {
       const root = path.dirname(_require.resolve('../../package.json'));
       const modVer = (rel) => { try { return JSON.parse(fs.readFileSync(path.join(root, rel), 'utf8')).version || null; } catch (_) { return null; } };
       const cur = R.current();
-      return ok(res, { ...cur, agreement: R.agreement(), github: `https://github.com/HorrisEllis/Nexus/releases/tag/${cur.tag}`,
+      // 0.60.277 VS3 — the agreement with its changelog line is Versionium's; when Versionium is down, lib's own places are said, and the
+      // changelog line says it was not checked (§5.15 rule 3, §1.2)
+      let agreement;
+      const va = await _versionium('GET', '/api/versionium/nexus/agreement');
+      if (va.ok && va.data && va.data.agreement) agreement = va.data.agreement;
+      else { const a = R.agreement(); agreement = { ...a, places: [...a.places, { place: 'the changelog', says: null, ok: null, why: `not checked: Versionium is down (${va.error || 'no answer'})` }] }; }
+      return ok(res, { ...cur, agreement, github: `https://github.com/HorrisEllis/Nexus/releases/tag/${cur.tag}`,
         modules: { ideaos: modVer('idearium/package.json'), clearGlass: modVer('clear-glass/package.json') } });
     }
     // 0.60.207 DL2 — James: "start the data migration … make each system responsible for it's own data." lib/data-home.js: where each
@@ -8151,6 +8208,21 @@ async function handle(req, res, route, query, body) {
           return ok(res, r);
         }
         const zips = (body.zips || []).map(z => ({ name: String(z.name || 'project.zip'), buffer: Buffer.from(String(z.contentBase64 || ''), 'base64') }));
+        // 0.60.225 — James: "no patch file. unless idearium can run it. like i can drag it into the versionium tab and import". A zip with
+        // nexus-change.json is a change to Nexus itself (lib/nexus-self/change-pack.js): checked against the files on this machine, then — on
+        // his press — written through the apply gate, system by system. Never through the repo layer (Nexus's repos are immutable).
+        { const CP = _require('../../lib/nexus-self/change-pack.js');
+          if (zips.length === 1 && CP.isPack(zips[0].buffer)) {
+            if (!repo.nexusSelf) return err(res, 409, "this is a change to Nexus itself: drop it on a Nexus repo's Versionium tab (core, clear-glass, …)");
+            const pack = CP.read(zips[0].buffer);
+            if (!pack.ok) return err(res, 400, pack.error);
+            const m = pack.manifest, manifest = { from: m.from, to: m.to, version: m.version, made: m.made, files: m.files.length };
+            if (!body.applyPack) return ok(res, { changePack: true, manifest, check: CP.check(pack) });
+            const r = CP.applyPack(pack, { by: body.by || 'person' });
+            if (!r.ok) return err(res, 409, `not applied: ${[...(r.errors || []), ...(r.conflicts || []).map(c => `${c.path} — ${c.why}`)].slice(0, 6).join('; ')}`, { changePack: true, ...r });
+            os.emit('nexus-self.change-pack.applied', { repoUuid: repo.uuid, from: m.from, to: m.to, version: m.version, applies: r.applies });
+            return ok(res, { changePack: true, manifest, applied: r });
+          } }
         const r = await RH.importHistory(_vcall, repo.uuid, { zips, dryRun: !!body.dryRun, allowSecrets: !!body.allowSecrets });
         if (!r.ok) return err(res, 409, r.error, { code: r.code, versions: r.versions, secrets: r.secrets });
         if (!r.dryRun) os.emit('idearium.repo.history.imported', { repoUuid: repo.uuid, imported: r.imported, skipped: r.skipped, branch: r.branch });
@@ -8201,6 +8273,145 @@ async function handle(req, res, route, query, body) {
         os.emit('idearium.repo.integrity.checked', { repoUuid: repo.uuid, ok: r.ok, failed: r.checks.filter(c => !c.ok).map(c => c.id), notes });
         return ok(res, { ...r, notes });
       } catch (e) { return err(res, e.status || 500, e.message); }
+    }
+    // 0.60.285 HN3 — James, 2026-10-29: "i want all the history in idearium saved as nodes per unit." (lib/repo-history-nodes.js)
+    case 'repo.history-nodes': case 'repo.history-nodes.backfill': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const HN = _require('../../lib/repo-history-nodes.js');
+      if (action === 'repo.history-nodes') return ok(res, { repoUuid: params.uuid, exchanges: HN.read({ repoUuid: params.uuid, lang: query.lang || null, provider: query.provider || null, limit: Math.min(parseInt(query.limit, 10) || 50, 500) }) });
+      const rows = _require('../../lib/repo-agent.js').history(params.uuid, 100000);
+      return ok(res, { repoUuid: params.uuid, ...HN.backfill({ rows }) });
+    }
+    // 0.60.286 FA6 — James, 2026-10-29: "take this, and import it into idearium, then create all the capability to finish this or any other
+    // project in the repo. convert mds, hardcoded phasemaps, refactor tool for the architecture to use the component registry as the spine,
+    // decomposition tool for breaking up each component into it's own file and wire it into the spine." The tools are lib's (agnostic, over
+    // files); Idearium reads the repo, shows the plan, and applies through its own versioned writer. GET never writes; a POST without
+    // apply:true returns the plan only.
+    case 'repo.spine': case 'repo.spine.write': case 'repo.refactor': case 'repo.split-candidates': case 'repo.split':
+    case 'repo.convert': case 'repo.convert.apply': case 'repo.finish': case 'repo.intent': {
+      const repo = getRepoLayer().get(params.uuid);
+      if (!repo) return err(res, 404, `repo not found: ${params.uuid}`);
+      const SP = _require('../../lib/project-spine.js');
+      const files = _repoTextFiles(params.uuid, repo);
+      const project = String(repo.name || params.uuid).replace(/[^A-Za-z0-9_-]+/g, '-');
+      const readSpine = () => { const r = getRepoLayer().readTextFile(params.uuid, SP.SPINE_FILE); return r && !r.error ? SP.read(r.content) : null; };
+      const spineNow = () => SP.merge(readSpine(), SP.scan({ files, project }));
+      const apply = async (writes, moves, reason) => {
+        if (repo.nexusSelf && (moves || []).length) return { ok: false, status: 409, error: 'Nexus\'s own tree moves files through the apply gate by hand; the plan is shown, not applied', code: 'NEXUS_MOVE' };
+        if (repo.nexusSelf) {
+          const PH = await import('../repo/phases.js'); const { scope, snapshot } = PH.mapsFor({ repo, repoDir: _repoDiskDir(params.uuid) });
+          return _phaseWriteMany(repo, scope, writes.map(w => ({ path: w.path, content: w.after })), snapshot, reason);
+        }
+        for (const m of moves || []) { const r = getRepoLayer().moveFile(params.uuid, m.from, m.to, { defer: true }); if (r.error) return { ok: false, status: 500, error: `move ${m.from} → ${m.to}: ${r.error}` }; }
+        // an imported project's files are its real bytes (the source layer): a new file joins them, so a chunk named like another
+        // file's (README.spec beside README.md: both 'readme') never refuses it
+        const L = getRepoLayer(); const sourced = (L.repos.repos.find(x => x.uuid === params.uuid) || {}).materializeDir || (repo.files || []).some(f => L.isSourceOwned(params.uuid, f.path));
+        for (const w of writes) {
+          if (sourced && !L.isSourceOwned(params.uuid, w.path)) { const b = L.writeSourceBytes(params.uuid, w.path, Buffer.from(w.after, 'utf8')); if (b.error) return { ok: false, status: 500, error: `write ${w.path}: ${b.error}` }; }
+          const r = L.writeTextFile(params.uuid, w.path, w.after, { defer: true, preserveWhitespace: true }); if (r.error) return { ok: false, status: 500, error: `write ${w.path}: ${r.error}` };
+        }
+        try { getRepoLayer().refresh(params.uuid); } catch (_) { /* the writes stand; the reindex says its own failure */ }
+        return { ok: true, via: 'repo-layer' };
+      };
+      const writeSpine = () => { const fresh = SP.merge(readSpine(), SP.scan({ files: _repoTextFiles(params.uuid, getRepoLayer().get(params.uuid)), project })); const w = getRepoLayer().writeTextFile(params.uuid, SP.SPINE_FILE, SP.text(fresh)); return { spine: fresh, error: w.error || null }; };
+      // 0.60.286 FA9 — James: "like type in the cli, determine context needed, build dag. search the project for context, ask user about any
+      // gaps, then contract, etc". The flow is lib/intent-flow.js (deterministic); the contract it builds is RAID's v2, validated here by RAID's
+      // own contract-gates (Idearium already reaches it) and saved through the repo layer only on write:true.
+      if (action === 'repo.intent') {
+        const IF = _require('../../lib/intent-flow.js');
+        const r = IF.run({ text: body.text, files, project, answers: body.answers || {}, spine: spineNow() });
+        if (!r.ok) return err(res, 400, r.error);
+        let written = null, problems = [];
+        if (r.contract) {
+          const CG = _require('../../cortex/core/raid/contract-gates.js');
+          problems = CG.validate(r.contract);
+          if (!problems.length && body.write === true) {
+            const NE = _require('../../lib/node-export.js');
+            const file = `contracts/${r.contract.uuid}.contract`;
+            const text = NE.toYaml(NE.wrap('contract', r.contract.uuid, r.contract, { context: 'lib/intent-flow.js (0.60.286 FA9)', tags: ['v2', 'intent'] }));
+            const a = await apply([{ path: file, after: text }], [], `contract from "${String(body.text).slice(0, 60)}"`);
+            if (!a.ok) return err(res, a.status || 500, a.error, { code: a.code || 'APPLY_FAILED' });
+            written = file;
+            getIdeaOS().emit('idearium.repo.intent.contract', { repoUuid: params.uuid, contract: r.contract.uuid, gates: r.contract.gates.length });
+          }
+        }
+        return ok(res, { repoUuid: params.uuid, ...r, needed: { chosen: r.needed.chosen, scored: r.needed.scored.slice(0, 8) }, problems, written });
+      }
+      if (action === 'repo.spine') {
+        const old = readSpine(); const sp = spineNow(); const drift = old ? SP.check(old, files) : null;
+        const lim = Math.min(parseInt(query.limit, 10) || 400, 5000);
+        return ok(res, { repoUuid: params.uuid, file: SP.SPINE_FILE, written: !!old, drift, stats: sp.stats, unknown: sp.unknown, npm: sp.npm, problems: sp.problems,
+          components: sp.components.slice(0, lim), wires: sp.wires.slice(0, lim * 3), truncated: sp.components.length > lim });
+      }
+      if (action === 'repo.spine.write') {
+        const r = writeSpine(); if (r.error) return err(res, 500, `could not write ${SP.SPINE_FILE}: ${r.error}`);
+        getIdeaOS().emit('idearium.repo.spine.written', { repoUuid: params.uuid, components: r.spine.components.length, wires: r.spine.wires.length, unknown: r.spine.unknown });
+        return ok(res, { repoUuid: params.uuid, file: SP.SPINE_FILE, stats: r.spine.stats, unknown: r.spine.unknown });
+      }
+      if (action === 'repo.refactor') {
+        const RF = _require('../../lib/project-refactor.js');
+        const op = String(body.op || 'move');
+        const plan = op === 'rename' ? RF.rename(spineNow(), files, { id: body.id, name: body.name }) : op === 'move' ? RF.move(spineNow(), files, { id: body.id, to: body.to }) : { ok: false, refused: `no refactor "${op}" — move or rename` };
+        const view = { ...plan, spine: undefined, writes: (plan.writes || []).map(w => ({ path: w.path, before: body.full ? w.before : undefined, after: body.full ? w.after : undefined, lines: String(w.after || '').split('\n').length, created: w.before == null })) };
+        if (!plan.ok) return err(res, 409, plan.refused || 'refused', { code: 'REFUSED', plan: view });
+        if (body.apply !== true) return ok(res, { repoUuid: params.uuid, applied: false, plan: view });
+        const a = await apply(plan.writes, plan.moves, `refactor ${op} ${plan.id} → ${plan.to}`);
+        if (!a.ok) return err(res, a.status || 500, a.error, { code: a.code || 'APPLY_FAILED' });
+        const s2 = writeSpine();
+        getIdeaOS().emit('idearium.repo.refactored', { repoUuid: params.uuid, op, id: plan.id, writes: plan.writes.length });
+        return ok(res, { repoUuid: params.uuid, applied: true, plan: view, via: a.via, spine: s2.spine.stats });
+      }
+      if (action === 'repo.split-candidates') return ok(res, { repoUuid: params.uuid, candidates: _require('../../lib/project-split.js').candidates(files, { minUnits: parseInt(query.minUnits, 10) || 6 }) });
+      if (action === 'repo.split') {
+        const X = _require('../../lib/project-split.js');
+        const f = files.find(x => x.path === String(body.path || '').replace(/\\/g, '/'));
+        if (!f) return err(res, 404, `no text file ${body.path} in the repo`);
+        const plan = X.plan(f.path, f.content, { by: body.by || 'auto' });
+        const view = { ...plan, door: body.full ? plan.door : undefined, writes: (plan.writes || []).map(w => ({ path: w.path, lines: String(w.after).split('\n').length, created: w.before == null, ...(body.full ? { after: w.after } : {}) })) };
+        if (!plan.ok) return err(res, 409, plan.refused, { code: 'REFUSED', plan: view });
+        const v = body.verify === false ? null : X.verify(plan, { files: _repoAllFiles(params.uuid, repo), testCmd: body.testCmd || null });
+        if (v && !v.ok) return err(res, 409, `the split does not keep the file's behaviour: ${v.diff.length ? v.diff.map(d => `${d.name} ${d.before} → ${d.after}`).join('; ') : (v.parse || []).map(p => `${p.path}: ${p.error}`).join('; ') || (v.test ? `the test exits ${v.test.before.exit} before, ${v.test.after.exit} after` : 'refused')}`, { code: 'NOT_SAME', plan: view, verify: v });
+        if (body.apply !== true) return ok(res, { repoUuid: params.uuid, applied: false, plan: view, verify: v });
+        const a = await apply(plan.writes, [], `split ${f.path} into ${plan.pieces.length} files`);
+        if (!a.ok) return err(res, a.status || 500, a.error, { code: a.code || 'APPLY_FAILED' });
+        const s2 = writeSpine();
+        getIdeaOS().emit('idearium.repo.split', { repoUuid: params.uuid, path: f.path, pieces: plan.pieces.length });
+        return ok(res, { repoUuid: params.uuid, applied: true, plan: view, verify: v, via: a.via, spine: s2.spine.stats });
+      }
+      const CV = _require('../../lib/project-convert.js');
+      if (action === 'repo.convert' || action === 'repo.convert.apply') {
+        const pl = CV.plan(files);
+        if (action === 'repo.convert') return ok(res, { repoUuid: params.uuid, ...pl, todo: { mds: pl.mds.filter(m => !m.exists).length, specPlans: pl.specPlans.filter(x => !x.exists).length } });
+        const only = Array.isArray(body.paths) && body.paths.length ? new Set(body.paths) : null;
+        const byPath = new Map(files.map(x => [x.path, x]));
+        const writes = []; const said = [];
+        for (const m of pl.mds) { if (m.exists && body.replace !== true) continue; if (only && !only.has(m.path)) continue; const r = CV.mdToSpec(m.path, byPath.get(m.path).content, { files, project }); writes.push({ path: r.target, after: r.text, kind: 'spec', from: m.path, modules: r.modules }); }
+        for (const x of pl.specPlans) { if (x.exists && body.replace !== true) continue; if (only && !only.has(x.path)) continue; const r = CV.specPlan(byPath.get(x.path).content, { specPath: x.path }); if (!r || r.error) { said.push(`${x.path}: ${r ? r.error : 'no build plan'}`); continue; } writes.push({ path: r.target, after: r.text, kind: 'phasemap', from: x.path, phases: r.phases.length, next: r.next, problems: r.problems }); }
+        const view = writes.map(({ after, ...w }) => ({ ...w, lines: after.split('\n').length, ...(body.full ? { after } : {}) }));
+        if (body.apply !== true) return ok(res, { repoUuid: params.uuid, applied: false, writes: view, said });
+        const a = await apply(writes, [], `convert ${writes.length} document(s) and plan(s)`);
+        if (!a.ok) return err(res, a.status || 500, a.error, { code: a.code || 'APPLY_FAILED' });
+        getIdeaOS().emit('idearium.repo.converted', { repoUuid: params.uuid, specs: writes.filter(w => w.kind === 'spec').length, phasemaps: writes.filter(w => w.kind === 'phasemap').length });
+        return ok(res, { repoUuid: params.uuid, applied: true, writes: view, said, via: a.via });
+      }
+      // repo.finish — one checklist: what stands between this project and done, each item with the command that moves it
+      const sp = spineNow(); const old = readSpine(); const drift = old ? SP.check(old, files) : null;
+      const pl = CV.plan(files);
+      const cands = _require('../../lib/project-split.js').candidates(files);
+      let phases = null;
+      try { const PH = await import('../repo/phases.js'); const { maps } = PH.mapsFor({ repo, repoDir: _repoDiskDir(params.uuid) }); const PP = _require('../../lib/phasemap-parse.js');
+        const all = maps.flatMap(m => (m.phases || PP.parsePhasemapText(m.text || '', String(m.path).split('/').pop())).filter(p => p.kind !== 'decision' && p.kind !== 'finding').map(p => ({ ...p, map: m.path })));
+        phases = { maps: maps.length, total: all.length, done: all.filter(p => /done|complete/i.test(p.status || '')).length }; } catch (e) { phases = { error: e.message }; }
+      const items = [
+        { id: 'spine', done: !!old && !!drift && drift.ok, say: !old ? `no ${SP.SPINE_FILE} yet — ${sp.components.length} components, ${sp.wires.length} wires to register` : drift.ok ? 'the spine matches the code' : `the code moved since the spine: ${drift.added.length} added, ${drift.gone.length} gone, ${drift.wiresAdded.length + drift.wiresGone.length} wires changed`, cmd: `repo spine ${repo.name} --write` },
+        { id: 'unknown-wires', done: !sp.unknown, say: sp.unknown ? `${sp.unknown} require(s) reach no file` : 'every wire resolves', cmd: `repo spine ${repo.name} --unknown` },
+        { id: 'docs', done: !pl.mds.some(m => !m.exists), say: `${pl.mds.filter(m => !m.exists).length} of ${pl.mds.length} md file(s) have no spec`, cmd: `repo convert ${repo.name} --apply` },
+        { id: 'plans', done: !pl.specPlans.some(x => !x.exists), say: pl.specPlans.length ? `${pl.specPlans.filter(x => !x.exists).length} spec(s) carry a build plan with no phasemap (${pl.specPlans.map(x => x.path).join(', ')})` : 'no hard-coded build plan', cmd: `repo convert ${repo.name} --apply` },
+        { id: 'split', done: !cands.length, say: cands.length ? `${cands.length} file(s) hold several components (largest: ${cands.slice(0, 3).map(c => `${c.path} ${c.lines} lines`).join(', ')})` : 'one component per file', cmd: cands[0] ? `repo split ${repo.name} ${cands[0].path}` : null },
+        { id: 'phases', done: !!phases && phases.total > 0 && phases.done === phases.total, say: phases && phases.total != null ? `${phases.done} of ${phases.total} phase(s) done across ${phases.maps} map(s)` : `phases unread: ${phases && phases.error}`, cmd: `repo phasemap ${repo.name} --ready` },
+      ];
+      return ok(res, { repoUuid: params.uuid, name: repo.name, items, open: items.filter(i => !i.done).length, stats: sp.stats, candidates: cands.slice(0, 20), convert: pl });
     }
     case 'repo.notes': case 'repo.notes.add': case 'notes.list': case 'notes.add': case 'notes.update': {
       const RN = _require('../../lib/repo-notes.js');
@@ -10957,7 +11168,9 @@ function _nexusSelfSync({ only = null, force = false, shouldPause = null } = {})
           // the commit fails (§0.3)
           const RIq = _require('../../lib/repo-inject.js');
           const changes = RIq.takeGateEntries(system);
-          const where = `${system === '(nexus)' ? 'nexus index' : 'nexus/' + system} @ snapshot ${String(snapshot).slice(0, 12)}`;
+          // 0.60.278 VE4 — each snapshot names the running Nexus version, so a version is found among them (§17.12)
+          let nexusVersion = null; try { nexusVersion = _require('../../lib/release-version.js').current().version; } catch (_) {}
+          const where = `${system === '(nexus)' ? 'nexus index' : 'nexus/' + system} @ snapshot ${String(snapshot).slice(0, 12)}${nexusVersion ? ` · Nexus ${nexusVersion}` : ''}`;
           const r = await commitRepoSnapshot({
             repo, repoDir: dir, message: changes.length ? `${changes[0].title}${changes.length > 1 ? ` (+${changes.length - 1} more)` : ''} · ${where}` : where,
             ...(changes.length ? { provenance: { by: [...new Set(changes.map(c => c.approvedBy).filter(Boolean))], refs: changes.map(c => `inject:${c.inject}`), files: changes.flatMap(c => c.files), labels: [], checkpoint: null, at: Date.now(), changelog: changes } } : {}),

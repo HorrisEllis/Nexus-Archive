@@ -2,9 +2,8 @@
 format: clearglass.gig/1
 platform: fiverr
 title: I will build an AI agent workflow that automates your repetitive work
-category: AI Services
-subcategory: AI Agents
-serviceType: ''
+category: Programming & Tech
+subcategory: AI Development
 tags:
   - ai agent
   - automation
@@ -44,18 +43,36 @@ packages:
     deliveryDays: 3
     revisions: 1
     price: 60
+    features:            # Fiverr's package rows for this subcategory, as the page labels them (draft values, to confirm)
+      "Number of APIs integrated": 1
+      "Number of Triggers / Actions": 3
+      "Number of Platform/Tools Integrated": 1
+      "Data Syncing": no
+      "Conditional Logic": no
   standard:
     name: Multi-Step Workflow
     description: A workflow of up to 4 steps, with checks between steps and a log.
     deliveryDays: 6
     revisions: 2
     price: 180
+    features:
+      "Number of APIs integrated": 2
+      "Number of Triggers / Actions": 4
+      "Number of Platform/Tools Integrated": 2
+      "Data Syncing": yes
+      "Conditional Logic": yes
   premium:
     name: Agent System
     description: Several agents, routing and fallback across providers, tests and a spec.
     deliveryDays: 12
     revisions: 3
     price: 450
+    features:
+      "Number of APIs integrated": 4
+      "Number of Triggers / Actions": 10
+      "Number of Platform/Tools Integrated": 4
+      "Data Syncing": yes
+      "Conditional Logic": yes
 faq:
   - question: Which AI providers can you use?
     answer: >-
@@ -75,6 +92,3 @@ requirements:
   - What must it always do, and what must it never do?
   - How will you check that it is done? (the test you will run, or what you will look at)
   - Please share any files, examples, access or data I need to start.
-metadata:
-  Programming language:
-    - JavaScript

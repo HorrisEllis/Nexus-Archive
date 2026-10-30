@@ -52,8 +52,7 @@ function normalize(cmd) {
 
 function parseCommands(text) {
   const out = [];
-  // §FQ2 0.60.264 — a block the model left unclosed at the end of its reply ("```driver {\"action\":\"readPage\"}") is still a command, not text for him
-  const re = /```(driver|tool)\s*\n?([\s\S]*?)(?:```|$)/g;
+  const re = /```(driver|tool)\s*\n?([\s\S]*?)```/g;
   let m;
   while ((m = re.exec(String(text || ''))) !== null) {
     const body = m[2].trim();
@@ -102,8 +101,7 @@ function nexusIntent(message) {
 // me)", "autofill", "fill out the application" run the fill; "pick github" opens the picker for one field type; "record a
 // macro (called x)" / "stop recording" drive the recorder. Anything more ("fill it with my other email") goes to the model.
 const OPENER = String.raw`^\s*(?:(?:hey|ok(?:ay)?|now|so|just|copilot|co-pilot)[\s,]+)*(?:please\s+|can you\s+|could you\s+)?`;
-// §FQ2 0.60.264 — James: "fill in this page" reached the model (it printed a driver block instead of filling): "this page", "this form", "my gig" count too
-const WHAT = String.raw`(?:(?:this|that|my)\s+(?:form|application|page|gig|listing)|this|it|that|the\s+(?:form|application|page|gig|listing))`;
+const WHAT = String.raw`(?:this|it|that|the\s+(?:form|application|page|gig|listing))`;
 const FILL_RE = new RegExp(`${OPENER}(?:auto-?fill(?:\\s+${WHAT})?|fill(?:\\s+${WHAT})?(?:\\s+(?:in|out))(?:\\s+${WHAT})?|fill\\s+${WHAT})(?:\\s+for\\s+me)?[\\s,.!?]*(?:please)?[\\s.!?]*$`, 'i');
 function fillIntent(message) { return FILL_RE.test(String(message || '')) ? { kind: 'fill' } : null; }
 const PICK_RE = new RegExp(`${OPENER}pick\\s+(?:the\\s+)?([a-z][a-z_]*)(?:\\s+(?:field|box|input))?[\\s.!?]*$`, 'i');
@@ -129,7 +127,6 @@ function describeJob(job, r = {}) {
     if (r.needsGig) return r.error;
     const left = r.leftToCopy || [];
     return `Filled the gig "${r.title || ''}": ${names(r.filled, 'key').join(', ') || 'nothing matched'}${r.drafted ? ' (written from your Fiverr profile just now)' : ''}.` +
-      (r.wizard ? ` Pages: ${(r.pages || []).map(p => p.tab + (p.stayed ? ' (stayed)' : '')).join(' → ')}${r.stop ? `; ${r.stop}` : ''}.` : '') +   // §FW1
       `${left.length ? ` Left to copy by hand: ${left.join(', ')}.` : ''}${(r.failed || []).length ? ` Failed: ${names(r.failed, 'key').join(', ')}.` : ''} Nothing was saved or published.`;
   }
   if (job.kind === 'fill') {

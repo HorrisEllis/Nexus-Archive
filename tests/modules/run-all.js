@@ -79,7 +79,6 @@ const SUITES = [
   'test-pipeline-routing.test.js', // 0.39.286 RG — routing and fallback: modes, chains, failure classes, breaker, the route walked and kept on the chunk, /api/routing, the settings page
   'test-genesis-and-architecture-spec.test.js', // 0.39.286 GN1/AR1 — genesis 1.1.0 (registry doorway, routing) the default system template; the architecture spec cut to what exists
   'test-genesis-sandboxed.test.js', // DB19 (parked) — a fork of genesis: sealed sandbox, the registry the drawbridge, three tunnels (compartment, bridge, contract)
-  'test-recall-tool.test.js', // 0.60.261 RC1 — nexus.recall.tool: the event ledger, runs, orchestrator ledger, .response nodes, chat ledgers and a log in one compact read
   'test-gate-waits-for-verdict.test.js', // 0.60.257 GV1–GV4 — RAID holds a phase nothing can check for his verdict (never FAILED, no self-heal); accept lands, reject reverts
   'test-autofill-transfer.test.js', // 0.60.256 AT1–AT5 — the autofill data out and in (one .autofill file, a merge, undo); gig files are .gig
   'test-registry-draft.test.js', // 0.60.255 (from brave-cori 0.60.229) DB16 — a registry drafted for every system with none, from its tree; not in force until he accepts it
@@ -409,6 +408,33 @@ const SUITES = [
   'test-global-settings.test.js',        // 0.60.218 SP4 — ClearDriver, Agent Mesh and Guardian settings (GS-05 in Clear Glass)
   'test-processes.test.js',              // 0.60.219 SP5 — processes with their pages, end (his only), the activity ring, the doors
   'test-processes-ui.test.js',           // 0.60.220 SP6 — the Processes window in Clear Glass (Shift+Esc, ☰, Tools)
+  'test-fiverr-works.test.js',           // 0.60.221 — Fiverr: link-tabs open as tabs, pricing boxes filled, dropdowns chosen one by one
+  'test-autofill-chips.test.js',         // 0.60.267 AF3 — the page reader always there; a chip under each input
+  'test-about-and-nodes.test.js',
+  'test-run-log-fixes.test.js',
+  'test-gated-dropdowns.test.js',          // 0.60.280 KB4–KB7 — gated dropdowns in the node, keys in macros and automation, the node upgraded, the CLI pinned
+  'test-gig-features.test.js',             // 0.60.281 AP1 — a gig's package rows: features in the .gig, checkAt/rowLabels, the fill's rows
+  'test-opportunity-contacts.test.js',     // 0.60.281 AP2–AP4 — contacts behind job applications: captured from the page, routes, command, tool, Settings › Applications
+  'test-snowflake-steps.test.js',          // 0.60.281 SN1 — Snowflake as a step in macros and workflows (route, unroute, start, wait, check, stop)
+  'test-fiverr-overview-and-a11y.test.js', // 0.60.283 — a new gig's Overview (category, subcategory, tags, gated) and a site's remembered accessibility look reset
+  'test-pipelines.test.js',                // 0.60.284 PL1–PL4 — pipelines: tasks in a dependency graph (macros, workflows, agents, commands), gated, a checklist
+  'test-history-nodes.test.js',            // 0.60.285 HN1–HN3 — Idearium's history as nodes per unit (.exchange .input .response .tool_call .code_block)
+  'test-release-backfill-off-process.test.js', // 0.60.285 — the full release backfill in a child process (0.60.278 froze Versionium for 1113 s)
+  'test-gig-fill-menu.test.js',   // 0.60.286 GM1–GM3 — the Fiverr fill menu: ticks, dropdowns, only what is ticked; price and revisions
+  'test-gig-all-fields.test.js',  // 0.60.290 GF1–GF4 — every field (title, rich description, FAQs, buyer questions) read back; friction → his site keys; 0.60.291 GG1 every part gated
+  'test-element-gates.test.js',   // 0.60.292 UG1/UG4/UG5 — a gate on any DOM element, made with the picker per site or page (UG2/UG3 archived 0.60.293)
+  'test-pipeline-gates.test.js',  // 0.60.293 PL6–PL11 — gates as pipeline blocks; macros ↔ workflows ↔ pipelines; per-site pipelines
+  'test-intent-flow.test.js',     // 0.60.286 FA8–FA10 — type what you want: intent → context → DAG → found → gaps → contract
+  'test-project-spine.test.js',   // 0.60.286 FA — import whole, the registry as the spine, refactor, split, convert, finish
+  'test-versionium-everywhere.test.js',   // 0.60.278 VE0–VE5 — every change and every version in Versionium, in full (§17.12)
+  'test-versionium-owns-releases.test.js', // 0.60.277 VS1–VS4 — Versionium owns the changelogs and the release logic (his (a), §5.15)
+  'test-dropdown-keys.test.js',           // 0.60.275 KB1 — dropdowns: wait for the page, arrows, the number
+  'test-site-keys.test.js',               // 0.60.275 KB2/KB3 — keys bound to elements, per site
+  'test-changelogs-home.test.js',         // 0.60.274 — the changelogs in versionium/changelogs, read in Idearium
+  'test-site-a11y-and-dropdowns.test.js', // 0.60.273 — the Tab switch per site; dropdown options scrolled within their list
+  'test-nerve-pointer-stream.test.js',   // 0.60.272 — the virtual mouse acts in Ollama's live Nerve stream
+  'test-fiverr-pace.test.js',            // 0.60.271 — dropdowns at a person's pace, Eros or Electron input          // 0.60.270 — jaa segment overflow, DOM clone, guardian missing-model wait        // 0.60.269 — the Fiverr automation as node files; Settings › About
+  'test-change-pack.test.js',            // 0.60.265 — a change to Nexus as one zip, through the gate
   'test-live-recording.test.js',      // 0.60.57 — a recording is a .macro node file from the first second; scroll/paging keys; survives navigation
   'test-chatgpt-scrape-template.test.js', // 0.60.69 — the ChatGPT chat reader template (loop body, vars, extract fields)
   'test-cos-app-ui.test.js',          // 0.60.89 COSA6 — COS window (jsdom) and controller

@@ -35,8 +35,6 @@ const FILES = [
   ]],
   ['idearium/ui/settings.html', I('idearium/ui/settings.html'), [I('idearium/api/index.js')]],   // HTTP /api/economy*
   // §AT1 0.60.256 — James, 2026-10-26: "i want to be able to import and export the data." The autofill data as one .autofill file
-  ['clear-glass/src/autofill/inline.js', I('clear-glass/src/autofill/inline.js'), [I('clear-glass/src/autofill/matcher.js')]],   // §AF3 0.60.263
-  ['lib/agent-tools/tools/nexus/recall.js', I('lib/agent-tools/tools/nexus/recall.js'), [I('lib/chat-ledger-client.js'), I('lib/nexus-read.js')]],   // §RC1 0.60.261
   ['clear-glass/src/contexts/human-check.js', I('clear-glass/src/contexts/human-check.js'), [I('clear-glass/src/net/compartment.js')]],   // §HC1 0.60.260
   ['clear-glass/src/main/glass-frame.js', I('clear-glass/src/main/glass-frame.js'), []],   // §GF1 0.60.258 the Clear Glass title bar over a foreign page
   ['clear-glass/src/autofill/transfer.js', I('clear-glass/src/autofill/transfer.js'), [I('clear-glass/src/autofill/learn-pick.js'), I('clear-glass/src/autofill/matcher.js')]],
@@ -92,7 +90,7 @@ const CONSUMERS = [
   [I('idearium/cli/route-commands.js'), I('clear-glass/src/ipc/bridge.js'), '0.60.251 AD4 autofill profiles|detect|fill, gig fill|detect, macro list|show|run|record|stop rows -> HTTP :7702'],
   [I('clear-glass/src/ipc/bridge.js'), I('clear-glass/src/macros/live-recording.js'), '0.60.251 AD2 _macroRecord: one LiveRecorder for IPC macros:record* and /cli/macros/record/*'],
   // §UP 0.60.252 — James, 2026-10-25: "can we make a tool for the copilot (remmber copilot is meant to be a hat.) like a update tool using github?"
-  [I('lib/nexus-update.js'), I('lib/nexus-releases.js'), '0.60.252 UP1 _releasesBetween: lineOf/quoteOf on origin\'s lib/version.js — his words per release'],
+  [I('lib/nexus-update.js'), I('lib/release-version.js'), '0.60.252 UP1 _releasesBetween: lineOf/quoteOf on origin\'s lib/version.js — his words per release (the parsers are lib\'s since 0.60.277)'],
   [I('lib/agent-tools/tools/nexus/update.js'), I('lib/nexus-update.js'), '0.60.252 UP4 nexus.update.tool check|history|apply|rollback'],
   [I('lib/agent-tools/index.js'), I('lib/agent-tools/tools/nexus/update.js'), '0.60.252 UP4 registerTool(nexus.update.tool)'],
   [I('lib/hat-seed.js'), I('lib/agent-tools/tools/nexus/update.js'), '0.60.252 UP4 the_clearglass_operator toolScope + SEED_ADDITIONS 0.60.252'],
@@ -107,19 +105,6 @@ const CONSUMERS = [
   [I('clear-glass/src/dom/archaeology.js'), I('clear-glass/src/driver/index.js'), '0.60.253 ER3 dom.erosInput = driver.erosInput: handleMutate via eros types the value through ErosmancerOS'],
   [I('clear-glass/renderer/settings/sections/accounts.js'), I('clear-glass/src/preload/index.js'), '0.60.253 ER4 cg.accounts.update {erosProfile} (each account\'s Eros pace)'],
   [I('idearium/cli/route-commands.js'), I('clear-glass/src/ipc/bridge.js'), '0.60.253 ER4 eros open|tabs|pace rows → /cli/eros/open, /cli/eros/tabs, PUT /cli/accounts/:id'],
-  // §AF3 0.60.263 — the inline autofill chip
-  [I('clear-glass/src/main/index.js'), I('clear-glass/src/autofill/inline.js'), '0.60.263 AF3 _autofillInline after a person page loads'],
-  [I('clear-glass/src/autofill/inline.js'), I('clear-glass/src/dom/archaeology.js'), '0.60.263 AF3 queryFieldsOf(wc)'],
-  [I('clear-glass/src/autofill/inline.js'), I('clear-glass/src/autofill/matcher.js'), '0.60.263 AF3 matchFields + learnedFromSettings'],
-  [I('clear-glass/src/autofill/inline.js'), I('clear-glass/renderer/autofill-inline.js'), '0.60.263 AF3 the chip, run in an isolated world'],
-  // §RC 0.60.261 — the agents' recall tool: each source through its owner's route
-  [I('lib/agent-tools/tools/nexus/recall.js'), I('idearium/api/index.js'), '0.60.261 RC1 GET /api/activity, /api/repos/:uuid/activity|runs, /api/ledger/out (HTTP via idearium/code.js _call)'],
-  [I('lib/agent-tools/tools/nexus/recall.js'), I('guardian/server.js'), '0.60.261 RC1 GET /api/responses/recent (HTTP :7820)'],
-  [I('guardian/server.js'), I('guardian/lib/response-sink.js'), '0.60.261 RC1 recent(): the newest .response nodes'],
-  [I('lib/agent-tools/tools/nexus/recall.js'), I('lib/chat-ledger-client.js'), '0.60.261 RC1 list(): the chat ledgers (Clear Glass :7702)'],
-  [I('lib/agent-tools/tools/nexus/recall.js'), I('lib/nexus-read.js'), '0.60.261 RC1 tailLog'],
-  [I('lib/agent-tools/index.js'), I('lib/agent-tools/tools/nexus/recall.js'), '0.60.261 RC1 registerTool(nexus.recall.tool)'],
-  [I('idearium/cli/route-commands.js'), I('lib/agent-tools/tools/nexus/recall.js'), '0.60.261 RC1 `recall` row (local)'],
   // §HC 0.60.260 — James, 2026-10-26: "i can't get passed this. can you help?"
   [I('clear-glass/src/main/index.js'), I('clear-glass/src/contexts/human-check.js'), '0.60.260 HC2 _humanCheck after a tab loads; _identityBeforeLoad for a remembered site'],
   [I('clear-glass/src/main/index.js'), I('clear-glass/src/contexts/manager.js'), '0.60.260 HC2 useEngineIdentity / contextForSession; the hostile hook asks mode engine on a challenge'],

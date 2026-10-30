@@ -4,7 +4,6 @@ platform: fiverr
 title: I will write automated tests for your Node.js or JavaScript project
 category: Programming & Tech
 subcategory: QA & Review
-serviceType: ''
 tags:
   - unit testing
   - node.js
@@ -43,18 +42,21 @@ packages:
     deliveryDays: 2
     revisions: 1
     price: 50
+    features: {}        # Fiverr's package rows for this subcategory, as the page labels them; the fill lists the rows it finds
   standard:
     name: Core Coverage
     description: Tests for your main features and failure cases, plus a bug list.
     deliveryDays: 5
     revisions: 2
     price: 150
+    features: {}        # Fiverr's package rows for this subcategory, as the page labels them; the fill lists the rows it finds
   premium:
     name: Full Test Setup
     description: Broad coverage, CI on GitHub, and a guide to adding tests.
     deliveryDays: 9
     revisions: 3
     price: 350
+    features: {}        # Fiverr's package rows for this subcategory, as the page labels them; the fill lists the rows it finds
 faq:
   - question: Which test tools do you use?
     answer: Whatever your project already uses. If none, Node's built-in test runner or Jest.
@@ -68,6 +70,3 @@ requirements:
   - What must it always do, and what must it never do?
   - How will you check that it is done? (the test you will run, or what you will look at)
   - Please share any files, examples, access or data I need to start.
-metadata:
-  Programming language:
-    - JavaScript

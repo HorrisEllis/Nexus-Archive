@@ -3,8 +3,7 @@ format: clearglass.gig/1
 platform: fiverr
 title: I will find the root cause of your JavaScript or Node.js bug and fix it
 category: Programming & Tech
-subcategory: Software Development
-serviceType: ''
+subcategory: Debugging
 tags:
   - bug fix
   - node.js
@@ -49,18 +48,21 @@ packages:
     deliveryDays: 1
     revisions: 1
     price: 35
+    features: {}        # Fiverr's package rows for this subcategory, as the page labels them; the fill lists the rows it finds
   standard:
     name: Bug and Test
     description: Root cause, fix and a test that keeps it fixed.
     deliveryDays: 3
     revisions: 2
     price: 90
+    features: {}        # Fiverr's package rows for this subcategory, as the page labels them; the fill lists the rows it finds
   premium:
     name: Stability Pass
     description: Up to 5 related bugs, fixes, tests and a short report.
     deliveryDays: 6
     revisions: 3
     price: 220
+    features: {}        # Fiverr's package rows for this subcategory, as the page labels them; the fill lists the rows it finds
 faq:
   - question: What do you need?
     answer: >-
@@ -78,6 +80,3 @@ requirements:
   - What must it always do, and what must it never do?
   - How will you check that it is done? (the test you will run, or what you will look at)
   - Please share any files, examples, access or data I need to start.
-metadata:
-  Programming language:
-    - JavaScript

@@ -84,7 +84,7 @@ function _ledgerWrite(system, type, payload) {
 // Injected into every page — the DOM mesh observer
 const DOM_OBSERVER_SCRIPT = `
 (function() {
-  if (window.__cgDomMesh) return; // already injected
+  if (window.__cgDomMesh && window.__cgDomMesh.mutate) return; // already injected (0.60.267: the renderer's query-only mesh is replaced, not kept)
 
   const mesh  = new Map();   // nodeId → metadata
   let   nodeCounter = 0;
@@ -129,23 +129,6 @@ const DOM_OBSERVER_SCRIPT = `
     return null;
   }
 
-  // §FQ4 0.60.265 — James's Fiverr gig editor: "fill this in for me" matched nothing. Its fields have no <label>; "Gig title" and
-  // "Search tags" are headings in the row's other column. The field's context: the nearest heading-like element BEFORE it inside
-  // the closest ancestor that has one (up to 6 levels), short text only. A guess from layout, so matchers use it at medium.
-  // (No template literal and no regex here: this source lives inside DOM_OBSERVER_SCRIPT, one big template literal.)
-  function _contextFor(el) {
-    const HEAD = 'h1,h2,h3,h4,h5,h6,label,legend,[role="heading"],b,strong,[class*="title"],[class*="label"],[class*="heading"]';
-    let a = el.parentElement;
-    for (let depth = 0; a && depth < 6; depth++, a = a.parentElement) {
-      const heads = [...a.querySelectorAll(HEAD)].filter(h => h !== el && !h.contains(el) && (h.compareDocumentPosition(el) & 4));
-      for (let i = heads.length - 1; i >= 0; i--) {
-        const t = (heads[i].innerText || '').trim();
-        if (t && t.length <= 60 && t.split(String.fromCharCode(10)).length <= 2) return t;
-      }
-    }
-    return null;
-  }
-
   function buildMeta(el) {
     const r = el.getBoundingClientRect ? el.getBoundingClientRect() : {};
     const isField = ['input', 'textarea', 'select'].includes(el.tagName?.toLowerCase());
@@ -165,7 +148,6 @@ const DOM_OBSERVER_SCRIPT = `
       name:     el.name || null,
       type:     el.type || null,
       label:    isField ? _labelFor(el) : null,
-      context:  isField ? _contextFor(el) : null,   // §FQ4
     };
   }
 
@@ -377,6 +359,7 @@ class DomArchaeology {
         window.__cgSendPick = (data) => {
           if (window.__cgIpc) window.__cgIpc.send('dom:pick-result', data);
         };
+        true;   // 0.60.270 — the script's value goes back to main; it was the function above, which cannot be cloned ("[DOM] Injection error: An object could not be cloned.", James's log), and dom.injected never fired
       `, true);
 
       this.sse.emit('dom.injected', { agentId, url: wc.getURL(), ts: Date.now() });
@@ -428,29 +411,22 @@ class DomArchaeology {
   }
 
   // ── Query ─────────────────────────────────────────────────────────────
-  // §FQ1 0.60.262 — James, 2026-10-26, the co-pilot on a Fiverr gig editor: "fill this in for me" → "Did not fill: matchGigFields: domFields
-  // must be the dom_query array". The page had no dom mesh (window.__cgDomMesh), so the query answered undefined and every fill threw a
-  // type error. The fields of a page, for every fill: the mesh is injected once if it is missing, and a page that still cannot answer says why.
-  async queryFields({ agentId = 'default', selector = 'input, select, textarea' } = {}) {
-    const wc = this._getWebContents(agentId);
-    if (!wc) return { error: `no tab for "${agentId}": open the page in a Clear Glass tab first` };
-    return this.queryFieldsOf(wc, { agentId, selector });
-  }
-
-  /** queryFieldsOf(wc) — the same, for a webContents the caller already holds (§AF3 0.60.263: the inline chip, per tab) */
-  async queryFieldsOf(wc, { agentId = 'default', selector = 'input, select, textarea' } = {}) {
-    const ask = () => wc.executeJavaScript(`window.__cgDomMesh ? window.__cgDomMesh.query(${JSON.stringify(selector)}) : null`, true);
-    let r = null; try { r = await ask(); } catch (e) { return { error: `the page could not be read: ${e.message}` }; }
-    if (!Array.isArray(r)) {
-      try { await this.inject(wc, agentId); r = await ask(); } catch (e) { return { error: `the page's field reader could not be loaded: ${e.message}` }; }
-    }
-    if (!Array.isArray(r)) return { error: `the page did not list its fields (${wc.getURL ? wc.getURL() : 'this tab'}): reload the tab and try again` };
-    return r;
+  // 0.60.267 — James, 2026-10-28: "Did not fill: matchGigFields: domFields must be the dom_query array". Root cause: inject() above had no
+  // caller, so the page API existed only if the renderer's DOM-tree panel had been opened — and that one is query-only (no queryOne, mutate,
+  // prepareType). Every query and change now makes sure the full observer is on the page first; a page that refuses it is said, not undefined.
+  async _ensure(wc, agentId) {
+    let ok;
+    try { ok = await wc.executeJavaScript('!!(window.__cgDomMesh && window.__cgDomMesh.mutate && window.__cgDomMesh.query)', true); } catch (_) {}
+    if (ok !== false) return { ok: true };   // true, or no answer at all: the call itself then says what happened
+    await this.inject(wc, agentId);
+    try { ok = await wc.executeJavaScript('!!(window.__cgDomMesh && window.__cgDomMesh.mutate)', true); } catch (_) {}
+    return ok === false ? { error: 'the page would not take the DOM reader (it may still be loading, or it blocks scripts)' } : { ok: true, injected: true };
   }
 
   async handleQuery({ agentId = 'default', selector, cgId, tree = false, x, y }) {
     const wc = this._getWebContents(agentId);
     if (!wc) return { error: 'No webcontents' };
+    { const e = await this._ensure(wc, agentId); if (e.error) return e; }
 
     if (tree) {
       return wc.executeJavaScript('window.__cgDomMesh?.getTree(5)', true);
@@ -459,7 +435,8 @@ class DomArchaeology {
       return wc.executeJavaScript(`window.__cgDomMesh?.getById(${JSON.stringify(cgId)})`, true);
     }
     if (selector) {
-      return wc.executeJavaScript(`window.__cgDomMesh?.query(${JSON.stringify(selector)})`, true);
+      const r = await wc.executeJavaScript(`window.__cgDomMesh?.query(${JSON.stringify(selector)})`, true);
+      return Array.isArray(r) ? r : { error: 'the page did not answer the query' };
     }
     // §BUILT 2026-09-21 — the real caller for screen-qa's right-click
     // path: which element is AT this window-relative point, not which
@@ -474,6 +451,7 @@ class DomArchaeology {
   async handleMutate({ agentId = 'default', cgId, selector, mutation, via = 'native', value, text }) {
     const wc = this._getWebContents(agentId);
     if (!wc) return { error: 'No webcontents' };
+    { const e = await this._ensure(wc, agentId); if (e.error) return e; }   // 0.60.267
     // §ER3 0.60.253 — found while hooking Eros in: browser_action documents dom_mutate as {selector, value} and sends exactly that, but
     // this read only `mutation`, so the page got mutate(cgId, undefined), threw, and the agent's call timed out (macro dom_mutate
     // steps too). The documented shorthand is a mutation; a call with neither is refused with why.

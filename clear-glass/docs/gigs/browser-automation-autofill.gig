@@ -3,8 +3,7 @@ format: clearglass.gig/1
 platform: fiverr
 title: I will automate your browser tasks, form filling and data entry
 category: Programming & Tech
-subcategory: Software Development
-serviceType: ''
+subcategory: Web Automation
 tags:
   - browser automation
   - form filling
@@ -43,18 +42,21 @@ packages:
     deliveryDays: 2
     revisions: 1
     price: 40
+    features: {}        # Fiverr's package rows for this subcategory, as the page labels them; the fill lists the rows it finds
   standard:
     name: Multi-Page Task
     description: A task across several pages or a spreadsheet, with checks.
     deliveryDays: 5
     revisions: 2
     price: 120
+    features: {}        # Fiverr's package rows for this subcategory, as the page labels them; the fill lists the rows it finds
   premium:
     name: Full Workflow
     description: A full repeatable workflow with macros, data import and a guide.
     deliveryDays: 9
     revisions: 3
     price: 300
+    features: {}        # Fiverr's package rows for this subcategory, as the page labels them; the fill lists the rows it finds
 faq:
   - question: Will it submit forms for me?
     answer: Only if you ask for that. By default it fills everything and leaves the final submit to you.
@@ -70,6 +72,3 @@ requirements:
   - What must it always do, and what must it never do?
   - How will you check that it is done? (the test you will run, or what you will look at)
   - Please share any files, examples, access or data I need to start.
-metadata:
-  Programming language:
-    - JavaScript

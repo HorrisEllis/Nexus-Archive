@@ -948,10 +948,12 @@ async function _startWire() {
       // import/export, validate, one-off steps, events, webhooks, cron preview.
       // Local pages only, except webhooks (they carry their own secret).
       if (u.startsWith('/automation/')) {
-        const r = await require('../automation/routes.js').handle(mesh && mesh._automation, { method: req.method, url: u, body: parsed, headers: req.headers, rawBody: body }, {
+        const r = await require('../../../lib/automation/routes.js').handle(   // 0.60.266: the routes moved to lib/automation in AE1 (0.60.251)
+          mesh && mesh._automation, { method: req.method, url: u, body: parsed, headers: req.headers, rawBody: body }, {
           getMacro: (name) => macroTool.execute({ action: 'get', name }),
           createMacro: (m) => macroTool.execute({ action: 'create', ...m }),
           openPath: (dir) => shell.openPath(dir),
+          bundledDir: path.join(__dirname, '..', '..', 'automation', 'nodes'),   // 0.60.269 — Clear Glass's own node files (the Fiverr gig ones), seeded into Settings
           pages: {
             list: () => listBackgroundTabs().filter(t => /^auto-/.test(t.agentId)),
             act: (page, action) => _automationBrowser({ page, action }),
@@ -1274,12 +1276,13 @@ async function bootstrap() {
 
   // 5. DOM archaeology — live DOM mesh via MutationObserver IPC
   const dom = new DomArchaeology({ sse: { emit: (t, d) => emit(t, d) } });
-  _domRef = dom;   // §AF3 0.60.263 — the inline autofill chip reads fields through it, per tab
 
   // 6. ClearDriver — sovereign automation, no Playwright
   driver = new ClearDriver({ ctxMgr, dom, vault, sse: { emit: (t, d) => emit(t, d) } });
   driver.erosInput = (...a) => (_erosInputFn ? _erosInputFn(...a) : Promise.reject(new Error('the ErosmancerOS wire is not started yet')));
   dom.erosInput = driver.erosInput;   // §ER3 0.60.253 — the DOM mutator types through ErosmancerOS when asked (via: 'eros')
+  // 2026-10-30 UG4/PL6 — his gates (the options store, made below) for the driver's gate action, which pipelines, workflows and macros use
+  driver.getSiteGates = () => (nexusOptions && nexusOptions.getSiteGates ? nexusOptions.getSiteGates() : {});
 
   // 7. URL listener — glob/regex per-agent request hooks
   urlListener = new UrlListener({ sse: { emit: (t, d) => emit(t, d) }, ctxMgr });
@@ -1637,7 +1640,10 @@ async function bootstrap() {
     }
   }
   // BS6 (0.60.179) — the floating CLI: a content-protected child window per browser window (src/main/float-cli.js)
-  try { require('./float-cli').register({ ipcMain, BrowserWindow }); } catch (err) { console.warn(`[float-cli] not registered: ${err.message}`); }
+  // 0.60.280 KB7 — pinned (floatCli.pinned) is his option, kept in Clear Glass's options like the rest
+  try { require('./float-cli').register({ ipcMain, BrowserWindow,
+    isPinned: () => !!(nexusOptions && ((nexusOptions.get() || {}).floatCli || {}).pinned),
+    setPinned: (on) => { if (!nexusOptions) return { error: 'options not ready' }; const cur = (nexusOptions.get() || {}).floatCli || {}; nexusOptions.set({ floatCli: { ...cur, pinned: !!on } }); return { ok: true }; } }); } catch (err) { console.warn(`[float-cli] not registered: ${err.message}`); }
   // BS4 (0.60.179) — a plugin he turned off stays off after a restart
   for (const id of (nexusOptions?.get()?.disabledPlugins || [])) {
     try { pluginHost.disable(id); console.log(`[ClearGlass/Plugins] kept off: ${id}`); } catch (err) { console.warn(`[ClearGlass/Plugins] could not keep ${id} off: ${err.message}`); }
@@ -2838,16 +2844,38 @@ function _runShortcut(action, accel, owner) {
   }
   if (owner) owner.win.webContents.send('shortcut:action', { action, accel });
 }
+// 0.60.275 KB2 — James, 2026-10-28: "any way you can add all of that to the keybindings. like elements to keys, per site?" A site key runs on the
+// page it was pressed in (wc:<id>) through ClearDriver as him: the element (an XPath from the picker is found on the page first), then its step.
+// A failure is said in the log with the key and the site, never silent.
+async function _runSiteKey(contents, b, accel) {
+  const SK = require('../shortcuts/site-keys');
+  const agentId = `wc:${contents.id}`, url = contents.getURL(), origin = SK.originOf(url);
+  try {
+    if (b.do === 'macro') { if (!ipcBridge) throw new Error('macros are not ready'); const r = await ipcBridge.runMacroAsPerson({ name: b.macro, agentId, url, by: `site key ${accel}` }); if (r && r.error) throw new Error(r.error); return; }
+    let sel = b.selector;
+    if (sel && SK.isXPath(sel)) {
+      const found = await contents.executeJavaScript(SK.markScript(sel), true);
+      if (!found) throw new Error(`the element is not on this page (${sel})`);
+      sel = SK.MARKED;
+    }
+    for (const st of SK.steps({ ...b, selector: sel })) await driver.exec({ agentId, by: 'person', ...st });
+  } catch (e) { console.warn(`[site-keys] ${accel} at ${origin} (${SK.describe(b)}) did not run: ${e.message}`); }
+}
 // §0.60.216 SP2 — James: "I need site specific settings for the autofill, macros, workflows …". A site's autoRun macros run when one of
 // its pages loads, as his own run (bridge.runMacroAsPerson), on that page (wc:<id>); once per page and minute, so a macro that reloads
 // the page does not run itself again. A failure is said in the log with the macro and the site.
 const _siteLoadRuns = new Map();   // `${wcId}|${origin}|${name}` → at
 function _siteOnLoad(contents, url) {
+  // 0.60.273 FG1 — James: "need the accessability settings, per site." On a site set to Off, what a Tab turns on is undone (keyboard-mode.js).
+  if (require('../site-settings/readers').tabMode(url) === 'off') {
+    contents.executeJavaScript(require('../page/keyboard-mode').offScript(), true).catch(e => console.warn(`[site-settings] Tab switch at ${new URL(url).origin} not set: ${e.message}`));
+  }
   const mode = require('../site-settings/readers').resumeMode(url);
   if (mode && mode !== 'off') {
     const js = require('../rewind/resume.js').resumeScript(mode);
     if (js) contents.executeJavaScript(js, true).catch(e => console.warn(`[site-settings] resume at ${new URL(url).origin} not kept: ${e.message}`));
   }
+  _sitePipelinesOnLoad(contents, url);   // 2026-10-30 PL10 — this site's pipelines that run when a page of it opens
   const m = require('../site-settings/readers').macrosOnLoad(url);
   if (!m || !m.enabled || !m.autoRun.length || !ipcBridge) return;
   const origin = new URL(url).origin; const now = Date.now();
@@ -2861,21 +2889,32 @@ function _siteOnLoad(contents, url) {
       .catch(e => console.warn(`[site-settings] macro "${name}" on load at ${origin} failed: ${e.message}`));
   }
 }
+// 2026-10-30 PL10 — James: "i want that with the option for per site pipelines." A pipeline that names this site and runs when a page of it
+// opens (onLoad) runs here, from this Clear Glass's own engine (the one Settings › Pipelines shows), with the page given as {{vars.page}}
+// (its window: wc:<id>) and {{vars.url}}; once per page and minute, like a site's macros; off when the site's Site settings say pipelines.enabled
+// false. A failure is said in the log with the pipeline and the site.
+function _sitePipelinesOnLoad(contents, url) {
+  const A = ipcBridge && ipcBridge.mesh && ipcBridge.mesh._automation; if (!A) return;
+  if (require('../site-settings/readers').pipelinesAllowed(url) === false) return;
+  let P; try { P = A.pipelines || (A.pipelines = new (require('../../../lib/automation/pipeline.js').Pipelines)(A)); } catch (e) { console.warn(`[pipelines] not loaded: ${e.message}`); return; }
+  const list = P.forSite(url, { onLoad: true }); if (!list.length) return;
+  const origin = new URL(url).origin, now = Date.now();
+  for (const [k, at] of _siteLoadRuns) if (now - at > 60000) _siteLoadRuns.delete(k);
+  for (const p of list) {
+    const key = `${contents.id}|${origin}|pipeline:${p.id}`;
+    if (_siteLoadRuns.has(key)) continue;
+    _siteLoadRuns.set(key, now);
+    Promise.resolve(P.run(p.id, { vars: { page: `wc:${contents.id}`, url }, wait: true }))
+      .then(r => { if (r && !r.ok) console.warn(`[pipelines] "${p.name}" on load at ${origin} did not finish: ${r.error || r.status}`); try { require('../processes').activity().push({ kind: 'pipeline', what: `pipeline "${p.name}" ${r && r.ok ? 'ran' : `did not finish: ${(r && r.error) || 'a task failed'}`}`, url, by: 'site pipeline (on load)', level: r && r.ok ? 'info' : 'warn' }); } catch (_) {} })
+      .catch(e => console.warn(`[pipelines] "${p.name}" on load at ${origin} failed: ${e.message}`));
+  }
+}
 // §0.39.265 — workflow event triggers: "I open a page" and "a download finishes".
 // Pages a workflow drives itself (auto-* windows) never fire page.visited.
 const _automationSessions = new WeakSet();
 // §HC1/HC2 0.60.260 — James, 2026-10-26: "i can't get passed this. can you help? do everything you can, find out why and help." A person's
 // tab that lands on a human check (Fiverr's Press & Hold) switches its session to the engine's own identity, remembers the site, and
 // reloads once, so the check meets the browser it really is. It never touches the check: he passes it (contexts/human-check.js).
-let _domRef = null;   // §AF3 0.60.263 — set in bootstrap (the DomArchaeology the bridge uses)
-// §AF3 0.60.263 — James, 2026-10-26: "When you click on name it will show autofill?" · "1". After a person's page loads (and again after an
-// in-page navigation), the chip under each field the active profile fills (src/autofill/inline.js, renderer/autofill-inline.js).
-function _autofillInline(contents, again = true) {
-  if (!_domRef || !contents || contents.isDestroyed()) return;
-  require('../autofill/inline.js').attach(contents, { dom: _domRef, store: autofillStore, siteSettings, options: nexusOptions })
-    .then(r => { if (again && r && !r.ok && /no field/.test(r.why || '')) setTimeout(() => _autofillInline(contents, false), 4000); })   // a page that builds its form late (Fiverr)
-    .catch(e => console.warn(`[autofill-inline] not shown: ${e.message}`));
-}
 const _hcReloaded = new Set();   // `${partition}|${origin}` — one reload per window and site, never a loop
 async function _humanCheck(contents) {
   if (!ctxMgr || !contents || contents.isDestroyed()) return null;
@@ -2904,8 +2943,7 @@ function _identityBeforeLoad(contents) {
   });
 }
 function _automationEvents(contents) {
-  try { if (contents.getType() === 'webview') { _identityBeforeLoad(contents); contents.on('did-finish-load', () => { setTimeout(() => { _humanCheck(contents).then(h => { if (!h) _autofillInline(contents); }).catch(() => {}); }, 1200); });
-    contents.on('did-navigate-in-page', () => { setTimeout(() => _autofillInline(contents), 1500); }); } } catch (_) {}   // §AF3 the chip (never on a human-check page)
+  try { if (contents.getType() === 'webview') { _identityBeforeLoad(contents); contents.on('did-finish-load', () => { setTimeout(() => { _humanCheck(contents).catch(() => {}); }, 1200); }); } } catch (_) {}
   contents.on('did-finish-load', () => {
     try {
       if (!mesh || !mesh._automation) return;
@@ -2945,6 +2983,12 @@ app.on('web-contents-created', (_e, contents) => {
     if (!accel) return;
     const host = contents.hostWebContents || contents;
     if (settingsWin && !settingsWin.isDestroyed() && host === settingsWin.webContents) return;   // Settings records new shortcuts
+    // 0.60.275 KB2 — a key bound to an element on this site wins over a global shortcut, on this site's pages only
+    // (only an http(s) page has a site: Clear Glass's own screens never match)
+    {
+      let sk = null; try { sk = nexusOptions && nexusOptions.getSiteKeys ? require('../shortcuts/site-keys').lookup(nexusOptions.getSiteKeys(), contents.getURL(), accel) : null; } catch (_) {}
+      if (sk) { event.preventDefault(); _runSiteKey(contents, sk, accel); return; }
+    }
     let bindings;
     try { bindings = nexusOptions ? nexusOptions.getShortcuts().bindings : Shortcuts.DEFAULT_BINDINGS; } catch (_) { bindings = Shortcuts.DEFAULT_BINDINGS; }
     const action = bindings[accel];
@@ -2957,7 +3001,8 @@ app.on('web-contents-created', (_e, contents) => {
   });
   try { require('../net/compartment').onContents(contents); } catch (e) { console.warn(`[compartment] WebRTC not restricted: ${e.message}`); }   // SF3 — no UDP around the proxy in a routed window
   try { if (require('../net/compartment').isCompartment(contents.session)) { const q = require('../net/service').service().quarantine; if (q) q.watch(contents, contents.session.__cgPartition); } } catch (e) { console.warn(`[quarantine] magnets not watched: ${e.message}`); }   // CD5 — magnets caught, never opened
-  try { CompartmentWindow.attach(contents); } catch (_) {}   // §0.39.280 — idearium's desktop / settings pop-outs
+  // §0.39.280 — idearium's desktop / settings pop-outs; 0.60.222 — a link-tab from a bare window (no tab strip) opens as a tab of the main window
+  try { CompartmentWindow.attach(contents, { openTab: (url, { background } = {}) => { const w = windows.get('default'); if (!w || w.isDestroyed()) return false; w.webContents.send('cg:open-tab', { url, background }); if (!background) { w.show(); w.focus(); } return true; } }); } catch (_) {}
   // AB3 (0.60.183) — element hiding: the leftover ad boxes are hidden on each page load, unless the Ad Blocker plugin is off or the site allowed
   try {
     if (contents.getType() === 'webview' || contents.getType() === 'window') contents.on('dom-ready', () => {

@@ -1809,6 +1809,8 @@ spec:
     | `docs/2026-10-24-brave-cori-reconciliation.spec` | 1.0.0 — READ + MAP of PR #161 (claude/brave-cori-eczug1) vs main (his "read and map first"): brave-cori is the COS-compartmentalization line (126 cos/services files, kernel ports, 5 specs), overlapping RF2 on the folds. Decisions: BC_D1 emerge a system (warp folded, supersedes CN_D3/RF2 plan), BC_D2 adopt COS + kernel ports on RF2, BC_D3 port phase-by-phase not force-merge. BCR0 done, BCR3 partly; BCR1 (cos/services), BCR2 (ports) next | mapping, porting | James: "can you merge these?" · "read and map first." |
     | `docs/2026-10-24-emerge-warp-system-phasemap.spec` | 1.0.0 — ported from brave-cori (§0.3, verbatim): emerge is its own system with warp folded in (BC_D1, his "okay warp and emerge"). Build via BCR3 | mapped, to build on main | James: "okay warp and emerge." |
     | `docs/2026-10-24-loom-into-cos-phasemap.spec` + `docs/2026-10-24-guardian-into-cos-phasemap.spec` | 1.0.0 — ported from brave-cori (§0.3): loom and guardian each into a COS compartment behind a kernel port (BC_D2). Build via BCR2/BCR3 | mapped, to build on main | James: "focus on just decoupling so we can get every system in a cos compartment. maybe start with one at a time? like guardian?" · "Isn't loom in a compartment already or clearglass? / Do it." |
+    | `clear-glass/spec/gated-flows.spec` + `docs/2026-10-28-gated-flows-phasemap.spec` | 1.0.0 — FULL build spec: macros as blocks with a gate each (url, element, text, value, gone), run with the curved pointer (native or ErosmancerOS virtual input), dropdowns chosen one by one and read back, a flow that continues across pages and resumes from a stopped block; Fiverr's gig editor as the first flow (Publish stays his); a per-site / global switch for the keyboard (Tab) mode a site turns on. 6 modules at specDepth 1.0; FG1–FG6, DAG clean | specced | James: "fiverr working with gates for each step, each gate can be like blocks." · "it needs to do the drop down menus. one by one, macros if needed, using erosmancer and mouse curve and the virtual input to simulat mouse movement." |
+    | `clear-glass/spec/tab-compartments.spec` + `docs/2026-10-28-tab-compartments-phasemap.spec` | 1.0.0 — FULL build spec: every Clear Glass tab its own compartment (its own webview and session: account, network route such as a Snowflake instance, fingerprint), served as COS compartment records; links that ask for a new tab open a tab in the opener's compartment, sized popups stay windows but are driven and dockable; a tab pops out into a compartment window and docks back. 5 modules at specDepth 1.0; TC1–TC5, DAG clean | specced | James: "I want it just to open in a new tab. thats how i wANTED NEW TABS, COMPLETELY isolated tabs, that can be seperate accounts, snowflake instances,etc" |
     | `cos/spec/cos-spine.spec` + `docs/2026-10-23-cos-spine-phasemap.spec` | 1.0.0 — FULL build spec: COS is the spine — every Nexus system a compartment (its compartment.json), a version is the whole system state (the Versionium commit of its files + the QEMU snapshot of its machine, with its registry and spec, under one id), each version tested in its own compartment, the component registry the bridge between compartments (verified through the orchestrator's handshake), caps by the OS, a system rebuilt from its spec with its drift listed, replicas spawned, despawned and balanced, the COS screen. 8 modules at specDepth 1.0; CS1–CS8 over SN0–SN4, CE3, IN3, COSA3; DAG clean, no new crossing | specced, nothing built | James: "Versioning could be actual system states ... we can use the spec, the .spec, as a template to rebuild a system. Since that's what it's for." |
     | `docs/2026-10-24-sovereign-systems-phasemap.spec` | 1.0.0 — each system sovereign and in its COS compartment (SV0–SV8, his "i want to get each system soveriegn and inside a cos compartment"; SV0 DONE 0.60.244) and the placement moves phased with COS (CS12–CS21, last unless sovereignty needs one). Moved from the cos-spine map, which is tied to cos-spine.spec's modules (SS-02). |
     | `cos/spec/cos-services.spec` + `docs/2026-10-24-cos-services-phasemap.spec` | 1.0.0 — ported from brave-cori (BCR1, §0.3, verbatim): his anonymousservers engines (web servers, DNS, firewall, SMTP, TLS, proxy …) as COS's deployable networking backend, his "this is all the networking backend for anything needed netwroking wise". Its own phases are SV0–SV4, a name clash with the sovereign-systems map, said there; the DAG keeps them apart. |
@@ -1826,4 +1828,48 @@ spec:
     | `docs/2026-10-26-gate-waits-for-verdict-phasemap.spec` | 1.0.0 — his "the gate doesn't wait for me to accept it or not before it fails. i want to be able to build nexus inside of nexus. need nexus to use those gates. like raid or orchastrator.": GV1 RAID's scheduler holds a gate for a person (awaiting, never FAILED, no self-heal), GV2 the phase gate asks on no-proof and POST /phases/verdict settles it (accept lands and closes, reject reverts), GV3 accept / reject in the Tasks panel and `repo verdict`, GV4 proof (0.60.257) |
     | `docs/2026-10-26-glass-frame-phasemap.spec` | 1.0.0 — his "alsO I CANT OPEN dev console in a popup window. also the popup windows need to match the rest of the ui.": GF1 provider, sign-in and popup windows in a Clear Glass frame (BaseWindow: the bar over the site), GF2 F12 / Ctrl+Shift+I in every window, GF3 proof in real Electron (0.60.258) |
     | `docs/2026-10-26-human-check-phasemap.spec` | 1.0.0 — his "i can't get passed this. can you help? do everything you can, find out why and help. each step of the autofill can be gates.": HC1 detect a human check, HC2 the tab tells the site the truth (engine identity; two switch bugs fixed), HC3 every fill stops at it, HC4 every autofill step a gate (open), HC5 proof in real Electron (0.60.260) |
-\n    | `docs/2026-10-26-recall-tool-phasemap.spec` | 1.0.0 — his "what if we have a tool for the agents to capture the recent event ledger or orchastrator? using the .response nodes, chat ledgers for the repo, and log for context. for persistent memory?": RC1 nexus.recall.tool and `recall` (0.60.261), RC2 memory written back (open) |
+
+# ADDENDUM 2026-10-28 (0.60.270) — docs/2026-10-28-run-log-and-direction.md registered: the run-log diagnosis, his ideas and his
+# priority (Fiverr → job applications → contact log). James: "okay. don't lose any of this."
+
+# ADDENDUM 2026-10-29 (0.60.277–0.60.278) — registered: docs/2026-10-29-versionium-everywhere-phasemap.spec (1.0.0)
+# James: "can you add that to claude. full changes, and versions have to be pushed to versionium? enforce it everywhere that you'd find it.
+# maybe the axioms". The audit (what reached Versionium and what did not), decisions VE_D1 (one durable recorder on nexus-client
+# postDurable) and VE_D2 ("full" = each path before → after), and phases VE0–VE5 (the law §17.12, the recorder, nexus-self applies,
+# updates, releases with all their commits, tree snapshots naming the version, the waiting line). DONE 0.60.278.
+# Also addended 2026-10-29: docs/2026-10-07-versionium-releases-phasemap.spec (VS1–VS4, his (a), 0.60.277).
+
+# ADDENDUM 2026-10-29 (0.60.281) — registered: docs/2026-10-29-gigs-contacts-snowflake-phasemap.spec (1.0.0)
+# James: "update the gig files. also capturing the contact info for job applications. also snowflake plugin support to macros and
+# automation. maybe a calander or add google or apple calender?" · "Guardian picker." Decisions AP_D1–AP_D4, SN_D1; phases AP1 (a gig's
+# package rows), AP2–AP4 (contacts: backend, route/command/tool, Settings › Applications), SN1 (Snowflake as a step) DONE 0.60.281;
+# CAL0 (calendar) and GP0 (Guardian picker) open, his. Also addended: docs/2026-10-19-gig-autofill-and-learn-phasemap.spec (AP1).
+
+# ADDENDUM 2026-10-29 (0.60.284) — registered: docs/automation-pipelines.spec (1.0.0) and docs/2026-10-29-pipelines-phasemap.spec
+# James: "making a pipeline and workflow feature and include the macros and automation". Modules MOD-PIPELINE, -ROUTES, -COMMANDS, -UI
+# (PL1–PL4, DONE 0.60.284) and -ORCHESTRATOR (PL5, open: needs AE2/AE3). Also addended: clear-glass/spec/gated-flows.spec gains MOD-KB1..KB7
+# (0.60.275–0.60.280 had been built without their modules), tied to KB1–KB7 in docs/2026-10-28-gated-flows-phasemap.spec.
+
+# ADDENDUM 2026-10-29 (0.60.285) — registered: docs/idearium-history-nodes.spec (1.0.0) and docs/2026-10-29-history-nodes-phasemap.spec
+# James: "i want all the history in idearium saved as nodes per unit. like a .reponse, .input, all of the taxonomy and expand if needed." ·
+# "what about .node types for each language/code block for each agent?" Modules MOD-HISTORY-NODES, -WIRE, -DOOR (HN1–HN3, DONE 0.60.285);
+# HN4 (runs, activity, notes) and HN5 (a screen) open. Decisions HN_D1 (reuse .input/.response, expand the rest) and HN_D2 (one .code_block
+# type, language and agent are fields), by his axioms, his to overturn. Also addended: lib/node-schemas/schema.response (jobId widened).
+
+# ADDENDUM 2026-10-29 (0.60.286) — registered: docs/project-spine.spec (1.0.0) and docs/2026-10-29-finish-any-project-phasemap.spec
+# James: "take this, and import it into idearium, then create all the capability to finish this or any other project in the repo. convert mds,
+# hardcoded phasemaps, refactor tool for the architecture to use the component registry as the spine, decomposition tool …" · the same day: "like
+# type in the cli, determine context needed, build dag. search the project for context, ask user about any gaps, then contract, etc"
+# Modules MOD-IMPORT-KEEPS-TRACKED, -ADAPTERS, -SPINE, -REFACTOR, -SPLIT, -CONVERT, -DOOR, -SCREEN, -INTENT-FLOW, -INTENT-DOOR, -INTENT-SCREEN (FA0–FA10,
+# DONE 0.60.286). Decisions FA_D1 (browser.html, a reading to confirm), FA_D2 (the registry is the spine — IN3; to confirm), FA_D3, FA_D4.
+# Also addended: clear-glass/spec/gated-flows.spec gains MOD-GM1..GM3 (the Fiverr fill menu), tied to GM1–GM3 in
+# docs/2026-10-28-gated-flows-phasemap.spec; docs/2026-10-19-infrastructure-spine-phasemap.spec (slices of IN3, AD1, AD2, AD4).
+
+# ADDENDUM 2026-10-29 — registered: docs/2026-10-29-his-loop-phasemap.spec (mapped, nothing built)
+# James: "Beyond getting fiverr gigs working. We then need the applications, port folios, appointments, calender, emails …" · "What about
+# sorting some tools by intent." · "Each problem needs to build a dag using reverse end state reasoning. Then dynamically chunk until the llm is
+# capable or we have to switch" · "Cos can be used for any code recursively." Phases HL0–HL9, GP1; specs written per phase before code.
+
+# ADDENDUM 2026-10-29 (0.60.289) — registered: docs/2026-10-29-fiverr-income-phasemap.spec (FI0–FI14, the Fiverr chain from money back)
+# James: "Also, make a dependency graph for the fiverr gigs." Built from the end state backward, DAG-checked. The per-system document
+# docs/NEXUS-SYSTEMS-FOR-CODING.md and scripts/systems-report.js answer "a full document of each system and what it needs to get nexus coding".

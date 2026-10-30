@@ -1,94 +1,109 @@
-/*
- * clear-glass/renderer/autofill-inline.js — the Firefox-style autofill chip under an input (AF3, 0.60.263)
- * Map: docs/2026-10-26-inline-autofill-ui-phasemap.spec (AF3)
+/**
+ * clear-glass/renderer/autofill-inline.js — the autofill chip under each input (AF3, 0.60.267).  (styles: autofill-inline.css)
+ * Map: docs/2026-10-26-inline-autofill-ui-phasemap.spec AF3.
  *
- * James, 2026-10-26: "like firefox … a autofill button where it shows under the input" · "And that's in the ui? When you click on name it
- * will show autofill?" · "1" (build it first).
+ * James, 2026-10-26: "need to have a autofill ui for relevant pages. like firefox has, like a autofill button where it shows under the input" ·
+ * 2026-10-28: "needs to autofill any field it can. also needs to have the autopill under each input fieled."
  *
- * Runs in an ISOLATED world (main/index.js executeJavaScriptInIsolatedWorld), so the page's own scripts cannot read the profile values this
- * closure holds, and it draws in a CLOSED shadow root, so they cannot read the chip either. The fields were tagged data-cg-af="<n>" by
- * main (a bare number, no data). Clicking fills through the native value setter and input/change events (what React and Vue listen to).
- * It never submits. Esc, blur or scrolling the field out of view hides it; it re-anchors on scroll and resize.
+ * Drawn in Clear Glass's own window, over the page — like Firefox's, never inside the page, so a site's scripts cannot read his profile
+ * before he chooses. The page reports only where its fields are (src/autofill/suggest.js reporterScript, through the webview bridge);
+ * the values come from main (cg.autofill.suggest: the active profile and the written gig) and go into the page only when a chip is clicked
+ * (cg.autofill.fillOne). A field that already holds the value has no chip. Several options: the chip's ▾ lists them.
+ * Refreshes on load, on in-page navigation and when the page's set of fields changes (Fiverr's editor steps).
  *
- * Called as: (CG_AF_INIT)({ fields: [{ n, fieldType, label, value }], profile: 'label' })
+ * AF5 (0.60.268) — James, 2026-10-28: "what a node anchor. also have the element picker come up to map the page if confused." A field
+ * nothing placed gets a ⚓ chip: he says what it is (a profile field type, or a gig part on a Fiverr editor page) and the meaning is
+ * anchored to the field's stable identity on the site (cg.autofill.anchor); the chips come back with its value.
  */
-(function (data) {
+(function () {
   'use strict';
-  if (!data || !Array.isArray(data.fields) || !data.fields.length) return { ok: false, why: 'no matched field' };
-  const prev = window.__cgAfInline; if (prev && prev.destroy) prev.destroy();
-  const byN = new Map(data.fields.map(f => [String(f.n), f]));
-  const host = document.createElement('div');
-  host.setAttribute('data-cg-af-chip', '');
-  host.style.cssText = 'position:fixed;z-index:2147483647;left:0;top:0;display:none;';
-  const root = host.attachShadow({ mode: 'closed' });
-  root.innerHTML = `<style>
-    .c{font:12px "Segoe UI",system-ui,sans-serif;background:#0f1018;color:#d5d8e4;border:1px solid rgba(0,245,255,.35);border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,.45);padding:4px;min-width:220px;max-width:360px}
-    .r{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer}
-    .r:hover,.r:focus{background:rgba(0,245,255,.10);outline:none}
-    .k{color:#7d8199;font-size:11px;white-space:nowrap}
-    .v{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#f2f4fb}
-    .m{width:10px;height:10px;border-radius:3px;border:1.5px solid #00f5ff;flex:none}
-    .all{border-top:1px solid rgba(255,255,255,.07);margin-top:2px;color:#00f5ff}
-    .f{padding:4px 8px 2px;color:#4c5068;font-size:10.5px}
-  </style><div class="c" role="listbox"></div>`;
-  const box = root.querySelector('.c');
-  (document.body || document.documentElement).appendChild(host);
-  let current = null;
+  const cg = window.cg;
+  const wv = document.getElementById('wv');
+  if (!cg || !cg.autofill || !wv) return;
+  const agentId = new URLSearchParams(location.search).get('agentId') || 'default';
+  const layer = document.createElement('div'); layer.id = 'af-chips'; layer.setAttribute('aria-live', 'polite'); document.body.appendChild(layer);
+  let sugg = new Map(), unmapped = new Map(), mapTo = { profile: [], gig: [] }, rects = [], timer = 0, gen = 0, open = null, done = new Map();
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
-  const setValue = (el, value) => {
-    const proto = el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : el instanceof HTMLSelectElement ? HTMLSelectElement.prototype : HTMLInputElement.prototype;
-    const desc = Object.getOwnPropertyDescriptor(proto, 'value');
-    el.focus();
-    if (desc && desc.set) desc.set.call(el, value); else el.value = value;
-    el.dispatchEvent(new Event('input', { bubbles: true }));
-    el.dispatchEvent(new Event('change', { bubbles: true }));
-  };
-  const fieldEl = (n) => document.querySelector(`[data-cg-af="${CSS.escape(String(n))}"]`);
-  const hide = () => { host.style.display = 'none'; current = null; };
-  const place = () => {
-    if (!current) return;
-    const r = current.getBoundingClientRect();
-    if (r.bottom < 0 || r.top > innerHeight || r.width === 0) return hide();
-    host.style.left = `${Math.max(4, Math.min(r.left, innerWidth - 370))}px`;
-    host.style.top = `${Math.min(r.bottom + 4, innerHeight - 40)}px`;
-  };
-  const fillOne = (f) => { const el = fieldEl(f.n); if (el) setValue(el, f.value); };
-  const show = (el) => {
-    const f = byN.get(el.getAttribute('data-cg-af')); if (!f) return;
-    current = el;
-    const others = data.fields.filter(x => x.n !== f.n && fieldEl(x.n) && !fieldEl(x.n).value);
-    const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-    box.innerHTML = `<div class="r" tabindex="0" data-a="one"><span class="m"></span><span class="v">${esc(f.value)}</span><span class="k">${esc(f.label || f.fieldType)}</span></div>`
-      + (others.length ? `<div class="r all" tabindex="0" data-a="all"><span class="v">Fill all ${others.length + 1} fields</span></div>` : '')
-      + `<div class="f">Clear Glass autofill · ${esc(data.profile || 'your profile')} · never submits</div>`;
-    box.querySelector('[data-a="one"]').addEventListener('mousedown', (e) => { e.preventDefault(); fillOne(f); hide(); });
-    const all = box.querySelector('[data-a="all"]');
-    if (all) all.addEventListener('mousedown', (e) => { e.preventDefault(); fillOne(f); others.forEach(fillOne); hide(); });
-    host.style.display = 'block';
-    place();
-  };
-  const onFocus = (e) => { const el = e.target; if (el && el.getAttribute && el.hasAttribute('data-cg-af') && !el.value) show(el); };
-  const onKey = (e) => { if (e.key === 'Escape') hide(); };
-  const onBlur = (e) => { if (e.target === current) setTimeout(() => { if (document.activeElement !== current) hide(); }, 150); };
-  const onInput = (e) => { if (e.target === current && e.target.value) hide(); };
-  document.addEventListener('focusin', onFocus, true);
-  document.addEventListener('click', onFocus, true);
-  document.addEventListener('keydown', onKey, true);
-  document.addEventListener('focusout', onBlur, true);
-  document.addEventListener('input', onInput, true);
-  addEventListener('scroll', place, true); addEventListener('resize', place);
-  const api = {
-    destroy() {
-      document.removeEventListener('focusin', onFocus, true); document.removeEventListener('click', onFocus, true);
-      document.removeEventListener('keydown', onKey, true); document.removeEventListener('focusout', onBlur, true);
-      document.removeEventListener('input', onInput, true);
-      removeEventListener('scroll', place, true); removeEventListener('resize', place);
-      host.remove();
-    },
-    // for tests: is the chip showing, and what does it offer (read in this isolated world only)
-    state() { return { shown: host.style.display === 'block', rows: [...box.querySelectorAll('.r')].map(r => r.textContent) }; },
-  };
-  window.__cgAfInline = api;   // the isolated world's own window: the page cannot see it
-  if (document.activeElement && document.activeElement.hasAttribute && document.activeElement.hasAttribute('data-cg-af')) show(document.activeElement);
-  return { ok: true, fields: data.fields.length };
-})
+  async function refresh() {
+    const my = ++gen;
+    let r; try { r = await cg.autofill.suggest(agentId); } catch (_) { r = null; }
+    if (my !== gen) return;
+    sugg = new Map(((r && r.suggestions) || []).map(s => [s.cgId, s]));
+    unmapped = new Map(((r && r.unmapped) || []).map(u => [u.cgId, u]));
+    mapTo = (r && r.mapTo) || { profile: [], gig: [] };
+    window.__cgAutofillChips = { count: sugg.size, unmapped: unmapped.size, why: r && r.why };
+    if ((!sugg.size && !unmapped.size) || !r.script) { rects = []; draw(); return; }
+    try { await wv.executeJavaScript(r.script, true); } catch (_) {}
+  }
+  const soon = (ms = 500) => { clearTimeout(timer); timer = setTimeout(refresh, ms); };
+
+  function zoom() { try { const z = wv.getZoomFactor(); return Number.isFinite(z) && z > 0 ? z : 1; } catch (_) { return 1; } }
+  function draw() {
+    const box = wv.getBoundingClientRect(), z = zoom();
+    const visible = box.width > 0 && box.height > 0 && getComputedStyle(wv).visibility !== 'hidden';
+    const html = [];
+    for (const f of visible ? rects : []) {
+      const s = sugg.get(f.cgId), u = !s && unmapped.get(f.cgId);
+      if (u) { html.push(anchorChip(f, u, box, z)); continue; }
+      if (!s || !s.options.length) continue;
+      if (s.options.some(o => o.value === f.v)) continue;            // already holds it
+      const x = box.left + f.x * z, y = box.top + f.y * z + 2;
+      if (y < box.top || y > box.bottom - 18 || x > box.right - 40) continue;
+      const o = s.options[0], st = done.get(f.cgId);
+      html.push(`<div class="af-chip${f.focus ? ' focus' : ''}${st ? ' ' + st : ''}" style="left:${Math.round(Math.max(box.left, x))}px;top:${Math.round(y)}px;max-width:${Math.round(Math.max(140, Math.min(420, f.w * z)))}px" data-cg="${esc(f.cgId)}">`
+        + `<button class="af-fill" data-v="0" title="${esc(o.label)} — click to fill">⚡ ${esc(o.preview)}</button>`
+        + (s.options.length > 1 ? `<button class="af-more" title="${s.options.length} options">▾</button>` : '')
+        + (open === f.cgId ? `<div class="af-list">${s.options.map((p, i) => `<button class="af-opt" data-v="${i}" title="${esc(p.label)}"><span>${esc(p.preview)}</span><em>${esc(p.label)}</em></button>`).join('')}</div>` : '')
+        + `</div>`);
+    }
+    layer.innerHTML = html.join('');
+  }
+  // ⚓ — a field the chips do not understand: say once what it is
+  function anchorChip(f, u, box, z) {
+    const x = box.left + f.x * z, y = box.top + f.y * z + 2;
+    if (y < box.top || y > box.bottom - 18 || x > box.right - 40 || f.v) return '';
+    const st = done.get(f.cgId);
+    const list = open === f.cgId ? `<div class="af-list">${u.key ? '' : `<div class="af-note">${esc(u.why || 'this field has nothing to remember it by')}</div>`}`
+      + (mapTo.gig || []).map(p => `<button class="af-opt" data-anchor="gig" data-val="${esc(p)}"><span>gig · ${esc(p)}</span><em>Fiverr ${esc(mapTo.page || '')} page</em></button>`).join('')
+      + (mapTo.profile || []).map(t => `<button class="af-opt" data-anchor="profile" data-val="${esc(t)}"><span>${esc(t)}</span><em>your profile</em></button>`).join('')
+      + (!(mapTo.gig || []).length && !(mapTo.profile || []).length ? '<div class="af-note">no profile values or gig to anchor it to yet</div>' : '') + '</div>' : '';
+    return `<div class="af-chip af-anchor${st ? ' ' + st : ''}" style="left:${Math.round(Math.max(box.left, x))}px;top:${Math.round(y)}px" data-cg="${esc(f.cgId)}">`
+      + `<button class="af-more" title="What is this field? Anchor it once${u.key ? ` (known by “${esc(u.key)}”)` : ''}">⚓</button>${list}</div>`;
+  }
+
+  layer.addEventListener('mousedown', (e) => e.preventDefault());   // the page's field keeps its focus
+  layer.addEventListener('click', async (e) => {
+    const chip = e.target.closest('.af-chip'); if (!chip) return;
+    const cgId = chip.dataset.cg, s = sugg.get(cgId);
+    if (e.target.closest('.af-more')) { open = open === cgId ? null : cgId; draw(); return; }
+    const a = e.target.closest('[data-anchor]');
+    if (a) {   // AF5 — anchor this field to what it is, then the chips come back with its value
+      open = null; done.set(cgId, 'busy'); draw();
+      let r; try { r = await cg.autofill.anchor(agentId, cgId, a.dataset.anchor, a.dataset.val); } catch (err) { r = { ok: false, error: err.message }; }
+      done.set(cgId, r && r.ok ? 'ok' : 'bad'); draw();
+      if (r && !r.ok && typeof window.toast === 'function') window.toast(`Not anchored: ${r.error}`, 'error');
+      setTimeout(() => { done.delete(cgId); refresh(); }, 600);
+      return;
+    }
+    if (!s) return;
+    const b = e.target.closest('[data-v]'); if (!b) return;
+    const o = s.options[Number(b.dataset.v) || 0]; open = null;
+    done.set(cgId, 'busy'); draw();
+    let r; try { r = await cg.autofill.fillOne(agentId, cgId, o.value); } catch (err) { r = { ok: false, error: err.message }; }
+    done.set(cgId, r && r.ok ? 'ok' : 'bad'); draw();
+    if (r && !r.ok && typeof window.toast === 'function') window.toast(`Not filled: ${r.error}`, 'error');
+    setTimeout(() => { done.delete(cgId); draw(); }, 1500);
+  });
+
+  wv.addEventListener('ipc-message', (e) => {
+    if (e.channel === 'autofill:rects') { rects = Array.isArray(e.args && e.args[0]) ? e.args[0] : []; draw(); }
+    else if (e.channel === 'autofill:stale') soon(600);
+  });
+  wv.addEventListener('dom-ready', () => soon(400));
+  wv.addEventListener('did-navigate-in-page', () => soon(600));
+  wv.addEventListener('did-start-navigation', () => { rects = []; sugg = new Map(); draw(); });
+  window.addEventListener('resize', draw);
+  window.addEventListener('cg:gig-changed', () => soon(100));
+  window.CGAutofillChips = { refresh, draw, _state: () => ({ sugg, rects }) };
+})();

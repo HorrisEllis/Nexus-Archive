@@ -167,6 +167,7 @@ function parseGig(text) {
       deliveryDays: _int(p.deliveryDays ?? p.delivery ?? p.days, 1, `${tier} delivery days`, warnings, tier === 'basic' ? 3 : tier === 'standard' ? 5 : 7),
       revisions: /unlimited/i.test(String(p.revisions)) ? 'unlimited' : _int(p.revisions, 0, `${tier} revisions`, warnings, 1),
       price: _int(String(p.price ?? '').replace(/[^0-9.]/g, ''), LIMITS.minPrice, `${tier} price`, warnings, tier === 'basic' ? 30 : tier === 'standard' ? 60 : 120),
+      features: _features(p.features, tier, warnings),
     };
   }
   const order = TIERS.filter(t => packages[t]);
@@ -180,18 +181,27 @@ function parseGig(text) {
   const requirements = (Array.isArray(raw.requirements) ? raw.requirements : []).map(r => _clip(typeof r === 'string' ? r : r && (r.question || r.text), LIMITS.requirement, 'a buyer question', warnings)).filter(Boolean);
   if (requirements.length > LIMITS.requirements) { warnings.push(`${requirements.length} buyer questions; kept ${LIMITS.requirements}`); requirements.length = LIMITS.requirements; }
 
-  // §FD2 0.60.267 — James, 2026-10-26, Fiverr's next rows: "Service type" (a dropdown) and "Gig metadata" (groups of options:
-  // PROGRAMMING LANGUAGE, FRONTEND FRAMEWORK, …): "also these bulllet points." metadata: { 'Programming language': ['JavaScript'], … }
-  const metadata = {};
-  if (raw.metadata && typeof raw.metadata === 'object' && !Array.isArray(raw.metadata)) {
-    for (const [k, v] of Object.entries(raw.metadata)) {
-      const vals = (Array.isArray(v) ? v : [v]).map(x => String(x == null ? '' : x).trim()).filter(Boolean).slice(0, 10);
-      if (String(k).trim() && vals.length) metadata[String(k).trim().slice(0, 60)] = vals;
-    }
-  }
-  const gig = { title, category: String(raw.category || '').trim(), subcategory: String(raw.subcategory || '').trim(), serviceType: String(raw.serviceType || raw.service_type || '').trim(),
-    tags, description, packages, faq, requirements, ...(Object.keys(metadata).length ? { metadata } : {}) };
+  const gig = { title, category: String(raw.category || '').trim(), subcategory: String(raw.subcategory || '').trim(), tags, description, packages, faq, requirements };
   return { ok: true, gig, warnings };
+}
+
+// 0.60.281 AP1 — James, 2026-10-29: "update the gig files." Fiverr's package rows (Number of APIs integrated, Data Syncing …) differ by
+// subcategory, so they are data in the gig, never code: features: { "<the row label as Fiverr shows it>": value }. A number or text picks that
+// option in the row's dropdown; yes/no (true/false) ticks or clears the row's checkbox. A row the page shows and the gig lacks is listed back.
+function _features(raw, tier, warnings) {
+  if (raw == null || raw === '') return {};
+  if (typeof raw !== 'object' || Array.isArray(raw)) { warnings.push(`the ${tier} features are not "row label: value" pairs; ignored`); return {}; }
+  const out = {};
+  for (const [k, v] of Object.entries(raw)) {
+    const label = String(k).replace(/\s+/g, ' ').trim();
+    if (!label || label.length > 80) { warnings.push(`a ${tier} feature row label is empty or over 80 characters; ignored`); continue; }
+    if (v === true || v === false) out[label] = v;
+    else if (/^(yes|y|on|true|✓)$/i.test(String(v).trim())) out[label] = true;
+    else if (/^(no|n|off|false|✗)$/i.test(String(v).trim())) out[label] = false;
+    else if (v == null || String(v).trim() === '') { warnings.push(`the ${tier} feature "${label}" has no value; ignored`); }
+    else out[label] = typeof v === 'number' ? v : String(v).trim().slice(0, 60);
+  }
+  return out;
 }
 
 /** gigParts(gig) → [{ key, label, text }] — each part on its own, in the order Fiverr's editor asks for them. */
@@ -199,8 +209,6 @@ function gigParts(gig) {
   if (!gig) return [];
   const out = [{ key: 'title', label: 'Gig title', text: gig.title }];
   if (gig.category) out.push({ key: 'category', label: 'Category', text: gig.subcategory ? `${gig.category} › ${gig.subcategory}` : gig.category });
-  if (gig.serviceType) out.push({ key: 'serviceType', label: 'Service type', text: gig.serviceType });   // §FD2
-  for (const [g, v] of Object.entries(gig.metadata || {})) out.push({ key: `metadata.${g}`, label: g, text: v.join(', ') });
   if (gig.tags && gig.tags.length) out.push({ key: 'tags', label: 'Search tags', text: gig.tags.join(', ') });
   for (const t of TIERS) {
     const p = gig.packages && gig.packages[t];
@@ -208,6 +216,8 @@ function gigParts(gig) {
     out.push({ key: `${t}.name`, label: `${t[0].toUpperCase() + t.slice(1)} — name`, text: p.name });
     out.push({ key: `${t}.description`, label: `${t[0].toUpperCase() + t.slice(1)} — description`, text: p.description });
     out.push({ key: `${t}.terms`, label: `${t[0].toUpperCase() + t.slice(1)} — delivery, revisions, price`, text: `${p.deliveryDays} day${p.deliveryDays === 1 ? '' : 's'} · ${p.revisions === 'unlimited' ? 'unlimited' : p.revisions} revision${p.revisions === 1 ? '' : 's'} · $${p.price}` });
+    const fe = Object.entries(p.features || {});
+    if (fe.length) out.push({ key: `${t}.features`, label: `${t[0].toUpperCase() + t.slice(1)} — package rows`, text: fe.map(([k, v]) => `${k}: ${v === true ? 'yes' : v === false ? 'no' : v}`).join(' · ') });
   }
   if (gig.description) out.push({ key: 'description', label: 'Description', text: gig.description });
   (gig.faq || []).forEach((x, i) => { out.push({ key: `faq.${i}.question`, label: `FAQ ${i + 1} — question`, text: x.question }); out.push({ key: `faq.${i}.answer`, label: `FAQ ${i + 1} — answer`, text: x.answer }); });
@@ -234,6 +244,7 @@ const GIG_PATTERNS = [
   { part: 'requirement',        re: /requirement|write[-_ ]?your[-_ ]?question[-_ ]?here|what[-_ ]?do[-_ ]?you[-_ ]?need[-_ ]?from[-_ ]?the[-_ ]?buyer/i },
   { part: 'description',        re: /description|briefly[-_ ]?describe[-_ ]?your[-_ ]?gig|about[-_ ]?this[-_ ]?gig/i },
 ];
+const FIVERR_PLACEHOLDER = /^(name your package|describe the details of your offering)$/i;   // Fiverr's Scope & Pricing boxes, exact
 function _gigPart(text) {
   if (!text) return null;
   const t = String(text).replace(/\s+/g, ' ').trim().slice(0, 200);
@@ -258,8 +269,10 @@ function matchGigFields(domFields, gig) {
     if (['submit', 'button', 'hidden', 'checkbox', 'radio', 'file', 'image', 'reset', 'search'].includes(type)) continue;
     let part = null, confidence = null, source = null;
     for (const [src, text, conf] of [['name', field.name, 'medium'], ['id', field.attrs && (field.attrs.id || field.id_attr), 'medium'],
-      ['label', field.label, 'medium'], ['label', field.attrs && field.attrs['aria-label'], 'medium'], ['context', field.context, 'medium'],   // §FQ4 the row's heading
-      ['placeholder', field.attrs && field.attrs.placeholder, 'low']]) {
+      ['label', field.label, 'medium'], ['label', field.attrs && field.attrs['aria-label'], 'medium'],
+      // 0.60.221 — Fiverr's pricing boxes have no label or name, only these placeholders (his screenshot, 2026-10-28). Matched as 'low', they
+      // fell under the default 'medium' floor and were never filled. Fiverr's own exact wording is as sure as a label: medium.
+      ['placeholder', field.attrs && field.attrs.placeholder, FIVERR_PLACEHOLDER.test(String(field.attrs && field.attrs.placeholder || '').trim()) ? 'medium' : 'low']]) {
       const p = _gigPart(text);
       if (p) { part = p; source = src; confidence = conf; break; }
     }
@@ -287,266 +300,34 @@ const RANK = { high: 3, medium: 2, low: 1 };
 
 /** detectGig(dom, gig, { agentId }) — what would be filled where; nothing is typed. */
 async function detectGig(dom, gig, { agentId = 'default' } = {}) {
-  const domFields = await (dom.queryFields ? dom.queryFields({ agentId, selector: 'input, textarea' }) : dom.handleQuery({ agentId, selector: 'input, textarea' }));   // §FQ1 0.60.262
-  if (!Array.isArray(domFields)) return { error: (domFields && domFields.error) || 'the page did not list its fields' };
+  const domFields = await dom.handleQuery({ agentId, selector: 'input, textarea' });
   if (domFields && domFields.error) return { error: domFields.error };
+  if (!Array.isArray(domFields)) return { error: 'the page could not be read (no field list came back) — reload the page and fill again' };   // 0.60.267
   const matches = matchGigFields(domFields, gig);
   const filledKeys = new Set(matches.map(m => m.key));
   return { totalFields: domFields.length, matches, leftToCopy: gigParts(gig).filter(p => !filledKeys.has(p.key)).map(p => p.key) };
 }
 
 /** fillGig(dom, gig, { agentId, minConfidence }) — types the matched parts in. Never saves, never publishes. */
-async function fillGig(dom, gig, { agentId = 'default', minConfidence = 'medium' } = {}) {
-  const domFields = await (dom.queryFields ? dom.queryFields({ agentId, selector: 'input, textarea' }) : dom.handleQuery({ agentId, selector: 'input, textarea' }));   // §FQ1 0.60.262
-  if (!Array.isArray(domFields)) return { error: (domFields && domFields.error) || 'the page did not list its fields' };
+async function fillGig(dom, gig, { agentId = 'default', minConfidence = 'medium', only = null, skip = null } = {}) {
+  const domFields = await dom.handleQuery({ agentId, selector: 'input, textarea' });
   if (domFields && domFields.error) return { error: domFields.error };
+  if (!Array.isArray(domFields)) return { error: 'the page could not be read (no field list came back) — reload the page and fill again' };   // 0.60.267
   const floor = RANK[minConfidence] || RANK.medium;
-  const all = matchGigFields(domFields, gig);
+  // 0.60.286 GM2 — only: the part keys ticked in the fill menu; the rest is never touched
+  // 2026-10-30 GF3 — skip: part keys another way fills on this page (the FAQs and questions item by item, the description typed)
+  const all = matchGigFields(domFields, gig).filter(m => (!only || only.includes(m.key)) && !(skip && skip.test(m.key)));
   const toFill = all.filter(m => RANK[m.confidence] >= floor);
   const skipped = all.filter(m => !toFill.includes(m)).map(m => ({ key: m.key, confidence: m.confidence, reason: 'below minConfidence' }));
   const filled = [], failed = [];
   for (const m of toFill) {
     try {
       const r = await dom.handleMutate({ agentId, cgId: m.cgId, mutation: { value: m.value } });
-      if (r && r.error) failed.push({ key: m.key, error: r.error }); else filled.push({ key: m.key, confidence: m.confidence, source: m.source });
+      if (r && r.error) failed.push({ key: m.key, error: r.error }); else filled.push({ key: m.key, confidence: m.confidence, source: m.source, cgId: m.cgId, value: m.value });   // cgId, value: the part's gate (2026-10-30 GG1)
     } catch (err) { failed.push({ key: m.key, error: err.message }); }
   }
-  // §FD1 0.60.266 — the category and subcategory dropdowns (Fiverr's own widgets, not <select>s): opened and chosen in the page
-  let selects = null;
-  if (gig.category || gig.serviceType || gig.metadata) {
-    try { selects = await fillGigSelects(dom, gig, { agentId }); } catch (err) { selects = { error: err.message }; }
-    for (const x of (selects && selects.results) || []) {
-      if (x.chose) filled.push({ key: x.key, confidence: x.exact ? 'high' : 'medium', source: 'dropdown', chose: x.chose });
-      else failed.push({ key: x.key, error: x.why || 'not chosen', ...(x.options ? { options: x.options } : {}) });
-    }
-  }
-  // §FW2 0.60.269 — FAQ, buyer questions, pricing dropdowns: only where the page shows them
-  try {
-    const ex = await fillGigExtras(dom, gig, { agentId });
-    for (const x of (ex && ex.results) || []) {
-      if (x.chose) filled.push({ key: x.key, confidence: 'high', source: 'page', chose: x.chose, ...(x.already ? { already: true } : {}) });
-      else failed.push({ key: x.key, error: x.why || 'not done', ...(x.options ? { options: x.options } : {}) });
-    }
-  } catch (err) { failed.push({ key: 'extras', error: err.message }); }
-  const done = _doneKeys(filled);
-  return { totalFields: domFields.length, filled, skipped, failed, leftToCopy: gigParts(gig).filter(p => !done.has(p.key)).map(p => p.key), ...(selects && selects.error ? { selectsError: selects.error } : {}) };
-}
-
-// §FD1 0.60.266 — James, 2026-10-26: "can you fix the drop down mewnu?" (Fiverr's Category / Subcategory, left "to copy by hand").
-// They are custom widgets: a box reading "SELECT A CATEGORY" that opens a list on mouse down. This runs in the page: find the box by
-// its words (category, then subcategory, which only enables after), open it as a mouse would (pointer/mouse down, up, click), wait
-// for the list, choose the option whose words match the gig's (exact first, then the closest by shared words), and say the options
-// when none fits. A native <select> is set by its option text with input/change. Never saves or publishes.
-const SELECT_SCRIPT = `async (want, meta) => {
-  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-  const vis = (e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
-  const norm = (s) => String(s || '').toLowerCase().replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, ' ').trim();
-  const press = (el) => { for (const t of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click']) el.dispatchEvent(new MouseEvent(t, { bubbles: true, cancelable: true, view: window })); };
-  const words = (s) => new Set(norm(s).split(' ').filter(w => w.length > 2 && w !== 'and'));
-  const best = (opts, v) => {
-    const nv = norm(v); let top = null, score = 0;
-    for (const o of opts) { const no = norm(o.innerText);
-      if (no === nv) return { el: o, exact: true };
-      const a = words(v), b = words(o.innerText); let k = 0; for (const w of a) if (b.has(w)) k++;
-      const sc = k / Math.max(a.size, 1) + (no.includes(nv) || nv.includes(no) ? 0.5 : 0);
-      if (sc > score) { score = sc; top = o; } }
-    return score >= 0.5 ? { el: top, exact: false } : null;
-  };
-  const findBox = (what) => {
-    const native = [...document.querySelectorAll('select')].filter(vis).find(s => new RegExp(what, 'i').test((s.name || '') + ' ' + (s.id || '') + ' ' + (s.options[0] ? s.options[0].text : '')));
-    if (native) return native;
-    const cands = [...document.querySelectorAll('[role="combobox"],[aria-haspopup],[class*="select" i],[class*="dropdown" i],button,div')]
-      .filter(vis).filter(e => { const t = (e.innerText || '').trim(); if (!t.length || t.length > 50) return false; const nt = norm(t); return ['select a ', 'select ', 'choose a ', 'choose '].some(p => nt === p + what); });   // no regex escapes: this lives in a template literal
-    return cands.sort((a, b) => a.innerText.length - b.innerText.length || b.querySelectorAll('*').length - a.querySelectorAll('*').length).pop() || null;
-  };
-  const results = [];
-  for (const w of want) {
-    if (!w.value) continue;
-    const box = findBox(w.what);
-    if (!box) { results.push({ key: w.key, why: 'no ' + w.what + ' dropdown found on this page' }); continue; }
-    if (box.tagName === 'SELECT') {
-      const o = best([...box.options].map(x => ({ innerText: x.text, opt: x })), w.value);
-      if (!o) { results.push({ key: w.key, why: 'no option matches "' + w.value + '"', options: [...box.options].map(x => x.text).slice(0, 40) }); continue; }
-      const d = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value'); d.set.call(box, o.el.opt.value);
-      box.dispatchEvent(new Event('input', { bubbles: true })); box.dispatchEvent(new Event('change', { bubbles: true }));
-      results.push({ key: w.key, chose: o.el.innerText, exact: o.exact }); await sleep(400); continue;
-    }
-    const before = new Set([...document.querySelectorAll('[role="option"],li,[class*="option" i]')]);
-    press(box); await sleep(500);
-    let opts = [...document.querySelectorAll('[role="option"],li,[class*="option" i]')].filter(vis).filter(o => { const t = (o.innerText || '').trim(); return t && t.length < 80 && !o.querySelector('[role="option"],li'); });
-    const fresh = opts.filter(o => !before.has(o)); if (fresh.length) opts = fresh;
-    if (!opts.length) { results.push({ key: w.key, why: 'the ' + w.what + ' list did not open' }); continue; }
-    const o = best(opts, w.value);
-    if (!o) { results.push({ key: w.key, why: 'no option matches "' + w.value + '"', options: opts.map(x => x.innerText.trim()).slice(0, 40) }); press(box); await sleep(200); continue; }
-    o.el.scrollIntoView({ block: 'nearest' }); press(o.el); await sleep(700);
-    results.push({ key: w.key, chose: o.el.innerText.trim(), exact: o.exact });
-  }
-  // §FD2 0.60.267 — the gig's metadata: each group (a tab or heading reading its name, e.g. "PROGRAMMING LANGUAGE") is opened, then
-  // each wanted option is ticked by its own words (its <label>, or the text beside a radio / checkbox / option). One already ticked is
-  // left as it is. A group or option the page does not have is said, with what it does have.
-  for (const [group, vals] of Object.entries(meta || {})) {
-    const ng = norm(group);
-    const tab = [...document.querySelectorAll('li,a,button,div,span,h3,h4,label,[role="tab"]')].filter(vis)
-      .filter(e => norm(e.innerText).replace(/ *$/, '') === ng || norm(e.innerText) === ng + ' ')
-      .sort((a, b) => a.querySelectorAll('*').length - b.querySelectorAll('*').length)[0];
-    if (tab) { press(tab); await sleep(400); }
-    const boxes = [...document.querySelectorAll('input[type="radio"],input[type="checkbox"],[role="radio"],[role="checkbox"],[role="option"]')];
-    const textOf = (b) => { const l = b.labels && b.labels[0]; if (l) return l.innerText; const p = b.closest('label') || b.parentElement; return p ? p.innerText : (b.innerText || ''); };
-    for (const v of vals) {
-      const nv = norm(v);
-      const hit = boxes.find(b => vis(b.closest('label') || b.parentElement || b) && norm(textOf(b)) === nv);
-      if (!hit) { results.push({ key: 'metadata.' + group, why: (tab ? '' : 'no "' + group + '" group found; ') + 'no option "' + v + '"', options: [...new Set(boxes.filter(b => vis(b.closest('label') || b.parentElement || b)).map(b => textOf(b).trim()).filter(t => t && t.length < 40))].slice(0, 40) }); continue; }
-      const on = hit.checked === true || hit.getAttribute('aria-checked') === 'true' || hit.getAttribute('aria-selected') === 'true';
-      if (!on) { const target = hit.labels && hit.labels[0] ? hit.labels[0] : (hit.tagName === 'INPUT' ? hit : hit); target.click(); await sleep(200); }
-      results.push({ key: 'metadata.' + group, chose: v, exact: true, already: on });
-    }
-  }
-  return { results };
-}`;
-
-// §FW1 0.60.268 — James, 2026-10-26: "needs to autofill then next page, wait for it to load, then autofill the next page."
-// Fiverr's gig editor is a wizard (Overview → Pricing → Description & FAQ → Requirements → Gallery → Publish). Each page is a step:
-// fill it, press Save & Continue, wait until the next step has loaded (its tab in the URL or its fields changed), fill that. It
-// stops on its own before Gallery and Publish (uploading and publishing are his), when a page does not move on (Fiverr's own
-// messages are read back), or after maxPages. Never presses Publish. Each step's result is kept, so a stop says where and why.
-const STOP_TABS = /gallery|publish/i;
-const PRESS_CONTINUE = `(() => {
-  const vis = (e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
-  const norm = (s) => String(s || '').toLowerCase().replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, ' ').trim();
-  const b = [...document.querySelectorAll('button,a,[role="button"],input[type="submit"]')].filter(vis)
-    .find(e => { const t = norm(e.innerText || e.value); return t === 'save and continue' || t === 'continue' || t === 'save continue'; });
-  if (!b) return { ok: false };
-  if (/publish/i.test(b.innerText || b.value || '')) return { ok: false, why: 'the next button publishes: that is his' };
-  b.scrollIntoView({ block: 'center' }); b.click();
-  return { ok: true, text: (b.innerText || b.value || '').trim() };
-})()`;
-const PAGE_SIG = `(() => { const vis = (e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
-  const f = [...document.querySelectorAll('input,textarea,select')].filter(vis).map(e => (e.name || e.id || e.placeholder || e.type || '')).join('|');
-  const msgs = [...document.querySelectorAll('[role="alert"],[class*="error" i],[class*="warning" i]')].filter(vis).map(e => (e.innerText || '').trim()).filter(t => t && t.length < 200);
-  return { sig: location.href.split('#')[0] + '#' + f, ready: document.readyState, msgs: [...new Set(msgs)].slice(0, 6) }; })()`;
-/** the gig parts a fill's results cover: an added FAQ covers its question and answer; the chosen category covers "category" */
-function _doneKeys(filled) {
-  const done = new Set(filled.map(x => x.key));
-  for (const k of [...done]) { const m = /^faq\.(\d+)$/.exec(k); if (m) { done.add(`faq.${m[1]}.question`); done.add(`faq.${m[1]}.answer`); } }
-  if (done.has('category.main')) done.add('category');
-  return done;
-}
-function _tabOf(url) { try { const u = new URL(url); return u.searchParams.get('tab') || u.pathname.split('/').filter(Boolean).pop() || ''; } catch (_) { return ''; } }
-
-async function fillGigWizard(dom, gig, { agentId = 'default', minConfidence = 'medium', maxPages = 5, waitMs = 20000, settleMs = 1500, pollMs = 500 } = {}) {
-  const wc = dom && dom._getWebContents ? dom._getWebContents(agentId) : null;
-  if (!wc) return fillGig(dom, gig, { agentId, minConfidence });
-  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-  const pages = [], filled = [], failed = []; let totalFields = 0, stop = null;
-  for (let i = 0; i < maxPages; i++) {
-    const tab = _tabOf(wc.getURL());
-    if (STOP_TABS.test(tab)) { stop = `stopped at ${tab}: uploading and publishing are yours`; break; }
-    const r = await fillGig(dom, gig, { agentId, minConfidence });
-    if (r.error) { pages.push({ tab, error: r.error }); stop = `stopped on ${tab}: ${r.error}`; break; }
-    totalFields += r.totalFields || 0;
-    for (const x of r.filled) if (!filled.some(y => y.key === x.key)) filled.push({ ...x, page: tab });
-    for (const x of r.failed) failed.push({ ...x, page: tab });
-    const page = { tab, filled: r.filled.map(x => x.key), failed: r.failed.map(x => x.key) };
-    pages.push(page);
-    const before = await wc.executeJavaScript(PAGE_SIG, true);
-    const pressed = await wc.executeJavaScript(PRESS_CONTINUE, true);
-    if (!pressed || !pressed.ok) { stop = `stopped on ${tab}: ${(pressed && pressed.why) || 'no Save & Continue button'}`; break; }
-    let moved = false, now = before;
-    for (let t = 0; t < waitMs; t += pollMs) {
-      await sleep(pollMs);
-      try { now = await wc.executeJavaScript(PAGE_SIG, true); } catch (_) { continue; }   // mid-navigation
-      if (now.sig !== before.sig && now.ready === 'complete') { moved = true; break; }
-    }
-    if (!moved) { stop = `stayed on ${tab} after "${pressed.text}"${now.msgs && now.msgs.length ? `: ${now.msgs.join(' · ')}` : ''}`; page.stayed = true; break; }
-    await sleep(settleMs);   // the next step's form renders after its URL
-    page.next = _tabOf(wc.getURL());
-  }
-  const done = _doneKeys(filled);
-  return { wizard: true, pages, stop, totalFields, filled, failed, skipped: [], leftToCopy: gigParts(gig).filter(p => !done.has(p.key)).map(p => p.key) };
-}
-
-// §FW2 0.60.269 — James: "continue." The wizard's remaining parts, each as his page shows it:
-//   FAQ ("Description & FAQ"): press "+ Add FAQ", type the question and the answer into the boxes that appear, press "Add";
-//   Requirements: press "Add New Question", type it, press "Add";
-//   Pricing: per package column, the Delivery Time and Revisions dropdowns (native <select> or Fiverr's own), chosen by the number.
-// An item the page already shows (same words) is not added twice. A part the page does not have is skipped, not failed.
-const EXTRAS_SCRIPT = `async (gig) => {
-  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-  const vis = (e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
-  const norm = (s) => String(s || '').toLowerCase().replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, ' ').trim();
-  const press = (el) => { for (const t of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click']) el.dispatchEvent(new MouseEvent(t, { bubbles: true, cancelable: true, view: window })); };
-  const setv = (el, v) => { const p = el.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype; el.focus(); Object.getOwnPropertyDescriptor(p, 'value').set.call(el, v); el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); };
-  const btn = (words) => [...document.querySelectorAll('button,a,[role="button"],span,div')].filter(vis).filter(e => { const t = norm(e.innerText); return t && words.some(w => t === w); })
-    .sort((a, b) => a.querySelectorAll('*').length - b.querySelectorAll('*').length)[0] || null;
-  const empties = () => [...document.querySelectorAll('input[type="text"],input:not([type]),textarea')].filter(vis).filter(e => !e.value);
-  const pageText = () => norm(document.body.innerText);
-  const results = [];
-  // FAQ and buyer questions: the same add-an-item flow
-  const addItems = async (key, openWords, items, two) => {
-    if (!items || !items.length || !btn(openWords)) return;
-    for (let i = 0; i < items.length; i++) {
-      const it = items[i]; const first = two ? it.question : it;
-      if (pageText().includes(norm(first))) { results.push({ key: key + '.' + i, chose: first, already: true }); continue; }
-      const before = new Set(empties()); const open = btn(openWords);
-      if (!open) { results.push({ key: key + '.' + i, why: 'the add button went away' }); break; }
-      press(open); await sleep(500);
-      const fresh = empties().filter(e => !before.has(e)); const boxes = fresh.length ? fresh : empties();
-      if (!boxes.length) { results.push({ key: key + '.' + i, why: 'no box appeared after "' + open.innerText.trim() + '"' }); break; }
-      setv(boxes[0], first); if (two && boxes[1]) setv(boxes[1], it.answer);
-      await sleep(250);
-      const add = btn(['add', 'save', 'add faq', 'add question']); if (add && add !== open) { press(add); await sleep(500); }
-      results.push({ key: key + '.' + i, chose: first });
-    }
-  };
-  await addItems('faq', ['add faq', 'add a faq', 'add new faq'], (gig.faq || []).filter(x => x && x.question && x.answer), true);
-  await addItems('requirement', ['add new question', 'add a question', 'add question'], gig.requirements || [], false);
-  // Pricing: a row named Delivery Time / Revisions, one control per package column (basic, standard, premium)
-  const tiers = ['basic', 'standard', 'premium'];
-  const pickIn = async (ctl, n, label) => {
-    const want = String(n); const match = (t) => { const x = norm(t); return x === want || new RegExp('(^| )' + want + '( |$)').test(x) || (n === 'unlimited' && /unlimited/.test(x)); };
-    if (ctl.tagName === 'SELECT') {
-      const o = [...ctl.options].find(o => match(o.text)); if (!o) return { why: 'no ' + label + ' option for ' + want, options: [...ctl.options].map(o => o.text).slice(0, 20) };
-      Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(ctl, o.value); ctl.dispatchEvent(new Event('input', { bubbles: true })); ctl.dispatchEvent(new Event('change', { bubbles: true }));
-      return { chose: o.text.trim() };
-    }
-    const before = new Set(document.querySelectorAll('[role="option"],li,[class*="option" i]'));
-    press(ctl); await sleep(450);
-    let opts = [...document.querySelectorAll('[role="option"],li,[class*="option" i]')].filter(vis).filter(o => (o.innerText || '').trim().length < 40 && !o.querySelector('li,[role="option"]'));
-    const nw = opts.filter(o => !before.has(o)); if (nw.length) opts = nw;
-    const o = opts.find(o => match(o.innerText)); if (!o) { press(ctl); await sleep(150); return { why: 'no ' + label + ' option for ' + want, options: opts.map(o => o.innerText.trim()).slice(0, 20) }; }
-    press(o); await sleep(350); return { chose: o.innerText.trim() };
-  };
-  for (const [label, field] of [['delivery time', 'deliveryDays'], ['revisions', 'revisions']]) {
-    const head = [...document.querySelectorAll('td,th,div,span,h3,h4,label')].filter(vis).find(e => norm(e.innerText) === label && e.children.length <= 1);
-    if (!head) continue;
-    const rowEl = head.closest('tr') || head.parentElement;
-    // one control per package column: each cell after the heading's, its select / combobox, else its first clickable child
-    const cells = [...rowEl.children].filter(c => !c.contains(head) && vis(c));
-    const ctls = cells.map(c => c.querySelector('select,[role="combobox"],[aria-haspopup],[class*="select" i]') || (c.firstElementChild && c.firstElementChild.firstElementChild) || c.firstElementChild).filter(Boolean);
-    if (!ctls.length) { results.push({ key: field, why: 'a "' + label + '" row but no control in it' }); continue; }
-    for (let i = 0; i < Math.min(ctls.length, 3); i++) {
-      const p = gig.packages && gig.packages[tiers[i]]; if (!p || p[field] == null) continue;
-      const r = await pickIn(ctls[i], p[field] === -1 ? 'unlimited' : p[field], label);
-      results.push({ key: tiers[i] + '.' + field, ...r });
-    }
-  }
-  return { results };
-}`;
-
-/** fillGigExtras(dom, gig, { agentId }) → { results } — FAQ, buyer questions and the pricing dropdowns, where the page has them */
-async function fillGigExtras(dom, gig, { agentId = 'default' } = {}) {
-  const wc = dom && dom._getWebContents ? dom._getWebContents(agentId) : null;
-  if (!wc) return { results: [] };
-  return wc.executeJavaScript(`(${EXTRAS_SCRIPT})(${JSON.stringify({ faq: gig.faq, requirements: gig.requirements, packages: gig.packages })})`, true);
-}
-
-/** fillGigSelects(dom, gig, { agentId }) → { results: [{ key, chose?, exact?, why?, options? }] } */
-async function fillGigSelects(dom, gig, { agentId = 'default' } = {}) {
-  const wc = dom && dom._getWebContents ? dom._getWebContents(agentId) : null;
-  if (!wc) return { error: 'no tab for the dropdowns' };
-  const want = [{ key: 'category.main', what: 'category', value: gig.category }, { key: 'category.sub', what: 'subcategory', value: gig.subcategory },
-    { key: 'serviceType', what: 'service type', value: gig.serviceType }];   // §FD2
-  return wc.executeJavaScript(`(${SELECT_SCRIPT})(${JSON.stringify(want)}, ${JSON.stringify(gig.metadata || {})})`, true);
+  const done = new Set(filled.map(f => f.key));
+  return { totalFields: domFields.length, filled, skipped, failed, leftToCopy: gigParts(gig).filter(p => !done.has(p.key)).map(p => p.key) };
 }
 
 // ── .gig files (YAML) ─────────────────────────────────────────────────────────
@@ -583,6 +364,7 @@ function gigTemplate() {
     `    deliveryDays: ${days}`,
     `    revisions: ${rev}`,
     `    price: ${price}            # US dollars, at least ${L.minPrice}; basic < standard < premium`,
+    '    features: {}        # Fiverr\'s package rows for your subcategory, as the page labels them: "Number of APIs integrated": 2, "Data Syncing": yes',
   ].join('\n');
   const text = [
     `# Clear Glass gig file (${GIG_FORMAT}) — a template. Fill it in, then load it: Settings → Autofill → Gig → "Load a gig file…".`,
@@ -592,11 +374,6 @@ function gigTemplate() {
     `title: "I will "        # starts with "I will", at most ${L.title} characters, the words a buyer would search for`,
     'category: ""',
     'subcategory: ""',
-    '# Service type: the dropdown under Category (Fiverr\'s exact words), e.g. "AI Agents"',
-    'serviceType: ""',
-    '# Gig metadata: each group as Fiverr names it, with the options to tick (its exact words)',
-    'metadata:',
-    '  Programming language: [""]',
     `tags: []                # at most ${L.tags} tags, each at most ${L.tag} characters, lowercase, no #`,
     `description: |          # at most ${L.description} characters: what the buyer gets, how it works, why it is reliable`,
     '  Write the description here. Keep the two-space indent on every line.',
@@ -612,4 +389,4 @@ function gigTemplate() {
   return { text, filename: 'gig-template.gig' };
 }
 
-module.exports = { fillGigExtras, EXTRAS_SCRIPT, fillGigWizard, fillGigSelects, SELECT_SCRIPT, GIG_FORMAT, gigFile, gigFilename, gigTemplate, END_STATE_QUESTIONS, briefToSpec, LIMITS, TIERS, GIG_PATTERNS, buildGigPrompt, parseGig, gigParts, gigText, matchGigFields, detectGig, fillGig };
+module.exports = { GIG_FORMAT, gigFile, gigFilename, gigTemplate, END_STATE_QUESTIONS, briefToSpec, LIMITS, TIERS, GIG_PATTERNS, buildGigPrompt, parseGig, gigParts, gigText, matchGigFields, detectGig, fillGig };
