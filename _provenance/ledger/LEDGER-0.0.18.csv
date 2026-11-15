@@ -1,0 +1,5 @@
+seq,tag,build,status,path,old_blob,new_blob
+0020,snap-0020,0.0.18,M,"data/cobalt/ledger.truth.jsonl",3a2efcda8b,63ef8e59f1
+0020,snap-0020,0.0.18,M,"orchestrator.js",964e4f0d14,62eab935d5
+0020,snap-0020,0.0.18,D,"powershell.exe",e6c933c6b7,0000000000
+0020,snap-0020,0.0.18,M,"tests/kernel-test-results.json",55f5aac3b1,7ca1f8d26d

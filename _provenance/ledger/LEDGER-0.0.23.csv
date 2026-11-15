@@ -1,0 +1,10 @@
+seq,tag,build,status,path,old_blob,new_blob
+0025,snap-0025,0.0.23,M,"MANIFEST.json",8e139a989d,d1e7863e3e
+0025,snap-0025,0.0.23,A,"cli/diagnose.js",0000000000,cc43e0f566
+0025,snap-0025,0.0.23,M,"cli/nexus-repl.js",cf79ddab5a,244535efb0
+0025,snap-0025,0.0.23,M,"data/cobalt/ledger.truth.jsonl",63ef8e59f1,5ea7006168
+0025,snap-0025,0.0.23,M,"data/ledger/orchestrator.jsonl",15ce6ad3f8,e336f1cb53
+0025,snap-0025,0.0.23,A,"docs/NEXUS-SPEC.md",0000000000,bce2960d24
+0025,snap-0025,0.0.23,M,"package.json",c0e702be3d,687417dcd1
+0025,snap-0025,0.0.23,A,"tests/diagnose-results.json",0000000000,b0442a712c
+0025,snap-0025,0.0.23,M,"tests/kernel-test-results.json",1a38ceeecb,73f97645fc

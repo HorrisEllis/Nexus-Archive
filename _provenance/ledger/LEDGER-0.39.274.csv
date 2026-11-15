@@ -1,0 +1,17 @@
+seq,tag,build,status,path,old_blob,new_blob
+0704,snap-0704,0.39.274-r1,A,"CHANGELOG-0.39.274.md",0000000000,c5bd34ea80
+0704,snap-0704,0.39.274-r1,M,"clear-glass/package.json",b86b888658,b7ca61f7bd
+0704,snap-0704,0.39.274-r1,M,"clear-glass/renderer/browser.html",a3907720dc,71b1c659cc
+0704,snap-0704,0.39.274-r1,M,"clear-glass/renderer/settings/sections/connections.js",74c0fd3303,a2028817dc
+0704,snap-0704,0.39.274-r1,M,"clear-glass/renderer/settings/sections/copilot.js",1fb6d3130b,46a64e1d40
+0704,snap-0704,0.39.274-r1,M,"clear-glass/renderer/settings/sections/diagnostics.js",c17c44c8a4,b27bdcc36a
+0704,snap-0704,0.39.274-r1,M,"clear-glass/spec/clear-glass.spec",f3626149cd,d80065105c
+0704,snap-0704,0.39.274-r1,M,"clear-glass/src/api/settings.js",dba10ca3ce,60ccd465fe
+0704,snap-0704,0.39.274-r1,M,"clear-glass/src/copilot/bridge.js",a165e18576,0a04aa8f50
+0704,snap-0704,0.39.274-r1,M,"lib/version.js",3613d7753c,b636ffa50c
+0704,snap-0704,0.39.274-r1,M,"package.json",f716560626,ebf2dc2d60
+0704,snap-0704,0.39.274-r1,M,"tests/modules/run-all.js",937c0df988,55648d9d21
+0704,snap-0704,0.39.274-r1,A,"tests/modules/test-cg-copilot-no-api.test.js",0000000000,cebb0bb2ba
+0705,snap-0705,0.39.274-r2,A,"docs/2026-09-28-graph-build-context-settings-memory-phasemap.spec",0000000000,54dd17c607
+0705,snap-0705,0.39.274-r2,A,"docs/2026-09-28-staging-self-heal-phasemap.spec",0000000000,7402982f4b
+0705,snap-0705,0.39.274-r2,M,"docs/SPEC-REGISTRY.spec",1be3e8c686,f77e0211bb

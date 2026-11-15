@@ -1,0 +1,7 @@
+seq,tag,build,status,path,old_blob,new_blob
+0709,snap-0709,0.39.277,A,"CHANGELOG-0.39.277.md",0000000000,e573c51265
+0709,snap-0709,0.39.277,M,"docs/2026-09-28-graph-build-context-settings-memory-phasemap.spec",54dd17c607,181b0e3fa4
+0709,snap-0709,0.39.277,M,"docs/SPEC-REGISTRY.spec",f77e0211bb,7685aecdd8
+0709,snap-0709,0.39.277,M,"docs/atlases/idearium-atlas.md",a4ddb35c02,4a550a5b6b
+0709,snap-0709,0.39.277,M,"lib/version.js",f71112821e,f2652918dd
+0709,snap-0709,0.39.277,M,"package.json",ba3b994dee,96caa2dec0

@@ -1,0 +1,12 @@
+seq,tag,build,status,path,old_blob,new_blob
+0451,snap-0451,0.39.4,M,"clear-glass/renderer/browser.html",af4c9ecc13,e7b85c5423
+0451,snap-0451,0.39.4,M,"clear-glass/renderer/browser.js",b6f24e4489,b263370b28
+0451,snap-0451,0.39.4,A,"clear-glass/src/extensions/manager.js",0000000000,9ea9729ffc
+0451,snap-0451,0.39.4,M,"clear-glass/src/gates/index.js",b751a9c82c,d933546b9f
+0451,snap-0451,0.39.4,A,"clear-glass/src/history/store.js",0000000000,395e74b2bf
+0451,snap-0451,0.39.4,M,"clear-glass/src/ipc/bridge.js",377b5c9c8b,cec56a4378
+0451,snap-0451,0.39.4,M,"clear-glass/src/main/index.js",641493a8ba,a3031e4591
+0451,snap-0451,0.39.4,M,"clear-glass/src/preload/index.js",f27bdca103,624c3bd256
+0451,snap-0451,0.39.4,M,"lib/version.js",a0e12a309f,680e23225e
+0451,snap-0451,0.39.4,M,"package-lock.json",ea8ed54e4c,552911a2ce
+0451,snap-0451,0.39.4,M,"package.json",f8bc4d96a8,50b2020a08

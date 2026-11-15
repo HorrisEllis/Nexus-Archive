@@ -1,0 +1,16 @@
+seq,tag,build,status,path,old_blob,new_blob
+0522,snap-0522,0.39.65,M,"clear-glass/renderer/browser.js",2e48cd8814,5dd55dad7c
+0522,snap-0522,0.39.65,M,"copilot/config.js",34e463097c,49b6bedf14
+0522,snap-0522,0.39.65,M,"copilot/server.js",a91ba3cf2d,3622bef66b
+0522,snap-0522,0.39.65,M,"data/alk/decisions.jsonl",e968b9d693,d85bfaaa9d
+0522,snap-0522,0.39.65,M,"data/cortex/memory/cfr_tension_history.json",2709e5858f,a50380b867
+0522,snap-0522,0.39.65,M,"data/guardian/ledger/boot/events.ndjson",265f85d1e5,4316fa104c
+0522,snap-0522,0.39.65,M,"data/guardian/ledger/cfr/event_log.jsonl",5eb30be1ad,475ef93767
+0522,snap-0522,0.39.65,M,"data/guardian/memory/settings.json",e98730ee80,36841783b0
+0522,snap-0522,0.39.65,M,"guardian/server.js",621567a1e9,924121bf4f
+0522,snap-0522,0.39.65,M,"package.json",2c70fcdd81,efcef73897
+0522,snap-0522,0.39.65,A,"tests/modules/clear-glass-hostile-html.test.js",0000000000,ffb558016d
+0522,snap-0522,0.39.65,M,"tests/modules/copilot-provider-toggle.test.js",759483eb07,f5948c48e5
+0522,snap-0522,0.39.65,A,"tests/modules/guardian-hostile-body-dos.test.js",0000000000,28f3c4cac7
+0522,snap-0522,0.39.65,M,"tests/modules/run-all.js",a7370cbeab,99884faa73
+0522,snap-0522,0.39.65,M,"ui/tv-shell/index.html",2627aab580,06741a97c6

@@ -1,0 +1,8 @@
+seq,tag,build,status,path,old_blob,new_blob
+0484,snap-0484,0.39.44,D,".gitignore",3af953d2ff,0000000000
+0484,snap-0484,0.39.44,D,"_archive/unintegrated/2026-08-14-uploaded-batch/emergence-6/.gitignore",63f7231537,0000000000
+0484,snap-0484,0.39.44,M,"clear-glass/src/mesh/agent-mesh.js",4bcb2deae6,cf50b2a7f4
+0484,snap-0484,0.39.44,A,"cortex/core/raid/context-synthesis.js",0000000000,dcbd4de30f
+0484,snap-0484,0.39.44,M,"cortex/core/raid/contract-boundary.js",7bf5119ece,4b09c34136
+0484,snap-0484,0.39.44,M,"cortex/core/raid/officiator.js",7fb8ac92a1,6772c2e7a0
+0484,snap-0484,0.39.44,A,"tests/modules/test-agent-mesh-guardian-connect.js",0000000000,cf1572923e

@@ -1,0 +1,10 @@
+seq,tag,build,status,path,old_blob,new_blob
+0767,snap-0767,0.60.168,A,"CHANGELOG-0.60.168.md",0000000000,9805b231b8
+0767,snap-0767,0.60.168,M,"VERSION",9512a6f4ba,1a55b009a9
+0767,snap-0767,0.60.168,M,"cos/compartment/qemu-runtime.js",4f198cac6b,8a96b53b95
+0767,snap-0767,0.60.168,M,"cos/workspace/index.js",e8af5a8660,bd31bb8a55
+0767,snap-0767,0.60.168,M,"docs/cos.spec",84d83ae5a7,4135118354
+0767,snap-0767,0.60.168,M,"idearium/ui/desktop.html",1cdd645175,c52d4b100c
+0767,snap-0767,0.60.168,M,"lib/version.js",9f9f9f2c33,bc25a4d5dd
+0767,snap-0767,0.60.168,M,"package.json",be340451a0,537b10bd56
+0767,snap-0767,0.60.168,M,"tests/modules/test-cos-workspace.test.js",63622b0806,4f156ed391

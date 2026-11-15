@@ -1,0 +1,13 @@
+seq,tag,build,status,path,old_blob,new_blob
+0138,snap-0138,0.9.7,M,"autopilot.js",3f3e4cc417,af9e32687e
+0138,snap-0138,0.9.7,A,"data/autopilot/autopilot.log",0000000000,51cdbb683b
+0138,snap-0138,0.9.7,M,"data/bridge/ledger/cfr/event_log.jsonl",1fa1c2c6e3,83ffa78984
+0138,snap-0138,0.9.7,M,"data/bridge/ledger/requests.jsonl",fe02d609cf,e1e070212d
+0138,snap-0138,0.9.7,M,"data/guardian/ledger/boot/events.ndjson",c4b8a0224c,1c5b559e6f
+0138,snap-0138,0.9.7,M,"data/ledger/event_log.jsonl",81f74d94b0,1afdac91de
+0138,snap-0138,0.9.7,M,"data/ledger/orchestrator.jsonl",ac2842f1fc,d7e9bc81c1
+0138,snap-0138,0.9.7,M,"guardian/lib/seam-queue.js",0bb32b3e5d,988f3c4968
+0138,snap-0138,0.9.7,M,"guardian/memory_store/event_log.jsonl",e66bc832e5,2429e432c7
+0138,snap-0138,0.9.7,M,"guardian/memory_store/settings.json",fa45625c10,cc74f6b89b
+0138,snap-0138,0.9.7,M,"orchestrator.js",6cd3e1efa0,3de32a8a26
+0138,snap-0138,0.9.7,M,"ui/home/index.html",b29126a85d,8ea675f927

@@ -1,0 +1,15 @@
+seq,tag,build,status,path,old_blob,new_blob
+0605,snap-0605,0.39.150-r1,M,"clear-glass/src/main/index.js",0e2cf54bf8,81710b2d7b
+0605,snap-0605,0.39.150-r1,M,"copilot/server.js",024995eed5,1b64c9f201
+0605,snap-0605,0.39.150-r1,M,"cortex/boot.js",747f2d8293,42798b1971
+0605,snap-0605,0.39.150-r1,M,"guardian/jaa-store.js",6e544fd9be,869e02fed9
+0605,snap-0605,0.39.150-r1,M,"guardian/server.js",71a73c5a2a,152b446415
+0605,snap-0605,0.39.150-r1,M,"idearium/ui/index.html",9bcec5f503,18001db092
+0605,snap-0605,0.39.150-r1,M,"idearium/ui/js/app.js",690e67635a,0718ee150a
+0605,snap-0605,0.39.150-r1,A,"lib/self-register-remote.js",0000000000,e2be3613c3
+0605,snap-0605,0.39.150-r1,M,"lib/self-register.js",477d91debc,a89755d025
+0605,snap-0605,0.39.150-r1,M,"nexus/autopilot.js",59fe144b3e,d067b0130f
+0605,snap-0605,0.39.150-r1,M,"orchestrator/orchestrator.js",277b2fce58,57e6db4307
+0605,snap-0605,0.39.150-r1,M,"package.json",4b73adf6a5,4dd644e821
+0606,snap-0606,0.39.150-r2,M,"docs/2026-09-01-living-model-and-autonomous-pipeline-phasemap.spec",fdd83af8bd,fc45e96996
+0606,snap-0606,0.39.150-r2,M,"docs/SPEC-REGISTRY.spec",cb9cddc5fc,9b03037bc7

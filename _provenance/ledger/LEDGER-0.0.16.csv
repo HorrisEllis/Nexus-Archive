@@ -1,0 +1,10 @@
+seq,tag,build,status,path,old_blob,new_blob
+0018,snap-0018,0.0.16,A,"orchestrator.js",0000000000,964e4f0d14
+0018,snap-0018,0.0.16,M,"package.json",c00e51964e,a8c32dc96a
+0018,snap-0018,0.0.16,M,"tests/kernel-test-results.json",be998b3491,55f5aac3b1
+0018,snap-0018,0.0.16,A,"ui/bridge/index.html",0000000000,8ae63f7dca
+0018,snap-0018,0.0.16,A,"ui/cortex/index.html",0000000000,15da91e6d1
+0018,snap-0018,0.0.16,A,"ui/emerge/index.html",0000000000,c5ef27294a
+0018,snap-0018,0.0.16,A,"ui/guardian/index.html",0000000000,1ff2b56d6c
+0018,snap-0018,0.0.16,A,"ui/idearium/index.html",0000000000,2cdad11bad
+0018,snap-0018,0.0.16,A,"ui/orchestrator/index.html",0000000000,958c062392

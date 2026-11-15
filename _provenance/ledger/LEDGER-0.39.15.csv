@@ -1,0 +1,15 @@
+seq,tag,build,status,path,old_blob,new_blob
+0456,snap-0456,0.39.15-r1,M,"clear-glass/renderer/guardian-picker.js",ca7b351109,581bab21e3
+0456,snap-0456,0.39.15-r1,M,"clear-glass/src/ipc/bridge.js",e9a49579a7,69ffc77df7
+0456,snap-0456,0.39.15-r1,M,"clear-glass/src/mesh/agent-mesh.js",0d6057598d,b004ead6ba
+0456,snap-0456,0.39.15-r1,M,"copilot/lifeline.js",5e4744dc33,8c113e6eda
+0456,snap-0456,0.39.15-r1,M,"cortex/core/raid/contract-intake.js",52fe3b4b3e,79a2c4c93c
+0456,snap-0456,0.39.15-r1,A,"docs/2026-08-28-definition-of-complete-phasemap.spec",0000000000,568ea1c673
+0456,snap-0456,0.39.15-r1,A,"docs/2026-08-28-self-building-pipeline-phasemap.spec",0000000000,f58e7929e3
+0456,snap-0456,0.39.15-r1,M,"docs/SPEC-REGISTRY.md",9ae7e3de59,e217a3345d
+0456,snap-0456,0.39.15-r1,M,"idearium/repo/index.js",ab73e4a74f,03eec20028
+0456,snap-0456,0.39.15-r1,M,"lib/version.js",38506001fe,b7d65c16f1
+0456,snap-0456,0.39.15-r1,M,"package.json",faf19128e1,1b00ba5059
+0457,snap-0457,0.39.15-r2,M,"clear-glass/renderer/browser.css",bea05d8269,d808acd272
+0457,snap-0457,0.39.15-r2,M,"clear-glass/renderer/browser.html",6ae7a41394,93ff6d1c03
+0457,snap-0457,0.39.15-r2,M,"clear-glass/renderer/browser.js",ca4fc0dd90,c5a2179a3f

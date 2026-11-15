@@ -1,0 +1,7 @@
+seq,tag,build,status,path,old_blob,new_blob
+0551,snap-0551,0.39.95,M,"lib/version.js",0554f028b3,ad4a073384
+0551,snap-0551,0.39.95,M,"package.json",72a07459a0,9470d1766d
+0551,snap-0551,0.39.95,M,"ui/brainos/brainos-app.css",deb4aa642c,f94056219b
+0551,snap-0551,0.39.95,M,"ui/brainos/brainos-app.js",9617e383ef,2ec837e466
+0551,snap-0551,0.39.95,M,"ui/brainos/brainos-automation.js",07cdba8264,57c6cfc897
+0551,snap-0551,0.39.95,M,"ui/brainos/index.html",5bd6baaf4c,5228f94e4c

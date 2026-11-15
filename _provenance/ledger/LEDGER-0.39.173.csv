@@ -1,0 +1,8 @@
+seq,tag,build,status,path,old_blob,new_blob
+0621,snap-0621,0.39.173,A,"CHANGELOG-0.39.173.md",0000000000,35bfc3e27a
+0621,snap-0621,0.39.173,M,"diagnostic/nexus-diagnostic.js",4d72d52b27,810e808706
+0621,snap-0621,0.39.173,M,"guardian/jaa-store.js",869e02fed9,8888a0968b
+0621,snap-0621,0.39.173,M,"guardian/lib/dispatcher.js",fb7916c6e5,66652a1956
+0621,snap-0621,0.39.173,M,"orchestrator/orchestrator.js",8c6c6e17ec,8eec8e1875
+0621,snap-0621,0.39.173,M,"package-lock.json",47ce6c9621,73d6d10a28
+0621,snap-0621,0.39.173,M,"package.json",6a35894644,f485d58f0f

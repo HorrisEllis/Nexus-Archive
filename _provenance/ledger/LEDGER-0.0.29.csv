@@ -1,0 +1,16 @@
+seq,tag,build,status,path,old_blob,new_blob
+0031,snap-0031,0.0.29,M,"MANIFEST.json",feac3a2367,7fb0443658
+0031,snap-0031,0.0.29,M,"cli/diagnose.js",70bb5dc322,b57d818cf3
+0031,snap-0031,0.0.29,M,"data/cobalt/ledger.truth.jsonl",f64fa513be,54c54d9ba3
+0031,snap-0031,0.0.29,M,"data/emerge/event_log.jsonl",3cd00963ea,c361c6714e
+0031,snap-0031,0.0.29,M,"data/idearium.json",7da557b293,1f6fd8051d
+0031,snap-0031,0.0.29,M,"data/idearium/event_log.jsonl",3a43cd1f7f,f4d78c4b6a
+0031,snap-0031,0.0.29,M,"data/ledger/event_log.jsonl",f6acea78f1,1bc70c3c59
+0031,snap-0031,0.0.29,M,"data/ledger/orchestrator.jsonl",9fb5a33248,9b23483c4d
+0031,snap-0031,0.0.29,A,"docs/HANDOFF.md",0000000000,f0eeb87209
+0031,snap-0031,0.0.29,A,"guardian/nexus-chat-v4.html",0000000000,97079fee94
+0031,snap-0031,0.0.29,M,"guardian/server.js",c79029d2c6,59f4dd1db5
+0031,snap-0031,0.0.29,M,"guardian/ui/index.html",70388ca0ea,8f75d5ff68
+0031,snap-0031,0.0.29,M,"guardian/userscript-claude.js",a8c1951a26,1b60d7f882
+0031,snap-0031,0.0.29,M,"tests/kernel-test-results.json",ecc5207b98,c6736be6e3
+0031,snap-0031,0.0.29,M,"tests/pipeline-results.json",4fbdcb3f9d,b51be60551

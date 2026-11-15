@@ -1,0 +1,4 @@
+seq,tag,build,status,path,old_blob,new_blob
+0014,snap-0014,0.0.12,M,"tests/kernel-test-results.json",9519560c41,3c155ca76b
+0014,snap-0014,0.0.12,M,"ui/emerge-ide.html",b500713b93,c5ef27294a
+0014,snap-0014,0.0.12,M,"ui/index.html",b500713b93,c5ef27294a

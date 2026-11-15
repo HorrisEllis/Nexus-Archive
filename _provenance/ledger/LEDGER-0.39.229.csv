@@ -1,0 +1,12 @@
+seq,tag,build,status,path,old_blob,new_blob
+0656,snap-0656,0.39.229,M,"clear-glass/interaction-contract.json",f3064c542f,fcb12e669b
+0656,snap-0656,0.39.229,M,"clear-glass/package.json",adf535fdc0,70c70b25c3
+0656,snap-0656,0.39.229,M,"clear-glass/registry-components.js",2056dc9557,2c3d0a3375
+0656,snap-0656,0.39.229,M,"clear-glass/spec/clear-glass.spec",a920c8c6d5,f61988145b
+0656,snap-0656,0.39.229,M,"clear-glass/src/main/index.js",1351adb099,632c4f5938
+0656,snap-0656,0.39.229,M,"clear-glass/src/options/store.js",c6a9669c91,81114c5af0
+0656,snap-0656,0.39.229,M,"lib/version.js",ba0ac53817,1f6fead9a9
+0656,snap-0656,0.39.229,M,"package-lock.json",cd84df4354,139c719af9
+0656,snap-0656,0.39.229,M,"package.json",c03fb8f10b,53c02ba94e
+0656,snap-0656,0.39.229,M,"tests/modules/nexus-options-autoboot.test.js",af5e40eee4,9305e5b731
+0656,snap-0656,0.39.229,M,"tests/modules/version-sync-and-registry.test.js",18a8019e0b,1b94fb73eb

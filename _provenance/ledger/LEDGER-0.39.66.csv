@@ -1,0 +1,8 @@
+seq,tag,build,status,path,old_blob,new_blob
+0523,snap-0523,0.39.66,M,"clear-glass/renderer/mesh-picker.js",fafdf4160b,2a644d8e87
+0523,snap-0523,0.39.66,M,"cli/diagnose.js",e5e3b8251a,e7bf43f838
+0523,snap-0523,0.39.66,M,"idearium/api/index.js",9bfc2c61e4,cf44147bf5
+0523,snap-0523,0.39.66,M,"lib/version.js",5ddec1b2aa,14fdc7474a
+0523,snap-0523,0.39.66,M,"ollama/config.js",2ddb6170f9,1922763f7d
+0523,snap-0523,0.39.66,M,"package.json",efcef73897,bbb2fa7e5f
+0523,snap-0523,0.39.66,M,"tests/modules/clear-glass-hostile-html.test.js",ffb558016d,e166e17892

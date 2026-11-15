@@ -1,0 +1,16 @@
+seq,tag,build,status,path,old_blob,new_blob
+0011,snap-0011,0.0.9,A,"cli/nexus.js",0000000000,4be29c9341
+0011,snap-0011,0.0.9,M,"cortex/foundation/admin-server.js",2832279a3a,12236e37a9
+0011,snap-0011,0.0.9,A,"data/cobalt/ledger.idea.jsonl",0000000000,e69de29bb2
+0011,snap-0011,0.0.9,A,"data/cobalt/ledger.truth.jsonl",0000000000,c9ecd247a6
+0011,snap-0011,0.0.9,A,"docs/CLI.md",0000000000,af1f784c83
+0011,snap-0011,0.0.9,A,"docs/NEXUS.md",0000000000,c26ec7a5b0
+0011,snap-0011,0.0.9,A,"docs/SCHEMA.md",0000000000,01e6d95a46
+0011,snap-0011,0.0.9,A,"docs/nexus.spec",0000000000,4946f8d83b
+0011,snap-0011,0.0.9,A,"guardian/guardian-cert.pem",0000000000,dd1a43c9a9
+0011,snap-0011,0.0.9,A,"guardian/guardian-key.pem",0000000000,71c34893a6
+0011,snap-0011,0.0.9,A,"guardian/memory_store/settings.json",0000000000,a5d1c9e4df
+0011,snap-0011,0.0.9,M,"guardian/server.js",48016b13fd,f194fb36b5
+0011,snap-0011,0.0.9,A,"package-lock.json",0000000000,fae19522b6
+0011,snap-0011,0.0.9,M,"package.json",8c3f8852a6,c3e1bc18ff
+0011,snap-0011,0.0.9,M,"tests/kernel-test-results.json",cd856b9951,0d2ae6d68f

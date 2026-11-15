@@ -1,0 +1,14 @@
+seq,tag,build,status,path,old_blob,new_blob
+0614,snap-0614,0.39.156,M,"clear-glass/src/copilot/wake-relay.js",49992e8e21,14fc02980e
+0614,snap-0614,0.39.156,M,"data/alk/decisions.jsonl",b191237150,5b177ecfc6
+0614,snap-0614,0.39.156,M,"docs/2026-09-19-guardian-mesh-first-dispatch-phasemap.spec",b2406f3a7f,719ff8c997
+0614,snap-0614,0.39.156,M,"docs/HANDOFF-2026-09-19-mesh-first-dispatch.md",2cacde6e61,0692b34861
+0614,snap-0614,0.39.156,M,"guardian/lib/dispatch-ladder.js",8016664cc1,d46ec01bfe
+0614,snap-0614,0.39.156,M,"guardian/lib/jobs.js",8eddb6df1e,ba52a092dd
+0614,snap-0614,0.39.156,A,"guardian/lib/wake-hint.js",0000000000,7b0a14409d
+0614,snap-0614,0.39.156,A,"guardian/lib/wake-loop.js",0000000000,4e663d9a8f
+0614,snap-0614,0.39.156,M,"guardian/server.js",2e00178808,08fcf0ca6a
+0614,snap-0614,0.39.156,M,"lib/version.js",b6a7354472,f0b9e05e06
+0614,snap-0614,0.39.156,M,"package.json",5abf695284,125b4852bc
+0614,snap-0614,0.39.156,A,"tests/modules/test-guardian-wake.js",0000000000,daaf1b651f
+0614,snap-0614,0.39.156,M,"tests/modules/test-wake-relay-real-endpoint.js",0be8e7f6e1,5df240e178

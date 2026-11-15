@@ -1,0 +1,7 @@
+seq,tag,build,status,path,old_blob,new_blob
+0008,snap-0008,0.0.6,A,"emerge-ide.js",0000000000,62136e8155
+0008,snap-0008,0.0.6,A,"emerge-kernel.js",0000000000,de29a41bcb
+0008,snap-0008,0.0.6,A,"emerge.spec",0000000000,84a824f60f
+0008,snap-0008,0.0.6,M,"package.json",0e9cf571ed,ccdd55468d
+0008,snap-0008,0.0.6,A,"tests/kernel-test-results.json",0000000000,cba635148c
+0008,snap-0008,0.0.6,A,"tests/kernel.test.js",0000000000,790aa255fc

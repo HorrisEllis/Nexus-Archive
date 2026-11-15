@@ -1,0 +1,12 @@
+seq,tag,build,status,path,old_blob,new_blob
+0625,snap-0625,0.39.181,A,"CHANGELOG-0.39.181.md",0000000000,e15ecb44ba
+0625,snap-0625,0.39.181,A,"clear-glass/interaction-contract.json",0000000000,0b450dbd5a
+0625,snap-0625,0.39.181,M,"docs/nexus.spec",a8a581eb51,310029aa2e
+0625,snap-0625,0.39.181,A,"guardian/interaction-contract.v2.json",0000000000,2be9adccb0
+0625,snap-0625,0.39.181,M,"idearium/interaction-contract.json",236014b005,a2333cb13f
+0625,snap-0625,0.39.181,M,"intelligence/interaction-contract.json",3612ca0008,f7c86d5162
+0625,snap-0625,0.39.181,A,"loom/interaction-contract.json",0000000000,8015d2180d
+0625,snap-0625,0.39.181,M,"loom/server.js",f3dad9838d,5199225727
+0625,snap-0625,0.39.181,A,"ollama/interaction-contract.json",0000000000,b5ad3afda5
+0625,snap-0625,0.39.181,M,"package.json",f776fa2a19,bf5c109994
+0625,snap-0625,0.39.181,A,"versionium/interaction-contract.json",0000000000,6f09f99b88

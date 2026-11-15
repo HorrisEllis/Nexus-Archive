@@ -1,0 +1,13 @@
+seq,tag,build,status,path,old_blob,new_blob
+0536,snap-0536,0.39.78,M,"docs/2026-09-11-sovereign-node-architecture-phasemap.spec",bd190efee5,18bc48233a
+0536,snap-0536,0.39.78,A,"guardian/schemas/guardian_chat_log.schema",0000000000,4b2a17e0d2
+0536,snap-0536,0.39.78,A,"guardian/schemas/guardian_queue_compartment.schema",0000000000,ddd951cda3
+0536,snap-0536,0.39.78,A,"guardian/schemas/guardian_seam_session.schema",0000000000,764d8bd8c0
+0536,snap-0536,0.39.78,M,"guardian/schemas/index.js",0dd9f886cc,076b328ff5
+0536,snap-0536,0.39.78,A,"lib/node-schemas/capability.schema",0000000000,8152f1a7bf
+0536,snap-0536,0.39.78,A,"lib/node-schemas/event.schema",0000000000,fb262a31ed
+0536,snap-0536,0.39.78,A,"lib/node-schemas/fault.schema",0000000000,ef0d785182
+0536,snap-0536,0.39.78,A,"lib/node-schemas/hook_contract.schema",0000000000,2e367dacc7
+0536,snap-0536,0.39.78,M,"lib/version.js",8e1e422cef,eb4220f8ab
+0536,snap-0536,0.39.78,M,"package.json",eaf832a986,fdaaa2d555
+0536,snap-0536,0.39.78,M,"tests/node-schemas-split.test.js",255e42c093,0d6d184eba

@@ -1,0 +1,13 @@
+seq,tag,build,status,path,old_blob,new_blob
+0776,snap-0776,0.60.202,A,"CHANGELOG-0.60.202.md",0000000000,c267ce6768
+0776,snap-0776,0.60.202,M,"VERSION",94d720e811,e713165453
+0776,snap-0776,0.60.202,M,"docs/2026-10-10-idearium-solid-phasemap.spec",f8db485f03,fc2178adc9
+0776,snap-0776,0.60.202,M,"idearium/api/index.js",a429de2a9a,44f160e0f6
+0776,snap-0776,0.60.202,M,"idearium/spec/idearium.spec",a4040dadbd,cc5eaf2ec7
+0776,snap-0776,0.60.202,M,"idearium/ui/index.html",1aa902965d,20f749697b
+0776,snap-0776,0.60.202,M,"idearium/ui/js/app.js",5314050035,d365dc020c
+0776,snap-0776,0.60.202,M,"idearium/ui/js/work-surface.js",56573ad945,a33ffc1d46
+0776,snap-0776,0.60.202,M,"lib/version.js",d941d656c6,7cc41beee8
+0776,snap-0776,0.60.202,M,"package.json",be5ed5a130,731674b100
+0776,snap-0776,0.60.202,M,"tests/modules/run-all.js",56693d4983,cb7b0eb47d
+0776,snap-0776,0.60.202,A,"tests/modules/test-refusal-sendback.test.js",0000000000,01eb624385

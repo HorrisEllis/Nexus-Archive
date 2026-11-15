@@ -1,0 +1,11 @@
+seq,tag,build,status,path,old_blob,new_blob
+0454,snap-0454,0.39.10,M,"clear-glass/renderer/browser.html",af4c9ecc13,6ae7a41394
+0454,snap-0454,0.39.10,M,"clear-glass/renderer/browser.js",b6f24e4489,ca4fc0dd90
+0454,snap-0454,0.39.10,M,"clear-glass/src/ipc/bridge.js",474710f2c5,e9a49579a7
+0454,snap-0454,0.39.10,M,"clear-glass/src/main/index.js",7fc99835f3,0b76b6b043
+0454,snap-0454,0.39.10,M,"clear-glass/src/preload/index.js",f27bdca103,c049e73dd7
+0454,snap-0454,0.39.10,A,"data/cortex/memory/macros.json",0000000000,5c230915c0
+0454,snap-0454,0.39.10,A,"data/cortex/memory/settings.json",0000000000,3afc36dd3c
+0454,snap-0454,0.39.10,M,"lib/version.js",921acc38e9,8458faa0c6
+0454,snap-0454,0.39.10,M,"package-lock.json",ea8ed54e4c,63f1dcfa22
+0454,snap-0454,0.39.10,M,"package.json",16dfcd9f3e,c9c0bdecb2

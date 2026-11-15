@@ -1,0 +1,13 @@
+seq,tag,build,status,path,old_blob,new_blob
+0010,snap-0010,0.0.8,A,"bridge/nexus-bridge.js",0000000000,1f5949d40e
+0010,snap-0010,0.0.8,M,"cortex/foundation/admin-server.js",811d013561,2832279a3a
+0010,snap-0010,0.0.8,M,"emerge-ide.js",1f2db3f18c,53956f9ff9
+0010,snap-0010,0.0.8,M,"guardian/server.js",d5c6168b2a,48016b13fd
+0010,snap-0010,0.0.8,M,"idearium/api/index.js",a9e8877515,f55ed15c7e
+0010,snap-0010,0.0.8,M,"package.json",ccdd55468d,8c3f8852a6
+0010,snap-0010,0.0.8,M,"tests/kernel-test-results.json",50cc748a28,cd856b9951
+0010,snap-0010,0.0.8,M,"ui/cockpit.html",fdc557ffe4,1141504598
+0010,snap-0010,0.0.8,A,"ui/cortex.html",0000000000,15da91e6d1
+0010,snap-0010,0.0.8,M,"ui/emerge-ide.html",96820bead7,b500713b93
+0010,snap-0010,0.0.8,A,"ui/idearium.html",0000000000,2cdad11bad
+0010,snap-0010,0.0.8,A,"ui/index.html",0000000000,b500713b93

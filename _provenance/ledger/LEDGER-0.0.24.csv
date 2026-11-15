@@ -1,0 +1,13 @@
+seq,tag,build,status,path,old_blob,new_blob
+0026,snap-0026,0.0.24,M,"cli/diagnose.js",cc43e0f566,1d5169b9e4
+0026,snap-0026,0.0.24,A,"cortex/interaction-contract.json",0000000000,b1e287d54d
+0026,snap-0026,0.0.24,M,"data/idearium.json",55515b890f,2d563d077c
+0026,snap-0026,0.0.24,M,"data/ledger/orchestrator.jsonl",e336f1cb53,8be30f1158
+0026,snap-0026,0.0.24,M,"emerge-ide.js",48581176f3,6d67a5bfe8
+0026,snap-0026,0.0.24,A,"emerge/interaction-contract.json",0000000000,981f5cef56
+0026,snap-0026,0.0.24,A,"guardian/interaction-contract.json",0000000000,9b9f80bc4d
+0026,snap-0026,0.0.24,M,"guardian/server.js",40d6b223b2,935dc0c042
+0026,snap-0026,0.0.24,M,"orchestrator.js",9cf7c7840a,78675d0ac8
+0026,snap-0026,0.0.24,M,"tests/diagnose-results.json",b0442a712c,70c774eab3
+0026,snap-0026,0.0.24,M,"tests/integration.test.js",e38d26050f,06b060e571
+0026,snap-0026,0.0.24,M,"tests/kernel-test-results.json",73f97645fc,08b357312c

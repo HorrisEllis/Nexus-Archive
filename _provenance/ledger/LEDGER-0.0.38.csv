@@ -1,0 +1,13 @@
+seq,tag,build,status,path,old_blob,new_blob
+0041,snap-0041,0.0.38,M,"cli/nexus.js",a40ec774c7,02a468baf6
+0041,snap-0041,0.0.38,A,"cortex/agent-tools/index.js",0000000000,cf2669528d
+0041,snap-0041,0.0.38,M,"cortex/boot.js",d4c2a78e5d,6b499bbd0c
+0041,snap-0041,0.0.38,M,"cortex/foundation/admin-server.js",0594b02799,73df2f7006
+0041,snap-0041,0.0.38,M,"cortex/foundation/poll-registry.js",c51517781b,b2aa9f998e
+0041,snap-0041,0.0.38,M,"cortex/healer/index.js",d534d86ada,4ece4c71c6
+0041,snap-0041,0.0.38,A,"cortex/heartbeat/index.js",0000000000,e69c05c87e
+0041,snap-0041,0.0.38,M,"cortex/memory/jaa-db.js",65f319fd3f,1152e85eed
+0041,snap-0041,0.0.38,A,"cortex/replay/index.js",0000000000,b9df17ac90
+0041,snap-0041,0.0.38,A,"cortex/self-heal/index.js",0000000000,1f7830a4da
+0041,snap-0041,0.0.38,A,"cortex/snapshot/index.js",0000000000,2b8bde6be8
+0041,snap-0041,0.0.38,M,"tests/pipeline.test.js",560d0df834,24534b1499

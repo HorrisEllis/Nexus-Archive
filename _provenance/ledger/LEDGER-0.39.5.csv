@@ -1,0 +1,8 @@
+seq,tag,build,status,path,old_blob,new_blob
+0452,snap-0452,0.39.5,M,"clear-glass/renderer/browser.css",bea05d8269,cba572f3c6
+0452,snap-0452,0.39.5,M,"clear-glass/renderer/browser.html",e7b85c5423,0092365fff
+0452,snap-0452,0.39.5,M,"clear-glass/renderer/browser.js",b263370b28,a644ce561e
+0452,snap-0452,0.39.5,M,"clear-glass/src/ipc/bridge.js",cec56a4378,d8e47183a8
+0452,snap-0452,0.39.5,M,"clear-glass/src/main/index.js",a3031e4591,4b408eaeb9
+0452,snap-0452,0.39.5,M,"clear-glass/src/preload/index.js",624c3bd256,38ee74c639
+0452,snap-0452,0.39.5,M,"docs/NEXUS-PHASE-MAP.md",4db3f648fe,fbbfe81a57

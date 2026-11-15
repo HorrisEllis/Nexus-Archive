@@ -1,0 +1,15 @@
+seq,tag,build,status,path,old_blob,new_blob
+0757,snap-0757,0.60.98,D,".claude/skills/james-brooks",00ffa09cd1,0000000000
+0757,snap-0757,0.60.98,A,"CHANGELOG-0.60.97.md",0000000000,5f319415c7
+0757,snap-0757,0.60.98,A,"CHANGELOG-0.60.98.md",0000000000,af59bcd677
+0757,snap-0757,0.60.98,M,"clear-glass/package.json",a2e079e7f8,96d1ac2e42
+0757,snap-0757,0.60.98,M,"clear-glass/src/accounts/login-portal.js",12eb88a250,6cf2e02ad6
+0757,snap-0757,0.60.98,M,"clear-glass/src/main/index.js",a0d6176773,04b904ba47
+0757,snap-0757,0.60.98,M,"clear-glass/src/providers/account-switch.js",b6533509eb,97495ca73c
+0757,snap-0757,0.60.98,M,"clear-glass/src/providers/attention.js",38a0a4f4db,1b7eaa5a4b
+0757,snap-0757,0.60.98,M,"clear-glass/src/providers/host.js",9081bac5d2,c88199a813
+0757,snap-0757,0.60.98,A,"clear-glass/test/signin-in-provider-tab.test.js",0000000000,bbc439477c
+0757,snap-0757,0.60.98,A,"clear-glass/test/signin-profile-jar.test.js",0000000000,1dd9926dc9
+0757,snap-0757,0.60.98,M,"lib/version.js",f85e94cb83,a7f6017d52
+0757,snap-0757,0.60.98,M,"package.json",cc3311a8dd,efe5682e92
+0757,snap-0757,0.60.98,M,"tests/modules/test-cg-accounts-portal-settings.test.js",eefacb5b39,ed7ab9019e

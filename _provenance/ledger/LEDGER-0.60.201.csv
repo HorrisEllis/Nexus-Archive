@@ -1,0 +1,13 @@
+seq,tag,build,status,path,old_blob,new_blob
+0775,snap-0775,0.60.201,A,"CHANGELOG-0.60.201.md",0000000000,bb245085e7
+0775,snap-0775,0.60.201,M,"VERSION",fc915d6aa6,94d720e811
+0775,snap-0775,0.60.201,M,"docs/2026-10-10-idearium-solid-phasemap.spec",cf82324f8b,f8db485f03
+0775,snap-0775,0.60.201,M,"idearium/repo/proof-run.js",58eedba68d,7a365fc0bc
+0775,snap-0775,0.60.201,M,"idearium/spec/idearium.spec",c7aeaf4f69,a4040dadbd
+0775,snap-0775,0.60.201,M,"idearium/ui/js/app.js",540f0023af,5314050035
+0775,snap-0775,0.60.201,M,"lib/version.js",823e94afa0,d941d656c6
+0775,snap-0775,0.60.201,M,"package.json",5c9b49aad5,be5ed5a130
+0775,snap-0775,0.60.201,M,"tests/modules/run-all.js",d9864ea945,56693d4983
+0775,snap-0775,0.60.201,A,"tests/modules/test-any-project-tests.test.js",0000000000,32976442b1
+0775,snap-0775,0.60.201,M,"tests/modules/test-mastermind-ready.test.js",b5b93e1420,14a3ce998d
+0775,snap-0775,0.60.201,M,"tests/modules/test-pipeline-root-causes.test.js",758c4e5203,c3c6474e61

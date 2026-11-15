@@ -1,0 +1,13 @@
+seq,tag,build,status,path,old_blob,new_blob
+0706,snap-0706,0.39.275,A,"CHANGELOG-0.39.275.md",0000000000,746d660f06
+0706,snap-0706,0.39.275,M,"docs/atlases/idearium-atlas.md",66858a5111,ead409fabc
+0706,snap-0706,0.39.275,M,"docs/atlases/loom-atlas.md",cf74008dac,bb78e2d66c
+0706,snap-0706,0.39.275,M,"idearium/repo/roadmap.js",ba808a9eaf,376b51b325
+0706,snap-0706,0.39.275,M,"idearium/spec/idearium.repo-roadmap.spec",4d1c04a945,2de07da953
+0706,snap-0706,0.39.275,M,"lib/version.js",b636ffa50c,b5b5b79e01
+0706,snap-0706,0.39.275,M,"loom/interaction-contract.json",8015d2180d,8457615e7e
+0706,snap-0706,0.39.275,M,"loom/registry-components.js",450d1d41a8,dff9d7dc1d
+0706,snap-0706,0.39.275,M,"loom/scanners/phasemap-map.js",bc9ef7ee60,df0cd1716e
+0706,snap-0706,0.39.275,M,"loom/spec/loom.spec",9dccf441ef,c42b821eb4
+0706,snap-0706,0.39.275,M,"package.json",ebf2dc2d60,ced1993088
+0706,snap-0706,0.39.275,M,"tests/modules/test-moce-roadmap.js",89175eec68,8728e06982

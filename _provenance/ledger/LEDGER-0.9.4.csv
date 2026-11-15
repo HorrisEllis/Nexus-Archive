@@ -1,0 +1,10 @@
+seq,tag,build,status,path,old_blob,new_blob
+0136,snap-0136,0.9.4,D,"cortex/agents/ollama/index.js",0c04061874,0000000000
+0136,snap-0136,0.9.4,M,"cortex/core/raid/index.js",add3f60643,969a3771d2
+0136,snap-0136,0.9.4,M,"cortex/foundation/poll-registry.js",e5a71d487c,c545253096
+0136,snap-0136,0.9.4,M,"cortex/self-heal/index.js",9550719677,41d3e03e14
+0136,snap-0136,0.9.4,M,"guardian/lib/seam-queue.js",3567964a01,0bb32b3e5d
+0136,snap-0136,0.9.4,A,"guardian/lib/seam-watchdog.js",0000000000,49d52f2427
+0136,snap-0136,0.9.4,M,"guardian/server.js",56b5f7fcaa,2673b773ac
+0136,snap-0136,0.9.4,M,"guardian/userscript-chatgpt.js",d425b14e70,57c3b2b4d6
+0136,snap-0136,0.9.4,M,"guardian/userscript-claude.js",d164ba9992,c7440f736a

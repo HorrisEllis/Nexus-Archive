@@ -1,0 +1,13 @@
+seq,tag,build,status,path,old_blob,new_blob
+0601,snap-0601,0.39.146,A,"CHANGELOG-0.39.144-part2.md",0000000000,e0f1731a7d
+0601,snap-0601,0.39.146,A,"clear-glass/src/downloads/artifact-chat-index.js",0000000000,e55a3a1dc2
+0601,snap-0601,0.39.146,M,"guardian/cli.js",a11b132435,20d25fef35
+0601,snap-0601,0.39.146,A,"guardian/lib/chat-sync.js",0000000000,6466ab5930
+0601,snap-0601,0.39.146,M,"guardian/lib/ncp-handler.js",e79d4a6e1d,3620580d64
+0601,snap-0601,0.39.146,M,"guardian/server.js",87f9075715,71a73c5a2a
+0601,snap-0601,0.39.146,M,"guardian/userscript-chatgpt.js",bde1e54419,ba5577df27
+0601,snap-0601,0.39.146,M,"guardian/userscript-claude.js",aa64bf348f,3d9ad2df28
+0601,snap-0601,0.39.146,M,"guardian/userscript-deepseek.js",14e15a00ac,30c88ea585
+0601,snap-0601,0.39.146,M,"guardian/userscript-gemini.js",e8d1b317b7,4cc8275252
+0601,snap-0601,0.39.146,M,"guardian/userscript-perplexity.js",4cdd979b82,4fb03422a6
+0601,snap-0601,0.39.146,M,"package.json",449201dac5,54eee9c8bf

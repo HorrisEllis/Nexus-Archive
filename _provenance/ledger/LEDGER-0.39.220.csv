@@ -1,0 +1,9 @@
+seq,tag,build,status,path,old_blob,new_blob
+0651,snap-0651,0.39.220,M,"guardian/cli.js",20d25fef35,50ab15680f
+0651,snap-0651,0.39.220,M,"guardian/lib/chat-sync.js",6466ab5930,fe6103543d
+0651,snap-0651,0.39.220,M,"guardian/server.js",6dc9891aab,2deeac6ccc
+0651,snap-0651,0.39.220,M,"lib/version.js",dca0a1176c,d128838267
+0651,snap-0651,0.39.220,M,"package-lock.json",c83d3340fa,379f191b5d
+0651,snap-0651,0.39.220,M,"package.json",45898624b2,84261c1dd3
+0651,snap-0651,0.39.220,M,"tests/modules/run-all.js",b33922916c,b52e702001
+0651,snap-0651,0.39.220,A,"tests/modules/test-chat-sync-agent-routing.test.js",0000000000,0300d4bdf2

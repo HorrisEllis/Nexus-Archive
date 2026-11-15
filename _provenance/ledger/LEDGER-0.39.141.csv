@@ -1,0 +1,14 @@
+seq,tag,build,status,path,old_blob,new_blob
+0589,snap-0589,0.39.141,M,"guardian/lib/jobs.js",81db27b8df,8eddb6df1e
+0589,snap-0589,0.39.141,M,"guardian/nexus-hey-claude.user.js",c913e21a1c,5eec6d71cc
+0589,snap-0589,0.39.141,M,"guardian/userscript-chatgpt.js",217f32382f,bde1e54419
+0589,snap-0589,0.39.141,M,"guardian/userscript-claude.js",23c7fdca09,aa64bf348f
+0589,snap-0589,0.39.141,M,"guardian/userscript-deepseek.js",58a785e7b3,14e15a00ac
+0589,snap-0589,0.39.141,M,"guardian/userscript-gemini.js",849d6d400c,e8d1b317b7
+0589,snap-0589,0.39.141,M,"guardian/userscript-nexus-wake.js",183eaf2742,8ca4a94ceb
+0589,snap-0589,0.39.141,M,"guardian/userscript-perplexity.js",f3065159a1,4cdd979b82
+0589,snap-0589,0.39.141,M,"idearium/api/index.js",1e4b07fe6a,4f314cb8df
+0589,snap-0589,0.39.141,M,"idearium/ui/index.html",7afefedcc9,9bcec5f503
+0589,snap-0589,0.39.141,M,"idearium/ui/js/app.js",b75496cfb4,5dffcc1ecd
+0589,snap-0589,0.39.141,M,"package.json",6444b3d749,5006f3fd53
+0589,snap-0589,0.39.141,M,"tablet/map3d.html",b9acedf24e,864d471f5e

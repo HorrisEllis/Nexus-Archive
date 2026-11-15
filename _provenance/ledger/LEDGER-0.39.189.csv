@@ -1,0 +1,12 @@
+seq,tag,build,status,path,old_blob,new_blob
+0631,snap-0631,0.39.189,M,"idearium/api/index.js",944a11702e,da209e43a6
+0631,snap-0631,0.39.189,M,"idearium/interaction-contract.json",3f747a489b,d9b8ac1d78
+0631,snap-0631,0.39.189,M,"idearium/registry-components.js",4036f4563a,235361d919
+0631,snap-0631,0.39.189,M,"idearium/ui/js/app.js",a843c2c1b0,d0875bfdf8
+0631,snap-0631,0.39.189,M,"lib/node-export.js",8815832950,f034a4b1a2
+0631,snap-0631,0.39.189,A,"lib/node-schemas/schema.repo_agent",0000000000,f949bd1799
+0631,snap-0631,0.39.189,A,"lib/repo-agent-node.js",0000000000,b978cc6020
+0631,snap-0631,0.39.189,M,"lib/version.js",615363c60f,dbf0a99486
+0631,snap-0631,0.39.189,M,"package.json",4a1cd991e0,81e2a344c9
+0631,snap-0631,0.39.189,M,"run-all.js",f9b0152d8b,86f86eaf8b
+0631,snap-0631,0.39.189,A,"tests/modules/test-repo-agent-node.js",0000000000,5b8ce7e310

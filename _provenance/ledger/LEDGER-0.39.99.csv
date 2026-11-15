@@ -1,0 +1,15 @@
+seq,tag,build,status,path,old_blob,new_blob
+0554,snap-0554,0.39.99,A,"_archive/codefactory-orphaned-2026-09-11/codefactory.spec.md",0000000000,93271f622b
+0554,snap-0554,0.39.99,D,"codefactory/codefactory.spec.md",93271f622b,0000000000
+0554,snap-0554,0.39.99,M,"docs/2026-09-11-compartment-nodetype-and-reorg-phasemap.spec",b563d1c909,98502ef40c
+0554,snap-0554,0.39.99,A,"docs/phase_map_11.html",0000000000,54f6651ff7
+0554,snap-0554,0.39.99,M,"emerge/emerge-ide.js",1084afe2a8,7877ebd045
+0554,snap-0554,0.39.99,M,"idearium/agent-suite/index.js",d341978b96,69c1a2c238
+0554,snap-0554,0.39.99,M,"lib/version.js",07da681cae,369acbfd7a
+0554,snap-0554,0.39.99,D,"nexus-roadmap-combined.html",ec5626b6fc,0000000000
+0554,snap-0554,0.39.99,D,"ollama-runtime.js",0f2e5b7516,0000000000
+0554,snap-0554,0.39.99,A,"ollama/ollama-runtime.js",0000000000,4130603161
+0554,snap-0554,0.39.99,M,"orchestrator/lib/autonomous-loop.js",f0af8a31f7,39ee47b064
+0554,snap-0554,0.39.99,M,"package.json",b0d0dd3e1a,197e713ea0
+0554,snap-0554,0.39.99,D,"phase_map_11.html",54f6651ff7,0000000000
+0554,snap-0554,0.39.99,M,"tests/modules/ollama-runtime.test.js",fd9d42f55b,b42d105b25

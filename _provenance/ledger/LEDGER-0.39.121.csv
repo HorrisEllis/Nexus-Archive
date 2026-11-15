@@ -1,0 +1,17 @@
+seq,tag,build,status,path,old_blob,new_blob
+0564,snap-0564,0.39.121,A,"cli/purge-pollution.js",0000000000,8aa79cffd3
+0564,snap-0564,0.39.121,M,"data/cortex/memory/component_ledger.json",61d35a2ae0,1f68a0e739
+0564,snap-0564,0.39.121,M,"data/cortex/memory/event_log.json",d37c16b887,02fc616a69
+0564,snap-0564,0.39.121,M,"data/cortex/memory/tool_index.json",0ed7c3a097,2c7b36243a
+0564,snap-0564,0.39.121,M,"data/lattice/relationship_lattice.buffer.jsonl",985783e3e6,3657aeafca
+0564,snap-0564,0.39.121,M,"data/nodes/clearglass-search-engines/search-gh.command",d52dbce371,42a8d964f9
+0564,snap-0564,0.39.121,M,"data/nodes/clearglass-search-engines/search-gh.tool",6dbd48b90b,0b575983a8
+0564,snap-0564,0.39.121,M,"lib/agent-tools/index.js",9482719571,4387508f06
+0564,snap-0564,0.39.121,M,"lib/agent-tools/tools/diagnostic/loom-scan.js",2b994a683b,4a65c639e3
+0564,snap-0564,0.39.121,A,"lib/agent-tools/tools/diagnostic/stub-finder.js",0000000000,80e32ce45b
+0564,snap-0564,0.39.121,M,"lib/version.js",c3141cdc63,89c103c6f1
+0564,snap-0564,0.39.121,A,"loom/scanners/stub-finder.js",0000000000,2e3a906efd
+0564,snap-0564,0.39.121,M,"package-lock.json",8f9936e705,18af94c8c8
+0564,snap-0564,0.39.121,M,"package.json",26a6c793bd,88669184ef
+0564,snap-0564,0.39.121,M,"tests/modules/_purge-test-rows.js",4380fdc108,761787394b
+0564,snap-0564,0.39.121,A,"tests/modules/test-stub-finder.js",0000000000,83da5e96c9

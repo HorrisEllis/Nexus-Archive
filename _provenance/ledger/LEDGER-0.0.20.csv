@@ -1,0 +1,15 @@
+seq,tag,build,status,path,old_blob,new_blob
+0022,snap-0022,0.0.20,M,"MANIFEST.json",3afb5b3a8a,8e139a989d
+0022,snap-0022,0.0.20,M,"START.md",b00f72d02e,b28279aba5
+0022,snap-0022,0.0.20,M,"cortex/boot.js",aed4a52f5f,8e41e6da85
+0022,snap-0022,0.0.20,A,"cortex/ess-gap-engine.js",0000000000,a20735e6e3
+0022,snap-0022,0.0.20,M,"guardian/server.js",3ae8456249,40d6b223b2
+0022,snap-0022,0.0.20,M,"guardian/userscript-claude.js",318f6f889c,91a620a94d
+0022,snap-0022,0.0.20,M,"idearium/api/index.js",7bda0e1942,a5a9870d18
+0022,snap-0022,0.0.20,M,"idearium/index.js",841a8a22e3,488c6a3bc0
+0022,snap-0022,0.0.20,M,"idearium/ui/index.html",39a637fa94,543b024391
+0022,snap-0022,0.0.20,M,"nexus-connect.js",331b51e173,340cf9dfb0
+0022,snap-0022,0.0.20,M,"orchestrator.js",82c8ccaf59,be9e4e5e40
+0022,snap-0022,0.0.20,M,"package.json",dd9dcf78a9,c0e702be3d
+0022,snap-0022,0.0.20,M,"tests/kernel-test-results.json",7ef39ccc05,8589efb498
+0022,snap-0022,0.0.20,M,"ui/idearium/index.html",39a637fa94,543b024391

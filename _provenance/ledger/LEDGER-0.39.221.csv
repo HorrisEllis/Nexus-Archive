@@ -1,0 +1,9 @@
+seq,tag,build,status,path,old_blob,new_blob
+0652,snap-0652,0.39.221,M,"guardian/lib/dispatcher.js",6fe48c9869,d845f7cc0f
+0652,snap-0652,0.39.221,M,"guardian/server.js",2deeac6ccc,9e0d8daf46
+0652,snap-0652,0.39.221,M,"lib/version.js",d128838267,ce8f0c0586
+0652,snap-0652,0.39.221,M,"package-lock.json",379f191b5d,e10f9e0232
+0652,snap-0652,0.39.221,M,"package.json",84261c1dd3,d98ed56acc
+0652,snap-0652,0.39.221,A,"tests/dispatcher-agent-tab-trigger.test.js",0000000000,dd2ad84a1f
+0652,snap-0652,0.39.221,M,"tests/modules/run-all.js",b52e702001,3cb14d59d2
+0652,snap-0652,0.39.221,A,"tests/modules/test-command-parse-null-guard.test.js",0000000000,b44b635411

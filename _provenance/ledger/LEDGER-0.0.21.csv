@@ -1,0 +1,11 @@
+seq,tag,build,status,path,old_blob,new_blob
+0023,snap-0023,0.0.21,A,"bridge/interaction-contract.json",0000000000,800fbf6160
+0023,snap-0023,0.0.21,M,"bridge/nexus-bridge.js",d65d9cc668,a09e25d389
+0023,snap-0023,0.0.21,M,"data/idearium.json",46eb90344f,e17f4f6e06
+0023,snap-0023,0.0.21,M,"data/ledger/orchestrator.jsonl",a263ebe11a,8e93cb1072
+0023,snap-0023,0.0.21,A,"idearium/schemas/interaction-contract.json",0000000000,1d8b4ccb38
+0023,snap-0023,0.0.21,A,"orchestrator-contract.json",0000000000,604adce97e
+0023,snap-0023,0.0.21,M,"orchestrator.js",be9e4e5e40,248e1ec7a4
+0023,snap-0023,0.0.21,A,"tests/integration-results.json",0000000000,dbd8c5d528
+0023,snap-0023,0.0.21,A,"tests/integration.test.js",0000000000,0f00d38e7f
+0023,snap-0023,0.0.21,M,"tests/kernel-test-results.json",8589efb498,1877fdfdeb

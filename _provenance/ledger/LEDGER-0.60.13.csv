@@ -1,0 +1,13 @@
+seq,tag,build,status,path,old_blob,new_blob
+0751,snap-0751,0.60.13,A,"CHANGELOG-0.60.13.md",0000000000,fff0e60ec6
+0751,snap-0751,0.60.13,M,"clear-glass/src/accounts/login-portal.js",b8085f1a15,d18b5540d8
+0751,snap-0751,0.60.13,A,"clear-glass/src/cookies/session-hub.js",0000000000,f9aedff813
+0751,snap-0751,0.60.13,M,"clear-glass/src/main/index.js",b8fbaf0d55,28c99612cd
+0751,snap-0751,0.60.13,M,"clear-glass/src/mesh/agent-mesh.js",0d340aa36f,dcad9bd375
+0751,snap-0751,0.60.13,M,"clear-glass/src/providers/account-switch.js",da1b86f5f8,27381a3a47
+0751,snap-0751,0.60.13,M,"clear-glass/test/login-portal-elsewhere.test.js",c9e7cb5f1b,b5e32af5af
+0751,snap-0751,0.60.13,A,"clear-glass/test/session-hub.test.js",0000000000,47316f8ec1
+0751,snap-0751,0.60.13,A,"data/guardian/memory/settings.4393.jsonl",0000000000,bc4b9407cd
+0751,snap-0751,0.60.13,D,"data/vector-index/index.json",d330f650f8,0000000000
+0751,snap-0751,0.60.13,M,"package.json",5438bceaf5,5263c1a23c
+0751,snap-0751,0.60.13,M,"tests/modules/test-cg-accounts-portal-settings.test.js",c3ee373355,eefacb5b39

@@ -1,0 +1,5 @@
+seq,tag,build,status,path,old_blob,new_blob
+0537,snap-0537,0.39.79,M,"copilot/lifeline.js",0a6db2a167,cf7e217e5a
+0537,snap-0537,0.39.79,M,"copilot/server.js",b66b9a676d,ee2d24337f
+0537,snap-0537,0.39.79,M,"tests/modules/copilot-provider-toggle.test.js",4696fedd24,9c682ef3fe
+0537,snap-0537,0.39.79,M,"ui/tv-shell/menu.js",c1126ab1b1,b08a0d81dd

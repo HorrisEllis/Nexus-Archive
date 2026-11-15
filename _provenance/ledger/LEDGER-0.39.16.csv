@@ -1,0 +1,7 @@
+seq,tag,build,status,path,old_blob,new_blob
+0458,snap-0458,0.39.16,M,"clear-glass/renderer/browser.css",d808acd272,7afc41e069
+0458,snap-0458,0.39.16,M,"clear-glass/renderer/browser.html",93ff6d1c03,6b135019c0
+0458,snap-0458,0.39.16,M,"clear-glass/renderer/browser.js",c5a2179a3f,816adcf9ea
+0458,snap-0458,0.39.16,M,"lib/version.js",b7d65c16f1,f67fe50215
+0458,snap-0458,0.39.16,M,"package-lock.json",ea8ed54e4c,931591aab6
+0458,snap-0458,0.39.16,M,"package.json",1b00ba5059,240c04638b

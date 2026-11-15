@@ -1,0 +1,8 @@
+seq,tag,build,status,path,old_blob,new_blob
+0628,snap-0628,0.39.186,M,"idearium/api/index.js",4c78d890af,653e505d92
+0628,snap-0628,0.39.186,M,"idearium/spec-engine/index.js",86425865ee,f4cc15fb99
+0628,snap-0628,0.39.186,M,"idearium/ui/index.html",46b4c0192d,63fa5b0cf0
+0628,snap-0628,0.39.186,M,"idearium/ui/js/app.js",313ba688a0,d29e8f4032
+0628,snap-0628,0.39.186,M,"package.json",938aeec241,fcf9041f69
+0628,snap-0628,0.39.186,M,"ui/home/home.css",2bff44325c,be2e860de8
+0628,snap-0628,0.39.186,M,"ui/home/index.html",0794c8319e,8519ce3556

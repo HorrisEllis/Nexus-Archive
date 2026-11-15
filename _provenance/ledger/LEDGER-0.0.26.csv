@@ -1,0 +1,9 @@
+seq,tag,build,status,path,old_blob,new_blob
+0028,snap-0028,0.0.26,M,"MANIFEST.json",8429af5e62,a500519103
+0028,snap-0028,0.0.26,M,"cli/diagnose.js",1d5169b9e4,70bb5dc322
+0028,snap-0028,0.0.26,M,"data/cobalt/ledger.truth.jsonl",88a105edbe,bf23e245f2
+0028,snap-0028,0.0.26,M,"data/idearium.json",7ab31a7b94,7f2bd7e682
+0028,snap-0028,0.0.26,M,"data/ledger/orchestrator.jsonl",e316ccb8e0,ef766b5d54
+0028,snap-0028,0.0.26,M,"guardian/server.js",4348f3bfe1,82c4626b74
+0028,snap-0028,0.0.26,M,"tests/kernel-test-results.json",f2d2d07860,bab43dba9c
+0028,snap-0028,0.0.26,M,"tests/pipeline-results.json",75c848454b,9de84f3ba4

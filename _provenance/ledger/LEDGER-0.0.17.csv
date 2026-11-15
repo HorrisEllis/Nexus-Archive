@@ -1,0 +1,2 @@
+seq,tag,build,status,path,old_blob,new_blob
+0019,snap-0019,0.0.17,A,"powershell.exe",0000000000,e6c933c6b7

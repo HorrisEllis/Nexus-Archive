@@ -1,0 +1,7 @@
+seq,tag,build,status,path,old_blob,new_blob
+0042,snap-0042,0.0.39,M,"cli/nexus.js",02a468baf6,e997d20815
+0042,snap-0042,0.0.39,A,"cortex/contract/index.js",0000000000,c9a30627ee
+0042,snap-0042,0.0.39,M,"cortex/foundation/admin-server.js",73df2f7006,5d3209eba9
+0042,snap-0042,0.0.39,M,"cortex/foundation/poll-registry.js",b2aa9f998e,624349d32c
+0042,snap-0042,0.0.39,M,"cortex/memory/jaa-db.js",1152e85eed,3b13280559
+0042,snap-0042,0.0.39,M,"tests/pipeline.test.js",24534b1499,03ecff3c8c

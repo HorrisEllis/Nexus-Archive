@@ -1,0 +1,6 @@
+seq,tag,build,status,path,old_blob,new_blob
+0627,snap-0627,0.39.184,M,"idearium/api/index.js",df2da9e1a1,4c78d890af
+0627,snap-0627,0.39.184,M,"idearium/repo/index.js",afb2f3c95f,24c72f2a74
+0627,snap-0627,0.39.184,M,"idearium/ui/index.html",0025ce25b5,46b4c0192d
+0627,snap-0627,0.39.184,M,"idearium/ui/js/app.js",15e1d3ac47,313ba688a0
+0627,snap-0627,0.39.184,M,"package.json",e7eba53fc9,938aeec241

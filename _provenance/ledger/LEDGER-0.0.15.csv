@@ -1,0 +1,4 @@
+seq,tag,build,status,path,old_blob,new_blob
+0017,snap-0017,0.0.15,M,"cli/nexus.js",7fd580e164,a40ec774c7
+0017,snap-0017,0.0.15,M,"data/cobalt/ledger.truth.jsonl",d6e159597b,3a2efcda8b
+0017,snap-0017,0.0.15,M,"tests/kernel-test-results.json",ef7ee0e818,be998b3491

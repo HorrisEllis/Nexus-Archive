@@ -1,0 +1,14 @@
+seq,tag,build,status,path,old_blob,new_blob
+0758,snap-0758,0.60.99,A,"CHANGELOG-0.60.99.md",0000000000,0b62f9f191
+0758,snap-0758,0.60.99,M,"clear-glass/package.json",96d1ac2e42,7bf478b23a
+0758,snap-0758,0.60.99,M,"clear-glass/spec/clear-glass.spec",35fab3e9bc,2b813a8c41
+0758,snap-0758,0.60.99,M,"clear-glass/src/accounts/login-portal.js",6cf2e02ad6,1c897ee2e2
+0758,snap-0758,0.60.99,M,"clear-glass/src/main/index.js",04b904ba47,cacbb648e0
+0758,snap-0758,0.60.99,M,"clear-glass/src/providers/attention.js",1b7eaa5a4b,16858b83b0
+0758,snap-0758,0.60.99,M,"clear-glass/src/providers/host.js",c88199a813,28bf9e2493
+0758,snap-0758,0.60.99,M,"clear-glass/src/providers/profile-tabs.js",2db28edfd8,632624794d
+0758,snap-0758,0.60.99,A,"clear-glass/test/provider-idle-signin.test.js",0000000000,7f83787208
+0758,snap-0758,0.60.99,A,"clear-glass/test/signin-profile-tab-reload.test.js",0000000000,4f7a59621d
+0758,snap-0758,0.60.99,M,"docs/PROOF-OF-COMPETENCY.md",ac4a78972d,6a37ef6c94
+0758,snap-0758,0.60.99,M,"lib/version.js",a7f6017d52,8cbbe001ba
+0758,snap-0758,0.60.99,M,"package.json",efe5682e92,9ef33e5bae

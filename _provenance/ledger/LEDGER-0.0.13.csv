@@ -1,0 +1,8 @@
+seq,tag,build,status,path,old_blob,new_blob
+0015,snap-0015,0.0.13,A,"START.md",0000000000,b00f72d02e
+0015,snap-0015,0.0.13,D,"guardian/guardian-cert.pem",dd1a43c9a9,0000000000
+0015,snap-0015,0.0.13,D,"guardian/guardian-key.pem",71c34893a6,0000000000
+0015,snap-0015,0.0.13,D,"guardian/memory_store/settings.json",a5d1c9e4df,0000000000
+0015,snap-0015,0.0.13,M,"package.json",c3e1bc18ff,c00e51964e
+0015,snap-0015,0.0.13,M,"tests/kernel-test-results.json",3c155ca76b,2ba2761f17
+0015,snap-0015,0.0.13,M,"ui/cockpit.html",1141504598,1ff2b56d6c

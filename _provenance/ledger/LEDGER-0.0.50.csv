@@ -1,0 +1,4 @@
+seq,tag,build,status,path,old_blob,new_blob
+0054,snap-0054,0.0.50,M,"cli/boot-systems.js",0fa64564ab,61f708188d
+0054,snap-0054,0.0.50,M,"ui/home/index.html",c2759a390f,2e5717184b
+0054,snap-0054,0.0.50,M,"ui/index.html",c9b973e79b,b4fef2ebcb

@@ -1,0 +1,10 @@
+seq,tag,build,status,path,old_blob,new_blob
+0616,snap-0616,0.39.163,M,"data/cortex/memory/intake_drops.json",26acb1d8ec,b81b8e74d2
+0616,snap-0616,0.39.163,A,"data/guardian/code-artifacts/w2/block-0.js",0000000000,c1b0730e01
+0616,snap-0616,0.39.163,M,"guardian/event-taxonomy.js",5caa7c2102,172a228964
+0616,snap-0616,0.39.163,M,"guardian/lib/code-artifact.js",068cc480f2,a8c2b0a779
+0616,snap-0616,0.39.163,M,"guardian/spec/guardian.spec",8dba8e81cc,59d296e5ef
+0616,snap-0616,0.39.163,M,"lib/intake.js",c7d80ef737,904e13696d
+0616,snap-0616,0.39.163,M,"lib/version.js",dab3d21aa2,2987ed2058
+0616,snap-0616,0.39.163,M,"package.json",02941a46f8,36e25098bc
+0616,snap-0616,0.39.163,M,"tests/modules/test-code-artifact.js",f2970ca10e,1a1bcaba59

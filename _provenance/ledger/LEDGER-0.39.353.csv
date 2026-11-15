@@ -1,0 +1,13 @@
+seq,tag,build,status,path,old_blob,new_blob
+0736,snap-0736,0.39.353,A,"CHANGELOG-0.39.353.md",0000000000,7887aa1a23
+0736,snap-0736,0.39.353,M,"docs/2026-09-29-build-surface-phasemap.spec",7eca434120,91e7624016
+0736,snap-0736,0.39.353,M,"docs/2026-10-05-code-tab-and-one-router-phasemap.spec",83e349e60a,477691594a
+0736,snap-0736,0.39.353,M,"docs/SPEC-REGISTRY.spec",3c331fc02f,3215c0ba53
+0736,snap-0736,0.39.353,M,"idearium/ui/index.html",6c52fe7eb7,70ab78031b
+0736,snap-0736,0.39.353,M,"idearium/ui/js/app.js",0d553fbb92,fef7d5fef0
+0736,snap-0736,0.39.353,M,"idearium/ui/js/plan-panel.js",b9042d04b2,1931cf98bb
+0736,snap-0736,0.39.353,M,"lib/version.js",51c467c8cf,e42ba3a8bb
+0736,snap-0736,0.39.353,M,"loom/data/events.json",e4b32664b3,c4041c280a
+0736,snap-0736,0.39.353,M,"loom/data/registry.json",9fe7f99765,095f01a2c6
+0736,snap-0736,0.39.353,M,"package.json",40ae6331fe,596f31738f
+0736,snap-0736,0.39.353,M,"tests/modules/test-code-tab.test.js",40aecd7ad1,baa32782a7

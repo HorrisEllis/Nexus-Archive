@@ -1,0 +1,9 @@
+seq,tag,build,status,path,old_blob,new_blob
+0527,snap-0527,0.39.69,M,"guardian/userscript-chatgpt.js",11193a3cae,4a95b92709
+0527,snap-0527,0.39.69,M,"guardian/userscript-claude.js",3ec345adef,46d0ffc229
+0527,snap-0527,0.39.69,M,"guardian/userscript-gemini.js",bc96b1fa6d,69b0033673
+0527,snap-0527,0.39.69,M,"guardian/userscript-nexus-wake.js",4392be8e29,90dc1960a7
+0527,snap-0527,0.39.69,M,"guardian/userscript-perplexity.js",b97cede1ff,7322fc349e
+0527,snap-0527,0.39.69,M,"lib/version.js",8758df22eb,438ca67edf
+0527,snap-0527,0.39.69,M,"package.json",7af8b7a430,42fdc83515
+0527,snap-0527,0.39.69,M,"tests/modules/test-nexus-wake.js",5a260b9a36,69fa663fc5

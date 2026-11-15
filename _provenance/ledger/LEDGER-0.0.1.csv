@@ -1,0 +1,13 @@
+seq,tag,build,status,path,old_blob,new_blob
+0001,snap-0001,0.0.1,A,"MANIFEST.md",0000000000,d4632cdaa5
+0001,snap-0001,0.0.1,A,"__patches/boot.js",0000000000,8cd848f211
+0001,snap-0001,0.0.1,A,"__patches/foundation--poll-registry.js",0000000000,7d80068d0b
+0001,snap-0001,0.0.1,A,"__patches/guardian-v8--server.js",0000000000,cf23520f14
+0001,snap-0001,0.0.1,A,"__patches/memory--jaa-db.js",0000000000,77e9ddbcd5
+0001,snap-0001,0.0.1,A,"agents/callto/index.js",0000000000,e02bd34e44
+0001,snap-0001,0.0.1,A,"cockpit.html",0000000000,772e551dc6
+0001,snap-0001,0.0.1,A,"guardian/pulse.js",0000000000,0cb19891e8
+0001,snap-0001,0.0.1,A,"guardian/siphon.js",0000000000,2d0b632d0f
+0001,snap-0001,0.0.1,A,"guardian/watchman.js",0000000000,7b6983e70e
+0001,snap-0001,0.0.1,A,"schemas/guardian-chat.schema.json",0000000000,f2f424e0bd
+0001,snap-0001,0.0.1,A,"schemas/guardian-health.schema.json",0000000000,0c40c79fd3

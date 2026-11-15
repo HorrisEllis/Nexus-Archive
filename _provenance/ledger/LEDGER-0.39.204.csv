@@ -1,0 +1,4 @@
+seq,tag,build,status,path,old_blob,new_blob
+0638,snap-0638,0.39.204,M,"lib/version.js",bc742e1915,5797f0dd3c
+0638,snap-0638,0.39.204,M,"package-lock.json",c4c9574ca1,c0b9ca7cd4
+0638,snap-0638,0.39.204,M,"package.json",25397d3bb2,9967f693f0
